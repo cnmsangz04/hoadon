@@ -1,0 +1,76 @@
+/* Layout */
+.left_col {
+  background: #2f3e46;
+  color: #fff;
+  min-height: 100vh;
+  padding-top: 10px;
+}
+
+/* Logo */
+.logo {
+  width: 120px;
+  height: auto;
+  margin: 15px 0;
+  display: block;
+}
+
+/* ==== MENU ==== */
+
+/* Đảm bảo menu theo cột */
+.nav.side-menu {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 20px;
+  display: block;
+}
+
+.nav.side-menu > li {
+  display: block;
+  width: 100%;
+}
+
+.nav.side-menu > li > a {
+  display: block;
+  width: 100%;
+  color: #fff;
+  padding: 12px 20px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.2s;
+  white-space: nowrap;
+}
+
+.nav.side-menu > li > a:hover {
+  background: #3a5a63;
+  border-radius: 4px;
+}
+
+/* Menu đang mở */
+.nav.side-menu > li.open > a {
+  background: #354f52;
+  border-radius: 4px;
+}
+
+/* ==== SUBMENU ==== */
+.nav.child_menu {
+  list-style: none;
+  padding-left: 20px;
+  margin: 0;
+  display: block; /* 100% bắt buộc */
+}
+
+.nav.child_menu li {
+  display: block;
+}
+
+.nav.child_menu li a {
+  color: #e9ecef;
+  padding: 8px 20px;
+  display: block;
+  transition: 0.2s;
+}
+
+.nav.child_menu li a:hover {
+  background: #3a5a63;
+  border-radius: 4px;
+}

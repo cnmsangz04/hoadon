@@ -1,0 +1,56 @@
+/* Admin page layout styles - src/assets/css/admin_page.css */
+
+:root{
+  --admin-bg: #f5f6fa;
+  --content-bg: #ffffff;
+  --content-padding: 20px;
+  --content-radius: 8px;
+  --muted-text: #6c7a7a;
+}
+
+/* main container that holds sidebar + content */
+.main-container{
+  display: flex;
+  align-items: stretch;
+  min-height: calc(100vh - 60px - 40px); /* reserve header (60) + footer (40) approximate */
+}
+
+/* content area */
+.content{
+  flex: 1 1 auto;
+  background: var(--admin-bg);
+  padding: var(--content-padding);
+  box-sizing: border-box;
+}
+
+/* inner content wrapper to add card-like feel */
+.content > .page-inner{
+  background: var(--content-bg);
+  border-radius: var(--content-radius);
+  padding: 18px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  min-height: 400px;
+}
+
+/* spacing helpers */
+.admin-hero, .admin-stats, .admin-widgets{ margin-bottom: 16px; }
+
+/* responsive adjustments */
+@media (max-width: 992px){
+  .main-container{ flex-direction: column; }
+  .left_col{ width: 100%; }
+  .content{ padding: 12px; }
+}
+
+/* when the sidebar is collapsed (body.nav-sm), make content padding a bit smaller */
+body.nav-sm .content{ padding-left: 12px; }
+
+/* small screens: top fixed header reduces available height, ensure content scrolls */
+@media (max-width: 480px){
+  .content > .page-inner{ padding: 12px; }
+}
+
+/* utility: center empty pages */
+.page-empty{
+  display:flex; align-items:center; justify-content:center; min-height: 240px; color:var(--muted-text);
+}

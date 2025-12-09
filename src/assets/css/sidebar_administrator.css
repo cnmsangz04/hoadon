@@ -1,0 +1,120 @@
+/* Sidebar styles - src/assets/css/sidebar_administrator.css */
+
+:root{
+  --sidebar-bg: #2f3e46;
+  --sidebar-contrast: #354f52;
+  --sidebar-hover: #3a5a63;
+  --text-light: #ffffff;
+  --muted: #cbd5d2;
+  --accent: #16a085;
+}
+
+/* Layout */
+.main_container{ display:flex; min-height:100vh; }
+.left_col{
+  background: var(--sidebar-bg);
+  color: var(--text-light);
+  min-height: 100vh;
+  padding-top: 10px;
+  width: 250px;
+  box-sizing: border-box;
+  transition: width 0.18s ease;
+}
+
+/* collapsed / small sidebar */
+body.nav-sm .left_col{ width: 60px; }
+
+/* Scroll area */
+.left_col .scroll-view{
+  height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar (WebKit) */
+.left_col .scroll-view::-webkit-scrollbar{ width:8px; }
+.left_col .scroll-view::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.08); border-radius:4px; }
+.left_col .scroll-view::-webkit-scrollbar-track{ background: transparent; }
+
+/* Logo */
+.site_title{ display:block; padding:6px 0; }
+.site_title .logo{ width: 140px; max-width:100%; height:auto; display:block; margin:8px auto; }
+body.nav-sm .site_title .logo{ max-width:46px; }
+
+/* Menu container */
+.main_menu_side{ padding: 10px 0; }
+.menu_section{ padding-top:6px; }
+
+/* Menu list */
+.nav.side-menu{ list-style:none; margin:0; padding:0 6px; }
+.nav.side-menu > li{ position:relative; display:block; }
+
+/* link styles */
+.nav.side-menu a.nav-link,
+.nav.side-menu > li > a{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color: var(--muted);
+  padding:12px 14px;
+  font-size:14px;
+  text-decoration:none;
+  border-radius:6px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.nav.side-menu i{ width:28px; text-align:center; color: rgba(255,255,255,0.75); }
+
+.nav.side-menu a.nav-link span,
+.nav.side-menu > li > a span{ flex:1; }
+
+/* hover */
+.nav.side-menu a.nav-link:hover,
+.nav.side-menu > li > a:hover{ background: var(--sidebar-hover); color: var(--text-light); }
+
+/* active / open states */
+.nav.side-menu > li.open > a,
+.nav.side-menu > li.active > a,
+.nav.side-menu > li > a.router-link-active{
+  background: linear-gradient(90deg,var(--accent),#1aa07f);
+  color: var(--text-light);
+}
+
+/* show collapsed single-icon view */
+body.nav-sm .nav.side-menu a.nav-link span,
+body.nav-sm .nav.side-menu > li > a span{ display:none; }
+
+/* Child menu */
+.nav.child_menu{ list-style:none; padding-left:6px; margin:6px 0 0 0; overflow:hidden; }
+.nav.child_menu li{ margin:0; }
+.nav.child_menu li a{ display:block; color:var(--muted); padding:8px 12px; font-size:13px; border-radius:6px; }
+.nav.child_menu li a:hover{ background: var(--sidebar-hover); color:var(--text-light); }
+
+/* Animated height transition for submenus */
+.nav.child_menu{
+  max-height:0;
+  transition: max-height 220ms ease;
+}
+
+/* when open (we control open class on parent li) */
+.nav.side-menu > li.open > .child_menu{ max-height: 1000px; }
+
+/* Small helper for caret icon alignment */
+.nav.side-menu .fa-chevron-down{ margin-left:auto; opacity:0.9; }
+
+/* Footer / misc */
+.left_col .clearfix{ clear:both; }
+
+/* Ensure content area grows */
+.main_container > *:not(.left_col){ flex:1 1 auto; }
+
+/* Responsive: full collapse under 480px */
+@media (max-width:480px){
+  .left_col{ position:fixed; z-index:1000; left:0; top:0; bottom:0; transform: translateX(-100%); transition: transform 180ms ease; }
+  body.show-sidebar .left_col{ transform: translateX(0); }
+}
+
+/* Accessibility: focus states */
+.nav.side-menu a.nav-link:focus, .nav.child_menu li a:focus{ outline:2px solid rgba(255,255,255,0.12); outline-offset:2px; }
+
+/* Minor utilities */
+.text-muted-sidebar{ color: rgba(255,255,255,0.7); font-size:12px; }
