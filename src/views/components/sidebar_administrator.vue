@@ -21,7 +21,8 @@
               active: isActive(item),
             }"
           >
-            <!-- Item có children -->
+
+            <!-- Menu có con -->
             <template v-if="item.children">
               <a href="#" class="menu-item" @click.prevent="toggle(index)">
                 <i :class="item.icon"></i>
@@ -31,18 +32,15 @@
 
               <transition name="slide">
                 <ul class="sub" v-show="openIndex === index">
-                  <li
-                    v-for="(c, ci) in item.children"
-                    :key="ci"
-                    :class="{ active: isActive(c) }"
-                  >
+                  <li v-for="(c, ci) in item.children" :key="ci" :class="{ active: isActive(c) }">
                     <router-link :to="c.to">{{ c.title }}</router-link>
                   </li>
                 </ul>
               </transition>
+
             </template>
 
-            <!-- Item không có children -->
+            <!-- Menu không con -->
             <template v-else>
               <router-link class="menu-item" :to="item.to">
                 <i :class="item.icon"></i>
@@ -58,6 +56,8 @@
     </div>
   </div>
 </template>
+
+
 <script>
 export default {
   name: "sidebar_administrator",
@@ -67,16 +67,15 @@ export default {
       openIndex: null,
       menu: [
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
+        { title: 'Ngân hàng', icon: 'fas fa-university', to: '/administrator/bank/list' }
       ]
     };
   },
 
   mounted() {
-    // Tự động mở menu chứa route đang active
+    // Mở nhóm menu cha nếu đang ở route con
     this.menu.forEach((item, idx) => {
-      if (item.children && this.isActive(item)) {
-        this.openIndex = idx;
-      }
+      if (item.children && this.isActive(item)) this.openIndex = idx;
     });
   },
 
@@ -88,18 +87,21 @@ export default {
     isActive(item) {
       if (!item) return false;
 
-      if (item.to) {
-        return this.$route.path.indexOf(item.to) === 0;
-      }
+      // Active nếu route = item.to (không trùng prefix nữa)
+      if (item.to) return this.$route.path === item.to;
+
+      // Nếu là cha => active nếu 1 trong child match URL
       if (item.children) {
-        return item.children.some(c => this.$route.path.indexOf(c.to) === 0);
+        return item.children.some(c => this.$route.path === c.to);
       }
 
       return false;
-    },
+    }
   }
 };
 </script>
+
+
 <style scoped>
 .sidebar {
   width: 260px;
@@ -114,45 +116,25 @@ export default {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
 }
 
-.sidebar-inner {
-  padding: 18px 14px;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
+.sidebar-inner { padding: 18px 14px; height: 100%; display: flex; flex-direction: column; }
 .brand { text-align: center; margin-bottom: 12px; }
-.logo { max-width: 160px; display: block; margin: auto; }
-
-.menu { overflow: auto; flex: 1; }
-.menu ul { list-style: none; padding: 0; margin: 0; }
+.logo { max-width: 160px; margin: auto; display: block; }
+.menu { flex: 1; overflow: auto; }
+.menu ul { padding: 0; margin: 0; list-style: none; }
 .menu-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; color: #dbeefd; border-radius: 6px; text-decoration: none; }
 .menu-item:hover { background: rgba(255,255,255,0.03); color: #fff; }
 .menu-item i { width: 18px; text-align: center; }
+.menu li.active > .menu-item { background: rgba(255,255,255,0.08); color: #fff; }
 
-.menu li.active > .menu-item {
-  background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-}
-
-.has-children .chev {
-  margin-left: auto;
-  transition: transform 0.25s;
-}
-
+.has-children .chev { margin-left: auto; transition: 0.25s; }
 .rotated { transform: rotate(-180deg); }
 
-.sub { padding-left: 10px; margin: 5px 0 10px; }
-.sub li a {
-  display: block; padding: 8px 12px; border-radius: 6px; color: #cfe6ff;
-}
-.sub li.active > a { background: rgba(255,255,255,0.03); color: #fff; }
+.sub { padding-left: 10px; margin-top: 6px; }
+.sub li a { padding: 7px 12px; display: block; border-radius: 5px; color: #cfe6ff; }
+.sub li.active > a { background: rgba(255,255,255,0.12); color: #fff; }
 
-.sidebar-footer {
-  text-align: center; padding: 8px 0; color: #7f9ebf; font-size: 12px;
-}
+.sidebar-footer { text-align: center; font-size: 12px; padding: 10px 0; color: #8fa7c5; }
 
-/* Animation */
-.slide-enter-active, .slide-leave-active { transition: 240ms; }
-.slide-enter, .slide-leave-to { opacity: 0; transform: translateY(-6px); height: 0; }
+.slide-enter-active,.slide-leave-active { transition: 200ms; }
+.slide-enter,.slide-leave-to { opacity: 0; transform: translateY(-6px); height: 0; }
 </style>
-

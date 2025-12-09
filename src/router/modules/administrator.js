@@ -5,9 +5,15 @@ export default {
   children: [
     {
       path: '',
-      name: 'admin',
+      name: 'home',
       component: () => import('../../views/administrators/index.vue'),
       meta: { requiresAdmin: true, title: 'Trang quản trị' }
-    }
+    },
+	{
+	 path: 'bank/list',
+	 name: 'admin-bank-list',
+	 component: () => import('../../views/administrators/bank/list.vue'),
+	 meta: { requiresAdmin: true, title: 'Ngân hàng' }
+	}
   ]
 }

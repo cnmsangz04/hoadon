@@ -34,10 +34,11 @@ router.beforeEach((to, from, next) => {
   const guestAdmin = to.matched.some(r => r.meta.guestAdmin)
 
   if (needUser && !tokenUser) return next('/auth/login')
-  if (tokenUser && guestUser) return next('/')
+  if (tokenUser && guestUser) return  next('/')
   if (needAdmin && !tokenAdmin) return next('/auth/login-admin')
   if (tokenAdmin && guestAdmin) return next('/administrator')
 
+	console.log(1);
   next()
 })
 

@@ -107,21 +107,27 @@ export default {
     toggle(index) {
       this.isOpen = this.isOpen === index ? null : index;
     },
+		
     isActive(item) {
-      // item may have .to or .children
       if (!item) return false;
-      if (item.to) return this.$route && this.$route.path.indexOf(item.to) === 0;
+
+      // Item không có con
+      if (item.to) return this.$route.path === item.to;
+
+      // Item có children => active nếu child match chính xác
       if (item.children) {
-        return item.children.some((c) => this.$route && this.$route.path.indexOf(c.to) === 0);
+        return item.children.some(c => this.$route.path === c.to);
       }
       return false;
-    },
+    }
   },
   mounted() {
     // open the parent menu if a child route is active
-    this.menuItems.forEach((item, idx) => {
-      if (item.children && this.isActive(item)) this.isOpen = idx;
-    });
+	this.menuItems.forEach((item, idx) => {
+	   if (item.children && this.isActive(item)) {
+	      this.isOpen = idx;
+	   }
+	 });
   },
 };
 </script>
