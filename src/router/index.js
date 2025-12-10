@@ -38,7 +38,6 @@ router.beforeEach((to, from, next) => {
   if (needAdmin && !tokenAdmin) return next('/auth/login-admin')
   if (tokenAdmin && guestAdmin) return next('/administrator')
 
-	console.log(1);
   next()
 })
 

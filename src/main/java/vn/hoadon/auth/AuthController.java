@@ -1,4 +1,4 @@
-package vn.hoadon.controller.api;
+package vn.hoadon.auth;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +13,7 @@ import vn.hoadon.security.JwtUtil;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/v1/auth")
 public class AuthController {
     @Autowired private UserService userService;
     @Autowired private PasswordEncoder passwordEncoder;

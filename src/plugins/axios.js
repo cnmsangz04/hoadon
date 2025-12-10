@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // Thay đổi baseURL theo backend của bạn
-axios.defaults.baseURL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8080/api'
+axios.defaults.baseURL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8080/v1'
 
 // Helper: xác định ngữ cảnh admin dựa trên URL hiện tại
 function isAdminContext() {

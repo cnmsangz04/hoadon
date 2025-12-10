@@ -21,7 +21,7 @@ module.exports = {
     allowedHosts: 'all',
     // Proxy API calls to backend server on 8081
     proxy: {
-      '/api': {
+      '/v1': {
         target: 'http://localhost:8081',
         changeOrigin: true,
         // keep path as-is
