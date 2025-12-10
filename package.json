@@ -14,7 +14,8 @@
     "bootstrap": "^4.6.2",
     "bootstrap-vue": "^2.23.1",
     "jquery": "^3.7.1",
-    "vue": "^2.7.14"
+    "vue": "^2.7.14",
+    "vue-router": "^3.6.5"
   },
   "devDependencies": {
     "@vue/cli-service": "^5.0.0",
