@@ -31,3 +31,13 @@ build/
 
 ### VS Code ###
 .vscode/
+
+node_modules/
+dist/
+npm-debug.log
+yarn-error.log
+.envnode_modules/
+dist/
+npm-debug.log
+yarn-error.log
+.env

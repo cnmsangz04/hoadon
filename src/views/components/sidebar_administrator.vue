@@ -67,7 +67,8 @@ export default {
       openIndex: null,
       menu: [
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
-        { title: 'Ngân hàng', icon: 'fas fa-university', to: '/administrator/bank/list' }
+        { title: 'Ngân hàng', icon: 'fas fa-university', to: '/administrator/bank/list' },
+		{ title: 'Cơ quan thuế', icon: 'fas fa-university', to: '/administrator/tax-authorities/list' },
       ]
     };
   },

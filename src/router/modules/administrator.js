@@ -14,6 +14,12 @@ export default {
 	 name: 'admin-bank-list',
 	 component: () => import('../../views/administrators/bank/list.vue'),
 	 meta: { requiresAdmin: true, title: 'Ngân hàng' }
+	},
+	{
+		 path: 'tax-authorities/list',
+		 name: 'admin-bank-list',
+		 component: () => import('../../views/administrators/tax-authorities/list.vue'),
+		 meta: { requiresAdmin: true, title: 'Cơ quan thuế' }
 	}
   ]
 }
