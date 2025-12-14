@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import vn.hoadon.services.UserService;
-import vn.hoadon.model.User;
+import vn.hoadon.entity.UserEntity;
 import vn.hoadon.dto.AuthRequest;
 import vn.hoadon.dto.AuthResponse;
 import vn.hoadon.security.JwtUtil;
@@ -21,10 +21,10 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest req){
-        Optional<User> uOpt = userService.findByUsername(req.getUsername());
+        Optional<UserEntity> uOpt = userService.findByUsername(req.getUsername());
         if(uOpt.isEmpty()) return ResponseEntity.status(401).body("Invalid credentials");
 
-        User user = uOpt.get();
+        UserEntity user = uOpt.get();
         if(user.getStatus() == null || user.getStatus() == 0) {
             return ResponseEntity.status(403).body("Account inactive");
         }
@@ -40,9 +40,9 @@ public class AuthController {
 
     @PostMapping("/login-admin")
     public ResponseEntity<?> loginAdmin(@RequestBody AuthRequest req){
-        Optional<User> uOpt = userService.findByUsername(req.getUsername());
+        Optional<UserEntity> uOpt = userService.findByUsername(req.getUsername());
         if(uOpt.isEmpty()) return ResponseEntity.status(401).body("Invalid credentials");
-        User user = uOpt.get();
+        UserEntity user = uOpt.get();
         if(user.getStatus() == null || user.getStatus() == 0) {
             return ResponseEntity.status(403).body("Account inactive");
         }

@@ -1,7 +1,8 @@
 import axios from 'axios'
 
 // Thay đổi baseURL theo backend của bạn
-axios.defaults.baseURL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8080/v1'
+// Sử dụng '/v1' mặc định để tận dụng proxy của devServer và tránh CORS khi phát triển
+axios.defaults.baseURL = process.env.VUE_APP_API_BASE_URL || '/v1'
 
 // Helper: xác định ngữ cảnh admin dựa trên URL hiện tại
 function isAdminContext() {
@@ -30,12 +31,19 @@ axios.interceptors.request.use(config => {
 }, err => Promise.reject(err))
 
 axios.interceptors.response.use(res => res, err => {
-  if (err.response && err.response.status === 401) {
+  const status = err?.response?.status
+  if (status === 401 || status === 403) {
     const admin = isAdminContext()
     const key = admin ? 'token-admin' : 'token'
-    localStorage.removeItem(key)
-    // chuyển hướng tới trang đăng nhập tương ứng
-    window.location.href = admin ? '/auth/login-admin' : '/auth/login'
+    try {
+      localStorage.removeItem(key)
+    } catch (_) {}
+    // Nếu là 401: chưa đăng nhập hoặc token hết hạn -> chuyển về login
+    // Nếu là 403: không có quyền hoặc token sai phạm -> cũng quay về login admin/user tương ứng
+    const target = admin ? '/auth/login-admin' : '/auth/login'
+    if (typeof window !== 'undefined') {
+      window.location.href = target
+    }
   }
   return Promise.reject(err)
 })

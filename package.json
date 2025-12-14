@@ -13,12 +13,16 @@
     "axios": "^1.4.0",
     "bootstrap": "^4.6.2",
     "bootstrap-vue": "^2.23.1",
+    "font-awesome": "^4.7.0",
     "jquery": "^3.7.1",
+    "toastr": "^2.1.4",
     "vue": "^2.7.14",
     "vue-router": "^3.6.5"
   },
   "devDependencies": {
     "@vue/cli-service": "^5.0.0",
+    "sass": "^1.96.0",
+    "sass-loader": "^16.0.6",
     "vue-template-compiler": "^2.7.14"
   }
 }

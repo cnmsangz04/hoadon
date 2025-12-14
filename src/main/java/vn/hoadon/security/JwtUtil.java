@@ -18,7 +18,8 @@ public class JwtUtil {
         Date exp = new Date(now.getTime() + expirationMs);
         return Jwts.builder()
                 .setSubject(username)
-                .setClaims(Map.of("userId", userId, "role", role))
+                .claim("userId", userId)
+                .claim("role", role)
                 .setIssuedAt(now)
                 .setExpiration(exp)
                 .signWith(key, SignatureAlgorithm.HS256)

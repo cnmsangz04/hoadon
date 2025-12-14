@@ -1,8 +1,8 @@
 package vn.hoadon.services;
 
-import vn.hoadon.model.User;
+import vn.hoadon.entity.UserEntity;
 import java.util.Optional;
 
 public interface UserService {
-    Optional<User> findByUsername(String username);
+    Optional<UserEntity> findByUsername(String username);
 }

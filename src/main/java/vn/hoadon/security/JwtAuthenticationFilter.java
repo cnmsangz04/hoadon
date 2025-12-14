@@ -9,7 +9,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.util.StringUtils;
 import java.io.IOException;
 import vn.hoadon.services.UserService;
-import vn.hoadon.model.User;
+import vn.hoadon.entity.UserEntity;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -34,9 +34,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null) {
             try {
                 String username = jwtUtil.getUsername(token);
-                Optional<User> uOpt = userService.findByUsername(username);
+                Optional<UserEntity> uOpt = userService.findByUsername(username);
                 if (uOpt.isPresent()) {
-                    User user = uOpt.get();
+                    UserEntity user = uOpt.get();
                     if (user.getStatus() != null && user.getStatus() == 1) {
                         Integer role = user.getRole();
                         List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
