@@ -215,7 +215,7 @@ export default {
 
   computed: {
     passwordsMatch() {
-      // Nếu không sửa mật khẩu (ví dụ edit và không chạm), cho qua
+      // Nếu không sửa mật khẩu cho qua
       if (!this.allowEditPassword && this.companyForm.id) return true;
       return this.companyForm.password === this.confirmPassword;
     }
