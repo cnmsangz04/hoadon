@@ -11,9 +11,7 @@ import vn.hoadon.dto.company.CompanyFilterDTO;
 
 import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class CompanyServiceImpl implements CompanyService {
@@ -23,7 +21,7 @@ public class CompanyServiceImpl implements CompanyService {
     public CompanyServiceImpl(CompanyRepository repo) {
         this.repo = repo;
     }
-
+  
     @Override
     public Page<CompanyEntity> list(CompanyFilterDTO filter, Pageable pageable) {
         Specification<CompanyEntity> spec = (root, query, cb) -> {
@@ -55,42 +53,37 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     public CompanyEntity saveOrUpdate(CompanyEntity company) {
         if (company.getId() == null) {
-            // Create new
-            company.setCreatedAt(LocalDateTime.now());
-            company.setUpdatedAt(LocalDateTime.now());
+
+            if (company.getPrefix() == null || company.getPrefix().isEmpty()) {
+                company.setPrefix(generatePrefix());
+            }
+
             return repo.save(company);
-        } else {
-            // Update existing: merge fields
-            Optional<CompanyEntity> opt = repo.findById(company.getId());
-            CompanyEntity existing = opt.orElseGet(CompanyEntity::new);
-
-            // preserve createdAt if exists
-            if (existing.getCreatedAt() != null) {
-                company.setCreatedAt(existing.getCreatedAt());
-            } else {
-                company.setCreatedAt(company.getCreatedAt());
-            }
-
-            // Merge field-by-field only when provided (non-null)
-            if (company.getDomain() != null) existing.setDomain(company.getDomain());
-            if (company.getDomainLookup() != null) existing.setDomainLookup(company.getDomainLookup());
-            if (company.getPrefix() != null) existing.setPrefix(company.getPrefix());
-            if (company.getTaxcode() != null) existing.setTaxcode(company.getTaxcode());
-            if (company.getEmail() != null) existing.setEmail(company.getEmail());
-            if (company.getHotline() != null) existing.setHotline(company.getHotline());
-            if (company.getStatus() != null) existing.setStatus(company.getStatus());
-            // Password: only update if provided (non-null and not empty)
-            if (company.getPassword() != null && !company.getPassword().isEmpty()) {
-                existing.setPassword(company.getPassword());
-            }
-
-            existing.setUpdatedAt(LocalDateTime.now());
-
-            // ensure id stays
-            existing.setId(company.getId());
-
-            return repo.save(existing);
         }
+
+        CompanyEntity existing = repo.findById(company.getId())
+                .orElseThrow(() -> new RuntimeException("Company not found"));
+
+        if (company.getDomain() != null) existing.setDomain(company.getDomain());
+        if (company.getDomainLookup() != null) existing.setDomainLookup(company.getDomainLookup());
+        if (company.getTaxcode() != null) existing.setTaxcode(company.getTaxcode());
+        if (company.getEmail() != null) existing.setEmail(company.getEmail());
+        if (company.getHotline() != null) existing.setHotline(company.getHotline());
+        if (company.getStatus() != null) existing.setStatus(company.getStatus());
+
+        if (company.getPassword() != null && !company.getPassword().isEmpty()) {
+            existing.setPassword(company.getPassword());
+        }
+
+        return repo.save(existing);
+    }
+    
+    private String generatePrefix() {
+        String prefix;
+        do {
+            prefix = "HD" + System.currentTimeMillis();
+        } while (repo.existsByPrefix(prefix));
+        return prefix;
     }
 
     @Override
