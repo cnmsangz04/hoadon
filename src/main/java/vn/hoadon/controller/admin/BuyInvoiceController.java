@@ -1,5 +1,6 @@
 package vn.hoadon.controller.admin;
 
+import vn.hoadon.controller.base.BaseController;
 import vn.hoadon.dto.buyinvoice.BuyInvoiceCreateDTO;
 import vn.hoadon.dto.buyinvoice.BuyInvoiceFilterDTO;
 import vn.hoadon.dto.common.IdRequestDTO;
@@ -15,7 +16,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("v1/administrator/buy-invoice")
-public class BuyInvoiceController {
+public class BuyInvoiceController extends BaseController {
 
     @Autowired
     private BuyInvoiceService service;
@@ -26,6 +27,8 @@ public class BuyInvoiceController {
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size
     ) {
+    	permission("buy-invoice-list");
+    	
         if (filter == null) filter = new BuyInvoiceFilterDTO();
         int pageNum = page != null ? page : 0;
         int pageSize = size != null ? size : 25;
