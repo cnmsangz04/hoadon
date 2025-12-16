@@ -3,51 +3,77 @@ package vn.hoadon.security;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import org.springframework.security.core.*;
-import org.springframework.security.authentication.*;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.util.StringUtils;
 import java.io.IOException;
 import vn.hoadon.services.UserService;
 import vn.hoadon.entity.UserEntity;
-import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
 import java.util.List;
+import java.util.Optional;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    @Autowired
-    private JwtUtil jwtUtil;
 
-    @Autowired
-    private UserService userService;
+    private final JwtUtil jwtUtil;
+    private final UserService userService;
+
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, UserService userService) {
+        this.jwtUtil = jwtUtil;
+        this.userService = userService;
+    }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain chain)
             throws ServletException, IOException {
-        String header = req.getHeader("Authorization");
-        String token = null;
-        if (StringUtils.hasText(header) && header.startsWith("Bearer ")) {
-            token = header.substring(7);
-        }
 
-        if (token != null) {
-            try {
+        try {
+            String header = request.getHeader("Authorization");
+
+            if (StringUtils.hasText(header) && header.startsWith("Bearer ")) {
+                String token = header.substring(7);
+
                 String username = jwtUtil.getUsername(token);
-                Optional<UserEntity> uOpt = userService.findByUsername(username);
-                if (uOpt.isPresent()) {
-                    UserEntity user = uOpt.get();
+                Optional<UserEntity> userOpt = userService.findByUsername(username);
+
+                if (userOpt.isPresent()) {
+                    UserEntity user = userOpt.get();
+
                     if (user.getStatus() != null && user.getStatus() == 1) {
-                        Integer role = user.getRole();
-                        List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
-                        Authentication auth = new UsernamePasswordAuthenticationToken(username, null, authorities);
-                        SecurityContextHolder.getContext().setAuthentication(auth);
+
+                        String roleName = mapRole(user.getRole());
+                        List<SimpleGrantedAuthority> authorities =
+                                List.of(new SimpleGrantedAuthority("ROLE_" + roleName));
+
+                        Authentication authentication =
+                                new UsernamePasswordAuthenticationToken(
+                                        user, // principal
+                                        null,
+                                        authorities
+                                );
+
+                        SecurityContextHolder.getContext()
+                                .setAuthentication(authentication);
                     }
                 }
-            } catch (Exception ex) {
-                // invalid token -> ignore (no auth)
             }
+        } catch (Exception e) {
+            SecurityContextHolder.clearContext();
         }
-        chain.doFilter(req, res);
+
+        chain.doFilter(request, response);
+    }
+
+    private String mapRole(Integer role) {
+        return switch (role) {
+            case 1 -> "ADMIN";
+            case 2 -> "USER";
+            default -> "USER";
+        };
     }
 }

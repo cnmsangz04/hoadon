@@ -1,6 +1,6 @@
 package vn.hoadon.services;
 
-import vn.hoadon.dto.buy_invoice.BuyInvoiceFilterDTO;
+import vn.hoadon.dto.buyinvoice.BuyInvoiceFilterDTO;
 import vn.hoadon.entity.BuyInvoiceEntity;
 import org.springframework.data.domain.*;
 
