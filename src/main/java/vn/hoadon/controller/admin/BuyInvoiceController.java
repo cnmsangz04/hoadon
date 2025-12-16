@@ -1,8 +1,8 @@
 package vn.hoadon.controller.admin;
 
-import vn.hoadon.dto.buyinvoice.BuyInvoiceDeleteDTO;
+import vn.hoadon.dto.buyinvoice.BuyInvoiceCreateDTO;
 import vn.hoadon.dto.buyinvoice.BuyInvoiceFilterDTO;
-import vn.hoadon.dto.buyinvoice.BuyInvoiceGetDTO;
+import vn.hoadon.dto.common.IdRequestDTO;
 import vn.hoadon.entity.BuyInvoiceEntity;
 import vn.hoadon.services.BuyInvoiceService;
 
@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 
-import java.util.Optional;
-
 @RestController
 @RequestMapping("v1/administrator/buy-invoice")
 public class BuyInvoiceController {
@@ -24,34 +22,37 @@ public class BuyInvoiceController {
 
     @PostMapping("/list")
     public ResponseEntity<Page<BuyInvoiceEntity>> list(
-            @RequestBody BuyInvoiceFilterDTO filter,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "25") int size
+            @RequestBody(required = false) BuyInvoiceFilterDTO filter,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size
     ) {
-        Pageable pageable =
-                PageRequest.of(page, size, Sort.by("createdAt").descending());
+        if (filter == null) filter = new BuyInvoiceFilterDTO();
+        int pageNum = page != null ? page : 0;
+        int pageSize = size != null ? size : 25;
+
+        Pageable pageable = PageRequest.of(pageNum, pageSize, Sort.by("createdAt").descending());
 
         return ResponseEntity.ok(service.list(filter, pageable));
     }
 
     @PostMapping("/get")
-    public ResponseEntity<BuyInvoiceEntity> get(
-            @RequestBody @Valid BuyInvoiceGetDTO request
-    ) {
+    public ResponseEntity<BuyInvoiceEntity> get(@RequestBody @Valid IdRequestDTO request) {
         return ResponseEntity.of(service.findById(request.getId()));
     }
 
+    // Sử dụng DTO để nhận dữ liệu
     @PostMapping("/create")
-    public ResponseEntity<BuyInvoiceEntity> create(
-            @RequestBody BuyInvoiceEntity entity
-    ) {
+    public ResponseEntity<BuyInvoiceEntity> create(@RequestBody BuyInvoiceCreateDTO dto) {
+        BuyInvoiceEntity entity = new BuyInvoiceEntity();
+        entity.setId(dto.getId());
+        entity.setCompanyId(dto.getCompanyId());
+        entity.setAmount(dto.getAmount());
+        entity.setStatus(dto.getStatus());
         return ResponseEntity.ok(service.saveOrUpdate(entity));
     }
 
     @PostMapping("/delete")
-    public ResponseEntity<Void> delete(
-            @RequestBody @Valid BuyInvoiceDeleteDTO request
-    ) {
+    public ResponseEntity<Void> delete(@RequestBody @Valid IdRequestDTO request) {
         service.delete(request.getId());
         return ResponseEntity.noContent().build();
     }

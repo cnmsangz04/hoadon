@@ -16,6 +16,12 @@ export default {
 			meta: { requiresAdmin: true, title: 'Danh sách công ty' }
 		},
 		{
+			path: 'buy-invoice/list',
+			name: 'admin-buy-invoice-list',
+			component: () => import('../../views/administrators/buy-invoice/list.vue'),
+			meta: { requiresAdmin: true, title: 'Mua hóa đơn' }
+		},
+		{
 			path: 'bank/list',
 			name: 'admin-bank-list',
 			component: () => import('../../views/administrators/bank/list.vue'),

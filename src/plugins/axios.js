@@ -1,21 +1,22 @@
 import axios from 'axios'
+import toastr from 'toastr'
+import 'toastr/toastr.scss'
 
-// Thay đổi baseURL theo backend của bạn
-// Sử dụng '/v1' mặc định để tận dụng proxy của devServer và tránh CORS khi phát triển
+// Base URL
 axios.defaults.baseURL = process.env.VUE_APP_API_BASE_URL || '/v1'
+axios.defaults.headers.post['Content-Type'] = 'application/json'
 
-// Helper: xác định ngữ cảnh admin dựa trên URL hiện tại
+// Helper xác định ngữ cảnh admin
 function isAdminContext() {
   try {
     const p = window.location?.pathname || ''
-    // nếu URL chứa "administrator" hoặc "admin" thì coi là ngữ cảnh admin
     return /administrator|admin/.test(p)
   } catch (e) {
     return false
   }
 }
 
-// Gắn token tự động từ localStorage
+// Request interceptor: gắn token
 axios.interceptors.request.use(config => {
   try {
     const admin = isAdminContext()
@@ -24,30 +25,31 @@ axios.interceptors.request.use(config => {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) {}
   return config
 }, err => Promise.reject(err))
 
-axios.interceptors.response.use(res => res, err => {
-  const status = err?.response?.status
-  if (status === 401 || status === 403) {
+// Response interceptor: xử lý lỗi
+axios.interceptors.response.use(
+  res => res,
+  err => {
+    const status = err?.response?.status
     const admin = isAdminContext()
     const key = admin ? 'token-admin' : 'token'
-    try {
-      localStorage.removeItem(key)
-    } catch (_) {}
-    // Nếu là 401: chưa đăng nhập hoặc token hết hạn -> chuyển về login
-    // Nếu là 403: không có quyền hoặc token sai phạm -> cũng quay về login admin/user tương ứng
-    const target = admin ? '/auth/login-admin' : '/auth/login'
-    if (typeof window !== 'undefined') {
-      window.location.href = target
+
+    if (status === 401 || status === 403) {
+      try { localStorage.removeItem(key) } catch (_) {}
+      const target = admin ? '/auth/login-admin' : '/auth/login'
+      if (typeof window !== 'undefined') window.location.href = target
+      return Promise.reject(err)
     }
+
+    // Hiển thị toastr lỗi tự động
+    const msg = err?.response?.data?.message || err.message || 'Lỗi API'
+    toastr.error(msg)
+    return Promise.reject(err)
   }
-  return Promise.reject(err)
-})
+)
 
 window.axios = axios
-
 export default axios
