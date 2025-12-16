@@ -1,8 +1,8 @@
 package vn.hoadon.controller.admin;
 
-import vn.hoadon.dto.buy_invoice.BuyInvoiceDeleteDTO;
-import vn.hoadon.dto.buy_invoice.BuyInvoiceFilterDTO;
-import vn.hoadon.dto.buy_invoice.BuyInvoiceGetDTO;
+import vn.hoadon.dto.buyinvoice.BuyInvoiceDeleteDTO;
+import vn.hoadon.dto.buyinvoice.BuyInvoiceFilterDTO;
+import vn.hoadon.dto.buyinvoice.BuyInvoiceGetDTO;
 import vn.hoadon.entity.BuyInvoiceEntity;
 import vn.hoadon.services.BuyInvoiceService;
 
