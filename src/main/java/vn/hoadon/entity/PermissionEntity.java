@@ -1,10 +1,7 @@
 package vn.hoadon.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "permissions")
@@ -14,39 +11,49 @@ public class PermissionEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true, length = 255)
     private String name;
+
+    @Column(name = "display_name", length = 255)
     private String displayName;
-    private Integer level;
 
-    public Long getId() {
-        return id;
-    }
+    @Column(name = "level")
+    private Integer level = 0;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category", nullable = false)
+    private PermissionCategoryEntity category;
 
-    public String getName() {
-        return name;
-    }
+    @Column(name = "description", length = 255)
+    private String description;
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
-    public String getDisplayName() {
-        return displayName;
-    }
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
-    public void setDisplayName(String displayName) {
-        this.displayName = displayName;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public Integer getLevel() {
-        return level;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public void setLevel(Integer level) {
-        this.level = level;
-    }
+    public String getDisplayName() { return displayName; }
+    public void setDisplayName(String displayName) { this.displayName = displayName; }
+
+    public Integer getLevel() { return level; }
+    public void setLevel(Integer level) { this.level = level; }
+
+    public PermissionCategoryEntity getCategory() { return category; }
+    public void setCategory(PermissionCategoryEntity category) { this.category = category; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }
