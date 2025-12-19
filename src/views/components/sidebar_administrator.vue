@@ -71,6 +71,15 @@ export default {
 	  	{ title: 'Mua hóa đơn', icon: 'fas fa-university', to: '/administrator/buy-invoice/list' },
         { title: 'Ngân hàng', icon: 'fas fa-university', to: '/administrator/bank/list' },
 		{ title: 'Cơ quan thuế', icon: 'fas fa-university', to: '/administrator/tax-authorities/list' },
+		{
+          title: 'Phân quyền',
+          icon: 'far fa-file-alt',
+          children: [
+            { title: 'Quyền', to: '/administrator/access-control/permissions/list' },
+            { title: 'Nhóm quyền', to: '/administrator/access-control/permission-categories/list' },
+            { title: 'Vai trò', to: '/administrator/access-control/roles/list' },
+          ],
+        },
       ]
     };
   },

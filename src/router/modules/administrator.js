@@ -32,6 +32,32 @@ export default {
 			name: 'admin-tax-authorities-list',
 			component: () => import('../../views/administrators/tax-authorities/list.vue'),
 			meta: { requiresAdmin: true, title: 'Cơ quan thuế' }
+		},
+		{
+			path: 'access-control',
+			name: 'admin-access-control',
+			component: () => import('../../views/administrators/access-control/index.vue'),
+			meta: { requiresAdmin: true, title: 'Quản lý phân quyền' },
+			children: [
+				{
+					path: 'permissions/list',
+					name: 'admin-permissions-list',
+					component: () => import('../../views/administrators/access-control/permissions/list.vue'),
+					meta: { requiresAdmin: true, title: 'Quyền' }
+				},
+				{
+					path: 'permission-categories/list',
+					name: 'admin-permission-categories-list',
+					component: () => import('../../views/administrators/access-control/permission-categories/list.vue'),
+					meta: { requiresAdmin: true, title: 'Nhóm quyền' }
+				},
+				{
+					path: 'roles/list',
+					name: 'admin-roles-list',
+					component: () => import('../../views/administrators/access-control/roles/list.vue'),
+					meta: { requiresAdmin: true, title: 'Vai trò' }
+				}
+			]
 		}
 	]
 }

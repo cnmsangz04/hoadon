@@ -1,8 +1,18 @@
 package vn.hoadon.services;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import vn.hoadon.dto.permission.PermissionCreateDTO;
+import vn.hoadon.entity.PermissionEntity;
 import vn.hoadon.entity.UserEntity;
 
+import java.util.Optional;
+
 public interface PermissionService {
+    Page<PermissionEntity> list(String keyword, Pageable pageable);
+    Optional<PermissionEntity> findById(Long id);
+    PermissionEntity saveOrUpdate(PermissionCreateDTO dto);
+    void delete(Long id);
 
     /**
      * @param user        user hiện tại
