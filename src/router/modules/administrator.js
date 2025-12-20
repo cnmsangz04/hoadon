@@ -6,8 +6,7 @@ export default {
 		{
 			path: '',
 			name: 'admin',
-			component: () => import('../../views/administrators/index.vue'),
-			meta: { requiresAdmin: true, title: 'Trang quản trị' }
+			redirect: 'company/list'
 		},
 		{
 			path: 'company/list',
