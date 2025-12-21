@@ -46,9 +46,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain chain)
             throws ServletException, IOException {
 
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
         String header = request.getHeader("Authorization");
 
-        // Public endpoint
         if (!StringUtils.hasText(header)) {
             chain.doFilter(request, response);
             return;
@@ -90,20 +91,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            log.info("Authentication success: user={}, authorities={}, role={}",
-                    username, authorities, mapRole(user.getRole()));
-
         } catch (ExpiredJwtException e) {
             SecurityContextHolder.clearContext();
             unauthorized(response, "TOKEN_EXPIRED", "JWT token has expired");
             return;
+
         } catch (JwtException e) {
             SecurityContextHolder.clearContext();
             unauthorized(response, "INVALID_TOKEN", "JWT token is invalid");
             return;
+
+        } catch (Exception e) {
+            SecurityContextHolder.clearContext();
+            unauthorized(response, "AUTH_ERROR", "Authentication error");
+            return;
         }
 
-        // Important: let controller exceptions propagate
         chain.doFilter(request, response);
     }
 
@@ -116,7 +119,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         switch (role) {
-            case 0 -> { // SUPER ADMIN
+            case 0 -> {
                 list.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
                 list.add(new SimpleGrantedAuthority("ROLE_USER"));
             }
