@@ -1,4 +1,4 @@
-package vn.hoadon.dto;
+package vn.hoadon.dto.request;
 
 public class AuthRequest {
     private String username;

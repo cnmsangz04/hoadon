@@ -6,8 +6,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import vn.hoadon.services.UserService;
 import vn.hoadon.model.User;
-import vn.hoadon.dto.AuthRequest;
-import vn.hoadon.dto.AuthResponse;
+import vn.hoadon.dto.request.AuthRequest;
+import vn.hoadon.dto.response.AuthResponse;
 import vn.hoadon.security.JwtUtil;
 
 import java.util.Optional;

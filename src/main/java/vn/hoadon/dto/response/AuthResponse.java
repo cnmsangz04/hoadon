@@ -1,4 +1,4 @@
-package vn.hoadon.dto;
+package vn.hoadon.dto.response;
 
 public class AuthResponse {
     private final String token;
