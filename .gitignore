@@ -32,4 +32,7 @@ build/
 ### VS Code ###
 .vscode/
 node_modules/
+logs/
+*.log
+.env
 **/node_modules/
