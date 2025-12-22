@@ -86,7 +86,6 @@
       </template>
     </b-table>
 
-    <!-- PAGINATION -->
     <b-pagination
       v-model="list.current_page"
       :per-page="list.per_page"
