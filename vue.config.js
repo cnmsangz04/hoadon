@@ -28,6 +28,14 @@ module.exports = {
         secure: false,
         ws: false,
         logLevel: 'warn'
+      },
+      // Proxy static uploads (avatars, etc.) to backend to avoid CORS in dev
+      '/uploads': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+        secure: false,
+        ws: false,
+        logLevel: 'warn'
       }
     }
   },

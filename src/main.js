@@ -10,6 +10,10 @@ import 'bootstrap-vue/dist/bootstrap-vue.css'
 import toastr from 'toastr'
 import 'toastr/toastr.scss'
 
+import 'vue-advanced-cropper/dist/style.css'
+
+import i18n from './i18n'
+
 Vue.prototype.$toastr = toastr
 
 toastr.options = {
@@ -26,5 +30,6 @@ Vue.config.productionTip = false
 
 new Vue({
   router,
+  i18n,
   render: h => h(App)
 }).$mount('#app')

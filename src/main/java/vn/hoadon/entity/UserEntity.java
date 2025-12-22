@@ -22,6 +22,10 @@ public class UserEntity {
     @Column(nullable = false, length = 32)
     private String username;
 
+    // Add display name for the user
+    @Column(name = "name", length = 255)
+    private String name;
+
     @Column(length = 255)
     private String email;
 
@@ -36,6 +40,10 @@ public class UserEntity {
 
     @Column(nullable = false)
     private Integer role;
+
+    // Phone number for the user
+    @Column(name = "phone", length = 32)
+    private String phone;
 
     // 1 = active, 0 = inactive
     @Column(nullable = false)
@@ -109,6 +117,14 @@ public class UserEntity {
         this.username = username;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String getEmail() {
         return email;
     }
@@ -147,6 +163,14 @@ public class UserEntity {
 
     public void setRole(Integer role) {
         this.role = role;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
     public Byte getStatus() {
