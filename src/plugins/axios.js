@@ -1,45 +1,73 @@
 import axios from 'axios'
+import toastr from 'toastr'
+import 'toastr/build/toastr.min.css'
 
-// Thay đổi baseURL theo backend của bạn
-axios.defaults.baseURL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8080/v1'
+axios.defaults.baseURL = process.env.VUE_APP_API_BASE_URL || '/v1'
 
-// Helper: xác định ngữ cảnh admin dựa trên URL hiện tại
 function isAdminContext() {
   try {
     const p = window.location?.pathname || ''
-    // nếu URL chứa "administrator" hoặc "admin" thì coi là ngữ cảnh admin
     return /administrator|admin/.test(p)
-  } catch (e) {
+  } catch {
     return false
   }
 }
 
-// Gắn token tự động từ localStorage
 axios.interceptors.request.use(config => {
   try {
     const admin = isAdminContext()
-    const key = admin ? 'token-admin' : 'token'
-    const token = localStorage.getItem(key)
+    const primaryKey = admin ? 'token-admin' : 'token'
+    let token = localStorage.getItem(primaryKey)
+
+    // Fallback: if primary token missing, try the alternate token key
+    if (!token) {
+      const altKey = admin ? 'token' : 'token-admin'
+      token = localStorage.getItem(altKey)
+    }
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
-  } catch (e) {
-    // ignore
-  }
+
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']
+    }
+
+  } catch {}
   return config
 }, err => Promise.reject(err))
 
-axios.interceptors.response.use(res => res, err => {
-  if (err.response && err.response.status === 401) {
+axios.interceptors.response.use(
+  res => res,
+  err => {
+    const status = err?.response?.status
     const admin = isAdminContext()
     const key = admin ? 'token-admin' : 'token'
-    localStorage.removeItem(key)
-    // chuyển hướng tới trang đăng nhập tương ứng
-    window.location.href = admin ? '/auth/login-admin' : '/auth/login'
+
+    const message =
+      err?.response?.data?.message ||
+      err?.response?.data?.error ||
+      err.message ||
+      'Lỗi hệ thống'
+
+    if (status === 401) {
+      toastr.warning(message || 'Phiên đăng nhập đã hết hạn')
+      setTimeout(() => {
+        localStorage.removeItem(key)
+        window.location.href = admin ? '/auth/login-admin' : '/auth/login'
+      }, 1200)
+      return Promise.reject(err)
+    }
+
+    if (status === 403) {
+      toastr.error(message || 'Bạn không có quyền thao tác')
+      return Promise.reject(err)
+    }
+
+    toastr.error(message)
+    return Promise.reject(err)
   }
-  return Promise.reject(err)
-})
+)
 
 window.axios = axios
-
 export default axios

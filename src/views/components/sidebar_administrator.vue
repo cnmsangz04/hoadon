@@ -4,44 +4,29 @@
       <!-- Logo -->
       <div class="brand">
         <router-link class="brand-link" to="/">
-          <img
-            class="logo"
-            :src="require('@/assets/images/logo/logo-hoadon.png')"
-            alt="logo"
-          />
+          <img class="logo" :src="require('@/assets/images/logo/logo-hoadon.png')" alt="logo" />
         </router-link>
       </div>
 
       <!-- Menu -->
       <nav class="menu">
         <ul>
-          <li
-            v-for="(item, index) in menu"
-            :key="index"
-            :class="{
-              'has-children': !!item.children,
-              open: openIndex === index,
-              active: isActive(item),
-            }"
-          >
+          <li v-for="(item, index) in menu" :key="index" :class="{
+            'has-children': !!item.children,
+            open: openIndex === index,
+            active: isActive(item),
+          }">
             <!-- Menu có con -->
             <template v-if="item.children">
               <a href="#" class="menu-item" @click.prevent="toggle(index)">
                 <i :class="item.icon"></i>
                 <span class="label">{{ item.title }}</span>
-                <i
-                  class="chev fas fa-chevron-down"
-                  :class="{ rotated: openIndex === index }"
-                ></i>
+                <i class="chev fas fa-chevron-down" :class="{ rotated: openIndex === index }"></i>
               </a>
 
               <transition name="slide">
                 <ul class="sub" v-show="openIndex === index">
-                  <li
-                    v-for="(c, ci) in item.children"
-                    :key="ci"
-                    :class="{ active: isActive(c) }"
-                  >
+                  <li v-for="(c, ci) in item.children" :key="ci" :class="{ active: isActive(c) }">
                     <router-link :to="c.to">{{ c.title }}</router-link>
                   </li>
                 </ul>
@@ -72,18 +57,21 @@ export default {
     return {
       openIndex: null,
       menu: [
-        { title: "Trang chủ", icon: "fas fa-home", to: "/" },
+        { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
+        { title: 'Công ty', icon: 'fas fa-university', to: '/administrator/company/list' },
+        { title: 'Mua hóa đơn', icon: 'fas fa-university', to: '/administrator/buy-invoice/list' },
+        { title: 'Ngân hàng', icon: 'fas fa-university', to: '/administrator/bank/list' },
+        { title: 'Cơ quan thuế', icon: 'fas fa-university', to: '/administrator/tax-authorities/list' },
         {
-          title: "Ngân hàng",
-          icon: "fas fa-university",
-          to: "/administrator/bank/list",
+          title: 'Phân quyền',
+          icon: 'far fa-file-alt',
+          children: [
+            { title: 'Quyền', to: '/administrator/access-control/permissions/list' },
+            { title: 'Nhóm quyền', to: '/administrator/access-control/permission-categories/list' },
+            { title: 'Vai trò', to: '/administrator/access-control/roles/list' },
+          ],
         },
-        {
-          title: "Cơ quan thuế",
-          icon: "fas fa-building",
-          to: "/administrator/tax-authority/list",
-        },
-      ],
+      ]
     };
   },
 
@@ -137,24 +125,29 @@ export default {
   display: flex;
   flex-direction: column;
 }
+
 .brand {
   text-align: center;
   margin-bottom: 12px;
 }
+
 .logo {
   max-width: 160px;
   margin: auto;
   display: block;
 }
+
 .menu {
   flex: 1;
   overflow: auto;
 }
+
 .menu ul {
   padding: 0;
   margin: 0;
   list-style: none;
 }
+
 .menu-item {
   display: flex;
   align-items: center;
@@ -164,15 +157,18 @@ export default {
   border-radius: 6px;
   text-decoration: none;
 }
+
 .menu-item:hover {
   background: rgba(255, 255, 255, 0.03);
   color: #fff;
 }
+
 .menu-item i {
   width: 18px;
   text-align: center;
 }
-.menu li.active > .menu-item {
+
+.menu li.active>.menu-item {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
 }
@@ -181,6 +177,7 @@ export default {
   margin-left: auto;
   transition: 0.25s;
 }
+
 .rotated {
   transform: rotate(-180deg);
 }
@@ -189,13 +186,15 @@ export default {
   padding-left: 10px;
   margin-top: 6px;
 }
+
 .sub li a {
   padding: 7px 12px;
   display: block;
   border-radius: 5px;
   color: #cfe6ff;
 }
-.sub li.active > a {
+
+.sub li.active>a {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
@@ -211,6 +210,7 @@ export default {
 .slide-leave-active {
   transition: 200ms;
 }
+
 .slide-enter,
 .slide-leave-to {
   opacity: 0;

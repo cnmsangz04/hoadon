@@ -83,6 +83,7 @@ export default {
         },
         { title: 'Báo cáo', icon: 'fas fa-file-signature', to: '/reports' },
         { title: 'Danh mục', icon: 'fas fa-list', to: '/categories' },
+        { title: 'Cài đặt', icon: 'fas fa-cog', to: '/setting' },
       ],
     };
   },

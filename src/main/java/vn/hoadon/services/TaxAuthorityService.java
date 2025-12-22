@@ -5,8 +5,16 @@ import org.springframework.data.domain.Pageable;
 
 import vn.hoadon.dto.request.TaxAuthorityRequest;
 import vn.hoadon.dto.response.TaxAuthorityResponse;
+import vn.hoadon.entity.TaxAuthorityEntity;
+  import java.util.List;
+import java.util.Optional;
 
 public interface TaxAuthorityService {
+  
+     List<TaxAuthorityEntity> listCities();
+    List<TaxAuthorityEntity> listByParent(Long parentId);
+    List<TaxAuthorityEntity> listByParentActive(Long parentId);
+    Optional<TaxAuthorityEntity> findByCode(Integer code);
     // Tìm kiếm phân trang + lọc theo từ khóa
     Page<TaxAuthorityResponse> search(String keyword, Pageable pageable);
 

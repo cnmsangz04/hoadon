@@ -9,10 +9,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.hoadon.dto.request.TaxAuthorityRequest;
 import vn.hoadon.dto.response.TaxAuthorityResponse;
-import vn.hoadon.model.TaxAuthority;
+import vn.hoadon.entity.TaxAuthorityEntity;
 import vn.hoadon.repositories.TaxAuthorityRepository;
 import vn.hoadon.services.TaxAuthorityService;
 import vn.hoadon.utils.SearchCriteria; // Class tiện ích search ở câu trả lời trước
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional // Đảm bảo tính toàn vẹn dữ liệu
@@ -20,15 +22,37 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
 
     @Autowired
     private TaxAuthorityRepository taxRepo;
+    public TaxAuthorityServiceImpl(TaxAuthorityRepository repo) {
+        this.taxRepo = repo;
+    }
 
+    @Override
+    public List<TaxAuthorityEntity> listCities() {
+        return taxRepo.findByParentIdAndStatus(0L, 1);
+    }
+
+    @Override
+    public List<TaxAuthorityEntity> listByParent(Long parentId) {
+        return taxRepo.findByParentId(parentId);
+    }
+
+    @Override
+    public List<TaxAuthorityEntity> listByParentActive(Long parentId) {
+        return taxRepo.findByParentIdAndStatus(parentId, 1);
+    }
+
+    @Override
+    public Optional<TaxAuthorityEntity> findByCode(Integer code) {
+        return taxRepo.findByCode(code);
+    }
     @Override
     @Transactional(readOnly = true) // Tối ưu hiệu năng cho việc đọc
     public Page<TaxAuthorityResponse> search(String keyword, Pageable pageable) {
         // 1. Tạo điều kiện tìm kiếm (tìm theo mã HOẶC tên HOẶC tỉnh)
-        Specification<TaxAuthority> spec = SearchCriteria.hasKeyword(keyword, "code", "name");
+        Specification<TaxAuthorityEntity> spec = SearchCriteria.hasKeyword(keyword, "code", "name");
 
         // 2. Query DB (Repo đã được tối ưu fetch parent)
-        Page<TaxAuthority> entities = taxRepo.findAll(spec, pageable);
+        Page<TaxAuthorityEntity> entities = taxRepo.findAll(spec, pageable);
 
         // 3. Convert Entity -> DTO
         return entities.map(this::mapToResponse);
@@ -36,7 +60,7 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
 
     @Override
     public TaxAuthorityResponse findById(Long id) {
-        TaxAuthority entity = taxRepo.findById(id)
+        TaxAuthorityEntity entity = taxRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy cơ quan thuế với ID: " + id));
         return mapToResponse(entity);
     }
@@ -46,9 +70,9 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
         // Check trùng mã nếu cần
         // if (taxRepo.existsByCode(req.getCode())) throw ...
 
-        TaxAuthority entity = new TaxAuthority();
+        TaxAuthorityEntity entity = new TaxAuthorityEntity();
         if (entity.getParent() != null && entity.getParent().id != null) {
-            TaxAuthority parent = taxRepo.findById(entity.getParent().id)
+            TaxAuthorityEntity parent = taxRepo.findById(entity.getParent().id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy CQT cha"));
             entity.setParent(parent);
         } else {
@@ -56,16 +80,16 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
         }
         mapRequestToEntity(req, entity);
         
-        TaxAuthority saved = taxRepo.save(entity);
+        TaxAuthorityEntity saved = taxRepo.save(entity);
         return mapToResponse(saved);
     }
 
     @Override
     public TaxAuthorityResponse update(Long id, TaxAuthorityRequest req) {
-        TaxAuthority entity = taxRepo.findById(id)
+        TaxAuthorityEntity entity = taxRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy CQT để cập nhật"));
         if (entity.getParent() != null && entity.getParent().id != null) {
-            TaxAuthority parent = taxRepo.findById(entity.getParent().id)
+            TaxAuthorityEntity parent = taxRepo.findById(entity.getParent().id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy CQT cha"));
             entity.setParent(parent);
         } else {
@@ -73,7 +97,7 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
         }
         mapRequestToEntity(req, entity);
         
-        TaxAuthority saved = taxRepo.save(entity);
+        TaxAuthorityEntity saved = taxRepo.save(entity);
         return mapToResponse(saved);
     }
 
@@ -88,7 +112,7 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
 
     // --- Helper Methods: Mapping ---
 
-    private TaxAuthorityResponse mapToResponse(TaxAuthority entity) {
+    private TaxAuthorityResponse mapToResponse(TaxAuthorityEntity entity) {
         TaxAuthorityResponse dto = new TaxAuthorityResponse();
         dto.setId(entity.getId());
         dto.setCode(entity.getCode());
@@ -105,7 +129,7 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
         return dto;
     }
 
-    private void mapRequestToEntity(TaxAuthorityRequest req, TaxAuthority entity) {
+    private void mapRequestToEntity(TaxAuthorityRequest req, TaxAuthorityEntity entity) {
         entity.setCode(req.getCode());
         entity.setName(req.getName());
         entity.setProvinceName(req.getProvinceName());
@@ -114,7 +138,7 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
         // Xử lý gán cha
         if (req.getParentId() != null) {
             // Nếu có gửi parentId lên -> tìm cha gán vào
-            TaxAuthority parent = taxRepo.findById(req.getParentId())
+            TaxAuthorityEntity parent = taxRepo.findById(req.getParentId())
                     .orElseThrow(() -> new RuntimeException("Cơ quan quản lý không tồn tại"));
             entity.setParent(parent);
         } else {
