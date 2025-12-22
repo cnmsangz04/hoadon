@@ -16,8 +16,14 @@ function isAdminContext() {
 axios.interceptors.request.use(config => {
   try {
     const admin = isAdminContext()
-    const key = admin ? 'token-admin' : 'token'
-    const token = localStorage.getItem(key)
+    const primaryKey = admin ? 'token-admin' : 'token'
+    let token = localStorage.getItem(primaryKey)
+
+    // Fallback: if primary token missing, try the alternate token key
+    if (!token) {
+      const altKey = admin ? 'token' : 'token-admin'
+      token = localStorage.getItem(altKey)
+    }
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`

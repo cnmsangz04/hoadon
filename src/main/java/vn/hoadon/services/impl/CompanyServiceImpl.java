@@ -10,7 +10,6 @@ import vn.hoadon.services.CompanyService;
 import vn.hoadon.dto.company.CompanyFilterDTO;
 
 import jakarta.persistence.criteria.Predicate;
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -28,14 +27,15 @@ public class CompanyServiceImpl implements CompanyService {
             List<Predicate> predicates = new ArrayList<>();
 
             if (filter != null) {
-                if (filter.getStatus() != null && !filter.getStatus().isEmpty()) {
+                if (filter.getStatus() != null) {
                     predicates.add(cb.equal(root.get("status"), filter.getStatus()));
                 }
 
                 if (filter.getKeyword() != null && !filter.getKeyword().isEmpty()) {
+                    String like = "%" + filter.getKeyword() + "%";
                     predicates.add(cb.or(
-                        cb.like(root.get("domain"), "%" + filter.getKeyword() + "%"),
-                        cb.like(root.get("taxcode"), "%" + filter.getKeyword() + "%")
+                        cb.like(root.get("domain"), like),
+                        cb.like(root.get("taxcode"), like)
                     ));
                 }
 
@@ -53,11 +53,9 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     public CompanyEntity saveOrUpdate(CompanyEntity company) {
         if (company.getId() == null) {
-
             if (company.getPrefix() == null || company.getPrefix().isEmpty()) {
                 company.setPrefix(generatePrefix());
             }
-
             return repo.save(company);
         }
 

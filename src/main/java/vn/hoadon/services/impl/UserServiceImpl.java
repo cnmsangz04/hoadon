@@ -12,6 +12,7 @@ import vn.hoadon.repositories.UserRepository;
 import vn.hoadon.services.UserService;
 import vn.hoadon.dto.UserDto;
 import vn.hoadon.entity.UserEntity;
+import vn.hoadon.util.UploadPath;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -24,16 +25,13 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserRepository userRepository;
 
-    private static final String UPLOAD_DIR = "uploads/avatars";
-
     private static final long MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
 
     @PostConstruct
     public void initUploadDir() {
         try {
-            Path path = Paths.get(UPLOAD_DIR);
-            Files.createDirectories(path);
-            System.out.println("UPLOAD DIR READY: " + path.toAbsolutePath());
+            // Ensure base uploads dir exists
+            UploadPath.baseDir();
         } catch (IOException e) {
             throw new RuntimeException("Cannot create upload directory", e);
         }
@@ -117,7 +115,8 @@ public class UserServiceImpl implements UserService {
         UserEntity user = getCurrentUserEntity();
 
         try {
-            Path uploadPath = Paths.get(UPLOAD_DIR);
+            Long companyId = user.getCompanyId();
+            Path uploadPath = UploadPath.resolveCompanyTypeDir(companyId, "avatars");
 
             String ext = Optional.ofNullable(avatar.getOriginalFilename())
                     .filter(f -> f.contains("."))
@@ -133,7 +132,7 @@ public class UserServiceImpl implements UserService {
                 StandardOpenOption.CREATE_NEW
             );
 
-            user.setAvatar("/uploads/avatars/" + fileName);
+            user.setAvatar(UploadPath.publicUrl(companyId, "avatars", fileName));
 
             return toDto(userRepository.save(user));
 

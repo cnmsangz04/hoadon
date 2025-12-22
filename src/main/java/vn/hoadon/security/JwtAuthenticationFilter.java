@@ -28,8 +28,7 @@ import java.util.Optional;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private static final Logger log =
-            LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtUtil jwtUtil;
     private final UserService userService;
@@ -50,59 +49,71 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String method = request.getMethod();
         String header = request.getHeader("Authorization");
 
+        log.debug("Request URI: {}, Method: {}, Authorization Header Present: {}", uri, method, StringUtils.hasText(header));
+
         if (!StringUtils.hasText(header)) {
+            log.debug("No Authorization header found, skipping JWT filter");
             chain.doFilter(request, response);
             return;
         }
 
         if (!header.startsWith("Bearer ")) {
+            log.warn("Invalid Authorization header format: {}", header);
             unauthorized(response, "INVALID_HEADER",
                     "Authorization header must start with Bearer");
             return;
         }
 
         String token = header.substring(7);
+        log.debug("Extracted JWT token: {}", token);
 
         try {
             String username = jwtUtil.getUsername(token);
+            log.debug("Decoded username from JWT: {}", username);
 
             Optional<UserEntity> userOpt = userService.findByUsername(username);
             if (userOpt.isEmpty()) {
+                log.warn("User not found: {}", username);
                 unauthorized(response, "USER_NOT_FOUND", "User does not exist");
                 return;
             }
 
             UserEntity user = userOpt.get();
+            log.debug("User found: id={}, username={}, status={}", user.getId(), user.getUsername(), user.getStatus());
 
             if (user.getStatus() == null || user.getStatus() != 1) {
+                log.warn("User is disabled or inactive: {}", username);
                 unauthorized(response, "USER_DISABLED", "User is inactive or disabled");
                 return;
             }
 
-            List<SimpleGrantedAuthority> authorities =
-                    mapAuthorities(user.getRole());
+            List<SimpleGrantedAuthority> authorities = mapAuthorities(user.getRole());
+            log.debug("Mapped authorities for user {}: {}", username, authorities);
 
-            Authentication authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            user,
-                            null,
-                            authorities
-                    );
+            Authentication authentication = new UsernamePasswordAuthenticationToken(
+                    user,
+                    null,
+                    authorities
+            );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            log.debug("User {} authenticated successfully", username);
 
         } catch (ExpiredJwtException e) {
             SecurityContextHolder.clearContext();
+            log.warn("JWT token expired: {}", e.getMessage());
             unauthorized(response, "TOKEN_EXPIRED", "JWT token has expired");
             return;
 
         } catch (JwtException e) {
             SecurityContextHolder.clearContext();
+            log.warn("Invalid JWT token: {}", e.getMessage());
             unauthorized(response, "INVALID_TOKEN", "JWT token is invalid");
             return;
 
         } catch (Exception e) {
             SecurityContextHolder.clearContext();
+            log.error("Unexpected authentication error", e);
             unauthorized(response, "AUTH_ERROR", "Authentication error");
             return;
         }
@@ -135,6 +146,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                               String error,
                               String message) throws IOException {
 
+        log.debug("Responding unauthorized: error={}, message={}", error, message);
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");

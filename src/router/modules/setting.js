@@ -12,6 +12,12 @@ export default {
       name: 'setting-account',
       component: () => import('../../views/settings/account/list.vue'),
       meta: { requiresUser: true, title: 'Tài khoản' }
-    }
+    },
+	{
+	  path: 'profile/list',
+	  name: 'setting-profile',
+	  component: () => import('../../views/settings/profile/list.vue'),
+	  meta: { requiresUser: true, title: 'Hồ sơ' }
+	}
   ]
 }

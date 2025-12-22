@@ -67,7 +67,8 @@ export default {
       openIndex: null,
       menu: [
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
-	  	{ title: 'Tài khản', icon: 'fas fa-user', to: '/setting/account/list' },
+	  	{ title: 'Tài khoản', icon: 'fas fa-user', to: '/setting/account/list' },
+	  	{ title: 'Hồ sơ', icon: 'fas fa-user', to: '/setting/profile/list' },
       ]
     };
   },
