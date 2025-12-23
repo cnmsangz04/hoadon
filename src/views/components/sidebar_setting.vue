@@ -69,6 +69,7 @@ export default {
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
 	  	{ title: 'Tài khoản', icon: 'fas fa-user', to: '/setting/account/list' },
 	  	{ title: 'Hồ sơ', icon: 'fas fa-user', to: '/setting/profile/list' },
+	  	{ title: 'Thành viên', icon: 'fas fa-user', to: '/setting/member/list' },
       ]
     };
   },

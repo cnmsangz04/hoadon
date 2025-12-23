@@ -80,6 +80,7 @@ public class PermissionServiceImpl implements PermissionService {
         entity.setDisplayName(dto.getDisplayName());
         entity.setLevel(dto.getLevel() != null ? dto.getLevel() : 0);
         entity.setDescription(dto.getDescription());
+        if (dto.getStatus() != null) entity.setStatus(dto.getStatus());
 
         if (dto.getCategory() == null) {
             throw new IllegalArgumentException("category is required");
@@ -101,7 +102,21 @@ public class PermissionServiceImpl implements PermissionService {
 
     @Override
     public void delete(Long id) {
-        permissionRepository.deleteById(id);
+        // Soft delete: mark hidden instead of physical delete
+        permissionRepository.findById(id).ifPresent(e -> {
+            e.setStatus((byte)0);
+            e.setUpdatedAt(LocalDateTime.now());
+            permissionRepository.save(e);
+        });
+    }
+
+    @Override
+    public void updateStatus(Long id, byte status) {
+        permissionRepository.findById(id).ifPresent(e -> {
+            e.setStatus(status);
+            e.setUpdatedAt(LocalDateTime.now());
+            permissionRepository.save(e);
+        });
     }
 
     @Override

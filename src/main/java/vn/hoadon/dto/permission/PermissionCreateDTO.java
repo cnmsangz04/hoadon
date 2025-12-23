@@ -10,6 +10,7 @@ public class PermissionCreateDTO {
     private Integer level;
     private String displayName;
     private String description;
+    private Byte status; // 0: hidden, 1: visible
 
     // Explicit getters/setters to ensure availability even if Lombok is not processed
     public Long getId() { return id; }
@@ -29,4 +30,7 @@ public class PermissionCreateDTO {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public Byte getStatus() { return status; }
+    public void setStatus(Byte status) { this.status = status; }
 }

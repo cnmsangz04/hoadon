@@ -5,11 +5,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.hoadon.entity.PermissionCategoryEntity;
 import vn.hoadon.repositories.PermissionCategoryRepository;
 import vn.hoadon.services.PermissionCategoryService;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -48,5 +50,22 @@ public class PermissionCategoryServiceImpl implements PermissionCategoryService 
     @Override
     public void delete(Long id) {
         repository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void reorder(List<Long> orderedIds) {
+        if (orderedIds == null) return;
+        int idx = 0;
+        for (Long id : orderedIds) {
+            if (id == null) continue;
+            Optional<PermissionCategoryEntity> opt = repository.findById(id);
+            if (opt.isPresent()) {
+                PermissionCategoryEntity e = opt.get();
+                e.setOrderIndex(idx++);
+                e.setUpdatedAt(LocalDateTime.now());
+                repository.save(e);
+            }
+        }
     }
 }

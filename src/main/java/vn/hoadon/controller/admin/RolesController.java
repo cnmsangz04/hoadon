@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import vn.hoadon.dto.role.RoleCloneDTO;
 import vn.hoadon.entity.RoleEntity;
 import vn.hoadon.services.RoleService;
 
@@ -46,5 +47,11 @@ public class RolesController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/clone")
+    public ResponseEntity<RoleEntity> cloneRole(@PathVariable Long id, @RequestBody RoleCloneDTO dto) {
+        RoleEntity cloned = service.cloneRole(id, dto.getName(), dto.getDisplayName());
+        return ResponseEntity.ok(cloned);
     }
 }

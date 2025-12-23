@@ -11,4 +11,6 @@ public interface RoleService {
     Optional<RoleEntity> findById(Long id);
     RoleEntity saveOrUpdate(RoleEntity entity);
     void delete(Long id);
+    // Clone a role with a new name/displayName and copy its permissions
+    RoleEntity cloneRole(Long id, String name, String displayName);
 }

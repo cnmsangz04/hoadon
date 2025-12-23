@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import vn.hoadon.entity.PermissionCategoryEntity;
 import vn.hoadon.services.PermissionCategoryService;
 
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -25,7 +26,10 @@ public class PermissionCategoriesController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by(
+                Sort.Order.asc("orderIndex"),
+                Sort.Order.desc("createdAt")
+        ));
         Page<PermissionCategoryEntity> data = service.list(keyword, pageable);
         return ResponseEntity.ok(data);
     }
@@ -46,5 +50,11 @@ public class PermissionCategoriesController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/reorder")
+    public ResponseEntity<Void> reorder(@RequestBody List<Long> orderedIds) {
+        service.reorder(orderedIds);
+        return ResponseEntity.ok().build();
     }
 }

@@ -1,92 +1,123 @@
 <template>
-  <div class="container-fluid py-3">
-    <h4 class="mb-3 font-weight-bold">Danh sách quyền</h4>
+  <div class="container-fluid py-3 permissions">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h4 class="mb-0 font-weight-bold">Danh sách quyền</h4>
+      <div>
+        <b-button size="sm" variant="outline-primary" class="mr-2" @click="onFilter">
+          <i class="fas fa-sync-alt"></i>
+          Làm mới
+        </b-button>
+        <b-button size="sm" variant="success" @click="showModal">
+          <i class="fas fa-plus"></i>
+          Thêm quyền
+        </b-button>
+      </div>
+    </div>
 
-    <!-- FILTER -->
-    <b-card class="mb-2">
+    <b-card class="mb-3 shadow-sm">
       <b-row>
-        <b-col cols="6">
-          <b-form-group
-            label="Từ khóa:"
-            horizontal
-            :label-cols="3"
-            label-class="font-weight-bold text-right"
-          >
+        <b-col cols="8">
+          <b-input-group>
+            <b-input-group-prepend is-text>
+              <i class="fas fa-search text-muted"></i>
+            </b-input-group-prepend>
             <b-form-input
               v-model="keyword"
               placeholder="Tìm theo tên / hiển thị"
               @keyup.enter="onFilter"
             />
-          </b-form-group>
+          </b-input-group>
         </b-col>
-
-        <b-col cols="6" class="text-right">
+        <b-col cols="4" class="text-right">
           <b-button size="sm" variant="primary" @click="onFilter">
-            <i class="fas fa-search"></i> Tìm kiếm
-          </b-button>
-          <b-button size="sm" variant="success" class="ml-2" @click="showModal">
-            <i class="fas fa-plus"></i> Thêm quyền
+            Tìm kiếm
           </b-button>
         </b-col>
       </b-row>
     </b-card>
 
-    <!-- TABLE -->
-    <b-table
-      bordered
-      hover
-      responsive
-      small
-      show-empty
-      :items="items"
-      :fields="fields"
-      :busy="isBusy"
-      empty-text="Không có dữ liệu"
-    >
-      <!-- STT -->
-      <template #cell(index)="data">
-        {{ data.index + 1 + (list.current_page - 1) * list.per_page }}
-      </template>
+    <b-card class="shadow-sm">
+      <b-table
+        bordered
+        hover
+        responsive
+        small
+        show-empty
+        :items="items"
+        :fields="fields"
+        :busy="isBusy"
+        empty-text="Không có dữ liệu"
+      >
+        <!-- STT -->
+        <template #cell(index)="data">
+          {{ data.index + 1 + (list.current_page - 1) * list.per_page }}
+        </template>
 
-      <template #cell(category)="data">
-        {{ data.item.category?.name || data.item.category }}
-      </template>
+        <template #cell(category)="data">
+          <b-badge pill variant="light" class="category-pill">
+            {{ categoryName(data.item) }}
+          </b-badge>
+        </template>
 
-      <template #cell(level)="data">
-        <b-badge variant="info">Level {{ data.item.level }}</b-badge>
-      </template>
+        <template #cell(level)="data">
+          <b-badge variant="info">Level {{ data.item.level }}</b-badge>
+        </template>
 
-      <template #cell(option)="data">
-        <b-button
-          size="sm"
-          variant="warning"
-          class="mr-1"
-          @click="editPermission(data.item)"
-        >
-          Sửa
-        </b-button>
-        <b-button
-          size="sm"
-          variant="danger"
-          @click="deletePermission(data.item)"
-        >
-          Xóa
-        </b-button>
-      </template>
-    </b-table>
+        <template #cell(status)="data">
+          <b-badge :variant="data.item.status === 1 ? 'success' : 'secondary'">
+            {{ data.item.status === 1 ? 'Hiển thị' : 'Ẩn' }}
+          </b-badge>
+        </template>
 
-    <!-- PAGINATION -->
-    <b-pagination
-      v-if="list.total > list.per_page"
-      v-model="list.current_page"
-      :per-page="list.per_page"
-      :total-rows="list.total"
-      align="right"
-      class="mt-2"
-      @change="onPageChange"
-    />
+        <template #cell(option)="data">
+          <b-dropdown
+            size="sm"
+            right
+            variant="link"
+            toggle-class="text-decoration-none"
+            no-caret
+          >
+            <template #button-content>
+              <i class="fas fa-ellipsis-h"></i>
+            </template>
+            <b-dropdown-item
+              class="text-center"
+              href="#"
+              @click.prevent="editPermission(data.item)"
+            >
+              {{ $t('core.btn.update') || 'Cập nhật' }}
+            </b-dropdown-item>
+            <b-dropdown-item
+              v-if="data.item.status === 1"
+              class="text-center"
+              href="#"
+              @click.prevent="hidePermission(data.item)"
+            >
+              <span class="text-warning">Ẩn</span>
+            </b-dropdown-item>
+            <b-dropdown-item
+              v-else
+              class="text-center"
+              href="#"
+              @click.prevent="showPermission(data.item)"
+            >
+              <span class="text-success">Hiện</span>
+            </b-dropdown-item>
+          </b-dropdown>
+        </template>
+      </b-table>
 
-    <!-- MODAL -->
+      <b-pagination
+        v-if="list.total > list.per_page"
+        v-model="list.current_page"
+        :per-page="list.per_page"
+        :total-rows="list.total"
+        align="right"
+        class="mt-2"
+        @change="onPageChange"
+      />
+    </b-card>
+
     <b-modal
       ref="permissionModal"
       :title="form.id ? 'Sửa quyền' : 'Thêm quyền'"
@@ -122,6 +153,13 @@
           <b-form-textarea v-model="form.description" rows="2" />
         </b-form-group>
 
+        <b-form-group label="Trạng thái">
+          <b-form-select
+            v-model.number="form.status"
+            :options="statusOptions"
+          />
+        </b-form-group>
+
         <div class="text-right">
           <b-button type="submit" variant="primary">Lưu</b-button>
           <b-button variant="secondary" @click="$refs.permissionModal.hide()">
@@ -138,56 +176,69 @@ import axios from "@/plugins/axios";
 
 export default {
   name: "PermissionsList",
-
   data() {
     return {
       keyword: "",
       items: [],
       categories: [],
       isBusy: false,
-
-      list: {
-        current_page: 1,
-        per_page: 10,
-        total: 0
-      },
-
+      list: { current_page: 1, per_page: 10, total: 0 },
       form: {
         id: null,
         name: "",
         displayName: "",
         level: 0,
         category: null,
-        description: ""
+        description: "",
+        status: 1
       },
-
+      statusOptions: [
+        { value: 1, text: "Hiển thị" },
+        { value: 0, text: "Ẩn" }
+      ],
       fields: [
         { key: "index", label: "#", thStyle: { width: "50px" } },
         { key: "name", label: "Tên" },
         { key: "displayName", label: "Hiển thị" },
         { key: "level", label: "Level" },
         { key: "category", label: "Nhóm" },
+        { key: "status", label: "Trạng thái", thStyle: { width: "120px" } },
         { key: "description", label: "Mô tả" },
-        { key: "option", label: "Chức năng", thStyle: { width: "150px" } }
+        { key: "option", label: "Chức năng", thStyle: { width: "80px" } }
       ]
     };
   },
-
   computed: {
     categoryOptions() {
-      return this.categories.map(c => ({
-        value: c.id,
-        text: c.name
-      }));
+      return this.categories.map(c => ({ value: c.id, text: c.name }));
+    },
+    // Map category id -> category object for robust name lookup
+    categoryById() {
+      const map = {};
+      for (const c of this.categories) map[c.id] = c;
+      return map;
     }
   },
-
   mounted() {
     this.loadCategories();
     this.loadData();
   },
-
   methods: {
+    // Return category display name robustly using object name or id lookup
+    categoryName(item) {
+      const cat = item?.category;
+      if (!cat && cat !== 0) return 'Khác';
+      if (typeof cat === 'object') {
+        if (cat.name && String(cat.name).trim()) return cat.name;
+        if (cat.id != null && this.categoryById[cat.id]?.name) {
+          return this.categoryById[cat.id].name;
+        }
+        return 'Khác';
+      }
+      // cat is likely an id (number/string)
+      const name = this.categoryById[cat]?.name;
+      return (name && String(name).trim()) ? name : 'Khác';
+    },
     async loadData() {
       this.isBusy = true;
       try {
@@ -203,14 +254,12 @@ export default {
             }
           }
         );
-
         this.items = res.data.content || [];
         this.list.total = res.data.totalElements || 0;
       } finally {
         this.isBusy = false;
       }
     },
-
     async loadCategories() {
       const res = await axios.post(
         "/administrator/permission-categories/list",
@@ -219,17 +268,14 @@ export default {
       );
       this.categories = res.data.content || [];
     },
-
     onFilter() {
       this.list.current_page = 1;
       this.loadData();
     },
-
     onPageChange(page) {
       this.list.current_page = page;
       this.loadData();
     },
-
     showModal() {
       this.form = {
         id: null,
@@ -237,11 +283,11 @@ export default {
         displayName: "",
         level: 0,
         category: this.categories[0]?.id || null,
-        description: ""
+        description: "",
+        status: 1
       };
       this.$refs.permissionModal.show();
     },
-
     editPermission(p) {
       this.form = {
         id: p.id,
@@ -249,11 +295,11 @@ export default {
         displayName: p.displayName,
         level: p.level,
         category: p.category?.id || p.category,
-        description: p.description
+        description: p.description,
+        status: p.status
       };
       this.$refs.permissionModal.show();
     },
-
     async savePermission() {
       await axios.post(
         "/administrator/permissions/saveOrUpdate",
@@ -262,10 +308,20 @@ export default {
       this.$refs.permissionModal.hide();
       this.loadData();
     },
-
-    async deletePermission(p) {
-      if (!confirm("Xóa quyền này?")) return;
-      await axios.delete(`/administrator/permissions/${p.id}`);
+    async hidePermission(p) {
+      await axios.post(
+        `/administrator/permissions/${p.id}/status`,
+        null,
+        { params: { status: 0 } }
+      );
+      this.loadData();
+    },
+    async showPermission(p) {
+      await axios.post(
+        `/administrator/permissions/${p.id}/status`,
+        null,
+        { params: { status: 1 } }
+      );
       this.loadData();
     }
   }
@@ -273,4 +329,18 @@ export default {
 </script>
 
 <style scoped>
+.permissions .badge { font-weight: 600; }
+.permissions .category-pill {
+  background: #f7f9fc;
+  border: 1px solid #ecf0f6;
+  color: #374151;
+  padding: 6px 10px;
+}
+.permissions .card.shadow-sm { border-radius: 10px; }
+.permissions .table-hover tbody tr:hover { background-color: #fafbfd; }
+.permissions .btn-outline-primary { border-color: #dfe7ff; }
+.permissions .btn-outline-primary:hover { background: #eef3ff; }
+
+/* Header tone like Roles list */
+.permissions .table thead th { background: #f7f9fc; border-bottom: 1px solid #ecf0f6; color: #4a5568; font-weight: 700; }
 </style>

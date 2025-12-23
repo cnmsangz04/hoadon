@@ -26,7 +26,10 @@ public class PermissionsController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by(
+                Sort.Order.desc("createdAt"),
+                Sort.Order.asc("name")
+        ));
         Page<PermissionEntity> data = service.list(keyword, pageable);
         return ResponseEntity.ok(data);
     }
@@ -47,5 +50,11 @@ public class PermissionsController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/status")
+    public ResponseEntity<Void> updateStatus(@PathVariable Long id, @RequestParam byte status) {
+        service.updateStatus(id, status);
+        return ResponseEntity.ok().build();
     }
 }
