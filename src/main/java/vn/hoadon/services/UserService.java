@@ -17,4 +17,7 @@ public interface UserService {
 
     // Update avatar for current user
     UserDto updateAvatar(MultipartFile avatar);
+
+    // Change password for current user
+    void changePassword(String currentPassword, String newPassword);
 }

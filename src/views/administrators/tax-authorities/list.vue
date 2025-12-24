@@ -64,7 +64,7 @@
             <i class="fa fa-ellipsis-v"></i>
           </template>
           <b-dropdown-item @click="editItem(data.item)">
-            Chỉnh sửa
+            Cập nhật
           </b-dropdown-item>
           <b-dropdown-item @click="deleteItem(data.item)">
             Xóa
@@ -198,7 +198,7 @@ export default {
 
   methods: {
     async editItem(item) {
-      alert("Chỉnh sửa: " + item.code);
+      alert("Cập nhật: " + item.code);
 	  
 	  const res = await axios.post("/auth/login", {
 	           username: this.username,

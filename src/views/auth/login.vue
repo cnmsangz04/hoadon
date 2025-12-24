@@ -68,8 +68,8 @@
 </template>
 
 <script>
-import axios from "axios";
-import { parseJwt } from "@/utils/jwt";
+import axios from '@/plugins/axios'
+import { parseJwt } from '@/utils/jwt'
 
 export default {
   data() {

@@ -78,7 +78,7 @@ public class PermissionServiceImpl implements PermissionService {
 
         entity.setName(dto.getName());
         entity.setDisplayName(dto.getDisplayName());
-        entity.setLevel(dto.getLevel() != null ? dto.getLevel() : 0);
+        entity.setLevel(dto.getLevel() != null ? dto.getLevel() : 2);
         entity.setDescription(dto.getDescription());
         if (dto.getStatus() != null) entity.setStatus(dto.getStatus());
 

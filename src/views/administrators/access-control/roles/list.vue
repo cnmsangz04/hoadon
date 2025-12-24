@@ -41,9 +41,9 @@
         <template #cell(option)="data">
           <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret>
             <template #button-content><i class="fas fa-ellipsis-h"></i></template>
-            <b-dropdown-item class="text-center" href="#" @click.prevent="editRole(data.item)">{{ $t('core.btn.update') || 'Cập nhật' }}</b-dropdown-item>
-            <b-dropdown-item class="text-center" href="#" @click.prevent="openClone(data.item)"><span>Clone</span></b-dropdown-item>
-            <b-dropdown-item class="text-center" href="#" @click.prevent="deleteRole(data.item)"><span class="text-danger">{{ $t('core.btn.delete') || 'Xóa' }}</span></b-dropdown-item>
+            <b-dropdown-item class="text-center" href="#" @click.prevent="editRole(data.item)">Cập nhật</b-dropdown-item>
+            <b-dropdown-item class="text-center" href="#" @click.prevent="openClone(data.item)"><span>Sao chép</span></b-dropdown-item>
+            <b-dropdown-item class="text-center" href="#" @click.prevent="deleteRole(data.item)"><span class="text-danger">Xóa</span></b-dropdown-item>
           </b-dropdown>
         </template>
       </b-table>
@@ -109,7 +109,7 @@
         </b-card>
 
         <div class="text-right mt-3">
-          <b-button type="submit" variant="primary">Lưu</b-button>
+          <b-button type="submit" :disabled="!canSubmit" variant="primary">Lưu</b-button>
           <b-button variant="secondary" @click="$refs.roleModal.hide()">Hủy</b-button>
         </div>
       </b-form>
@@ -118,7 +118,7 @@
     <!-- Modal Clone Role -->
     <b-modal
       ref="cloneModal"
-      title="Clone vai trò"
+      title="Sao chép vai trò"
       hide-footer
       content-class="role-modal-content"
       header-class="role-modal-header"
@@ -134,7 +134,7 @@
           </b-form-group>
         </b-card>
         <div class="text-right">
-          <b-button type="submit" variant="primary">Clone</b-button>
+          <b-button type="submit" variant="primary">Sao chép</b-button>
           <b-button variant="secondary" @click="$refs.cloneModal.hide()">Hủy</b-button>
         </div>
       </b-form>
@@ -199,6 +199,9 @@ export default {
         g._allSelected = g.items.length > 0 && g.items.every(x => selected.has(x.id));
       }
       return groups;
+    },
+    canSubmit() {
+      return !!this.form.name && !!this.form.displayName;
     }
   },
   mounted() {
@@ -258,11 +261,33 @@ export default {
       }
     },
 
-    async saveRole() { await axios.post("/administrator/roles/saveOrUpdate", this.form); this.$refs.roleModal.hide(); this.loadData(); },
-    async deleteRole(r) { if (!confirm("Xóa vai trò này?")) return; await axios.delete(`/administrator/roles/${r.id}`); this.loadData(); },
-
+    async saveRole() {
+      if (!this.canSubmit) return;
+      try {
+        await axios.post("/administrator/roles/saveOrUpdate", this.form);
+        this.$toastr && this.$toastr.success(this.form.id ? 'Cập nhật vai trò thành công' : 'Thêm vai trò thành công');
+        this.$refs.roleModal.hide();
+        this.loadData();
+      } catch (e) { console.error(e); }
+    },
+    async deleteRole(r) {
+      if (!confirm("Xóa vai trò này?")) return;
+      try {
+        await axios.delete(`/administrator/roles/${r.id}`);
+        this.$toastr && this.$toastr.success('Đã xóa vai trò');
+        this.loadData();
+      } catch (e) { console.error(e); }
+    },
+    
     openClone(r) { this.cloneForm = { sourceId: r.id, name: `${r.name}_copy`, displayName: `${r.displayName || r.name} (copy)` }; this.$refs.cloneModal.show(); },
-    async doClone() { await axios.post(`/administrator/roles/${this.cloneForm.sourceId}/clone`, { name: this.cloneForm.name, displayName: this.cloneForm.displayName }); this.$refs.cloneModal.hide(); this.loadData(); }
+    async doClone() {
+      try {
+        await axios.post(`/administrator/roles/${this.cloneForm.sourceId}/clone`, { name: this.cloneForm.name, displayName: this.cloneForm.displayName });
+        this.$toastr && this.$toastr.success('Đã clone vai trò');
+        this.$refs.cloneModal.hide();
+        this.loadData();
+      } catch (e) { console.error(e); }
+    }
   }
 };
 </script>
@@ -281,9 +306,6 @@ export default {
 .roles .dropdown-toggle:hover { color: #374151 !important; }
 
 .roles .perm-chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 56px; overflow: hidden; }
-.roles .perm-chip.badge-info {
-  background: #eef6ff; color: #1e40af; border: 1px solid #dbeafe; font-weight: 600; padding: 6px 10px; border-radius: 9999px;
-}
 
 /* Checkbox switches spacing inside permission groups */
 .roles .perm-group .custom-control { padding-left: 2.25rem; }

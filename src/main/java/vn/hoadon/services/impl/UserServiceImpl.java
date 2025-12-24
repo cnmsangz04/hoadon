@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import vn.hoadon.repositories.UserRepository;
 import vn.hoadon.services.UserService;
@@ -18,12 +19,16 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.Optional;
 import java.util.UUID;
+import java.security.MessageDigest;
 
 @Service
 public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     private static final long MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
 
@@ -138,6 +143,58 @@ public class UserServiceImpl implements UserService {
 
         } catch (IOException ex) {
             throw new RuntimeException("Upload avatar failed", ex);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(String currentPassword, String newPassword) {
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new RuntimeException("Mật khẩu mới phải từ 8 ký tự");
+        }
+        UserEntity user = getCurrentUserEntity();
+        String stored = user.getPassword();
+        boolean match = passwordEncoder.matches(currentPassword, stored);
+        if (!match && looksLikeLegacy(stored)) {
+            if (checkLegacy(stored, currentPassword)) {
+                match = true;
+            }
+        }
+        if (!match) {
+            throw new RuntimeException("Mật khẩu hiện tại không đúng");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    private boolean looksLikeLegacy(String stored) {
+        if (stored == null || stored.isBlank()) return false;
+        return !looksLikeBcrypt(stored);
+    }
+
+    private boolean looksLikeBcrypt(String v) {
+        return v != null && v.length() == 60 && v.startsWith("$2") && v.matches("^\\$2[aby]\\$\\d{2}\\$.*");
+    }
+
+    private boolean checkLegacy(String stored, String raw) {
+        if (stored == null || raw == null) return false;
+        if (stored.equals(raw)) return true; // plain
+        return isHex32(stored) && stored.equalsIgnoreCase(md5Hex(raw));
+    }
+
+    private boolean isHex32(String s) {
+        return s != null && s.length() == 32 && s.matches("[0-9a-fA-F]{32}");
+    }
+
+    private String md5Hex(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(32);
+            for (byte b : digest) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (Exception e) {
+            return "";
         }
     }
 }

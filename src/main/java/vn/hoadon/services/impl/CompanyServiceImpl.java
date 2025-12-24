@@ -1,21 +1,28 @@
 package vn.hoadon.services.impl;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import vn.hoadon.dto.company.CompanyFilterDTO;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.services.CompanyService;
-import vn.hoadon.dto.company.CompanyFilterDTO;
 
 import jakarta.persistence.criteria.Predicate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CompanyServiceImpl implements CompanyService {
 
     private final CompanyRepository repo;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     public CompanyServiceImpl(CompanyRepository repo) {
         this.repo = repo;
@@ -56,6 +63,10 @@ public class CompanyServiceImpl implements CompanyService {
             if (company.getPrefix() == null || company.getPrefix().isEmpty()) {
                 company.setPrefix(generatePrefix());
             }
+            // Normalize password if provided on create
+            if (company.getPassword() != null && !company.getPassword().isBlank()) {
+                company.setPassword(encodeIfNeeded(company.getPassword()));
+            }
             return repo.save(company);
         }
 
@@ -70,7 +81,7 @@ public class CompanyServiceImpl implements CompanyService {
         if (company.getStatus() != null) existing.setStatus(company.getStatus());
 
         if (company.getPassword() != null && !company.getPassword().isEmpty()) {
-            existing.setPassword(company.getPassword());
+            existing.setPassword(encodeIfNeeded(company.getPassword()));
         }
 
         return repo.save(existing);
@@ -82,6 +93,17 @@ public class CompanyServiceImpl implements CompanyService {
             prefix = "HD" + System.currentTimeMillis();
         } while (repo.existsByPrefix(prefix));
         return prefix;
+    }
+
+    private boolean isBcrypt(String v) {
+        if (v == null) return false;
+        if (v.length() == 60 && v.startsWith("$2")) return true;
+        return v.matches("^\\$2[aby]\\$\\d{2}\\$.*");
+    }
+
+    private String encodeIfNeeded(String rawOrHash) {
+        if (rawOrHash == null || rawOrHash.isBlank()) return rawOrHash;
+        return isBcrypt(rawOrHash) ? rawOrHash : passwordEncoder.encode(rawOrHash);
     }
 
     @Override

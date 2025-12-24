@@ -1,38 +1,58 @@
 package vn.hoadon.security;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import vn.hoadon.entity.UserEntity;
-
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
-import java.util.Map;
 
 @Component
 public class JwtUtil {
 
     private static final String SECRET =
-        "replace-this-with-a-very-long-secret-key-should-be-256-bit";
+        "hoadon-prod-jwt-secret-2025-!@#A9fKxQ2LmP8wZr7YHnC4E6S1VdB";
+
+    private static final long EXPIRATION_MS = 1000L * 60 * 60 * 4; // 4 hours
+
     private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
 
-    private final long expirationMs = 1000 * 60 * 60 * 4;
-
+    /**
+     * Generate JWT token for user
+     * Role convention:
+     * 0 = Root
+     * 1 = System Admin
+     * 2 = Company Admin
+     * 3 = Employee
+     */
     public String generateToken(UserEntity user) {
         Date now = new Date();
-        Date exp = new Date(now.getTime() + expirationMs);
+        Date exp = new Date(now.getTime() + EXPIRATION_MS);
+
+        Long companyId = user.getCompanyId();
+        Integer role = user.getRole();
+        Byte adminType = user.getAdminType(); // 0,1,2
+        boolean isSystemAdmin = (adminType != null && adminType == 1);
 
         return Jwts.builder()
                 .setSubject(user.getUsername())
                 .claim("userId", user.getId())
-                .claim("role", user.getRole())
+                .claim("role", role)
+                .claim("companyId", companyId)
+                .claim("adminType", adminType)
+                .claim("isSystemAdmin", isSystemAdmin)
                 .setIssuedAt(now)
                 .setExpiration(exp)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
+    /**
+     * Parse and validate JWT claims
+     */
     public Claims parseClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(key)
@@ -41,7 +61,28 @@ public class JwtUtil {
                 .getBody();
     }
 
+    /**
+     * Extract username from token
+     */
     public String getUsername(String token) {
         return parseClaims(token).getSubject();
+    }
+
+    /**
+     * Helper methods (optional)
+     */
+    public Integer getRole(String token) {
+        Object role = parseClaims(token).get("role");
+        return role != null ? Integer.valueOf(role.toString()) : null;
+    }
+
+    public Long getCompanyId(String token) {
+        Object cid = parseClaims(token).get("companyId");
+        return cid != null ? Long.valueOf(cid.toString()) : null;
+    }
+
+    public boolean isSystemAdmin(String token) {
+        Object v = parseClaims(token).get("isSystemAdmin");
+        return Boolean.TRUE.equals(v);
     }
 }

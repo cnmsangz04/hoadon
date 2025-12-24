@@ -234,6 +234,7 @@ export default {
 
     async saveInvoice() {
       await axios.post("/administrator/buy-invoice/create", this.invoiceForm);
+      this.$toastr && this.$toastr.success(this.invoiceForm.id ? 'Cập nhật hóa đơn thành công' : 'Thêm hóa đơn thành công');
       this.$refs.buyInvoiceModal.hide();
       this.loadData();
     },
@@ -241,6 +242,7 @@ export default {
     async deleteInvoice(id) {
       if (!confirm("Xóa hóa đơn này?")) return;
       await axios.post("/administrator/buy-invoice/delete", { id });
+      this.$toastr && this.$toastr.success('Đã xóa hóa đơn');
       this.loadData();
     },
 

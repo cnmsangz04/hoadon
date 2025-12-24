@@ -23,7 +23,7 @@ export default {
 	  path: 'member/list',
 	  name: 'setting-member',
 	  component: () => import('../../views/settings/member/list.vue'),
-	  meta: { requiresUser: true, title: 'Thành viên' }
+	  meta: { requiresUser: true, title: 'Thành viên', rolePolicy: 'role<2' }
 	}
   ]
 }

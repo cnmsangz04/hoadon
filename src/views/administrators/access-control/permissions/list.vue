@@ -85,7 +85,7 @@
               href="#"
               @click.prevent="editPermission(data.item)"
             >
-              {{ $t('core.btn.update') || 'Cập nhật' }}
+              Cập nhật
             </b-dropdown-item>
             <b-dropdown-item
               v-if="data.item.status === 1"
@@ -139,6 +139,7 @@
             max="2"
             v-model.number="form.level"
           />
+          <small v-if="!validLevel" class="text-danger">Level phải từ 0 đến 2</small>
         </b-form-group>
 
         <b-form-group label="Nhóm quyền">
@@ -147,6 +148,7 @@
             :options="categoryOptions"
             required
           />
+          <small v-if="!form.category" class="text-danger">Vui lòng chọn nhóm</small>
         </b-form-group>
 
         <b-form-group label="Mô tả">
@@ -161,7 +163,7 @@
         </b-form-group>
 
         <div class="text-right">
-          <b-button type="submit" variant="primary">Lưu</b-button>
+          <b-button type="submit" :disabled="!canSubmit" variant="primary">Lưu</b-button>
           <b-button variant="secondary" @click="$refs.permissionModal.hide()">
             Hủy
           </b-button>
@@ -210,13 +212,28 @@ export default {
   },
   computed: {
     categoryOptions() {
-      return this.categories.map(c => ({ value: c.id, text: c.name }));
+      // Only show visible categories (status === 1)
+      return this.categories
+        .filter(c => c.status === 1)
+        .map(c => ({ value: c.id, text: c.name }));
     },
-    // Map category id -> category object for robust name lookup
     categoryById() {
       const map = {};
       for (const c of this.categories) map[c.id] = c;
       return map;
+    },
+    validLevel() {
+      const lvl = Number(this.form.level);
+      return Number.isFinite(lvl) && lvl >= 0 && lvl <= 2;
+    },
+    canSubmit() {
+      return (
+        !!this.form.name &&
+        !!this.form.displayName &&
+        this.validLevel &&
+        !!this.form.category &&
+        (this.form.status === 0 || this.form.status === 1)
+      );
     }
   },
   mounted() {
@@ -282,7 +299,7 @@ export default {
         name: "",
         displayName: "",
         level: 0,
-        category: this.categories[0]?.id || null,
+        category: this.categoryOptions[0]?.value || null,
         description: "",
         status: 1
       };
@@ -301,41 +318,52 @@ export default {
       this.$refs.permissionModal.show();
     },
     async savePermission() {
-      await axios.post(
-        "/administrator/permissions/saveOrUpdate",
-        this.form
-      );
-      this.$refs.permissionModal.hide();
-      this.loadData();
+      if (!this.canSubmit) return;
+      try {
+        await axios.post(
+          "/administrator/permissions/saveOrUpdate",
+          this.form
+        );
+        // Success toast
+        this.$toastr.success(this.form.id ? 'Cập nhật quyền thành công' : 'Thêm quyền thành công');
+        this.$refs.permissionModal.hide();
+        this.loadData();
+      } catch (e) {
+        // Axios interceptor already shows error toast
+        console.error(e);
+      }
     },
     async hidePermission(p) {
-      await axios.post(
-        `/administrator/permissions/${p.id}/status`,
-        null,
-        { params: { status: 0 } }
-      );
-      this.loadData();
+      try {
+        await axios.post(
+          `/administrator/permissions/${p.id}/status`,
+          null,
+          { params: { status: 0 } }
+        );
+        this.$toastr.success('Đã ẩn quyền');
+        this.loadData();
+      } catch (e) {
+        console.error(e);
+      }
     },
     async showPermission(p) {
-      await axios.post(
-        `/administrator/permissions/${p.id}/status`,
-        null,
-        { params: { status: 1 } }
-      );
-      this.loadData();
+      try {
+        await axios.post(
+          `/administrator/permissions/${p.id}/status`,
+          null,
+          { params: { status: 1 } }
+        );
+        this.$toastr.success('Đã hiện quyền');
+        this.loadData();
+      } catch (e) {
+        console.error(e);
+      }
     }
   }
 };
 </script>
 
 <style scoped>
-.permissions .badge { font-weight: 600; }
-.permissions .category-pill {
-  background: #f7f9fc;
-  border: 1px solid #ecf0f6;
-  color: #374151;
-  padding: 6px 10px;
-}
 .permissions .card.shadow-sm { border-radius: 10px; }
 .permissions .table-hover tbody tr:hover { background-color: #fafbfd; }
 .permissions .btn-outline-primary { border-color: #dfe7ff; }

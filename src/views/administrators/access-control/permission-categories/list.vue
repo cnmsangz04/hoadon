@@ -249,6 +249,7 @@ export default {
         const orderedIds = this.orderedItems.map(it => it.id);
         await axios.post("/administrator/permission-categories/reorder", orderedIds);
         this.dirtyOrder = false;
+        this.$toastr && this.$toastr.success('Đã lưu sắp xếp nhóm quyền');
         this.loadData();
       } finally {
         this.savingOrder = false;
@@ -264,18 +265,21 @@ export default {
     },
     async saveCategory() {
       await axios.post("/administrator/permission-categories/saveOrUpdate", this.form);
+      this.$toastr && this.$toastr.success(this.form.id ? 'Cập nhật nhóm quyền thành công' : 'Thêm nhóm quyền thành công');
       this.$refs.categoryModal.hide();
       this.loadData();
     },
     async deleteCategory(c) {
       if (!confirm("Xóa nhóm quyền này?")) return;
       await axios.delete(`/administrator/permission-categories/${c.id}`);
+      this.$toastr && this.$toastr.success('Đã xóa nhóm quyền');
       this.loadData();
     },
     async toggleStatus(item) {
       // inline quick toggle
       const payload = { id: item.id, name: item.name, orderIndex: item.orderIndex, status: item.status };
       await axios.post("/administrator/permission-categories/saveOrUpdate", payload);
+      this.$toastr && this.$toastr.success(item.status === 1 ? 'Đã bật hiển thị' : 'Đã ẩn nhóm');
     },
     showModalUpdate(id) {
       const found = this.items.find(x => x.id === id) || this.orderedItems.find(x => x.id === id)
@@ -289,6 +293,7 @@ export default {
       if (found) return this.deleteCategory(found)
       if (!confirm("Xóa nhóm quyền này?")) return
       axios.delete(`/administrator/permission-categories/${id}`).then(() => this.loadData())
+        .then(() => { this.$toastr && this.$toastr.success('Đã xóa nhóm quyền'); })
     }
   }
 };

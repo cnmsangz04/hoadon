@@ -300,6 +300,7 @@ export default {
       }
       axios.post("/administrator/company/saveOrUpdate", payload)
         .then(() => {
+          this.$toastr && this.$toastr.success(payload.id ? 'Cập nhật công ty thành công' : 'Thêm công ty thành công');
           this.$refs.companyModal.hide();
           this.$refs.tblCompany.refresh();
         });
@@ -308,6 +309,7 @@ export default {
     deleteCompany(id) {
       if(confirm("Bạn có chắc muốn xóa công ty này?")) {
         axios.delete(`/administrator/company/${id}`).then(() => {
+          this.$toastr && this.$toastr.success('Đã xóa công ty');
           this.$refs.tblCompany.refresh();
         });
       }

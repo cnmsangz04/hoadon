@@ -37,8 +37,21 @@ axios.interceptors.request.use(config => {
   return config
 }, err => Promise.reject(err))
 
+// Success handler with optional success toast via request config
 axios.interceptors.response.use(
-  res => res,
+  res => {
+    try {
+      const cfg = res?.config || {}
+      const method = (cfg.method || '').toUpperCase()
+      // Read optional success message keys from config
+      const msg = cfg.successMessage || cfg.successText || cfg?.meta?.successMessage
+      // Default: only show for mutating methods when message provided
+      if (msg && ['POST','PUT','PATCH','DELETE'].includes(method)) {
+        toastr.success(msg)
+      }
+    } catch {}
+    return res
+  },
   err => {
     const status = err?.response?.status
     const admin = isAdminContext()
