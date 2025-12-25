@@ -61,17 +61,10 @@ export default {
       openIndex: null,
       menu: [
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
-<<<<<<< HEAD
-        { title: 'Công ty', icon: 'fas fa-university', to: '/administrator/company/list' },
-        { title: 'Mua hóa đơn', icon: 'fas fa-university', to: '/administrator/buy-invoice/list' },
-        { title: 'Ngân hàng', icon: 'fas fa-university', to: '/administrator/bank/list' },
-        { title: 'Cơ quan thuế', icon: 'fas fa-university', to: '/administrator/tax-authorities/list' },
-=======
         { title: 'Công ty', icon: 'fas fa-building', to: '/administrator/company/list' },
         { title: 'Mua hóa đơn', icon: 'fas fa-file-invoice-dollar', to: '/administrator/buy-invoice/list' },
         { title: 'Ngân hàng', icon: 'fas fa-piggy-bank', to: '/administrator/bank/list' },
         { title: 'Cơ quan thuế', icon: 'fas fa-landmark', to: '/administrator/tax-authorities/list' },
->>>>>>> 1eda31a04840376f9f6b426dfa25076c59d893d1
         {
           title: 'Phân quyền',
           icon: 'fas fa-user-shield',
@@ -140,26 +133,12 @@ export default {
     "Helvetica Neue", Arial;
 }
 
-<<<<<<< HEAD
 .sidebar-inner {
   padding: 18px 14px;
   height: 100%;
   display: flex;
   flex-direction: column;
 }
-=======
-.sidebar-inner { padding: 18px 14px; height: 100%; display: flex; flex-direction: column; }
-.brand { text-align: center; margin-bottom: 12px; }
-.logo { max-width: 160px; margin: auto; display: block; }
-.menu { flex: 1; overflow: auto; }
-.menu ul { padding: 0; margin: 0; list-style: none; }
-.menu-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; color: #dbeefd; border-radius: 6px; text-decoration: none; }
-.menu-item:hover { background: rgba(255,255,255,0.03); color: #fff; }
-.menu-item i { width: 18px; text-align: center; }
-/* Show child icons if provided */
-.sub li a i { width: 16px; text-align: center; margin-right: 8px; }
-.menu li.active > .menu-item { background: rgba(255,255,255,0.08); color: #fff; }
->>>>>>> 1eda31a04840376f9f6b426dfa25076c59d893d1
 
 .brand {
   text-align: center;
@@ -177,7 +156,6 @@ export default {
   overflow: auto;
 }
 
-<<<<<<< HEAD
 .menu ul {
   padding: 0;
   margin: 0;
@@ -204,7 +182,14 @@ export default {
   text-align: center;
 }
 
-.menu li.active>.menu-item {
+/* Show child icons if provided */
+.sub li a i {
+  width: 16px;
+  text-align: center;
+  margin-right: 8px;
+}
+
+.menu li.active > .menu-item {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
 }
@@ -230,7 +215,7 @@ export default {
   color: #cfe6ff;
 }
 
-.sub li.active>a {
+.sub li.active > a {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
@@ -254,8 +239,3 @@ export default {
   height: 0;
 }
 </style>
-=======
-.slide-enter-active,.slide-leave-active { transition: 200ms; }
-.slide-enter,.slide-leave-to { opacity: 0; transform: translateY(-6px); height: 0; }
-</style>
->>>>>>> 1eda31a04840376f9f6b426dfa25076c59d893d1

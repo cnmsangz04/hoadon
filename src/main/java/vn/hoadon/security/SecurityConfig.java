@@ -8,13 +8,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-// --- IMPORT THÊM CÁC GÓI NÀY ĐỂ XỬ LÝ CORS ---
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -33,16 +26,21 @@ public class SecurityConfig {
             JwtAuthenticationFilter jwtFilter) throws Exception {
 
         http
-            // 1. THÊM DÒNG NÀY ĐẦU TIÊN: Bật cấu hình CORS
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            
-            .csrf(csrf -> csrf.disable()) // Cách viết mới của Spring Security 6+ (hoặc giữ .csrf().disable() nếu bản cũ)
-            .sessionManagement(session -> session.disable()) // Tắt session vì dùng JWT
-            
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(sm ->
+                sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/v1/**","/api/**", "/public/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
-                // Nếu muốn request OPTIONS (Pre-flight) luôn được qua (đề phòng)
-                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(
+                    "/uploads/**",
+                    "/v1/auth/**",
+                    "/h2-console/**"
+                ).permitAll()
+
+                .requestMatchers("/v1/administrator/**").authenticated()
+                .requestMatchers("/v1/setting/**").authenticated()
+                .requestMatchers("/v1/**").authenticated()
+
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
@@ -50,28 +48,6 @@ public class SecurityConfig {
         http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
 
         return http.build();
-    }
-
-    // 2. BEAN CẤU HÌNH CHI TIẾT CORS (QUAN TRỌNG)
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        
-        // Cho phép tất cả các nguồn (Vue đang chạy ở port khác)
-        configuration.setAllowedOrigins(Arrays.asList("*")); 
-        
-        // Cho phép đầy đủ các method: QUAN TRỌNG PHẢI CÓ PUT, DELETE, OPTIONS
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
-        
-        // Cho phép mọi header (như Authorization, Content-Type...)
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        
-        // Nếu dùng credentials (cookie), setAllowedOrigins không được để "*" mà phải chỉ định rõ domain.
-        // Nhưng với JWT qua Header thì để "*" thường vẫn ổn.
-        
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 
     @Bean
