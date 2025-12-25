@@ -3,8 +3,8 @@ package vn.hoadon.services;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import vn.hoadon.dto.request.TaxAuthorityRequest;
-import vn.hoadon.dto.response.TaxAuthorityResponse;
+import vn.hoadon.dto.taxauthority.TaxAuthorityResponse;
+import vn.hoadon.dto.taxauthority.TaxAuthorityRequest;
 import vn.hoadon.entity.TaxAuthorityEntity;
   import java.util.List;
 import java.util.Optional;

@@ -1,4 +1,4 @@
-package vn.hoadon.utils;
+package vn.hoadon.util;
 
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;

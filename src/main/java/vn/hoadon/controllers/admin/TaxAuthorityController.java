@@ -8,8 +8,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import vn.hoadon.dto.request.TaxAuthorityRequest;
-import vn.hoadon.dto.response.TaxAuthorityResponse;
+import vn.hoadon.dto.taxauthority.TaxAuthorityResponse;
+import vn.hoadon.dto.taxauthority.TaxAuthorityRequest;
 import vn.hoadon.services.TaxAuthorityService;
 
 @RestController

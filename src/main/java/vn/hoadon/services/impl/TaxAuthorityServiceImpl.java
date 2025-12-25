@@ -7,12 +7,12 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import vn.hoadon.dto.request.TaxAuthorityRequest;
-import vn.hoadon.dto.response.TaxAuthorityResponse;
+import vn.hoadon.dto.taxauthority.TaxAuthorityResponse;
+import vn.hoadon.dto.taxauthority.TaxAuthorityRequest;
 import vn.hoadon.entity.TaxAuthorityEntity;
 import vn.hoadon.repositories.TaxAuthorityRepository;
 import vn.hoadon.services.TaxAuthorityService;
-import vn.hoadon.utils.SearchCriteria; // Class tiện ích search ở câu trả lời trước
+import vn.hoadon.util.SearchCriteria; // Class tiện ích search ở câu trả lời trước
 import java.util.List;
 import java.util.Optional;
 
