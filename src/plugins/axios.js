@@ -57,6 +57,9 @@ axios.interceptors.response.use(
     const admin = isAdminContext()
     const key = admin ? 'token-admin' : 'token'
 
+    const cfg = err?.config || {}
+    const suppressGlobal = cfg?.meta?.suppressGlobalErrorToast === true
+
     const message =
       err?.response?.data?.message ||
       err?.response?.data?.error ||
@@ -64,7 +67,7 @@ axios.interceptors.response.use(
       'Lỗi hệ thống'
 
     if (status === 401) {
-      toastr.warning(message || 'Phiên đăng nhập đã hết hạn')
+      if (!suppressGlobal) toastr.warning(message || 'Phiên đăng nhập đã hết hạn')
       setTimeout(() => {
         localStorage.removeItem(key)
         window.location.href = admin ? '/auth/login-admin' : '/auth/login'
@@ -73,11 +76,14 @@ axios.interceptors.response.use(
     }
 
     if (status === 403) {
-      toastr.error(message || 'Bạn không có quyền thao tác')
+      if (!suppressGlobal) toastr.error(message || 'Bạn không có quyền thao tác')
+      setTimeout(() => {
+        window.location.href = admin ? '/administrator' : '/'
+      }, 1200)
       return Promise.reject(err)
     }
 
-    toastr.error(message)
+    if (!suppressGlobal) toastr.error(message)
     return Promise.reject(err)
   }
 )

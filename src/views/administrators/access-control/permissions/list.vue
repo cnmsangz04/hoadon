@@ -120,7 +120,7 @@
 
     <b-modal
       ref="permissionModal"
-      :title="form.id ? 'Sửa quyền' : 'Thêm quyền'"
+      :title="form.id ? 'Cập nhật quyền' : 'Thêm quyền'"
       hide-footer
     >
       <b-form @submit.prevent="savePermission">
@@ -369,6 +369,5 @@ export default {
 .permissions .btn-outline-primary { border-color: #dfe7ff; }
 .permissions .btn-outline-primary:hover { background: #eef3ff; }
 
-/* Header tone like Roles list */
 .permissions .table thead th { background: #f7f9fc; border-bottom: 1px solid #ecf0f6; color: #4a5568; font-weight: 700; }
 </style>

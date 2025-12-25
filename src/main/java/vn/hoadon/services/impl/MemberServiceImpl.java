@@ -9,13 +9,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vn.hoadon.dto.MemberUpsertRequest;
+import vn.hoadon.dto.member.MemberUpsertRequest;
 import vn.hoadon.entity.PermissionEntity;
-import vn.hoadon.entity.RoleEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.entity.UserPermissionEntity;
 import vn.hoadon.repositories.PermissionRepository;
-import vn.hoadon.repositories.RoleRepository;
 import vn.hoadon.repositories.UserRepository;
 import vn.hoadon.repositories.UserPermissionRepository;
 import vn.hoadon.services.MemberService;
@@ -31,9 +29,6 @@ public class MemberServiceImpl implements MemberService {
 
     @Autowired
     private PermissionRepository permissionRepository;
-
-    @Autowired
-    private RoleRepository roleRepository;
 
     @Autowired
     private UserPermissionRepository userPermissionRepository;
@@ -69,10 +64,7 @@ public class MemberServiceImpl implements MemberService {
                 ));
             }
 
-            if (roleId != null) {
-                preds.add(cb.equal(root.get("workRole").get("id"), roleId));
-            }
-
+            // Drop roleId filter tied to workRole
             if (role != null) {
                 preds.add(cb.equal(root.get("role"), role));
             }
@@ -96,25 +88,19 @@ public class MemberServiceImpl implements MemberService {
                 : null;
 
         Integer actorRole = actor != null ? actor.getRole() : null;
-        Byte actorAdminType = actor != null ? actor.getAdminType() : null; // 1: system admin, 2: company admin
         Long actorCompanyId = actor != null ? actor.getCompanyId() : null;
         boolean isRoot = actorRole != null && actorRole == 0;
-        boolean isSystemAdmin = actorRole != null && actorRole == 1 && actorAdminType != null && actorAdminType == 1;
-        boolean isAdminCompany = actorRole != null && actorRole == 1 && actorAdminType != null && actorAdminType == 2;
 
+        // Determine target companyId: only root can set arbitrary companyId
         Long companyId = incoming.getCompanyId();
-        if (!isRoot && !isSystemAdmin) {
+        if (!isRoot) {
             companyId = actorCompanyId;
         }
 
+        // Validate role changes (if provided)
         Integer role = incoming.getRole();
-        if (role != null) {
-            if (role == 0) {
-                throw new IllegalArgumentException("Không được gán role root");
-            }
-            if (!isRoot && !isSystemAdmin && role != 1 && role != 2) {
-                throw new IllegalArgumentException("Không đủ quyền gán role");
-            }
+        if (role != null && role == 0) {
+            throw new IllegalArgumentException("Không được gán role root");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -131,44 +117,78 @@ public class MemberServiceImpl implements MemberService {
             user.setPassword(passwordEncoder.encode(
                     incoming.getPassword() != null ? incoming.getPassword() : "ChangeMe123"
             ));
+            // Admin password on create if provided
+            if (incoming.getAdminPassword() != null) {
+                String ap = incoming.getAdminPassword();
+                if (ap.isBlank()) {
+                    user.setAdminPassword(null);
+                } else {
+                    user.setAdminPassword(passwordEncoder.encode(ap));
+                }
+            }
+            // Required fields on create
+            user.setCompanyId(companyId);
+            user.setUsername(incoming.getUsername());
+            user.setRole(role != null ? role : 2);
+            user.setStatus(incoming.getStatus() != null ? incoming.getStatus() : (byte) 1);
         } else {
             user = userRepository.findById(incoming.getId())
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
+            // Only update password if provided
             if (incoming.getPassword() != null && !incoming.getPassword().isBlank()) {
                 user.setPassword(passwordEncoder.encode(incoming.getPassword()));
             }
-        }
-
-        user.setCompanyId(companyId);
-        user.setUsername(incoming.getUsername());
-        user.setName(incoming.getName());
-        user.setEmail(incoming.getEmail());
-        user.setPhone(incoming.getPhone());
-        user.setAvatar(incoming.getAvatar());
-        user.setRole(role != null ? role : 2);
-        user.setStatus(incoming.getStatus() != null ? incoming.getStatus() : (byte) 1);
-        user.setUpdatedAt(now);
-
-        // Validate and set work role (vai trò làm việc)
-        if (incoming.getWorkRole() != null && incoming.getWorkRole().getId() != null) {
-            RoleEntity wr = roleRepository.findById(incoming.getWorkRole().getId())
-                    .orElseThrow(() -> new IllegalArgumentException("Work role not found"));
-
-            // If actor is admin company (role=1, admin_type=2), only allow assigning roles whose permissions all have level=0
-            if (isAdminCompany) {
-                var perms = wr.getPermissions();
-                boolean allowed = (perms == null || perms.isEmpty()) || perms.stream().allMatch(p -> {
-                    Integer lvl = p.getLevel();
-                    return lvl == null || lvl == 0;
-                });
-                if (!allowed) {
-                    throw new IllegalArgumentException("Admin company chỉ được gán vai trò có quyền level=0");
+            // Admin password on update if provided
+            if (incoming.getAdminPassword() != null) {
+                String ap = incoming.getAdminPassword();
+                if (ap.isBlank()) {
+                    user.setAdminPassword(null);
+                } else {
+                    user.setAdminPassword(passwordEncoder.encode(ap));
                 }
             }
 
-            user.setWorkRole(wr);
+            // Only update companyId if actor is allowed (handled above) and provided
+            if (companyId != null && isRoot) {
+                user.setCompanyId(companyId);
+            }
+
+            // Only update role if provided
+            if (role != null) {
+                user.setRole(role);
+            }
+
+            // Only update status if provided
+            if (incoming.getStatus() != null) {
+                user.setStatus(incoming.getStatus());
+            }
+
+            // Only update username if provided and not blank
+            if (incoming.getUsername() != null && !incoming.getUsername().isBlank()) {
+                Optional<UserEntity> existed = userRepository.findByUsername(incoming.getUsername());
+                if (existed.isPresent() && !existed.get().getId().equals(user.getId())) {
+                    throw new IllegalArgumentException("Username đã tồn tại");
+                }
+                user.setUsername(incoming.getUsername());
+            }
         }
+
+        // Common optional fields: update only when provided
+        if (incoming.getName() != null) {
+            user.setName(incoming.getName());
+        }
+        if (incoming.getEmail() != null) {
+            user.setEmail(incoming.getEmail());
+        }
+        if (incoming.getPhone() != null) {
+            user.setPhone(incoming.getPhone());
+        }
+        if (incoming.getAvatar() != null) {
+            user.setAvatar(incoming.getAvatar());
+        }
+
+        user.setUpdatedAt(now);
 
         // Persist user first
         user = userRepository.save(user);
@@ -206,8 +226,22 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional
     public String resetPassword(Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserEntity actor = (auth != null && auth.getPrincipal() instanceof UserEntity)
+                ? (UserEntity) auth.getPrincipal()
+                : null;
+        Integer actorRole = actor != null ? actor.getRole() : null;
+        boolean isAdmin = actorRole != null && actorRole == 1;
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        // Admin can reset only for self or non-admins
+        if (isAdmin) {
+            boolean isSelf = actor != null && actor.getId().equals(id);
+            boolean targetIsAdmin = user.getRole() != null && user.getRole() == 1;
+            if (!isSelf && targetIsAdmin) {
+                throw new IllegalArgumentException("Admin chỉ có thể Reset mật khẩu cho chính mình hoặc Nhân viên");
+            }
+        }
         String newPass = "Reset@" + System.currentTimeMillis();
         user.setPassword(passwordEncoder.encode(newPass));
         user.setUpdatedAt(LocalDateTime.now());
@@ -233,7 +267,6 @@ public class MemberServiceImpl implements MemberService {
         user.setDeletedAt(LocalDateTime.now());
         user.setStatus((byte) 0);
         user.setCompanyId(null);
-        user.setWorkRole(null);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
         userPermissionRepository.deleteAllByUserId(user.getId());

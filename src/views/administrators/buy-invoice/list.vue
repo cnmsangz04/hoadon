@@ -87,7 +87,7 @@
 
       <template #cell(option)="data">
         <b-button size="sm" variant="warning" class="mr-1" @click="editInvoice(data.item)">
-          Sửa
+          Cập nhật
         </b-button>
         <b-button size="sm" variant="danger" @click="deleteInvoice(data.item.id)">
           Xóa
@@ -107,7 +107,7 @@
     />
 
     <!-- MODAL -->
-    <b-modal ref="buyInvoiceModal" title="Thêm / Sửa hóa đơn" hide-footer>
+    <b-modal ref="buyInvoiceModal" title="Thêm / Cập nhật hóa đơn" hide-footer>
       <b-form @submit.prevent="saveInvoice">
         <b-form-group label="Công ty">
           <v-select

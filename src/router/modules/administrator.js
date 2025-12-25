@@ -6,7 +6,8 @@ export default {
 		{
 			path: '',
 			name: 'admin',
-			redirect: 'company/list'
+			component: () => import('../../views/administrators/index.vue'),
+			meta: { requiresAdmin: true, title: 'Danh sách công ty' }
 		},
 		{
 			path: 'company/list',
@@ -49,12 +50,6 @@ export default {
 					name: 'admin-permission-categories-list',
 					component: () => import('../../views/administrators/access-control/permission-categories/list.vue'),
 					meta: { requiresAdmin: true, title: 'Nhóm quyền' }
-				},
-				{
-					path: 'roles/list',
-					name: 'admin-roles-list',
-					component: () => import('../../views/administrators/access-control/roles/list.vue'),
-					meta: { requiresAdmin: true, title: 'Vai trò' }
 				}
 			]
 		}

@@ -13,4 +13,5 @@ public interface CompanyService {
     CompanyEntity saveOrUpdate(CompanyEntity company);
     Optional<CompanyEntity> findById(Long id);
     void delete(Long id);
+    void updateStatus(Long id, Integer status);
 }

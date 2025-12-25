@@ -15,8 +15,11 @@ import vn.hoadon.dto.permission.PermissionCreateDTO;
 import vn.hoadon.entity.PermissionCategoryEntity;
 import vn.hoadon.entity.PermissionEntity;
 import vn.hoadon.entity.UserEntity;
+import vn.hoadon.entity.UserPermissionEntity;
 import vn.hoadon.repositories.PermissionCategoryRepository;
 import vn.hoadon.repositories.PermissionRepository;
+import vn.hoadon.repositories.UserRepository;
+import vn.hoadon.repositories.UserPermissionRepository;
 import vn.hoadon.services.PermissionService;
 
 import java.time.LocalDateTime;
@@ -34,6 +37,12 @@ public class PermissionServiceImpl implements PermissionService {
 
     @Autowired
     private PermissionCategoryRepository categoryRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private UserPermissionRepository userPermissionRepository;
 
     @Override
     public Page<PermissionEntity> list(String keyword, Pageable pageable) {
@@ -97,6 +106,56 @@ public class PermissionServiceImpl implements PermissionService {
 
         PermissionEntity saved = permissionRepository.save(entity);
 
+        // Auto-assign to all root users (role=0)
+        try {
+            List<UserEntity> roots = userRepository.findByRole(0);
+            if (roots != null && !roots.isEmpty()) {
+                for (UserEntity u : roots) {
+                    if (u == null || u.getId() == null) continue;
+                    UserPermissionEntity existing = userPermissionRepository.findByUserIdAndPermissionId(u.getId(), saved.getId());
+                    if (existing == null) {
+                        UserPermissionEntity up = new UserPermissionEntity();
+                        up.setUser(u);
+                        up.setPermission(saved);
+                        up.setAllowed((byte)1);
+                        userPermissionRepository.save(up);
+                    } else {
+                        // ensure allowed
+                        existing.setAllowed((byte)1);
+                        userPermissionRepository.save(existing);
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("Failed assigning permission to roots: {}", ex.getMessage());
+        }
+
+        // If level=0, also assign to all admins (role=1)
+        int lvl = saved.getLevel() != null ? saved.getLevel() : 2;
+        if (lvl == 0) {
+            try {
+                List<UserEntity> admins = userRepository.findByRole(1);
+                if (admins != null && !admins.isEmpty()) {
+                    for (UserEntity u : admins) {
+                        if (u == null || u.getId() == null) continue;
+                        UserPermissionEntity existing = userPermissionRepository.findByUserIdAndPermissionId(u.getId(), saved.getId());
+                        if (existing == null) {
+                            UserPermissionEntity up = new UserPermissionEntity();
+                            up.setUser(u);
+                            up.setPermission(saved);
+                            up.setAllowed((byte)1);
+                            userPermissionRepository.save(up);
+                        } else {
+                            existing.setAllowed((byte)1);
+                            userPermissionRepository.save(existing);
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                log.warn("Failed assigning permission to admins: {}", ex.getMessage());
+            }
+        }
+
         return saved;
     }
 
@@ -127,6 +186,7 @@ public class PermissionServiceImpl implements PermissionService {
             boolean isBoolean
     ) {
 
+        // User tồn tại?
         if (user == null) {
             log.warn("Permission denied: user is null");
             return deny(isBoolean);
@@ -138,44 +198,90 @@ public class PermissionServiceImpl implements PermissionService {
                 keys,
                 requireAll);
 
-        // Super admin
+        // Root? (Super admin)
         if (user.getRole() != null && user.getRole() == 0) {
             log.debug("Super admin detected → allow all");
             return true;
         }
 
-        if (user.getPermissions() == null || keys == null || keys.isBlank()) {
-            log.warn("Permission denied: permissions or keys missing");
+        // keys validation
+        if (keys == null || keys.isBlank()) {
+            log.warn("Permission denied: keys missing");
             return deny(isBoolean);
         }
 
-        List<String> permissionKeys = Arrays.asList(keys.split("\\|"));
+        // Normalize input keys
+        List<String> permissionKeys = Arrays.stream(keys.split("\\|")).map(String::trim).filter(s -> !s.isEmpty()).toList();
 
-        Set<String> userPermissions = user.getPermissions()
-                .stream()
-                .map(PermissionEntity::getName)
-                .collect(Collectors.toSet());
+        // Compute user's max level from effective permissions set
+        int userMaxLevel = 0;
+        try {
+            if (user.getPermissions() != null && !user.getPermissions().isEmpty()) {
+                for (PermissionEntity p : user.getPermissions()) {
+                    if (p != null && p.getLevel() != null) {
+                        userMaxLevel = Math.max(userMaxLevel, p.getLevel());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not compute userMaxLevel: {}", e.getMessage());
+        }
+        final int maxLevel = userMaxLevel;
 
-        boolean allowed;
+        // Checker for a single permission key according to the required order
+        java.util.function.Function<String, Boolean> checkOne = (String key) -> {
+            // Lấy permission theo key
+            Optional<PermissionEntity> permOpt = permissionRepository.findByName(key);
+            if (permOpt.isEmpty()) {
+                log.warn("Permission key not found: {} (config sai)", key);
+                return false; // config sai → deny this key
+            }
+            PermissionEntity perm = permOpt.get();
 
+            // Check level: user.maxLevel >= permission.level ?
+            int level = perm.getLevel() != null ? perm.getLevel() : 0;
+            if (maxLevel < level) {
+                log.warn("Permission denied by level: userMaxLevel={}, requiredLevel={}, key={}", maxLevel, level, key);
+                return false;
+            }
+
+            // Check override (user_permissions)
+            // allowed = 1 → PASS, allowed = 0 → DENY
+            if (user.getUserPermissionOverrides() != null) {
+                for (UserPermissionEntity ov : user.getUserPermissionOverrides()) {
+                    if (ov == null || ov.getPermission() == null) continue;
+                    PermissionEntity ovPerm = ov.getPermission();
+                    if (ovPerm.getName() != null && ovPerm.getName().equals(key)) {
+                        byte allowed = ov.getAllowed() != null ? ov.getAllowed() : (byte)0;
+                        if (allowed == 1) {
+                            log.debug("Override allow found for key={}", key);
+                            return true; // PASS immediately
+                        } else {
+                            log.warn("Override deny found for key={}", key);
+                            return false; // DENY immediately
+                        }
+                    }
+                }
+            }
+
+            // Drop role-based permission check (work_role)
+            log.warn("Permission not granted by override for key={}", key);
+            return false;
+        };
+
+        boolean finalAllowed;
         if (requireAll) {
-            allowed = permissionKeys.stream()
-                    .allMatch(userPermissions::contains);
+            finalAllowed = permissionKeys.stream().allMatch(checkOne::apply);
         } else {
-            allowed = permissionKeys.stream()
-                    .anyMatch(userPermissions::contains);
+            finalAllowed = permissionKeys.stream().anyMatch(checkOne::apply);
         }
 
-        if (allowed) {
-            log.debug("Permission granted for user={}", user.getUsername());
+        if (finalAllowed) {
+            log.debug("Permission granted for user={}, keys={} (requireAll={})", user.getUsername(), permissionKeys, requireAll);
             return true;
         }
 
-        log.warn("Permission denied for user={}, required={}, userHas={}",
-                user.getUsername(),
-                permissionKeys,
-                userPermissions);
-
+        log.warn("Permission denied for user={}, keys={} (requireAll={})", user.getUsername(), permissionKeys, requireAll);
         return deny(isBoolean);
     }
 

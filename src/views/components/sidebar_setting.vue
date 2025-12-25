@@ -5,7 +5,7 @@
       <!-- Logo -->
       <div class="brand">
         <router-link class="brand-link" to="/">
-          <img class="logo" :src="require('@/assets/images/logo/logo-hoadon.png')" alt="logo" />
+          <img class="logo" :src="logoSrc" alt="logo" />
         </router-link>
       </div>
 
@@ -69,8 +69,8 @@ export default {
       // Base menu without Member; we'll push Member conditionally in created()
       menu: [
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
-        { title: 'Tài khoản', icon: 'fas fa-user', to: '/setting/account/list' },
-        { title: 'Hồ sơ', icon: 'fas fa-user', to: '/setting/profile/list' }
+        { title: 'Tài khoản', icon: 'fas fa-user-cog', to: '/setting/account/list' },
+        { title: 'Hồ sơ', icon: 'fas fa-id-card', to: '/setting/profile/list' }
       ]
     };
   },
@@ -83,13 +83,20 @@ export default {
         const roleNum = payload && typeof payload.role !== 'undefined' ? Number(payload.role) : NaN
         return roleNum === 0 || roleNum === 1
       } catch { return false }
+    },
+    logoSrc() {
+      try {
+        const logo = this.$app?.info?.company?.logo
+        if (logo && typeof logo === 'string' && logo.trim() !== '') return logo
+      } catch {}
+      return require('@/assets/images/logo/logo-hoadon.png')
     }
   },
 
   created() {
     // Inject Member menu if allowed
     if (this.canSeeMember) {
-      this.menu.push({ title: 'Thành viên', icon: 'fas fa-user', to: '/setting/member/list' })
+      this.menu.push({ title: 'Thành viên', icon: 'fas fa-users', to: '/setting/member/list' })
     }
   },
 

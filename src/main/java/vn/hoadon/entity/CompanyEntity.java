@@ -46,9 +46,6 @@ public class CompanyEntity {
     private String taxcode;
 
     @Column(columnDefinition = "NVARCHAR(255)")
-    private String password;
-
-    @Column(columnDefinition = "NVARCHAR(255)")
     private String address;
 
     @Column(columnDefinition = "NVARCHAR(255)")
@@ -151,9 +148,6 @@ public class CompanyEntity {
 
     public String getTaxcode() { return taxcode; }
     public void setTaxcode(String taxcode) { this.taxcode = taxcode; }
-
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
 
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }

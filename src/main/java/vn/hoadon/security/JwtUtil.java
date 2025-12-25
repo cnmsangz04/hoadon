@@ -34,16 +34,12 @@ public class JwtUtil {
 
         Long companyId = user.getCompanyId();
         Integer role = user.getRole();
-        Byte adminType = user.getAdminType(); // 0,1,2
-        boolean isSystemAdmin = (adminType != null && adminType == 1);
 
         return Jwts.builder()
                 .setSubject(user.getUsername())
                 .claim("userId", user.getId())
                 .claim("role", role)
                 .claim("companyId", companyId)
-                .claim("adminType", adminType)
-                .claim("isSystemAdmin", isSystemAdmin)
                 .setIssuedAt(now)
                 .setExpiration(exp)
                 .signWith(key, SignatureAlgorithm.HS256)

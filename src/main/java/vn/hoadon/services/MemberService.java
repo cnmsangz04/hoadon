@@ -3,7 +3,7 @@ package vn.hoadon.services;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import vn.hoadon.entity.UserEntity;
-import vn.hoadon.dto.MemberUpsertRequest;
+import vn.hoadon.dto.member.MemberUpsertRequest;
 
 public interface MemberService {
     Page<UserEntity> list(String keyword, Long roleId, Byte status, Long companyId, Integer role, Pageable pageable);

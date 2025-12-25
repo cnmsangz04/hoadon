@@ -39,22 +39,23 @@ router.beforeEach((to, from, next) => {
   if (needUser && !tokenUser) return next('/auth/login')
   if (tokenUser && guestUser) return  next('/')
 
-  // Stricter admin access: require valid admin token with role 0 (Root) OR role 1 (System Admin with adminType==1)
-  if (needAdmin) {
-    if (!tokenAdmin) return next('/auth/login-admin')
-    const payload = parseJwt(tokenAdmin)
-    // Check token expiry if available
+  // Helper: validate admin token (role 0 Root or role 1 Admin)
+  function validateAdminToken(rawToken) {
+    if (!rawToken) return { valid: false, reason: 'missing' }
+    let payload
+    try { payload = parseJwt(rawToken) } catch (e) { return { valid: false, reason: 'parse' } }
     const nowSec = Math.floor(Date.now() / 1000)
-    if (payload && typeof payload.exp === 'number' && payload.exp <= nowSec) {
-      try { localStorage.removeItem('token-admin') } catch (e) {}
-      return next('/auth/login-admin')
-    }
+    if (payload && typeof payload.exp === 'number' && payload.exp <= nowSec) return { valid: false, reason: 'expired' }
     const roleNum = payload && typeof payload.role !== 'undefined' ? Number(payload.role) : NaN
-    const adminType = payload && typeof payload.adminType !== 'undefined' ? Number(payload.adminType) : undefined
     const isRoot = !Number.isNaN(roleNum) && roleNum === 0
-    const isSystemAdmin = !Number.isNaN(roleNum) && roleNum === 1 && adminType === 1
-    if (!isRoot && !isSystemAdmin) {
-      // Invalid token or Admin company/user -> purge and redirect to admin login
+    const isAdmin = !Number.isNaN(roleNum) && roleNum === 1
+    return { valid: isRoot || isAdmin, isRoot, isAdmin }
+  }
+
+  // Admin access: require valid admin token with role 0 (Root) OR role 1 (Admin)
+  if (needAdmin) {
+    const check = validateAdminToken(tokenAdmin)
+    if (!check.valid) {
       try { localStorage.removeItem('token-admin') } catch (e) {}
       return next('/auth/login-admin')
     }
@@ -72,7 +73,13 @@ router.beforeEach((to, from, next) => {
     }
   }
 
-  if (tokenAdmin && guestAdmin) return next('/administrator')
+  // Redirect logged-in admins away from admin login only when token is valid
+  if (guestAdmin) {
+    const check = validateAdminToken(tokenAdmin)
+    if (check.valid) return next('/administrator')
+    // If invalid token present, purge and stay on login-admin
+    if (tokenAdmin && !check.valid) { try { localStorage.removeItem('token-admin') } catch (e) {} }
+  }
 
   next()
 })

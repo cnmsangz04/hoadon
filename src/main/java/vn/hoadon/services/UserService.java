@@ -1,13 +1,14 @@
 package vn.hoadon.services;
 
 import org.springframework.web.multipart.MultipartFile;
-import vn.hoadon.dto.UserDto;
+import vn.hoadon.dto.user.UserDto;
 import vn.hoadon.entity.UserEntity;
 
 import java.util.Optional;
 
 public interface UserService {
     Optional<UserEntity> findByUsername(String username);
+    Optional<UserEntity> findByEmail(String email);
 
     // Get current user info (mapped to DTO)
     UserDto getCurrentUserInfo();

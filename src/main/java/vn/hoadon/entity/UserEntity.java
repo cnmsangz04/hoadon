@@ -11,7 +11,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users",
+       uniqueConstraints = {
+           @UniqueConstraint(name = "uk_users_username", columnNames = {"username"})
+       })
 public class UserEntity {
 
     @Id
@@ -21,13 +24,14 @@ public class UserEntity {
     @Column(name = "company_id", nullable = false)
     private Long companyId;
 
-    @Column(nullable = false, length = 32)
+    @Column(nullable = false, length = 32, unique = true)
     private String username;
 
     // Add display name for the user
     @Column(name = "name", length = 255)
     private String name;
 
+    // Email no longer unique
     @Column(length = 255)
     private String email;
 
@@ -78,21 +82,19 @@ public class UserEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Remove direct ManyToMany mapping to user_permissions and use explicit entity with allowed bit
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<UserPermissionEntity> userPermissionOverrides;
 
-    // Working role (vai trò làm việc)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "work_role_id")
-    private RoleEntity workRole;
-
-    // Expose raw foreign key for serialization without forcing join
-    @Column(name = "work_role_id", insertable = false, updatable = false)
-    private Long workRoleId;
-
-    @Column(name = "admin_type")
-    private Byte adminType; // 0: none, 1: system admin, 2: company admin
+    // Auto-generate username after ID is assigned
+    @PostPersist
+    public void ensureUsername() {
+        if (this.id != null) {
+            String expected = "cp-" + this.id;
+            if (this.username == null || !this.username.equals(expected)) {
+                this.username = expected;
+            }
+        }
+    }
 
     protected UserEntity getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -271,62 +273,15 @@ public class UserEntity {
         this.userPermissionOverrides = userPermissionOverrides;
     }
 
-    public RoleEntity getWorkRole() {
-        return workRole;
-    }
-
-    public void setWorkRole(RoleEntity workRole) {
-        this.workRole = workRole;
-    }
-
-    public Long getWorkRoleId() {
-        return workRoleId;
-    }
-
-    @JsonProperty("work_role_id")
-    public Long getWorkRoleIdSnake() {
-        return workRoleId;
-    }
-
-    public Byte getAdminType() {
-        return adminType;
-    }
-
-    public void setAdminType(Byte adminType) {
-        this.adminType = adminType;
-    }
-
-    // Compute effective permissions: start with workRole permissions, then apply per-user overrides
-    // allowed = 1 → ensure permission present; allowed = 0 → ensure permission removed
+    // Compute effective permissions: use per-user overrides only
     public Set<PermissionEntity> getPermissions() {
         Set<PermissionEntity> effective = new HashSet<>();
-        // Base from work role
-        if (this.workRole != null && this.workRole.getPermissions() != null) {
-            effective.addAll(this.workRole.getPermissions());
-        }
-        // Apply overrides
         if (this.userPermissionOverrides != null && !this.userPermissionOverrides.isEmpty()) {
-            // Build a map of current permission IDs in the set for quick lookup/remove
-            Set<Long> currentIds = new HashSet<>();
-            for (PermissionEntity p : effective) {
-                if (p != null && p.getId() != null) currentIds.add(p.getId());
-            }
             for (UserPermissionEntity ov : this.userPermissionOverrides) {
                 if (ov == null || ov.getPermission() == null || ov.getPermission().getId() == null) continue;
-                Long pid = ov.getPermission().getId();
                 byte allowed = ov.getAllowed() != null ? ov.getAllowed() : (byte)0;
                 if (allowed == 1) {
-                    // Add permission entity if not already present
-                    if (!currentIds.contains(pid)) {
-                        effective.add(ov.getPermission());
-                        currentIds.add(pid);
-                    }
-                } else {
-                    // Remove any permission in the set with same id
-                    if (currentIds.contains(pid)) {
-                        effective.removeIf(p -> p != null && pid.equals(p.getId()));
-                        currentIds.remove(pid);
-                    }
+                    effective.add(ov.getPermission());
                 }
             }
         }

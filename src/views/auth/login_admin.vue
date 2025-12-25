@@ -1,38 +1,39 @@
 <template>
   <div class="auth-page">
     <div class="auth-container">
+      
       <div class="brand-side">
         <div class="brand-inner">
-          <img src="/logo.png" alt="Logo" class="brand-logo" />
-          <h2>Khu vực Quản trị</h2>
-          <p class="text-muted">Chỉ dành cho tài khoản có quyền quản trị hệ thống.</p>
+          <img class="logo" :src="require('@/assets/images/logo/logo-hoadon.png')" alt="logo" />
+          <h2>Hóa đơn điện tử</h2>
+          <p class="text-muted">Khu vực Quản trị hệ thống.</p>
         </div>
       </div>
+
       <div class="form-side d-flex justify-content-center align-items-center">
         <b-card class="auth-card shadow-lg">
+
           <div class="text-center mb-4">
-            <h4 class="mb-1">Đăng nhập Admin</h4>
-            <small class="text-muted">Đăng nhập để vào trang quản trị</small>
+            <h4 class="mb-1">Đăng nhập</h4>
+            <small class="text-muted">Vào trang quản trị để bắt đầu làm việc</small>
           </div>
 
-          <b-alert v-if="error" variant="danger" show class="py-2 px-3">{{ error }}</b-alert>
-
           <b-form @submit.prevent="onSubmit">
-            <b-form-group label="Tài khoản">
+            <b-form-group label="Email hoặc Tài khoản">
               <div class="input-with-icon">
                 <i class="bi bi-person"></i>
-                <b-form-input v-model.trim="username" required placeholder="Nhập tài khoản"></b-form-input>
+                <b-form-input v-model.trim="account" type="text" required placeholder="Nhập email hoặc tài khoản"></b-form-input>
               </div>
             </b-form-group>
 
-            <b-form-group label="Mật khẩu quản trị">
+            <b-form-group label="Mật khẩu">
               <div class="input-with-icon">
                 <i class="bi bi-lock"></i>
                 <b-form-input 
                   :type="showPassword ? 'text' : 'password'"
                   v-model="password"
                   required 
-                  placeholder="Nhập mật khẩu quản trị"
+                  placeholder="Nhập mật khẩu"
                 ></b-form-input>
 
                 <b-button variant="outline-secondary" size="sm"
@@ -44,11 +45,11 @@
 
             <div class="d-flex justify-content-between mb-3">
               <b-form-checkbox v-model="remember">Ghi nhớ đăng nhập</b-form-checkbox>
-             </div>
+            </div>
 
             <b-button type="submit" block variant="primary"
               class="submit-btn"
-              :disabled="loading || !username || !password">
+              :disabled="loading || !account || !password">
               <span v-if="loading"><b-spinner small class="me-2"/>Đang đăng nhập...</span>
               <span v-else>Đăng nhập</span>
             </b-button>
@@ -65,13 +66,13 @@
 </template>
 
 <script>
-import axios from 'axios'
+import axios from '@/plugins/axios'
 import { parseJwt } from '@/utils/jwt'
 
 export default {
   data() {
     return {
-      username: '',
+      account: '',
       password: '',
       showPassword: false,
       remember: true,
@@ -79,42 +80,40 @@ export default {
       error: ''
     }
   },
-  computed: {
-    canSubmit() {
-      return this.username && this.password
-    }
-  },
   methods: {
     async onSubmit() {
-      if (!this.canSubmit) return
-      this.loading = true
-      this.error = ''
+      if (!this.account || !this.password) return
+      this.loading = true; this.error = ''
       try {
-        const res = await axios.post('/auth/login-admin', {
-          username: this.username,
-          password: this.password
-        })
+        const payload = { email: this.account, username: this.account, password: this.password }
+        const res = await axios.post('/auth/login-admin', payload, { meta: { suppressGlobalErrorToast: true } })
         const token = res.data?.token || res.data?.accessToken || res.data?.data?.token
-        if (!token) throw new Error('Không tìm thấy token trong phản hồi')
+        if (!token) throw new Error('Không tìm thấy token!')
         localStorage.setItem('token-admin', token)
-
-        const payload = parseJwt(token)
-        const role = payload?.role
-        if (role === 0 || role === 1 || parseInt(role, 10) === 0 || parseInt(role, 10) === 1) {
-          if (this.remember) {
-            localStorage.setItem('last-admin', this.username)
-          }
-          this.$router.push({ name: 'admin' })
-        } else {
+        const payloadJwt = parseJwt(token)
+        const role = payloadJwt?.role
+        const isAdmin = role === 0 || role === 1 || parseInt(role, 10) === 0 || parseInt(role, 10) === 1
+        if (!isAdmin) {
           localStorage.removeItem('token-admin')
           throw new Error('Tài khoản không có quyền Admin')
         }
-      } catch (err) {
-        console.error(err)
-        this.error = err.response?.data || err.message || 'Đăng nhập thất bại'
-      } finally {
-        this.loading = false
+        if (this.remember) localStorage.setItem('last-admin-account', this.account)
+        // Fetch app info immediately for admin context
+        try {
+          const infoRes = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
+          const data = infoRes?.data || {}
+          if (this.$app) {
+            this.$app.info.user = data.user || null
+            this.$app.info.company = data.company || null
+          }
+        } catch {}
+        this.$router.push({ name: 'admin' })
       }
+      catch(e) {
+        const msg = e.response?.data?.message || e.response?.data || e.message || 'Đăng nhập thất bại!'
+        try { this.$toastr.error(msg) } catch(_) { this.error = msg }
+      }
+      finally { this.loading = false }
     }
   }
 }
@@ -128,6 +127,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* soft gradient background */
   background: linear-gradient(135deg, #eef2f7 0%, #f8f9fb 50%, #f1f4f9 100%);
 }
 
@@ -137,7 +137,7 @@ export default {
   display: grid;
   grid-template-columns: 1.15fr 1fr;
   gap: 24px;
-  padding: 16px;
+  padding: 16px; /* compact padding to avoid overflow */
 }
 
 /* Branding */
@@ -149,7 +149,7 @@ export default {
   display: flex;
 }
 .brand-inner { margin: auto; text-align: center; padding: 28px; }
-.brand-logo { width: 72px; height: 72px; object-fit: contain; margin-bottom: 10px; }
+.brand-logo, .logo { width: 72px; height: 72px; object-fit: contain; margin-bottom: 10px; }
 .brand-inner h2 { margin: 0 0 6px; font-weight: 600; }
 .brand-inner p { margin: 0; color: #6c757d; }
 
@@ -171,6 +171,7 @@ export default {
 .input-with-icon { display: flex; align-items: center; gap: .6rem; }
 .input-with-icon i { color: #8a94a6; font-size: 1.05rem; }
 
+/* refine input aesthetics */
 :deep(.form-control), :deep(input.form-control) {
   border-radius: 10px;
   border: 1px solid #e5e7eb;
@@ -201,7 +202,9 @@ export default {
 }
 
 /* Alert */
-:deep(.alert-danger) { border-radius: 10px; }
+:deep(.alert-danger) {
+  border-radius: 10px;
+}
 
 /* Responsive */
 @media (max-width: 768px) {

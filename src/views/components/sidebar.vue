@@ -4,7 +4,7 @@
       <!-- Brand / Logo -->
       <div class="brand">
         <router-link class="brand-link" to="/">
-          <img class="logo" :src="require('@/assets/images/logo/logo-hoadon.png')" alt="logo" />
+          <img class="logo" :src="logoSrc" alt="logo" />
         </router-link>
       </div>
 
@@ -69,8 +69,7 @@ export default {
           icon: 'far fa-edit',
           children: [
             { title: 'Đăng ký/Thay đổi HĐ điện tử', to: '/register/invoice' },
-            { title: 'Đăng ký chứng từ TNCN', to: '/register/personal-income-tax' },
-            { title: 'Mẫu hóa đơn', to: '/register/invoice/form' },
+            { title: 'Mẫu hóa đơn', to: '/register/form-invoice' },
           ],
         },
         {
@@ -78,11 +77,17 @@ export default {
           icon: 'far fa-file-alt',
           children: [
             { title: 'Hóa đơn GTGT', to: '/invoice/list' },
-            { title: 'Hóa đơn bán hàng', to: '/bill-of-sale/list' },
           ],
         },
         { title: 'Báo cáo', icon: 'fas fa-file-signature', to: '/reports' },
-        { title: 'Danh mục', icon: 'fas fa-list', to: '/categories' },
+        {
+          title: 'Danh mục',
+          icon: 'far fa-file-alt',
+          children: [
+            { title: 'Sản phẩm', to: '/categories/product/list' },
+            { title: 'Khách hàng', to: '/categories/customer/list' },
+          ],
+        },
         { title: 'Cài đặt', icon: 'fas fa-cog', to: '/setting' },
       ],
     };
@@ -103,6 +108,13 @@ export default {
         })
         .filter(Boolean);
     },
+    logoSrc() {
+      try {
+        const logo = this.$app?.info?.company?.logo
+        if (logo && typeof logo === 'string' && logo.trim() !== '') return logo
+      } catch {}
+      return require('@/assets/images/logo/logo-hoadon.png')
+    }
   },
   methods: {
     toggle(index) {

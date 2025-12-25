@@ -45,7 +45,7 @@
                   <label>Tên</label>
                   <p>{{ account.name }}</p>
                 </div>
-                <b-button size="sm" variant="light" @click="editForm('name')">Sửa</b-button>
+                <b-button size="sm" variant="light" @click="editForm('name')">Cập nhật</b-button>
               </div>
               <b-form v-else @submit="nameSubmit" class="form-profile">
                 <b-input-group>
@@ -73,7 +73,7 @@
                   <label>Email</label>
                   <p>{{ account.email }}</p>
                 </div>
-                <b-button size="sm" variant="light" @click="editForm('email')">Sửa</b-button>
+                <b-button size="sm" variant="light" @click="editForm('email')">Cập nhật</b-button>
               </div>
               <b-form v-else @submit="emailSubmit" class="form-profile">
                 <b-input-group>
@@ -101,7 +101,7 @@
                   <label>Điện thoại</label>
                   <p>{{ account.phone }}</p>
                 </div>
-                <b-button size="sm" variant="light" @click="editForm('phone')">Sửa</b-button>
+                <b-button size="sm" variant="light" @click="editForm('phone')">Cập nhật</b-button>
               </div>
               <b-form v-else @submit="phoneSubmit" class="form-profile">
                 <b-input-group>
@@ -129,7 +129,7 @@
                   <label>Đổi mật khẩu</label>
                   <p class="text-muted">••••••••</p>
                 </div>
-                <b-button size="sm" variant="light" @click="editForm('password')">Sửa</b-button>
+                <b-button size="sm" variant="light" @click="editForm('password')">Cập nhật</b-button>
               </div>
               <b-form v-else @submit.prevent="passwordSubmit" class="form-profile">
                 <b-form-group label="Mật khẩu hiện tại">
@@ -273,10 +273,15 @@ export default {
     },
 
     submitForm(data, key) {
-      axios.post('/setting/account/update', data).then(() => {
+      axios.post('/setting/account/update', data, { meta: { suppressGlobalErrorToast: true } }).then(() => {
         Object.assign(this.account, data)
         this.closeForm(key)
         this.$toastr && this.$toastr.success('Đã cập nhật thông tin tài khoản')
+      })
+      .catch(err => {
+        const msg = err?.response?.data?.message || err?.response?.data || 'Cập nhật thông tin thất bại'
+        if (key) { this.$set(this.errors, key, [msg]) }
+        this.$toastr && this.$toastr.error(msg)
       })
     },
 
@@ -315,12 +320,10 @@ export default {
 
     submitModel() {
       const { canvas } = this.$refs.cropper.getResult()
-
       canvas.toBlob(blob => {
         const formData = new FormData()
         formData.append('avatar', blob, 'avatar.png')
-
-        axios.post('/setting/account/avatar', formData)
+        axios.post('/setting/account/avatar', formData, { meta: { suppressGlobalErrorToast: true } })
           .then(() => {
             this.loadInfo()
             this.closelModel()
@@ -332,7 +335,7 @@ export default {
     passwordSubmit() {
       if (!this.canSubmitPassword) return
       const payload = { currentPassword: this.frmPassword.current, newPassword: this.frmPassword.new }
-      axios.post('/setting/account/change-password', payload)
+      axios.post('/setting/account/change-password', payload, { meta: { suppressGlobalErrorToast: true } })
         .then(() => {
           this.frmPassword = { current: '', new: '', confirm: '' }
           this.$toastr && this.$toastr.success('Đã đổi mật khẩu thành công')

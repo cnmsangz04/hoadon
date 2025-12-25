@@ -144,7 +144,7 @@
     </b-card>
 
     <!-- MODAL -->
-    <b-modal ref="categoryModal" :title="form.id ? 'Sửa nhóm quyền' : 'Thêm nhóm quyền'" hide-footer>
+    <b-modal ref="categoryModal" :title="form.id ? 'Cập nhật nhóm quyền' : 'Thêm nhóm quyền'" hide-footer>
       <b-form @submit.prevent="saveCategory">
         <b-form-group label="Tên nhóm">
           <b-form-input v-model="form.name" required />

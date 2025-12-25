@@ -11,7 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import vn.hoadon.repositories.UserRepository;
 import vn.hoadon.services.UserService;
-import vn.hoadon.dto.UserDto;
+import vn.hoadon.dto.user.UserDto;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.util.UploadPath;
 
@@ -47,6 +47,12 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByUsername(username);
     }
 
+    @Override
+    public Optional<UserEntity> findByEmail(String email) {
+        if (email == null) return Optional.empty();
+        return userRepository.findByEmail(email);
+    }
+
     private UserEntity getCurrentUserEntity() {
         Authentication auth = SecurityContextHolder
                 .getContext()
@@ -63,6 +69,10 @@ public class UserServiceImpl implements UserService {
         }
 
         return (UserEntity) principal;
+    }
+
+    private String expectedUsername(Long id) {
+        return id == null ? null : ("cp-" + id);
     }
 
     private UserDto toDto(UserEntity e) {
@@ -87,11 +97,24 @@ public class UserServiceImpl implements UserService {
     public UserDto updateCurrentUser(UserDto update) {
         UserEntity e = getCurrentUserEntity();
 
+        // Block username editing: always enforce rule
+        String expect = expectedUsername(e.getId());
+        if (expect != null && !expect.equals(e.getUsername())) {
+            e.setUsername(expect);
+        }
+
         if (update.getName() != null) {
             e.setName(update.getName());
         }
         if (update.getEmail() != null) {
-            e.setEmail(update.getEmail());
+            // normalize for comparison
+            String newEmail = update.getEmail().trim();
+            if (!newEmail.isEmpty()) {
+                // remove duplicate email check to allow non-unique emails
+                e.setEmail(newEmail);
+            } else {
+                e.setEmail(null);
+            }
         }
         if (update.getPhone() != null) {
             e.setPhone(update.getPhone());
