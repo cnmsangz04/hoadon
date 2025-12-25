@@ -45,7 +45,7 @@
                   <label>Tên</label>
                   <p>{{ account.name }}</p>
                 </div>
-                <b-button size="sm" variant="light" @click="editForm('name')">Sửa</b-button>
+                <b-button size="sm" variant="light" @click="editForm('name')">Cập nhật</b-button>
               </div>
               <b-form v-else @submit="nameSubmit" class="form-profile">
                 <b-input-group>
@@ -73,7 +73,7 @@
                   <label>Email</label>
                   <p>{{ account.email }}</p>
                 </div>
-                <b-button size="sm" variant="light" @click="editForm('email')">Sửa</b-button>
+                <b-button size="sm" variant="light" @click="editForm('email')">Cập nhật</b-button>
               </div>
               <b-form v-else @submit="emailSubmit" class="form-profile">
                 <b-input-group>
@@ -101,7 +101,7 @@
                   <label>Điện thoại</label>
                   <p>{{ account.phone }}</p>
                 </div>
-                <b-button size="sm" variant="light" @click="editForm('phone')">Sửa</b-button>
+                <b-button size="sm" variant="light" @click="editForm('phone')">Cập nhật</b-button>
               </div>
               <b-form v-else @submit="phoneSubmit" class="form-profile">
                 <b-input-group>
@@ -119,6 +119,40 @@
                 <b-form-invalid-feedback>
                   {{ invalidFeedback('phone') }}
                 </b-form-invalid-feedback>
+              </b-form>
+            </div>
+
+            <!-- PASSWORD CHANGE -->
+            <div class="list-info">
+              <div class="list-item" v-if="!showPassword">
+                <div>
+                  <label>Đổi mật khẩu</label>
+                  <p class="text-muted">••••••••</p>
+                </div>
+                <b-button size="sm" variant="light" @click="editForm('password')">Cập nhật</b-button>
+              </div>
+              <b-form v-else @submit.prevent="passwordSubmit" class="form-profile">
+                <b-form-group label="Mật khẩu hiện tại">
+                  <b-form-input v-model.trim="frmPassword.current" type="password" required :state="pwdState('current')" />
+                </b-form-group>
+                <b-form-row>
+                  <b-col md="6">
+                    <b-form-group label="Mật khẩu mới">
+                      <b-form-input v-model="frmPassword.new" type="password" required :state="pwdState('new')" />
+                      <small class="text-muted">Tối thiểu 8 ký tự</small>
+                    </b-form-group>
+                  </b-col>
+                  <b-col md="6">
+                    <b-form-group label="Nhập lại mật khẩu mới">
+                      <b-form-input v-model="frmPassword.confirm" type="password" required :state="pwdState('confirm')" />
+                      <small v-if="pwdState('confirm') === false" class="text-danger">Mật khẩu không khớp</small>
+                    </b-form-group>
+                  </b-col>
+                </b-form-row>
+                <div class="text-right">
+                  <b-button type="submit" class="btn-primary" :disabled="!canSubmitPassword">Đổi mật khẩu</b-button>
+                  <b-button variant="outline-secondary" class="ml-2" @click="closeForm('password')">Hủy</b-button>
+                </div>
               </b-form>
             </div>
           </b-card>
@@ -177,7 +211,9 @@ export default {
       showEmail: false,
       showPhone: false,
       imgLogo: null,
-      errors: {}
+      errors: {},
+      showPassword: false,
+      frmPassword: { current: '', new: '', confirm: '' }
     }
   },
   mounted() {
@@ -198,6 +234,14 @@ export default {
         // If parsing fails, return as-is
         return src
       }
+    },
+    canSubmitPassword() {
+      const cur = (this.frmPassword.current || '').trim()
+      const npw = this.frmPassword.new || ''
+      const cf = this.frmPassword.confirm || ''
+      const minLenOk = npw.length >= 8
+      const matchOk = npw === cf
+      return !!cur && minLenOk && matchOk
     }
   },
   methods: {
@@ -209,18 +253,35 @@ export default {
     },
 
     editForm(k) {
-      this[`show${k.charAt(0).toUpperCase() + k.slice(1)}`] = true
+      const key = k.charAt(0).toUpperCase() + k.slice(1)
+      if (k === 'password') {
+        this.showPassword = true
+        return
+      }
+      this[`show${key}`] = true
     },
 
     closeForm(k) {
-      this[`show${k.charAt(0).toUpperCase() + k.slice(1)}`] = false
+      const key = k.charAt(0).toUpperCase() + k.slice(1)
+      if (k === 'password') {
+        this.showPassword = false
+        this.frmPassword = { current: '', new: '', confirm: '' }
+        return
+      }
+      this[`show${key}`] = false
       this.frmInfo[k] = this.account[k]
     },
 
     submitForm(data, key) {
-      axios.post('/setting/account/update', data).then(() => {
+      axios.post('/setting/account/update', data, { meta: { suppressGlobalErrorToast: true } }).then(() => {
         Object.assign(this.account, data)
         this.closeForm(key)
+        this.$toastr && this.$toastr.success('Đã cập nhật thông tin tài khoản')
+      })
+      .catch(err => {
+        const msg = err?.response?.data?.message || err?.response?.data || 'Cập nhật thông tin thất bại'
+        if (key) { this.$set(this.errors, key, [msg]) }
+        this.$toastr && this.$toastr.error(msg)
       })
     },
 
@@ -259,17 +320,40 @@ export default {
 
     submitModel() {
       const { canvas } = this.$refs.cropper.getResult()
-
       canvas.toBlob(blob => {
         const formData = new FormData()
         formData.append('avatar', blob, 'avatar.png')
-
-        axios.post('/setting/account/avatar', formData)
+        axios.post('/setting/account/avatar', formData, { meta: { suppressGlobalErrorToast: true } })
           .then(() => {
             this.loadInfo()
             this.closelModel()
+            this.$toastr && this.$toastr.success('Đã cập nhật ảnh đại diện')
           })
       }, 'image/png')
+    },
+
+    passwordSubmit() {
+      if (!this.canSubmitPassword) return
+      const payload = { currentPassword: this.frmPassword.current, newPassword: this.frmPassword.new }
+      axios.post('/setting/account/change-password', payload, { meta: { suppressGlobalErrorToast: true } })
+        .then(() => {
+          this.frmPassword = { current: '', new: '', confirm: '' }
+          this.$toastr && this.$toastr.success('Đã đổi mật khẩu thành công')
+        })
+        .catch(err => {
+          const msg = err?.response?.data?.message || err?.response?.data || 'Đổi mật khẩu thất bại'
+          this.$toastr && this.$toastr.error(msg)
+        })
+    },
+
+    pwdState(k) {
+      const cur = (this.frmPassword.current || '').trim()
+      const npw = this.frmPassword.new || ''
+      const cf = this.frmPassword.confirm || ''
+      if (k === 'current') return cur ? null : false
+      if (k === 'new') return npw.length === 0 ? null : (npw.length >= 8)
+      if (k === 'confirm') return cf.length === 0 ? null : (npw === cf)
+      return null
     },
 
     state(f) {
@@ -396,5 +480,57 @@ export default {
   height: 420px;
   border-radius: 12px;
   overflow: hidden;
+}
+
+/* Password Change section */
+.list-info h5 {
+  font-weight: 700;
+  color: #111827;
+}
+.form-profile .form-group label,
+.form-profile label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+:deep(.form-profile .form-control),
+:deep(.form-profile input.form-control) {
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 10px 12px;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+:deep(.form-profile .form-control:focus) {
+  border-color: #84a9ff;
+  box-shadow: 0 0 0 3px rgba(132, 169, 255, 0.25);
+}
+.form-profile small.text-muted { color: #9aa3b2 !important; }
+.form-profile .text-danger { font-size: 12px; }
+.form-profile .btn-primary {
+  min-width: 160px;
+  border-radius: 10px;
+}
+.form-profile .b-form-row, .form-profile .row {
+  margin-left: -6px;
+  margin-right: -6px;
+}
+.form-profile .col-md-6, .form-profile [class*="col-"] {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+/* Spacing harmonization */
+.profile-card .list-info + .list-info { border-top: 1px dashed #eef2f7; }
+.profile-card .list-info { padding-top: 14px; padding-bottom: 14px; }
+
+/* Button color unify */
+:deep(.btn-primary) {
+  background: linear-gradient(180deg, #4f77ff, #3b66f0);
+}
+:deep(.btn-primary:hover) { filter: brightness(1.03); }
+
+/* Responsive tweaks */
+@media (max-width: 576px) {
+  .form-profile .btn-primary { width: 100%; }
 }
 </style>

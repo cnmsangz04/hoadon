@@ -1,2 +1,18 @@
 /* Compatibility shim for backward-compatibility */
 @import "./sidebar_administrator.css";
+
+/* Unified admin badge styles (shared across admin views) */
+.badge { font-weight: 600; border-radius: 9999px; padding: 6px 10px; }
+.badge-info {
+  background-color: #eef6ff !important;
+  color: #1e40af !important;
+  border: 1px solid #dbeafe !important;
+}
+.badge-light {
+  background: #f7f9fc !important;
+  border: 1px solid #ecf0f6 !important;
+  color: #374151 !important;
+}
+
+/* Category pill used in permissions list */
+.category-pill { /* keeps same style as .badge-light with pill shape */ }

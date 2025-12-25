@@ -1,8 +1,9 @@
-package vn.hoadon.controller.admin;
+package vn.hoadon.controllers.admin;
 
-import vn.hoadon.controller.base.BaseController;
+import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.dto.buyinvoice.BuyInvoiceCreateDTO;
 import vn.hoadon.dto.buyinvoice.BuyInvoiceFilterDTO;
+import vn.hoadon.dto.buyinvoice.BuyInvoiceListItemDTO;
 import vn.hoadon.dto.common.IdRequestDTO;
 import vn.hoadon.entity.BuyInvoiceEntity;
 import vn.hoadon.services.BuyInvoiceService;
@@ -22,7 +23,7 @@ public class BuyInvoiceController extends BaseController {
     private BuyInvoiceService service;
 
     @PostMapping("/list")
-    public ResponseEntity<Page<BuyInvoiceEntity>> list(
+    public ResponseEntity<Page<BuyInvoiceListItemDTO>> list(
             @RequestBody(required = false) BuyInvoiceFilterDTO filter,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size

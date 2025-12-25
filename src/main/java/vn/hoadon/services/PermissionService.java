@@ -12,7 +12,10 @@ public interface PermissionService {
     Page<PermissionEntity> list(String keyword, Pageable pageable);
     Optional<PermissionEntity> findById(Long id);
     PermissionEntity saveOrUpdate(PermissionCreateDTO dto);
+    // Soft delete: mark status=0
     void delete(Long id);
+    // Explicit status update for hide/show
+    void updateStatus(Long id, byte status);
 
     /**
      * @param user        user hiện tại

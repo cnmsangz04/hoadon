@@ -18,6 +18,12 @@ export default {
 	  name: 'setting-profile',
 	  component: () => import('../../views/settings/profile/list.vue'),
 	  meta: { requiresUser: true, title: 'Hồ sơ' }
+	},
+	{
+	  path: 'member/list',
+	  name: 'setting-member',
+	  component: () => import('../../views/settings/member/list.vue'),
+	  meta: { requiresUser: true, title: 'Thành viên', rolePolicy: 'role<2' }
 	}
   ]
 }

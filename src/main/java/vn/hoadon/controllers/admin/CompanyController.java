@@ -1,4 +1,4 @@
-package vn.hoadon.controller.admin;
+package vn.hoadon.controllers.admin;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,10 +57,16 @@ public class CompanyController {
         return ResponseEntity.ok(saved);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        service.delete(id);
-
-        return ResponseEntity.noContent().build();
+    @PostMapping("/{id}/status")
+    public ResponseEntity<Void> updateStatus(@PathVariable Long id, @RequestBody StatusDTO req) {
+        service.updateStatus(id, req.getStatus());
+        return ResponseEntity.ok().build();
     }
+
+}
+
+class StatusDTO {
+    private Integer status;
+    public Integer getStatus() { return status; }
+    public void setStatus(Integer status) { this.status = status; }
 }

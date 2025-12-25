@@ -1,21 +1,44 @@
 package vn.hoadon.services.impl;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import vn.hoadon.entity.CompanyEntity;
-import vn.hoadon.repositories.CompanyRepository;
-import vn.hoadon.services.CompanyService;
 import vn.hoadon.dto.company.CompanyFilterDTO;
+import vn.hoadon.entity.CompanyEntity;
+import vn.hoadon.entity.PermissionEntity;
+import vn.hoadon.entity.UserEntity;
+import vn.hoadon.entity.UserPermissionEntity;
+import vn.hoadon.repositories.CompanyRepository;
+import vn.hoadon.repositories.PermissionRepository;
+import vn.hoadon.repositories.UserPermissionRepository;
+import vn.hoadon.repositories.UserRepository;
+import vn.hoadon.services.CompanyService;
 
 import jakarta.persistence.criteria.Predicate;
-import java.util.*;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CompanyServiceImpl implements CompanyService {
 
     private final CompanyRepository repo;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PermissionRepository permissionRepository;
+
+    @Autowired
+    private UserPermissionRepository userPermissionRepository;
 
     public CompanyServiceImpl(CompanyRepository repo) {
         this.repo = repo;
@@ -35,7 +58,9 @@ public class CompanyServiceImpl implements CompanyService {
                     String like = "%" + filter.getKeyword() + "%";
                     predicates.add(cb.or(
                         cb.like(root.get("domain"), like),
-                        cb.like(root.get("taxcode"), like)
+                        cb.like(root.get("taxcode"), like),
+                        cb.like(root.get("name"), like),
+                        cb.like(root.get("address"), like)
                     ));
                 }
 
@@ -56,7 +81,12 @@ public class CompanyServiceImpl implements CompanyService {
             if (company.getPrefix() == null || company.getPrefix().isEmpty()) {
                 company.setPrefix(generatePrefix());
             }
-            return repo.save(company);
+            CompanyEntity savedCompany = repo.save(company);
+
+            // Auto-create default admin user for the new company
+            createDefaultCompanyAdmin(savedCompany);
+
+            return savedCompany;
         }
 
         CompanyEntity existing = repo.findById(company.getId())
@@ -68,20 +98,37 @@ public class CompanyServiceImpl implements CompanyService {
         if (company.getEmail() != null) existing.setEmail(company.getEmail());
         if (company.getHotline() != null) existing.setHotline(company.getHotline());
         if (company.getStatus() != null) existing.setStatus(company.getStatus());
-
-        if (company.getPassword() != null && !company.getPassword().isEmpty()) {
-            existing.setPassword(company.getPassword());
-        }
+        if (company.getName() != null) existing.setName(company.getName());
+        if (company.getAddress() != null) existing.setAddress(company.getAddress());
 
         return repo.save(existing);
     }
     
+    @Override
+    public void updateStatus(Long id, Integer status) {
+        CompanyEntity existing = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Company not found"));
+        existing.setStatus(status != null && status == 1 ? 1 : 0);
+        repo.save(existing);
+    }
+
     private String generatePrefix() {
         String prefix;
         do {
             prefix = "HD" + System.currentTimeMillis();
         } while (repo.existsByPrefix(prefix));
         return prefix;
+    }
+
+    private boolean isBcrypt(String v) {
+        if (v == null) return false;
+        if (v.length() == 60 && v.startsWith("$2")) return true;
+        return v.matches("^\\$2[aby]\\$\\d{2}\\$.*");
+    }
+
+    private String encodeIfNeeded(String rawOrHash) {
+        if (rawOrHash == null || rawOrHash.isBlank()) return rawOrHash;
+        return isBcrypt(rawOrHash) ? rawOrHash : passwordEncoder.encode(rawOrHash);
     }
 
     @Override
@@ -92,5 +139,74 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     public void delete(Long id) {
         repo.deleteById(id);
+    }
+
+    // Create user (username=admin) for company and assign level=0 permissions
+    private void createDefaultCompanyAdmin(CompanyEntity company) {
+        if (company == null || company.getId() == null) return;
+
+        // If an admin user already exists for this company with username 'admin', skip
+        try {
+            Optional<UserEntity> existingAdmin = userRepository.findByUsername("admin");
+            if (existingAdmin.isPresent() && company.getId().equals(existingAdmin.get().getCompanyId())) {
+                return;
+            }
+        } catch (Exception ignore) {}
+
+        // Build user entity
+        UserEntity user = new UserEntity();
+        user.setCompanyId(company.getId());
+        user.setUsername("admin");
+        user.setName("Admin");
+        user.setRole(1); // Admin
+        user.setStatus((byte)1);
+        String rawPassword = generateStrongPassword(14);
+        user.setPassword(passwordEncoder.encode(rawPassword));
+
+        UserEntity savedUser = userRepository.save(user);
+
+        // Assign all permissions with level=0 and status=1
+        List<PermissionEntity> basePerms = permissionRepository.findByLevelAndStatus(0, (byte)1);
+        if (basePerms != null && !basePerms.isEmpty()) {
+            List<UserPermissionEntity> assigns = new ArrayList<>(basePerms.size());
+            for (PermissionEntity p : basePerms) {
+                UserPermissionEntity up = new UserPermissionEntity();
+                up.setUser(savedUser);
+                up.setPermission(p);
+                up.setAllowed((byte)1);
+                assigns.add(up);
+            }
+            userPermissionRepository.saveAll(assigns);
+        }
+
+        // Optionally: store or log the generated password somewhere secure
+        // For now, no-op to avoid leaking credentials.
+    }
+
+    private static final String LOWER = "abcdefghijkmnopqrstuvwxyz";
+    private static final String UPPER = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    private static final String DIGIT = "23456789";
+    private static final String SYM = "!@#$%^&*()-_=+[]{}:;,./?";
+    private static final SecureRandom RNG = new SecureRandom();
+    private String generateStrongPassword(int length) {
+        String all = LOWER + UPPER + DIGIT + SYM;
+        StringBuilder sb = new StringBuilder(length);
+        // ensure at least one from each group
+        sb.append(LOWER.charAt(RNG.nextInt(LOWER.length())));
+        sb.append(UPPER.charAt(RNG.nextInt(UPPER.length())));
+        sb.append(DIGIT.charAt(RNG.nextInt(DIGIT.length())));
+        sb.append(SYM.charAt(RNG.nextInt(SYM.length())));
+        for (int i = sb.length(); i < length; i++) {
+            sb.append(all.charAt(RNG.nextInt(all.length())));
+        }
+        // simple shuffle
+        char[] arr = sb.toString().toCharArray();
+        for (int i = arr.length - 1; i > 0; i--) {
+            int j = RNG.nextInt(i + 1);
+            char t = arr[i];
+            arr[i] = arr[j];
+            arr[j] = t;
+        }
+        return new String(arr);
     }
 }

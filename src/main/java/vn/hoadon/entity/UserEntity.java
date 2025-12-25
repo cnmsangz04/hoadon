@@ -3,13 +3,18 @@ package vn.hoadon.entity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users",
+       uniqueConstraints = {
+           @UniqueConstraint(name = "uk_users_username", columnNames = {"username"})
+       })
 public class UserEntity {
 
     @Id
@@ -19,13 +24,14 @@ public class UserEntity {
     @Column(name = "company_id", nullable = false)
     private Long companyId;
 
-    @Column(nullable = false, length = 32)
+    @Column(nullable = false, length = 32, unique = true)
     private String username;
 
     // Add display name for the user
     @Column(name = "name", length = 255)
     private String name;
 
+    // Email no longer unique
     @Column(length = 255)
     private String email;
 
@@ -76,14 +82,20 @@ public class UserEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-        name = "user_permissions",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "permission_id")
-    )
-    private Set<PermissionEntity> permissions = new HashSet<>();
-    
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<UserPermissionEntity> userPermissionOverrides;
+
+    // Auto-generate username after ID is assigned
+    @PostPersist
+    public void ensureUsername() {
+        if (this.id != null) {
+            String expected = "cp-" + this.id;
+            if (this.username == null || !this.username.equals(expected)) {
+                this.username = expected;
+            }
+        }
+    }
+
     protected UserEntity getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
@@ -253,11 +265,26 @@ public class UserEntity {
         this.updatedAt = updatedAt;
     }
 
-    public Set<PermissionEntity> getPermissions() {
-        return permissions;
+    public List<UserPermissionEntity> getUserPermissionOverrides() {
+        return userPermissionOverrides;
     }
 
-    public void setPermissions(Set<PermissionEntity> permissions) {
-        this.permissions = permissions;
+    public void setUserPermissionOverrides(List<UserPermissionEntity> userPermissionOverrides) {
+        this.userPermissionOverrides = userPermissionOverrides;
+    }
+
+    // Compute effective permissions: use per-user overrides only
+    public Set<PermissionEntity> getPermissions() {
+        Set<PermissionEntity> effective = new HashSet<>();
+        if (this.userPermissionOverrides != null && !this.userPermissionOverrides.isEmpty()) {
+            for (UserPermissionEntity ov : this.userPermissionOverrides) {
+                if (ov == null || ov.getPermission() == null || ov.getPermission().getId() == null) continue;
+                byte allowed = ov.getAllowed() != null ? ov.getAllowed() : (byte)0;
+                if (allowed == 1) {
+                    effective.add(ov.getPermission());
+                }
+            }
+        }
+        return effective;
     }
 }

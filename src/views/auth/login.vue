@@ -4,7 +4,7 @@
       
       <div class="brand-side">
         <div class="brand-inner">
-          <img src="/logo.png" alt="Logo" class="brand-logo" />
+          <img class="logo" :src="require('@/assets/images/logo/logo-hoadon.png')" alt="logo" />
           <h2>Hóa đơn điện tử</h2>
           <p class="text-muted">Quản lý hóa đơn nhanh chóng, an toàn và hiệu quả.</p>
         </div>
@@ -18,13 +18,11 @@
             <small class="text-muted">Vào trang chủ để bắt đầu làm việc</small>
           </div>
 
-          <b-alert v-if="error" variant="danger" show class="py-2 px-3">{{ error }}</b-alert>
-
           <b-form @submit.prevent="onSubmit">
-            <b-form-group label="Tài khoản">
+            <b-form-group label="Email hoặc Tài khoản">
               <div class="input-with-icon">
                 <i class="bi bi-person"></i>
-                <b-form-input v-model.trim="username" required placeholder="Nhập tài khoản"></b-form-input>
+                <b-form-input v-model.trim="account" type="text" required placeholder="Nhập email hoặc tài khoản"></b-form-input>
               </div>
             </b-form-group>
 
@@ -51,7 +49,7 @@
 
             <b-button type="submit" block variant="primary"
               class="submit-btn"
-              :disabled="loading || !username || !password">
+              :disabled="loading || !account || !password">
               <span v-if="loading"><b-spinner small class="me-2"/>Đang đăng nhập...</span>
               <span v-else>Đăng nhập</span>
             </b-button>
@@ -68,13 +66,13 @@
 </template>
 
 <script>
-import axios from "axios";
+import axios from '@/plugins/axios';
 import { parseJwt } from "@/utils/jwt";
 
 export default {
   data() {
     return {
-      username: "",
+      account: "",
       password: "",
       showPassword: false,
       remember: true,
@@ -84,27 +82,34 @@ export default {
   },
   methods: {
     async onSubmit() {
-      if (!this.username || !this.password) return;
+      if (!this.account || !this.password) return;
       this.loading = true; this.error = "";
 
       try {
-        const res = await axios.post("/auth/login", {
-          username: this.username,
-          password: this.password
-        });
-
+        // Allow login with email or username by sending both
+        const payload = { email: this.account, username: this.account, password: this.password };
+        const res = await axios.post("/auth/login", payload, { meta: { suppressGlobalErrorToast: true } });
         const token = res.data?.token || res.data?.accessToken || res.data?.data?.token;
         if (!token) throw new Error("Không tìm thấy token!");
-
         localStorage.setItem("token", token);
         parseJwt(token);
-
-        if (this.remember) localStorage.setItem("last-username", this.username);
-
+        if (this.remember) localStorage.setItem("last-account", this.account);
+        // Fetch app info immediately after login to populate header/sidebar
+        try {
+          const infoRes = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
+          const data = infoRes?.data || {}
+          // Update global lightweight store
+          if (this.$app) {
+            this.$app.info.user = data.user || null
+            this.$app.info.company = data.company || null
+          }
+        } catch {}
         this.$router.push({ name: "/" });
       }
       catch(e) {
-        this.error = e.response?.data || "Đăng nhập thất bại!";
+        // Prefer toastr for user-friendly error
+        const msg = e.response?.data?.message || e.response?.data || e.message || "Đăng nhập thất bại!";
+        try { this.$toastr.error(msg); } catch(_) { this.error = msg; }
       }
       finally { this.loading = false; }
     }
@@ -142,7 +147,7 @@ export default {
   display: flex;
 }
 .brand-inner { margin: auto; text-align: center; padding: 28px; }
-.brand-logo { width: 72px; height: 72px; object-fit: contain; margin-bottom: 10px; }
+.brand-logo, .logo { width: 72px; height: 72px; object-fit: contain; margin-bottom: 10px; }
 .brand-inner h2 { margin: 0 0 6px; font-weight: 600; }
 .brand-inner p { margin: 0; color: #6c757d; }
 

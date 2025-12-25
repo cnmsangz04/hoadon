@@ -1,4 +1,4 @@
-package vn.hoadon.dto;
+package vn.hoadon.dto.user;
 
 public class UserDto {
     private Long id;

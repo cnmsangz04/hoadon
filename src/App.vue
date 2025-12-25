@@ -9,3 +9,8 @@ export default {
   name: 'App'
 }
 </script>
+
+<style>
+/* Import shared admin styles */
+@import '@/assets/css/admin.css';
+</style>

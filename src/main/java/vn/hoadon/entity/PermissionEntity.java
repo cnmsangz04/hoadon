@@ -27,6 +27,10 @@ public class PermissionEntity {
     @Column(name = "description", length = 255)
     private String description;
 
+    // 0: hidden, 1: visible
+    @Column(name = "status")
+    private Byte status = 1;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -50,6 +54,9 @@ public class PermissionEntity {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public Byte getStatus() { return status; }
+    public void setStatus(Byte status) { this.status = status; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

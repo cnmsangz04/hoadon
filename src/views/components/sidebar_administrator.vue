@@ -4,7 +4,7 @@
       <!-- Logo -->
       <div class="brand">
         <router-link class="brand-link" to="/">
-          <img class="logo" :src="require('@/assets/images/logo/logo-hoadon.png')" alt="logo" />
+          <img class="logo" :src="logoSrc" alt="logo" />
         </router-link>
       </div>
 
@@ -27,7 +27,10 @@
               <transition name="slide">
                 <ul class="sub" v-show="openIndex === index">
                   <li v-for="(c, ci) in item.children" :key="ci" :class="{ active: isActive(c) }">
-                    <router-link :to="c.to">{{ c.title }}</router-link>
+                    <router-link :to="c.to">
+                      <i v-if="c.icon" :class="c.icon"></i>
+                      {{ c.title }}
+                    </router-link>
                   </li>
                 </ul>
               </transition>
@@ -58,21 +61,39 @@ export default {
       openIndex: null,
       menu: [
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
+<<<<<<< HEAD
         { title: 'Công ty', icon: 'fas fa-university', to: '/administrator/company/list' },
         { title: 'Mua hóa đơn', icon: 'fas fa-university', to: '/administrator/buy-invoice/list' },
         { title: 'Ngân hàng', icon: 'fas fa-university', to: '/administrator/bank/list' },
         { title: 'Cơ quan thuế', icon: 'fas fa-university', to: '/administrator/tax-authorities/list' },
+=======
+        { title: 'Công ty', icon: 'fas fa-building', to: '/administrator/company/list' },
+        { title: 'Mua hóa đơn', icon: 'fas fa-file-invoice-dollar', to: '/administrator/buy-invoice/list' },
+        { title: 'Ngân hàng', icon: 'fas fa-piggy-bank', to: '/administrator/bank/list' },
+        { title: 'Cơ quan thuế', icon: 'fas fa-landmark', to: '/administrator/tax-authorities/list' },
+>>>>>>> 1eda31a04840376f9f6b426dfa25076c59d893d1
         {
           title: 'Phân quyền',
-          icon: 'far fa-file-alt',
+          icon: 'fas fa-user-shield',
           children: [
-            { title: 'Quyền', to: '/administrator/access-control/permissions/list' },
-            { title: 'Nhóm quyền', to: '/administrator/access-control/permission-categories/list' },
-            { title: 'Vai trò', to: '/administrator/access-control/roles/list' },
+            { title: 'Quyền', to: '/administrator/access-control/permissions/list', icon: 'fas fa-key' },
+            { title: 'Nhóm quyền', to: '/administrator/access-control/permission-categories/list', icon: 'fas fa-layer-group' },
           ],
         },
       ]
     };
+  },
+
+  computed: {
+    logoSrc() {
+      try {
+        const logo = this.$app?.info?.company?.logo
+        if (logo && typeof logo === 'string' && logo.trim() !== '') {
+          return logo
+        }
+      } catch {}
+      return require('@/assets/images/logo/logo-hoadon.png')
+    }
   },
 
   mounted() {
@@ -119,12 +140,26 @@ export default {
     "Helvetica Neue", Arial;
 }
 
+<<<<<<< HEAD
 .sidebar-inner {
   padding: 18px 14px;
   height: 100%;
   display: flex;
   flex-direction: column;
 }
+=======
+.sidebar-inner { padding: 18px 14px; height: 100%; display: flex; flex-direction: column; }
+.brand { text-align: center; margin-bottom: 12px; }
+.logo { max-width: 160px; margin: auto; display: block; }
+.menu { flex: 1; overflow: auto; }
+.menu ul { padding: 0; margin: 0; list-style: none; }
+.menu-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; color: #dbeefd; border-radius: 6px; text-decoration: none; }
+.menu-item:hover { background: rgba(255,255,255,0.03); color: #fff; }
+.menu-item i { width: 18px; text-align: center; }
+/* Show child icons if provided */
+.sub li a i { width: 16px; text-align: center; margin-right: 8px; }
+.menu li.active > .menu-item { background: rgba(255,255,255,0.08); color: #fff; }
+>>>>>>> 1eda31a04840376f9f6b426dfa25076c59d893d1
 
 .brand {
   text-align: center;
@@ -142,6 +177,7 @@ export default {
   overflow: auto;
 }
 
+<<<<<<< HEAD
 .menu ul {
   padding: 0;
   margin: 0;
@@ -218,3 +254,8 @@ export default {
   height: 0;
 }
 </style>
+=======
+.slide-enter-active,.slide-leave-active { transition: 200ms; }
+.slide-enter,.slide-leave-to { opacity: 0; transform: translateY(-6px); height: 0; }
+</style>
+>>>>>>> 1eda31a04840376f9f6b426dfa25076c59d893d1

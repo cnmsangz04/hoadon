@@ -3,28 +3,7 @@
     <section class="admin-hero">
       <div class="hero-content">
         <h2>Quản trị</h2>
-        <p>Chào mừng tới trang quản trị. Chọn mục bên trái để quản lý.</p>
-      </div>
-    </section>
-
-    <section class="admin-stats">
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value">1,500</div>
-          <div class="stat-label">Tổng hóa đơn</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">800</div>
-          <div class="stat-label">Đã sử dụng</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">700</div>
-          <div class="stat-label">Còn lại</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">300</div>
-          <div class="stat-label">Phát hành năm nay</div>
-        </div>
+        <p>Chào mừng tới trang quản trị</p>
       </div>
     </section>
   </div>

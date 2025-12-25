@@ -31,6 +31,22 @@ Vue.use(IconsPlugin)
 
 Vue.config.productionTip = false
 
+// Global app store (lightweight) accessible via this.$app
+Vue.prototype.$app = {
+  info: {
+    user: null,
+    company: null
+  }
+}
+
+// Fetch info on app load so all components can use it
+import axios from './plugins/axios'
+axios.get('/auth/info').then(res => {
+  const data = res?.data || {}
+  Vue.prototype.$app.info.user = data.user || null
+  Vue.prototype.$app.info.company = data.company || null
+}).catch(() => {})
+
 new Vue({
   router,
   i18n,

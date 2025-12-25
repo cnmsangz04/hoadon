@@ -1,4 +1,4 @@
-package vn.hoadon.controller;
+package vn.hoadon.controllers.setting;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +20,9 @@ import java.util.*;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.UUID;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import vn.hoadon.entity.UserEntity;
 
 @RestController
 @RequestMapping("/v1/setting/profile")
@@ -54,10 +57,22 @@ public class ProfileController {
         return ResponseEntity.ok(map);
     }
 
-    // Return profile data for current company (for demo, use id=1)
+    // Return profile data for current company using authenticated user's companyId
     @PostMapping("/get")
     public ResponseEntity<ProfileDTO> profile() {
-        Optional<CompanyEntity> companyOpt = companyRepository.findById(1L);
+        // Resolve authenticated user
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Long companyId = null;
+        if (auth != null && auth.getPrincipal() instanceof UserEntity) {
+            companyId = ((UserEntity) auth.getPrincipal()).getCompanyId();
+        }
+
+        if (companyId == null) {
+            // No user or no company bound; return empty DTO
+            return ResponseEntity.ok(new ProfileDTO());
+        }
+
+        Optional<CompanyEntity> companyOpt = companyRepository.findById(companyId);
         ProfileDTO dto = new ProfileDTO();
         companyOpt.ifPresent(company -> {
             dto.companyId = company.getId();
@@ -111,7 +126,8 @@ public class ProfileController {
             }
         });
 
-        legalRepresentativeRepository.findByCompanyId(1L).ifPresent(rep -> {
+        // Load legal representative by companyId
+        legalRepresentativeRepository.findByCompanyId(companyId).ifPresent(rep -> {
             dto.representName = rep.getFullname();
             dto.representGender = rep.getGender();
             dto.representDateBirth = rep.getDateOfBirth();
@@ -254,7 +270,7 @@ public class ProfileController {
             errors.put("contactMail", Collections.singletonList("Vui lòng nhập email"));
         } else {
             // very simple email pattern
-            String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+            String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Zaz0-9.-]+$";
             if (!contactMail.matches(emailRegex)) {
                 errors.put("contactMail", Collections.singletonList("Email không hợp lệ"));
             }

@@ -37,12 +37,28 @@ axios.interceptors.request.use(config => {
   return config
 }, err => Promise.reject(err))
 
+// Success handler with optional success toast via request config
 axios.interceptors.response.use(
-  res => res,
+  res => {
+    try {
+      const cfg = res?.config || {}
+      const method = (cfg.method || '').toUpperCase()
+      // Read optional success message keys from config
+      const msg = cfg.successMessage || cfg.successText || cfg?.meta?.successMessage
+      // Default: only show for mutating methods when message provided
+      if (msg && ['POST','PUT','PATCH','DELETE'].includes(method)) {
+        toastr.success(msg)
+      }
+    } catch {}
+    return res
+  },
   err => {
     const status = err?.response?.status
     const admin = isAdminContext()
     const key = admin ? 'token-admin' : 'token'
+
+    const cfg = err?.config || {}
+    const suppressGlobal = cfg?.meta?.suppressGlobalErrorToast === true
 
     const message =
       err?.response?.data?.message ||
@@ -51,7 +67,7 @@ axios.interceptors.response.use(
       'Lỗi hệ thống'
 
     if (status === 401) {
-      toastr.warning(message || 'Phiên đăng nhập đã hết hạn')
+      if (!suppressGlobal) toastr.warning(message || 'Phiên đăng nhập đã hết hạn')
       setTimeout(() => {
         localStorage.removeItem(key)
         window.location.href = admin ? '/auth/login-admin' : '/auth/login'
@@ -60,11 +76,14 @@ axios.interceptors.response.use(
     }
 
     if (status === 403) {
-      toastr.error(message || 'Bạn không có quyền thao tác')
+      if (!suppressGlobal) toastr.error(message || 'Bạn không có quyền thao tác')
+      setTimeout(() => {
+        window.location.href = admin ? '/administrator' : '/'
+      }, 1200)
       return Promise.reject(err)
     }
 
-    toastr.error(message)
+    if (!suppressGlobal) toastr.error(message)
     return Promise.reject(err)
   }
 )

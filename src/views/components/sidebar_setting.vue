@@ -5,7 +5,7 @@
       <!-- Logo -->
       <div class="brand">
         <router-link class="brand-link" to="/">
-          <img class="logo" :src="require('@/assets/images/logo/logo-hoadon.png')" alt="logo" />
+          <img class="logo" :src="logoSrc" alt="logo" />
         </router-link>
       </div>
 
@@ -59,18 +59,45 @@
 
 
 <script>
+import { parseJwt } from '@/utils/jwt'
 export default {
   name: "sidebar_setting",
 
   data() {
     return {
       openIndex: null,
+      // Base menu without Member; we'll push Member conditionally in created()
       menu: [
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
-	  	{ title: 'Tài khoản', icon: 'fas fa-user', to: '/setting/account/list' },
-	  	{ title: 'Hồ sơ', icon: 'fas fa-user', to: '/setting/profile/list' },
+        { title: 'Tài khoản', icon: 'fas fa-user-cog', to: '/setting/account/list' },
+        { title: 'Hồ sơ', icon: 'fas fa-id-card', to: '/setting/profile/list' }
       ]
     };
+  },
+
+  computed: {
+    canSeeMember() {
+      try {
+        const token = localStorage.getItem('token') || localStorage.getItem('token-admin')
+        const payload = parseJwt(token)
+        const roleNum = payload && typeof payload.role !== 'undefined' ? Number(payload.role) : NaN
+        return roleNum === 0 || roleNum === 1
+      } catch { return false }
+    },
+    logoSrc() {
+      try {
+        const logo = this.$app?.info?.company?.logo
+        if (logo && typeof logo === 'string' && logo.trim() !== '') return logo
+      } catch {}
+      return require('@/assets/images/logo/logo-hoadon.png')
+    }
+  },
+
+  created() {
+    // Inject Member menu if allowed
+    if (this.canSeeMember) {
+      this.menu.push({ title: 'Thành viên', icon: 'fas fa-users', to: '/setting/member/list' })
+    }
   },
 
   mounted() {
@@ -87,15 +114,10 @@ export default {
 
     isActive(item) {
       if (!item) return false;
-
-      // Active nếu route = item.to (không trùng prefix nữa)
       if (item.to) return this.$route.path === item.to;
-
-      // Nếu là cha => active nếu 1 trong child match URL
       if (item.children) {
         return item.children.some(c => this.$route.path === c.to);
       }
-
       return false;
     }
   }

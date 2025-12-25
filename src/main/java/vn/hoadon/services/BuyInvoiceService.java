@@ -1,18 +1,18 @@
 package vn.hoadon.services;
 
 import vn.hoadon.dto.buyinvoice.BuyInvoiceFilterDTO;
-import vn.hoadon.entity.BuyInvoiceEntity;
+import vn.hoadon.dto.buyinvoice.BuyInvoiceListItemDTO;
 import org.springframework.data.domain.*;
 
 import java.util.Optional;
 
 public interface BuyInvoiceService {
 
-    Page<BuyInvoiceEntity> list(BuyInvoiceFilterDTO filter, Pageable pageable);
+    Page<BuyInvoiceListItemDTO> list(BuyInvoiceFilterDTO filter, Pageable pageable);
 
-    Optional<BuyInvoiceEntity> findById(Long id);
+    Optional<vn.hoadon.entity.BuyInvoiceEntity> findById(Long id);
 
-    BuyInvoiceEntity saveOrUpdate(BuyInvoiceEntity entity);
+    vn.hoadon.entity.BuyInvoiceEntity saveOrUpdate(vn.hoadon.entity.BuyInvoiceEntity entity);
 
     void delete(Long id);
 }

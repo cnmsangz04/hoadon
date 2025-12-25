@@ -60,7 +60,7 @@
           <template #button-content>
             <i class="fa fa-ellipsis-v"></i>
           </template>
-          <b-dropdown-item>Chỉnh sửa</b-dropdown-item>
+          <b-dropdown-item>Cập nhật</b-dropdown-item>
           <b-dropdown-item>Xóa</b-dropdown-item>
         </b-dropdown>
       </template>
