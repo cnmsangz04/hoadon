@@ -65,6 +65,7 @@
 
 <script>
 import { parseJwt } from '@/utils/jwt'
+import axios from '@/plugins/axios'
 export default {
   name: "Header",
   data() {
@@ -75,21 +76,19 @@ export default {
         auth: {
           avatar: '',
           username: '',
-          name: ''
+          name: '',
+          role: null
         }
       }
     };
   },
   computed: {
     usernameInitial() {
-      // Change to use user name initial
       const n = (this.app.auth.name || '').trim()
       return n ? n.charAt(0).toUpperCase() : 'A'
     },
     showAdminLink() {
-      const u = (this.$app && this.$app.info && this.$app.info.user) ? this.$app.info.user : null
-      if (!u) return false
-      const role = u.role
+      const role = this.app.auth.role
       return role === 0 || role === 1
     }
   },
@@ -108,12 +107,22 @@ export default {
       let token = localStorage.getItem(primaryKey) || localStorage.getItem(altKey)
       const payload = parseJwt(token)
       if (payload) {
-        // Basic user visuals
         this.app.auth.username = payload.username || payload.user_name || payload.sub || this.app.auth.username || ''
         this.app.auth.name = payload.name || payload.full_name || payload.displayName || this.app.auth.name || ''
         this.app.auth.avatar = payload.avatar || this.app.auth.avatar || ''
+        // capture role from JWT if present
+        const pr = payload.role ?? payload.roles ?? payload.authority ?? payload.auth_role
+        if (typeof pr === 'number') {
+          this.app.auth.role = pr
+        } else if (Array.isArray(pr)) {
+          // if array of roles, treat having 'ADMIN' as admin
+          this.app.auth.role = pr.includes('ADMIN') ? 1 : (pr.includes('SUPER_ADMIN') ? 0 : null)
+        } else if (typeof pr === 'string') {
+          const s = pr.toUpperCase()
+          this.app.auth.role = s.includes('SUPER') ? 0 : (s.includes('ADMIN') ? 1 : null)
+        }
 
-        // Extract company id from various fields
+        // Extract company id
         const cid = (
           payload.companyId ?? payload.company_id ??
           (typeof payload.company === 'object' ? payload.company?.id : payload.company) ??
@@ -121,13 +130,10 @@ export default {
         )
         const nCid = cid != null && cid !== '' ? Number(cid) : undefined
         if (nCid != null && Number.isFinite(nCid)) {
-          // Initialize or update global app company info
           const cur = this.$app?.info?.company || {}
           this.$app.info.company = { ...(cur || {}), id: nCid }
-          // Mirror to localStorage to survive token changes
           try { localStorage.setItem('companyId', String(nCid)) } catch {}
         } else {
-          // Fallback: keep previous or localStorage value
           const lsCid = localStorage.getItem('companyId')
           if (lsCid) {
             const n = Number(lsCid)
@@ -140,22 +146,40 @@ export default {
       }
     } catch {}
 
-    // Use globally fetched info if available (without overwriting existing company id)
+    // Use globally fetched info if available; also set local role when present
     try {
       const info = this.$app?.info || {}
       if (info.user) {
         this.app.auth.username = info.user.username || this.app.auth.username
         this.app.auth.name = info.user.name || this.app.auth.name
         this.app.auth.avatar = info.user.avatar || this.app.auth.avatar
+        if (typeof info.user.role === 'number') this.app.auth.role = info.user.role
       }
       if (info.company) {
         const cur = this.$app.info.company || {}
-        // Only set if id present or not already set
         if (info.company.id != null && !Number.isNaN(Number(info.company.id))) {
           this.$app.info.company = { ...cur, id: Number(info.company.id) }
           try { localStorage.setItem('companyId', String(Number(info.company.id))) } catch {}
         }
       }
+    } catch {}
+  },
+  mounted() {
+    // Ensure /auth/info is fetched so role is set even if JWT lacks role
+    try {
+      axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
+        .then(res => {
+          const info = res.data || {}
+          if (info?.user && typeof info.user.role === 'number') {
+            this.app.auth.role = info.user.role
+          }
+          if (info?.company?.id != null) {
+            const cur = this.$app?.info?.company || {}
+            this.$app.info.company = { ...cur, id: Number(info.company.id) }
+            try { localStorage.setItem('companyId', String(Number(info.company.id))) } catch {}
+          }
+        })
+        .catch(() => {})
     } catch {}
   },
   methods: {

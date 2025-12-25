@@ -1,8 +1,11 @@
 package vn.hoadon.services.impl;
 
 import vn.hoadon.dto.buyinvoice.BuyInvoiceFilterDTO;
+import vn.hoadon.dto.buyinvoice.BuyInvoiceListItemDTO;
 import vn.hoadon.entity.BuyInvoiceEntity;
+import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.repositories.BuyInvoiceRepository;
+import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.services.BuyInvoiceService;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +13,8 @@ import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class BuyInvoiceServiceImpl implements BuyInvoiceService {
@@ -18,10 +22,12 @@ public class BuyInvoiceServiceImpl implements BuyInvoiceService {
     @Autowired
     private BuyInvoiceRepository repository;
 
+    @Autowired
+    private CompanyRepository companyRepository;
+
     @Override
-    public Page<BuyInvoiceEntity> list(BuyInvoiceFilterDTO filter, Pageable pageable) {
+    public Page<BuyInvoiceListItemDTO> list(BuyInvoiceFilterDTO filter, Pageable pageable) {
         Specification<BuyInvoiceEntity> spec = (root, query, cb) -> {
-            // filter theo companyId
             var predicates = cb.conjunction();
             if (filter.getCompanyId() != null) {
                 predicates = cb.and(predicates, cb.equal(root.get("companyId"), filter.getCompanyId()));
@@ -35,7 +41,39 @@ public class BuyInvoiceServiceImpl implements BuyInvoiceService {
             return predicates;
         };
 
-        return repository.findAll(spec, pageable);
+        Page<BuyInvoiceEntity> page = repository.findAll(spec, pageable);
+        List<BuyInvoiceEntity> entities = page.getContent();
+
+        // Collect company IDs
+        Set<Long> ids = entities.stream()
+                .map(BuyInvoiceEntity::getCompanyId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, String> nameById = new HashMap<>();
+        if (!ids.isEmpty()) {
+            // Bulk load companies
+            List<CompanyEntity> companies = companyRepository.findAllById(ids);
+            for (CompanyEntity c : companies) {
+                nameById.put(c.getId(), Optional.ofNullable(c.getName()).orElse(Optional.ofNullable(c.getDomain()).orElse("#" + c.getId())));
+            }
+        }
+
+        List<BuyInvoiceListItemDTO> dtos = entities.stream().map(e -> {
+            String companyName = e.getCompanyId() != null ? nameById.getOrDefault(e.getCompanyId(), "") : "";
+            BuyInvoiceListItemDTO dto = new BuyInvoiceListItemDTO();
+            dto.setId(e.getId());
+            dto.setCompanyId(e.getCompanyId());
+            dto.setCompanyName(companyName);
+            dto.setAmount(e.getAmount());
+            dto.setAmountUsed(Optional.ofNullable(e.getAmountUsed()).orElse(0));
+            dto.setStatus(e.getStatus());
+            dto.setCreatedAt(e.getCreatedAt());
+            dto.setUpdatedAt(e.getUpdatedAt());
+            return dto;
+        }).collect(Collectors.toList());
+
+        return new PageImpl<>(dtos, pageable, page.getTotalElements());
     }
 
     @Override

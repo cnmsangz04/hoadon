@@ -35,19 +35,22 @@ public class Info {
             u.put("name", user.getName());
             u.put("avatar", user.getAvatar());
             u.put("role", user.getRole());
+            u.put("companyId", user.getCompanyId());
             resp.put("user", u);
         } else {
             resp.put("user", null);
         }
 
-        // Resolve company by user's companyId or fallback to 1
+        // Resolve company strictly by user's companyId; do NOT fallback to 1
         CompanyEntity company = null;
-        Long companyId = (user != null) ? user.getCompanyId() : 1L;
+        Long companyId = (user != null) ? user.getCompanyId() : null;
         if (companyId != null) {
             company = companyRepository.findById(companyId).orElse(null);
         }
         if (company != null) {
             Map<String, Object> c = new HashMap<>();
+            c.put("id", company.getId());
+            c.put("name", company.getName());
             c.put("logo", company.getLogo());
             c.put("favicon", company.getFavicon());
             resp.put("company", c);

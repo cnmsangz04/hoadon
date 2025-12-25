@@ -43,7 +43,7 @@
           </b-form-select>
         </b-col>
         <b-col md="2" class="text-right">
-          <b-button size="sm" variant="primary" @click="applyFilters">Lọc</b-button>
+          <b-button size="sm" variant="primary" @click="applyFilters">Tìm kiếm</b-button>
         </b-col>
       </b-row>
     </b-card>
