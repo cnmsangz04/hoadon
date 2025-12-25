@@ -67,19 +67,8 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
 
     @Override
     public TaxAuthorityResponse create(TaxAuthorityRequest req) {
-        // Check trùng mã nếu cần
-        // if (taxRepo.existsByCode(req.getCode())) throw ...
-
         TaxAuthorityEntity entity = new TaxAuthorityEntity();
-        if (entity.getParent() != null && entity.getParent().id != null) {
-            TaxAuthorityEntity parent = taxRepo.findById(entity.getParent().id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy CQT cha"));
-            entity.setParent(parent);
-        } else {
-            entity.setParent(null); // Nếu chọn "Không có"
-        }
         mapRequestToEntity(req, entity);
-        
         TaxAuthorityEntity saved = taxRepo.save(entity);
         return mapToResponse(saved);
     }
@@ -88,15 +77,7 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
     public TaxAuthorityResponse update(Long id, TaxAuthorityRequest req) {
         TaxAuthorityEntity entity = taxRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy CQT để cập nhật"));
-        if (entity.getParent() != null && entity.getParent().id != null) {
-            TaxAuthorityEntity parent = taxRepo.findById(entity.getParent().id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy CQT cha"));
-            entity.setParent(parent);
-        } else {
-            entity.setParent(null); // Nếu chọn "Không có"
-        }
         mapRequestToEntity(req, entity);
-        
         TaxAuthorityEntity saved = taxRepo.save(entity);
         return mapToResponse(saved);
     }
@@ -114,35 +95,33 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
 
     private TaxAuthorityResponse mapToResponse(TaxAuthorityEntity entity) {
         TaxAuthorityResponse dto = new TaxAuthorityResponse();
+        // Lombok @Data tạo sẵn setter theo field định nghĩa trong DTO
         dto.setId(entity.getId());
-        dto.setCode(entity.getCode());
+        // Chuyển mã code Integer -> String cho DTO nếu cần
+        dto.setCode(entity.getCode() != null ? String.valueOf(entity.getCode()) : null);
         dto.setName(entity.getName());
-        dto.setProvinceName(entity.getProvinceName());
+        dto.setParentId(entity.getParentId());
         dto.setStatus(entity.getStatus());
         dto.setCreatedAt(entity.getCreatedAt());
-
-        // Xử lý quan hệ cha (để tránh NullPointer)
-        if (entity.getParent() != null) {
-            dto.setParentId(entity.getParent().getId());
-            dto.setManagerName(entity.getParent().getName());
-        }
+        // managerName không thể suy ra vì Entity chỉ lưu parentId (Long)
         return dto;
     }
 
     private void mapRequestToEntity(TaxAuthorityRequest req, TaxAuthorityEntity entity) {
-        entity.setCode(req.getCode());
+        // Request.code là String, entity.code là Integer
+        if (req.getCode() != null && !req.getCode().isEmpty()) {
+            try {
+                entity.setCode(Integer.valueOf(req.getCode()));
+            } catch (NumberFormatException ex) {
+                throw new RuntimeException("Mã CQT phải là số hợp lệ");
+            }
+        } else {
+            entity.setCode(null);
+        }
         entity.setName(req.getName());
-        entity.setProvinceName(req.getProvinceName());
         entity.setStatus(req.getStatus());
 
-        // Xử lý gán cha
-        if (req.getParentId() != null) {
-            // Nếu có gửi parentId lên -> tìm cha gán vào
-            TaxAuthorityEntity parent = taxRepo.findById(req.getParentId())
-                    .orElseThrow(() -> new RuntimeException("Cơ quan quản lý không tồn tại"));
-            entity.setParent(parent);
-        } else {
-            entity.setParent(null);
-        }
+        // Gán cha trực tiếp theo ID (Entity chỉ có Long parentId)
+        entity.setParentId(req.getParentId());
     }
 }
