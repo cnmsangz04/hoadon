@@ -1,6 +1,7 @@
 <template>
   <div class="sidebar">
     <div class="sidebar-inner">
+
       <!-- Logo -->
       <div class="brand">
         <router-link class="brand-link" to="/">
@@ -11,11 +12,16 @@
       <!-- Menu -->
       <nav class="menu">
         <ul>
-          <li v-for="(item, index) in menu" :key="index" :class="{
-            'has-children': !!item.children,
-            open: openIndex === index,
-            active: isActive(item),
-          }">
+          <li
+            v-for="(item, index) in menu"
+            :key="index"
+            :class="{
+              'has-children': !!item.children,
+              open: openIndex === index,
+              active: isActive(item),
+            }"
+          >
+
             <!-- Menu có con -->
             <template v-if="item.children">
               <a href="#" class="menu-item" @click.prevent="toggle(index)">
@@ -34,6 +40,7 @@
                   </li>
                 </ul>
               </transition>
+
             </template>
 
             <!-- Menu không con -->
@@ -43,6 +50,7 @@
                 <span class="label">{{ item.title }}</span>
               </router-link>
             </template>
+
           </li>
         </ul>
       </nav>
@@ -51,6 +59,7 @@
     </div>
   </div>
 </template>
+
 
 <script>
 export default {
@@ -64,7 +73,7 @@ export default {
         { title: 'Công ty', icon: 'fas fa-building', to: '/administrator/company/list' },
         { title: 'Mua hóa đơn', icon: 'fas fa-file-invoice-dollar', to: '/administrator/buy-invoice/list' },
         { title: 'Ngân hàng', icon: 'fas fa-piggy-bank', to: '/administrator/bank/list' },
-        { title: 'Cơ quan thuế', icon: 'fas fa-landmark', to: '/administrator/tax-authorities/list' },
+        { title: 'Cơ quan thuế', icon: 'fas fa-landmark', to: '/administrator/tax-authority/list' },
         {
           title: 'Phân quyền',
           icon: 'fas fa-user-shield',
@@ -109,14 +118,15 @@ export default {
 
       // Nếu là cha => active nếu 1 trong child match URL
       if (item.children) {
-        return item.children.some((c) => this.$route.path === c.to);
+        return item.children.some(c => this.$route.path === c.to);
       }
 
       return false;
-    },
-  },
+    }
+  }
 };
 </script>
+
 
 <style scoped>
 .sidebar {
@@ -128,114 +138,31 @@ export default {
   top: 0;
   display: flex;
   flex-direction: column;
-  box-shadow: 2px 0 8px rgba(2, 6, 23, 0.6);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial;
+  box-shadow: 2px 0 8px rgba(2,6,23,0.6);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
 }
 
-.sidebar-inner {
-  padding: 18px 14px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.brand {
-  text-align: center;
-  margin-bottom: 12px;
-}
-
-.logo {
-  max-width: 160px;
-  margin: auto;
-  display: block;
-}
-
-.menu {
-  flex: 1;
-  overflow: auto;
-}
-
-.menu ul {
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  color: #dbeefd;
-  border-radius: 6px;
-  text-decoration: none;
-}
-
-.menu-item:hover {
-  background: rgba(255, 255, 255, 0.03);
-  color: #fff;
-}
-
-.menu-item i {
-  width: 18px;
-  text-align: center;
-}
-
+.sidebar-inner { padding: 18px 14px; height: 100%; display: flex; flex-direction: column; }
+.brand { text-align: center; margin-bottom: 12px; }
+.logo { max-width: 160px; margin: auto; display: block; }
+.menu { flex: 1; overflow: auto; }
+.menu ul { padding: 0; margin: 0; list-style: none; }
+.menu-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; color: #dbeefd; border-radius: 6px; text-decoration: none; }
+.menu-item:hover { background: rgba(255,255,255,0.03); color: #fff; }
+.menu-item i { width: 18px; text-align: center; }
 /* Show child icons if provided */
-.sub li a i {
-  width: 16px;
-  text-align: center;
-  margin-right: 8px;
-}
+.sub li a i { width: 16px; text-align: center; margin-right: 8px; }
+.menu li.active > .menu-item { background: rgba(255,255,255,0.08); color: #fff; }
 
-.menu li.active > .menu-item {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
+.has-children .chev { margin-left: auto; transition: 0.25s; }
+.rotated { transform: rotate(-180deg); }
 
-.has-children .chev {
-  margin-left: auto;
-  transition: 0.25s;
-}
+.sub { padding-left: 10px; margin-top: 6px; }
+.sub li a { padding: 7px 12px; display: block; border-radius: 5px; color: #cfe6ff; }
+.sub li.active > a { background: rgba(255,255,255,0.12); color: #fff; }
 
-.rotated {
-  transform: rotate(-180deg);
-}
+.sidebar-footer { text-align: center; font-size: 12px; padding: 10px 0; color: #8fa7c5; }
 
-.sub {
-  padding-left: 10px;
-  margin-top: 6px;
-}
-
-.sub li a {
-  padding: 7px 12px;
-  display: block;
-  border-radius: 5px;
-  color: #cfe6ff;
-}
-
-.sub li.active > a {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-.sidebar-footer {
-  text-align: center;
-  font-size: 12px;
-  padding: 10px 0;
-  color: #8fa7c5;
-}
-
-.slide-enter-active,
-.slide-leave-active {
-  transition: 200ms;
-}
-
-.slide-enter,
-.slide-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
-  height: 0;
-}
+.slide-enter-active,.slide-leave-active { transition: 200ms; }
+.slide-enter,.slide-leave-to { opacity: 0; transform: translateY(-6px); height: 0; }
 </style>

@@ -48,7 +48,7 @@ public class ProfileController {
         this.companyBankRepository = companyBankRepository;
     }
 
-    // Provide options data: banks and tax authorities (cities)
+    // Provide options data: banks and tax authority (cities)
     @PostMapping("/ini")
     public ResponseEntity<Map<String, Object>> init() {
         Map<String, Object> map = new HashMap<>();
@@ -140,7 +140,7 @@ public class ProfileController {
         return ResponseEntity.ok(dto);
     }
 
-    // Load tax authorities by city code
+    // Load tax authority by city code
     @PostMapping("/get-tax-authority")
     public ResponseEntity<?> getTaxAuthority(@RequestBody Map<String, Integer> body) {
         Integer parentCode = body.get("parentCode");

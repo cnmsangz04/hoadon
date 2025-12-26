@@ -204,7 +204,7 @@ export default {
                     headers: this.getAuthHeader(),
                 };
                 // Lưu ý: Đã thêm prefix  vào đường dẫn API
-                const response = await axios.get("/tax-authorities", config);
+                const response = await axios.get("/tax-authority", config);
                 this.items = response.data.content;
                 this.totalRows = response.data.totalElements;
             } catch (error) {
@@ -217,7 +217,7 @@ export default {
         async fetchParents() {
             try {
                 const config = { params: { size: 1000 }, headers: this.getAuthHeader() };
-                const response = await axios.get("/tax-authorities", config);
+                const response = await axios.get("/tax-authority", config);
 
                 this.parentOptions = response.data.content.map((item) => ({
                     value: item.id,
@@ -240,7 +240,7 @@ export default {
 
                 try {
                     // Gọi API lấy chi tiết để đảm bảo dữ liệu mới nhất
-                    const response = await axios.get(`/tax-authorities/${item.id}`, {
+                    const response = await axios.get(`/tax-authority/${item.id}`, {
                         headers: this.getAuthHeader()
                     });
                     const data = response.data;
@@ -277,7 +277,7 @@ export default {
 
                 if (this.isEditMode) {
                     // Update
-                    await axios.put(`/tax-authorities/${this.form.id}`, this.form, { headers });
+                    await axios.put(`/tax-authority/${this.form.id}`, this.form, { headers });
                     this.$bvToast.toast("Cập nhật thành công", {
                         variant: "success",
                         title: "Thông báo",
@@ -285,7 +285,7 @@ export default {
                     });
                 } else {
                     // Create
-                    await axios.post("/tax-authorities", this.form, { headers });
+                    await axios.post("/tax-authority", this.form, { headers });
                     this.$bvToast.toast("Thêm mới thành công", {
                         variant: "success",
                         title: "Thông báo",
@@ -317,7 +317,7 @@ export default {
                     if (value) {
                         try {
                             const headers = this.getAuthHeader();
-                            await axios.delete(`/tax-authorities/${item.id}`, { headers });
+                            await axios.delete(`/tax-authority/${item.id}`, { headers });
 
                             this.$bvToast.toast("Đã xóa bản ghi", { variant: "success", solid: true });
                             this.fetchData();

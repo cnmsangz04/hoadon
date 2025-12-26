@@ -19,10 +19,10 @@
           </div>
 
           <b-form @submit.prevent="onSubmit">
-            <b-form-group label="Tài khoản">
+            <b-form-group label="Email hoặc Tài khoản">
               <div class="input-with-icon">
                 <i class="bi bi-person"></i>
-                <b-form-input v-model.trim="account" type="text" required placeholder="Nhập tài khoản"></b-form-input>
+                <b-form-input v-model.trim="account" type="text" required placeholder="Nhập email hoặc tài khoản"></b-form-input>
               </div>
             </b-form-group>
 
@@ -55,8 +55,6 @@
             </b-button>
           </b-form>
 
-          <div v-if="error" class="mt-3 text-danger small text-center">{{ error }}</div>
-
           <div class="text-center mt-3">
             <small class="text-muted">© {{ new Date().getFullYear() }} hoadon.vn</small>
           </div>
@@ -82,62 +80,137 @@ export default {
       error: ""
     };
   },
-  mounted() {
-    // Prefill last used account (username) to ease login
-    try {
-      const last = localStorage.getItem('last-account')
-      if (last) this.account = last
-    } catch {}
-  },
   methods: {
     async onSubmit() {
       if (!this.account || !this.password) return;
-      // Disallow email-style input
-      if (/@/.test(this.account)) {
-        const msg = 'Hệ thống chỉ hỗ trợ đăng nhập bằng Tài khoản, không phải email.';
-        this.error = msg;
-        try { this.$toastr?.warning(msg) } catch {}
-        return;
-      }
-
       this.loading = true; this.error = "";
 
       try {
-        // Always login with username
-        const payload = { username: this.account.trim(), password: this.password };
-
+        // Allow login with email or username by sending both
+        const payload = { email: this.account, username: this.account, password: this.password };
         const res = await axios.post("/auth/login", payload, { meta: { suppressGlobalErrorToast: true } });
         const token = res.data?.token || res.data?.accessToken || res.data?.data?.token;
         if (!token) throw new Error("Không tìm thấy token!");
         localStorage.setItem("token", token);
         parseJwt(token);
         if (this.remember) localStorage.setItem("last-account", this.account);
-        // Optionally fetch user info after login
+        // Fetch app info immediately after login to populate header/sidebar
         try {
           const infoRes = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
           const data = infoRes?.data || {}
+          // Update global lightweight store
           if (this.$app) {
-            this.$app.info = this.$app.info || {}
             this.$app.info.user = data.user || null
             this.$app.info.company = data.company || null
           }
         } catch {}
-        // Navigate to home
-        this.$router.push({ name: '/' });
+        this.$router.push({ name: "/" });
       }
       catch(e) {
-        const msg = e?.response?.data?.message || e?.message || 'Đăng nhập thất bại!';
-        try { this.$toastr?.error(msg) } catch {}
-        this.error = msg
+        // Prefer toastr for user-friendly error
+        const msg = e.response?.data?.message || e.response?.data || e.message || "Đăng nhập thất bại!";
+        try { this.$toastr.error(msg); } catch(_) { this.error = msg; }
       }
-      finally {
-        this.loading = false
-      }
+      finally { this.loading = false; }
     }
   }
 };
 </script>
 
 <style scoped>
-/* keep existing styles unchanged */
+/* Layout */
+.auth-page {
+  height: 100vh;
+  overflow: hidden; /* no page scrollbar */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* soft gradient background */
+  background: linear-gradient(135deg, #eef2f7 0%, #f8f9fb 50%, #f1f4f9 100%);
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 980px;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 24px;
+  padding: 16px; /* compact padding to avoid overflow */
+}
+
+/* Branding */
+.brand-side {
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: saturate(1.2) blur(8px);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.06);
+  display: flex;
+}
+.brand-inner { margin: auto; text-align: center; padding: 28px; }
+.brand-logo, .logo { width: 72px; height: 72px; object-fit: contain; margin-bottom: 10px; }
+.brand-inner h2 { margin: 0 0 6px; font-weight: 600; }
+.brand-inner p { margin: 0; color: #6c757d; }
+
+/* Card */
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 22px 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,0.04);
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: saturate(1.2) blur(6px);
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+  animation: fadeIn .28s ease;
+}
+.auth-card .text-muted { color: #6c757d !important; }
+
+/* Form */
+.input-with-icon { display: flex; align-items: center; gap: .6rem; }
+.input-with-icon i { color: #8a94a6; font-size: 1.05rem; }
+
+/* refine input aesthetics */
+:deep(.form-control), :deep(input.form-control) {
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 10px 12px;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+:deep(.form-control:focus) {
+  border-color: #84a9ff;
+  box-shadow: 0 0 0 3px rgba(132, 169, 255, 0.25);
+}
+
+.toggle-btn {
+  margin-left: auto;
+  border-radius: 10px;
+}
+
+/* Button */
+.submit-btn {
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+:deep(.btn-primary) {
+  background: linear-gradient(180deg, #4f77ff, #3b66f0);
+  border: none;
+}
+:deep(.btn-primary:hover) {
+  filter: brightness(1.03);
+}
+
+/* Alert */
+:deep(.alert-danger) {
+  border-radius: 10px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .auth-container { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
+  .brand-side { display: none; }
+  .auth-card { width: 100%; max-height: none; }
+}
+
+/* Animation */
+@keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1;} }
 </style>
