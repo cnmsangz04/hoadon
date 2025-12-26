@@ -56,13 +56,13 @@
         responsive
         small
         show-empty
-        :items="items"
+        :items="list.data"
         :fields="fields"
         :busy="isBusy"
         empty-text="Không có dữ liệu"
       >
         <template #cell(index)="{ index }">
-          {{ index + 1 + (page.current - 1) * page.size }}
+          {{ index + 1 + (list.current_page - 1) * list.per_page }}
         </template>
 
         <!-- Tài khoản -> users.username -->
@@ -108,29 +108,48 @@
         </template>
       </b-table>
 
-      <!-- Temporary password modal -->
-      <b-modal ref="tempPwdModal" title="Mật khẩu tạm thời" hide-footer>
-        <div class="mb-2">Đã reset mật khẩu. Vui lòng gửi mật khẩu tạm thời cho người dùng và yêu cầu đổi sau khi đăng nhập.</div>
-        <b-input-group>
-          <b-form-input :value="tempPassword" readonly></b-form-input>
-          <b-input-group-append>
-            <b-button size="sm" variant="outline-primary" @click="copyTempPassword">Sao chép</b-button>
-          </b-input-group-append>
-        </b-input-group>
-        <div class="text-right mt-3">
-          <b-button variant="primary" @click="$refs.tempPwdModal.hide()">Đóng</b-button>
-        </div>
-      </b-modal>
+      <!-- Loading skeleton when changing page -->
+      <div v-if="isBusy" class="mt-2">
+        <b-skeleton width="100%" height="20px" animated class="mb-2" />
+        <b-skeleton width="96%" height="20px" animated class="mb-2" />
+        <b-skeleton width="92%" height="20px" animated class="mb-2" />
+      </div>
 
-      <b-pagination
-        v-if="page.total > page.size"
-        v-model="page.current"
-        :per-page="page.size"
-        :total-rows="page.total"
-        align="right"
-        class="mt-2"
-        @change="onPageChange"
-      />
+      <b-row class="mt-2">
+        <b-col cols="6">
+          <b-form inline>
+            <b-form-select
+              size="sm"
+              class="d-inline-block mb-2 mr-2 pl-2 pr-4"
+              v-model.number="list.per_page"
+              :options="pageSizes"
+              @input="onPageSizeChange"
+            />
+            <div class="pt-1 text-muted">
+              <i class="fas fa-globe mr-1"></i> Hiển thị từ
+              <b class="pl-1 pr-2">{{ list.from || 0 }}</b>
+              đến
+              <b class="pl-1 pr-2">{{ list.to || 0 }}</b>
+              trong tổng số
+              <b class="pl-1 pr-2">{{ list.total || 0 }}</b>
+              bản ghi.
+            </div>
+          </b-form>
+        </b-col>
+        <b-col cols="6">
+          <b-pagination
+            align="right"
+            v-model.number="list.current_page"
+            :per-page="list.per_page"
+            :total-rows="list.total"
+            :hide-goto-end-buttons="true"
+            v-if="list.last_page > 1"
+            size="sm"
+            pills
+            @input="onPageChange"
+          />
+        </b-col>
+      </b-row>
     </b-card>
 
     <!-- Create/Edit member modal -->
@@ -278,13 +297,25 @@ import { parseJwt } from '@/utils/jwt'
 
 export default {
   name: 'SettingsMemberList',
+  components: { },
   data() {
     return {
       isBusy: false,
-      items: [],
+      // New pagination object following requested shape
+      list: {
+        current_page: 1,
+        data: [],
+        last_page: 1,
+        prev_page_url: null,
+        next_page_url: null,
+        per_page: 10,
+        total: 0,
+        from: 0,
+        to: 0
+      },
       categories: [],
       allPermissions: [],
-      page: { current: 1, size: 10, total: 0 },
+      pageSizes: [10, 20, 50, 100],
       filters: { keyword: '', userRole: null, status: null },
       statusOptions: [
         { value: 1, text: 'Active' },
@@ -410,7 +441,7 @@ export default {
     },
     isEditingRootTarget() {
       if (!this.form.id) return false
-      const target = this.items.find(x => x.id === this.form.id)
+      const target = this.list.data.find(x => x.id === this.form.id)
       const role = Number(target?.role ?? target?.user?.role)
       return role === 0
     },
@@ -455,6 +486,13 @@ export default {
     }
   },
   mounted: async function() {
+    // Sync from query string on mount
+    const q = this.$route?.query || {}
+    const qp = Number(q.page)
+    const qs = Number(q.size)
+    if (Number.isFinite(qp) && qp > 0) this.list.current_page = qp
+    if (Number.isFinite(qs) && qs > 0) this.list.per_page = qs
+
     this.loadCategories()
     await this.loadAllPermissions()
     await this.loadData()
@@ -491,32 +529,38 @@ export default {
     async loadData() {
       this.isBusy = true
       try {
-        const page = this.page.current - 1
-        const companyId = this.currentCompanyId
+        const pageZero = Math.max(0, Number(this.list.current_page || 1) - 1)
         const params = {
           keyword: this.filters.keyword || undefined,
           role: this.filters.userRole ?? undefined,
           status: this.filters.status,
-          companyId: Number.isFinite(Number(companyId)) ? Number(companyId) : undefined,
-          page,
-          size: this.page.size
-        }
-        if (!params.companyId) {
-          // If companyId missing, clear list and inform
-          this.items = []
-          this.page.total = 0
-          try { this.$toastr.warning('Không xác định được công ty hiện tại, vui lòng đăng nhập lại') } catch {}
-          return
+          companyId: this.currentCompanyId,
+          page: pageZero,
+          size: this.list.per_page
         }
         const res = await axios.post('/setting/members/list', null, { params })
-        this.items = res.data?.content || []
-        this.page.total = res.data?.totalElements || 0
+        const d = res?.data || {}
+        // Normalize data keys just in case
+        this.list.data = Array.isArray(d.data) ? d.data : (Array.isArray(d.content) ? d.content : [])
+        this.list.total = Number(d.total ?? d.totalElements ?? 0)
+        this.list.per_page = Number(d.per_page ?? this.list.per_page)
+        this.list.current_page = Number(d.current_page ?? (Number(params.page) + 1))
+        this.list.last_page = Number(d.last_page ?? Math.max(1, Math.ceil(this.list.total / this.list.per_page)))
+        this.list.from = Number(d.from ?? ((this.list.total === 0) ? 0 : ((this.list.current_page - 1) * this.list.per_page + 1)))
+        const numberOfElements = Array.isArray(this.list.data) ? this.list.data.length : 0
+        this.list.to = Number(d.to ?? ((this.list.total === 0) ? 0 : (this.list.from + numberOfElements - 1)))
+
+        // Update query string
+        if (this.$route) {
+          this.$router.replace({ query: { ...this.$route.query, page: String(this.list.current_page), size: String(this.list.per_page) } }).catch(() => {})
+        }
       } finally {
         this.isBusy = false
       }
     },
-    applyFilters() { this.page.current = 1; this.loadData() },
-    onPageChange(p) { this.page.current = p; this.loadData() },
+    applyFilters() { this.list.current_page = 1; this.loadData() },
+    onPageChange(p) { this.list.current_page = Number(p); this.loadData() },
+    onPageSizeChange(s) { this.list.per_page = Number(s || this.list.per_page); this.list.current_page = 1; this.loadData() },
     reload() { this.applyFilters() },
     openCreate() {
       this.form = { id: null, username: '', fullName: '', phone: '', email: '', password: '', passwordConfirm: '', isAdmin: false, adminPassword: '', adminPasswordConfirm: '' }
@@ -598,7 +642,7 @@ export default {
     async savePermissions() {
       if (!this.canSavePermissions) return
       if (!this.permForm.username) {
-        const src = this.items.find(x => Number(x.id ?? x.user?.id) === Number(this.permForm.userId))
+        const src = this.list.data.find(x => Number(x.id ?? x.user?.id) === Number(this.permForm.userId))
         if (src) this.permForm.username = src.username || src.user?.username || ''
       }
       const allowedPermIds = new Set((this.permVisiblePermissions || []).map(p => Number(p.id)))
@@ -620,7 +664,7 @@ export default {
     async saveMember() {
       if (!this.canSubmitForm) return
       if (this.form.id) {
-        const target = this.items.find(x => x.id === this.form.id)
+        const target = this.list.data.find(x => x.id === this.form.id)
         const targetRole = Number(target?.role ?? target?.user?.role)
         const meRole = this.currentRole
         if (meRole === 1 && (targetRole === 0 || targetRole === 1)) {
@@ -628,7 +672,7 @@ export default {
           return
         }
       }
-      const isEditingRoot = this.form.id && Number(this.items.find(x => x.id === this.form.id)?.role) === 0
+      const isEditingRoot = this.form.id && Number(this.list.data.find(x => x.id === this.form.id)?.role) === 0
       const rolePayload = isEditingRoot ? undefined : (this.form.isAdmin ? 1 : 2)
       // Auto-generate username from email
       const usernamePayload = this.form.email || this.form.username || undefined
@@ -762,5 +806,91 @@ export default {
 .members .section-card { border: 1px solid #e8e8e8; border-radius: 12px; padding: 12px 14px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
 .members .perm-group { border: 1px solid #e8e8e8; border-radius: 12px; }
 .members .perm-group-header { border-bottom: 1px dashed #ecf0f6; padding-bottom: 6px; margin-bottom: 8px; }
-@media (max-width: 576px) { .admin-type-cards { flex-direction: column; } }
+.members .pagination { margin: 0; }
+.members .page-item .page-link {
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  padding: 4px 10px;
+  line-height: 1.2;
+}
+.members .page-item:not(.active) .page-link:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #111827;
+}
+.members .page-item.active .page-link {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(59,130,246,.15);
+}
+.members .page-item.disabled .page-link { color: #9ca3af; background: #f9fafb; }
+
+.pagination-bar {
+  padding-top: 10px;
+  margin-top: 12px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+/* Select */
+.pagination-bar .custom-select-sm {
+  height: 30px;
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+/* Pagination */
+.pagination-bar .pagination {
+  margin: 0;
+  gap: 6px;
+}
+
+.pagination-bar .page-item .page-link {
+  min-width: 32px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  font-size: 13px;
+  line-height: 28px;
+  text-align: center;
+  background-color: #fff;
+  transition: all 0.15s ease;
+}
+
+.pagination-bar .page-item:not(.active):not(.disabled) .page-link:hover {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+.pagination-bar .page-item.active .page-link {
+  background-color: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.pagination-bar .page-item.disabled .page-link {
+  background-color: #f9fafb;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+  .pagination-bar {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+
+  .pagination-bar .pagination {
+    justify-content: flex-start;
+  }
+}
 </style>

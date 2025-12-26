@@ -26,7 +26,7 @@ public class MemberController {
     private UserPermissionRepository userPermissionRepository;
 
     @PostMapping("/list")
-    public Page<UserEntity> list(
+    public Map<String, Object> list(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long roleId,
             @RequestParam(required = false) Byte status,
@@ -36,11 +36,12 @@ public class MemberController {
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        return service.list(keyword, roleId, status, companyId, role, pageable);
+        Page<UserEntity> p = service.list(keyword, roleId, status, companyId, role, pageable);
+        return toPaginationResponse(p);
     }
 
     @GetMapping("/list")
-    public Page<UserEntity> listGet(
+    public Map<String, Object> listGet(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long roleId,
             @RequestParam(required = false) Byte status,
@@ -50,7 +51,31 @@ public class MemberController {
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        return service.list(keyword, roleId, status, companyId, role, pageable);
+        Page<UserEntity> p = service.list(keyword, roleId, status, companyId, role, pageable);
+        return toPaginationResponse(p);
+    }
+
+    private Map<String, Object> toPaginationResponse(Page<UserEntity> p) {
+        Map<String, Object> res = new HashMap<>();
+        long total = p.getTotalElements();
+        int size = p.getSize();
+        int currentPage = p.getNumber() + 1; // 1-based
+        int lastPage = Math.max(1, p.getTotalPages());
+        int numberOfElements = p.getNumberOfElements();
+        long from = total == 0 ? 0 : ((long) (currentPage - 1) * size) + 1;
+        long to = total == 0 ? 0 : (from + numberOfElements - 1);
+
+        res.put("data", p.getContent());
+        res.put("total", total);
+        res.put("per_page", size);
+        res.put("current_page", currentPage);
+        res.put("last_page", lastPage);
+        res.put("from", from);
+        res.put("to", to);
+        // URLs are optional; keep null for now
+        res.put("prev_page_url", currentPage > 1 ? currentPage - 1 : null);
+        res.put("next_page_url", currentPage < lastPage ? currentPage + 1 : null);
+        return res;
     }
 
     @PostMapping("/saveOrUpdate")

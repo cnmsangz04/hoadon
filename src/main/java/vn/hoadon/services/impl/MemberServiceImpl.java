@@ -91,7 +91,7 @@ public class MemberServiceImpl implements MemberService {
         Long actorCompanyId = actor != null ? actor.getCompanyId() : null;
         boolean isRoot = actorRole != null && actorRole == 0;
 
-        // Determine target companyId: only root can set arbitrary companyId
+        // Determine target companyId: only root can set arbitrary companyId; admin/user defaults to actor company
         Long companyId = incoming.getCompanyId();
         if (!isRoot) {
             companyId = actorCompanyId;
@@ -108,6 +108,10 @@ public class MemberServiceImpl implements MemberService {
         boolean isCreate = incoming.getId() == null;
 
         if (isCreate) {
+            // companyId MUST be present on create (users.company_id NOT NULL)
+            if (companyId == null) {
+                throw new IllegalArgumentException("Thiếu companyId khi tạo thành viên. Vui lòng chọn công ty hoặc đăng nhập đúng ngữ cảnh công ty.");
+            }
             Optional<UserEntity> existed = userRepository.findByUsername(incoming.getUsername());
             if (existed.isPresent()) {
                 throw new IllegalArgumentException("Username đã tồn tại");
@@ -149,9 +153,9 @@ public class MemberServiceImpl implements MemberService {
                 }
             }
 
-            // Only update companyId if actor is allowed (handled above) and provided
-            if (companyId != null && isRoot) {
-                user.setCompanyId(companyId);
+            // Update companyId only when explicitly provided by root; avoid nulling accidentally
+            if (isRoot && incoming.getCompanyId() != null) {
+                user.setCompanyId(incoming.getCompanyId());
             }
 
             // Only update role if provided
