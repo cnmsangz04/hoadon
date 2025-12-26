@@ -6,6 +6,7 @@ import vn.hoadon.dto.buyinvoice.BuyInvoiceFilterDTO;
 import vn.hoadon.dto.buyinvoice.BuyInvoiceListItemDTO;
 import vn.hoadon.dto.common.IdRequestDTO;
 import vn.hoadon.entity.BuyInvoiceEntity;
+import vn.hoadon.entity.UserEntity;
 import vn.hoadon.services.BuyInvoiceService;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,11 +29,20 @@ public class BuyInvoiceController extends BaseController {
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size
     ) {
-    	permission("buy-invoice-list");
-    	
+        permission("buy-invoice-list");
+        
         if (filter == null) filter = new BuyInvoiceFilterDTO();
         int pageNum = page != null ? page : 0;
         int pageSize = size != null ? size : 25;
+
+        // Derive companyId from current user for non-root users
+        UserEntity user = currentUser();
+        Long actorCompanyId = user != null ? user.getCompanyId() : null;
+        Integer actorRole = user != null ? user.getRole() : null;
+        boolean isRoot = actorRole != null && actorRole == 0;
+        if (!isRoot) {
+            filter.setCompanyId(actorCompanyId);
+        }
 
         Pageable pageable = PageRequest.of(pageNum, pageSize, Sort.by("createdAt").descending());
 
@@ -47,9 +57,15 @@ public class BuyInvoiceController extends BaseController {
     // Sử dụng DTO để nhận dữ liệu
     @PostMapping("/create")
     public ResponseEntity<BuyInvoiceEntity> create(@RequestBody BuyInvoiceCreateDTO dto) {
+        UserEntity user = currentUser();
+        Long companyId = user != null ? user.getCompanyId() : null;
+        if (companyId == null) {
+            throw new IllegalArgumentException("Không xác định được công ty từ người dùng hiện tại");
+        }
         BuyInvoiceEntity entity = new BuyInvoiceEntity();
         entity.setId(dto.getId());
-        entity.setCompanyId(dto.getCompanyId());
+        // Force companyId from authenticated user; do not trust client payload
+        entity.setCompanyId(companyId);
         entity.setAmount(dto.getAmount());
         entity.setStatus(dto.getStatus());
         return ResponseEntity.ok(service.saveOrUpdate(entity));

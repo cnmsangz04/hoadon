@@ -162,17 +162,23 @@ public class ProfileController {
             @RequestParam(value = "logo", required = false) MultipartFile logo,
             @RequestParam(value = "favicon", required = false) MultipartFile favicon
     ) {
-        Optional<CompanyEntity> companyOpt = companyRepository.findById(1L);
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        Long companyId = null;
+        if (auth != null && auth.getPrincipal() instanceof vn.hoadon.entity.UserEntity) {
+            companyId = ((vn.hoadon.entity.UserEntity) auth.getPrincipal()).getCompanyId();
+        }
+        if (companyId == null) {
+            return ResponseEntity.status(403).body("Không xác định được công ty từ người dùng hiện tại");
+        }
+        Optional<vn.hoadon.entity.CompanyEntity> companyOpt = companyRepository.findById(companyId);
         if (!companyOpt.isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        CompanyEntity company = companyOpt.get();
+        vn.hoadon.entity.CompanyEntity company = companyOpt.get();
         if (companyName != null) company.setName(companyName);
         if (companyAddress != null) company.setAddress(companyAddress);
         if (companyBusiness != null) company.setBusiness(companyBusiness);
         
-        Long companyId = company.getId();
-
         // Save logo
         if (logo != null && !logo.isEmpty()) {
             try {
@@ -212,9 +218,17 @@ public class ProfileController {
 
     @PostMapping("/update-represent")
     public ResponseEntity<?> updateRepresent(@RequestBody Map<String, Object> body) {
-        LegalRepresentativeEntity rep = legalRepresentativeRepository.findByCompanyId(1L).
-                orElseGet(LegalRepresentativeEntity::new);
-        rep.setCompanyId(1L);
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        Long companyId = null;
+        if (auth != null && auth.getPrincipal() instanceof vn.hoadon.entity.UserEntity) {
+            companyId = ((vn.hoadon.entity.UserEntity) auth.getPrincipal()).getCompanyId();
+        }
+        if (companyId == null) {
+            return ResponseEntity.status(403).body("Không xác định được công ty từ người dùng hiện tại");
+        }
+        vn.hoadon.entity.LegalRepresentativeEntity rep = legalRepresentativeRepository.findByCompanyId(companyId).
+                orElseGet(vn.hoadon.entity.LegalRepresentativeEntity::new);
+        rep.setCompanyId(companyId);
         rep.setFullname((String) body.getOrDefault("representName", null));
         rep.setGender((Integer) body.getOrDefault("representGender", null));
         Object date = body.get("representDateBirth");
@@ -233,11 +247,19 @@ public class ProfileController {
 
     @PostMapping("/update-info-invoice")
     public ResponseEntity<?> updateInvoice(@RequestBody Map<String, String> body) {
-        Optional<CompanyEntity> companyOpt = companyRepository.findById(1L);
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        Long companyId = null;
+        if (auth != null && auth.getPrincipal() instanceof vn.hoadon.entity.UserEntity) {
+            companyId = ((vn.hoadon.entity.UserEntity) auth.getPrincipal()).getCompanyId();
+        }
+        if (companyId == null) {
+            return ResponseEntity.status(403).body("Không xác định được công ty từ người dùng hiện tại");
+        }
+        Optional<vn.hoadon.entity.CompanyEntity> companyOpt = companyRepository.findById(companyId);
         if (!companyOpt.isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        CompanyEntity company = companyOpt.get();
+        vn.hoadon.entity.CompanyEntity company = companyOpt.get();
         if (body.containsKey("invoiceEmail")) company.setInvoiceEmail(body.get("invoiceEmail"));
         if (body.containsKey("invoicePhone")) company.setInvoicePhone(body.get("invoicePhone"));
         if (body.containsKey("invoiceFax")) company.setInvoiceFax(body.get("invoiceFax"));
@@ -248,7 +270,15 @@ public class ProfileController {
 
     @PostMapping("/update-contact")
     public ResponseEntity<?> updateContact(@RequestBody Map<String, String> body) {
-        Optional<CompanyEntity> companyOpt = companyRepository.findById(1L);
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        Long companyId = null;
+        if (auth != null && auth.getPrincipal() instanceof vn.hoadon.entity.UserEntity) {
+            companyId = ((vn.hoadon.entity.UserEntity) auth.getPrincipal()).getCompanyId();
+        }
+        if (companyId == null) {
+            return ResponseEntity.status(403).body("Không xác định được công ty từ người dùng hiện tại");
+        }
+        Optional<vn.hoadon.entity.CompanyEntity> companyOpt = companyRepository.findById(companyId);
         if (!companyOpt.isPresent()) {
             return ResponseEntity.notFound().build();
         }
@@ -295,7 +325,7 @@ public class ProfileController {
             return ResponseEntity.status(422).body(resp);
         }
 
-        CompanyEntity company = companyOpt.get();
+        vn.hoadon.entity.CompanyEntity company = companyOpt.get();
         company.setContactName(contactName);
         company.setContactMail(contactMail);
         company.setContactPhone(contactPhone);
@@ -306,11 +336,19 @@ public class ProfileController {
 
     @PostMapping("/update-bank")
     public ResponseEntity<?> updateBank(@RequestBody Map<String, String> body) {
-        Optional<CompanyEntity> companyOpt = companyRepository.findById(1L);
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        Long companyId = null;
+        if (auth != null && auth.getPrincipal() instanceof vn.hoadon.entity.UserEntity) {
+            companyId = ((vn.hoadon.entity.UserEntity) auth.getPrincipal()).getCompanyId();
+        }
+        if (companyId == null) {
+            return ResponseEntity.status(403).body("Không xác định được công ty từ người dùng hiện tại");
+        }
+        Optional<vn.hoadon.entity.CompanyEntity> companyOpt = companyRepository.findById(companyId);
         if (!companyOpt.isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        CompanyEntity company = companyOpt.get();
+        vn.hoadon.entity.CompanyEntity company = companyOpt.get();
 
         String bankAbbreviation = body.get("bankName"); // reduced value from v-select
         String bankNo = body.get("bankNo");
@@ -340,11 +378,19 @@ public class ProfileController {
 
     @PostMapping("/update-tax-authority")
     public ResponseEntity<?> updateTaxAuthority(@RequestBody Map<String, Integer> body) {
-        Optional<CompanyEntity> companyOpt = companyRepository.findById(1L);
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        Long companyId = null;
+        if (auth != null && auth.getPrincipal() instanceof vn.hoadon.entity.UserEntity) {
+            companyId = ((vn.hoadon.entity.UserEntity) auth.getPrincipal()).getCompanyId();
+        }
+        if (companyId == null) {
+            return ResponseEntity.status(403).body("Không xác định được công ty từ người dùng hiện tại");
+        }
+        Optional<vn.hoadon.entity.CompanyEntity> companyOpt = companyRepository.findById(companyId);
         if (!companyOpt.isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        CompanyEntity company = companyOpt.get();
+        vn.hoadon.entity.CompanyEntity company = companyOpt.get();
         Integer cityCode = body.get("taxAuthorityCity");
         Integer nameCode = body.get("taxAuthorityName");
         if (cityCode != null) {
