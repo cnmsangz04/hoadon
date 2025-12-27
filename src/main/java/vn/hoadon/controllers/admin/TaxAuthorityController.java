@@ -24,19 +24,22 @@ public class TaxAuthorityController {
     @GetMapping
     public ResponseEntity<?> getList(
             @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(required = false) Long parentId, // Thêm dòng này (có thể null)
+            @RequestParam(required = false) Integer status, // Thêm dòng này (có thể null)
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "desc") String sortDir,
             @RequestParam(defaultValue = "id") String sortField
     ) {
-        // Tạo đối tượng Pageable với Sort
         Sort sort = sortDir.equalsIgnoreCase("asc") 
                 ? Sort.by(sortField).ascending() 
                 : Sort.by(sortField).descending();
         
         Pageable pageable = PageRequest.of(page, size, sort);
         
-        Page<TaxAuthorityResponse> result = taxService.search(keyword, pageable);
+        // Gọi Service với đầy đủ tham số lọc
+        Page<TaxAuthorityResponse> result = taxService.search(keyword, parentId, status, pageable);
+        
         return ResponseEntity.ok(result);
     }
 

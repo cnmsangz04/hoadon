@@ -7,25 +7,24 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import vn.hoadon.dto.taxauthority.TaxAuthorityResponse;
 import vn.hoadon.dto.taxauthority.TaxAuthorityRequest;
+import vn.hoadon.dto.taxauthority.TaxAuthorityResponse;
 import vn.hoadon.entity.TaxAuthorityEntity;
 import vn.hoadon.repositories.TaxAuthorityRepository;
 import vn.hoadon.services.TaxAuthorityService;
-import vn.hoadon.util.SearchCriteria; // Class tiện ích search ở câu trả lời trước
+import vn.hoadon.util.SearchCriteria;
+
 import java.util.List;
 import java.util.Optional;
 
 @Service
-@Transactional // Đảm bảo tính toàn vẹn dữ liệu
+@Transactional
 public class TaxAuthorityServiceImpl implements TaxAuthorityService {
 
     @Autowired
     private TaxAuthorityRepository taxRepo;
-    public TaxAuthorityServiceImpl(TaxAuthorityRepository repo) {
-        this.taxRepo = repo;
-    }
 
+    // --- Các hàm List giữ nguyên ---
     @Override
     public List<TaxAuthorityEntity> listCities() {
         return taxRepo.findByParentIdAndStatus(0L, 1);
@@ -45,23 +44,36 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
     public Optional<TaxAuthorityEntity> findByCode(Integer code) {
         return taxRepo.findByCode(code);
     }
+
+    // --- SEARCH & CRUD ---
+
     @Override
-    @Transactional(readOnly = true) // Tối ưu hiệu năng cho việc đọc
-    public Page<TaxAuthorityResponse> search(String keyword, Pageable pageable) {
-        // 1. Tạo điều kiện tìm kiếm (tìm theo mã HOẶC tên HOẶC tỉnh)
+    @Transactional(readOnly = true)
+    public Page<TaxAuthorityResponse> search(String keyword, Long parentId, Integer status, Pageable pageable) {
+        // 1. Tạo Spec tìm kiếm theo Keyword (Code hoặc Name)
         Specification<TaxAuthorityEntity> spec = SearchCriteria.hasKeyword(keyword, "code", "name");
 
-        // 2. Query DB (Repo đã được tối ưu fetch parent)
+        // 2. Ghép thêm điều kiện ParentId (nếu user có chọn combobox)
+        if (parentId != null) {
+            spec = spec.and(SearchCriteria.hasEqual("parentId", parentId));
+        }
+
+        // 3. Ghép thêm điều kiện Status (nếu user có chọn combobox)
+        if (status != null) {
+            spec = spec.and(SearchCriteria.hasEqual("status", status));
+        }
+
+        // 4. Query DB với bộ lọc tổng hợp
         Page<TaxAuthorityEntity> entities = taxRepo.findAll(spec, pageable);
 
-        // 3. Convert Entity -> DTO
+        // 5. Convert sang DTO Response
         return entities.map(this::mapToResponse);
     }
 
     @Override
     public TaxAuthorityResponse findById(Long id) {
         TaxAuthorityEntity entity = taxRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy cơ quan thuế với ID: " + id));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy dữ liệu với ID: " + id));
         return mapToResponse(entity);
     }
 
@@ -69,6 +81,16 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
     public TaxAuthorityResponse create(TaxAuthorityRequest req) {
         TaxAuthorityEntity entity = new TaxAuthorityEntity();
         mapRequestToEntity(req, entity);
+        
+        // Setup thời gian tạo (nếu Entity ko tự generate)
+        if (entity.getCreatedAt() == null) {
+            entity.setCreatedAt(java.time.LocalDateTime.now());
+        }
+
+        if(entity.getParentId() == null) {
+            entity.setParentId(0L); // Mặc định nếu không có cha thì là 0 (cấp cao nhất)
+        }
+
         TaxAuthorityEntity saved = taxRepo.save(entity);
         return mapToResponse(saved);
     }
@@ -76,8 +98,13 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
     @Override
     public TaxAuthorityResponse update(Long id, TaxAuthorityRequest req) {
         TaxAuthorityEntity entity = taxRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy CQT để cập nhật"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy dữ liệu để cập nhật"));
         mapRequestToEntity(req, entity);
+         if(entity.getParentId() == null) {
+            entity.setParentId(0L); // Mặc định nếu không có cha thì là 0 (cấp cao nhất)
+        }
+        entity.setUpdatedAt(java.time.LocalDateTime.now());
+        
         TaxAuthorityEntity saved = taxRepo.save(entity);
         return mapToResponse(saved);
     }
@@ -87,41 +114,60 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
         if (!taxRepo.existsById(id)) {
             throw new RuntimeException("ID không tồn tại");
         }
-        // Logic mở rộng: Kiểm tra xem CQT này có con không trước khi xóa?
         taxRepo.deleteById(id);
     }
 
-    // --- Helper Methods: Mapping ---
+    // ==========================================
+    // KHU VỰC MAPPING DỮ LIỆU (QUAN TRỌNG)
+    // ==========================================
 
     private TaxAuthorityResponse mapToResponse(TaxAuthorityEntity entity) {
         TaxAuthorityResponse dto = new TaxAuthorityResponse();
-        // Lombok @Data tạo sẵn setter theo field định nghĩa trong DTO
+        
         dto.setId(entity.getId());
-        // Chuyển mã code Integer -> String cho DTO nếu cần
-        dto.setCode(entity.getCode() != null ? String.valueOf(entity.getCode()) : null);
+        dto.setCode(entity.getCode() != null ? String.valueOf(entity.getCode()) : "");
         dto.setName(entity.getName());
         dto.setParentId(entity.getParentId());
         dto.setStatus(entity.getStatus());
         dto.setCreatedAt(entity.getCreatedAt());
-        // managerName không thể suy ra vì Entity chỉ lưu parentId (Long)
+        dto.setProvinceName(entity.getProvinceName()); // Mở comment nếu Entity có trường này
+
+        // --- LOGIC LẤY TÊN QUẢN LÝ (MANAGER NAME) ---
+        if (entity.getParentId() != null && entity.getParentId() > 0) {
+            // Tìm tên của cha dựa vào parentId
+            Optional<TaxAuthorityEntity> parentOpt = taxRepo.findById(entity.getParentId());
+            if (parentOpt.isPresent()) {
+                dto.setManagerName(parentOpt.get().getName());
+            } else {
+                dto.setManagerName("Không tìm thấy cha");
+            }
+        } else {
+            dto.setManagerName(null); // Hoặc để null để Frontend hiển thị "-- Cấp cao nhất --"
+        }
+
         return dto;
     }
 
     private void mapRequestToEntity(TaxAuthorityRequest req, TaxAuthorityEntity entity) {
-        // Request.code là String, entity.code là Integer
-        if (req.getCode() != null && !req.getCode().isEmpty()) {
+        // Convert Code String -> Integer
+        if (req.getCode() != null && !req.getCode().trim().isEmpty()) {
             try {
-                entity.setCode(Integer.valueOf(req.getCode()));
-            } catch (NumberFormatException ex) {
-                throw new RuntimeException("Mã CQT phải là số hợp lệ");
+                entity.setCode(Integer.valueOf(req.getCode().trim()));
+            } catch (NumberFormatException e) {
+                // Có thể throw lỗi hoặc log warning
+                entity.setCode(null); 
             }
-        } else {
-            entity.setCode(null);
         }
+
         entity.setName(req.getName());
         entity.setStatus(req.getStatus());
-
-        // Gán cha trực tiếp theo ID (Entity chỉ có Long parentId)
+        
+        // Kiểm tra logic cha con: Không được chọn chính mình làm cha
+        if (entity.getId() != null && entity.getId().equals(req.getParentId())) {
+             throw new RuntimeException("Không thể chọn chính cơ quan này làm cấp quản lý");
+        }
         entity.setParentId(req.getParentId());
+        
+        entity.setProvinceName(req.getProvinceName()); // Mở comment nếu Entity có trường này
     }
 }

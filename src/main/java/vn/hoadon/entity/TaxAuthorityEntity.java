@@ -30,7 +30,13 @@ public class TaxAuthorityEntity {
 
     @OneToMany(mappedBy = "taxAuthority")
     private List<CompanyEntity> companies;
+// Trong file TaxAuthorityEntity.java
+@Column(name = "province_name", columnDefinition = "NVARCHAR(255)")
+private String provinceName;
 
+// Getter & Setter
+public String getProvinceName() { return provinceName; }
+public void setProvinceName(String provinceName) { this.provinceName = provinceName; }
     // Getters & Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
