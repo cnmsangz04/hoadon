@@ -34,6 +34,12 @@ export default {
 			meta: { requiresAdmin: true, title: 'Cơ quan thuế' }
 		},
 		{
+			path: 'tax-rate/list',
+			name: 'admin-tax-rate-list',
+			component: () => import('../../views/administrators/tax-rate/list.vue'),
+			meta: { requiresAdmin: true, title: 'Thuế suất' }
+		},
+		{
 			path: 'access-control',
 			name: 'admin-access-control',
 			component: () => import('../../views/administrators/access-control/index.vue'),
