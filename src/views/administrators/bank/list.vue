@@ -1,146 +1,322 @@
 <template>
-  <div class="container-fluid py-3">
-
-    <!-- Tiêu đề -->
-    <h3 class="mb-3">Danh sách cơ quan thuế</h3>
-
-    <!-- Bộ lọc -->
-    <div class="d-flex flex-wrap mb-3 align-items-center">
-
-      <!-- Ô tìm kiếm -->
-      <b-input-group class="mr-3 mb-2" style="max-width: 260px;">
-        <b-form-input
-          v-model="searchKeyword"
-          placeholder="Nhập từ khóa tìm kiếm..."
-        ></b-form-input>
-        <b-input-group-append>
-          <b-button variant="outline-secondary">
-            <i class="fa fa-search"></i>
-          </b-button>
-        </b-input-group-append>
-      </b-input-group>
-
-      <!-- Dropdown cục thuế -->
-      <b-form-select
-        v-model="selectedProvince"
-        :options="provinceOptions"
-        class="mr-3 mb-2"
-        style="max-width: 260px;"
-      >
-      </b-form-select>
-
-      <!-- Nút danh sách cục thuế tỉnh/thành -->
-      <b-button variant="danger" class="mr-3 mb-2">
-        <i class="fa fa-list"></i> Danh sách Cục thuế Tỉnh/Thành
-      </b-button>
-
-      <!-- Nút thêm mới -->
-      <b-button variant="success" class="mb-2">
-        <i class="fa fa-plus"></i> Thêm mới
-      </b-button>
+  <div class="container-fluid py-3 bank-list">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="d-flex align-items-center">
+        <h4 class="mb-0 font-weight-bold">Danh sách ngân hàng</h4>
+      </div>
+      <div>
+        <b-button size="sm" variant="outline-primary" class="mr-2" @click="reload">
+          <i class="fas fa-sync-alt"></i> Làm mới
+        </b-button>
+        <b-button size="sm" variant="success" @click="openCreate">
+          <i class="fas fa-plus"></i> Thêm ngân hàng
+        </b-button>
+      </div>
     </div>
 
-    <!-- Bảng danh sách -->
-    <b-table
-      bordered
-      striped
-      hover
-      :items="filteredItems"
-      :fields="fields"
-      small
-    >
-      <!-- Trạng thái -->
-      <template #cell(status)="data">
-        <b-badge variant="success" class="px-3 py-2">Hiển thị</b-badge>
-      </template>
+    <b-card class="mb-3 shadow-sm">
+      <b-row>
+        <b-col md="4" class="mb-2">
+          <b-input-group>
+            <b-input-group-prepend is-text>
+              <i class="fas fa-search text-muted"></i>
+            </b-input-group-prepend>
+            <b-form-input 
+              v-model.trim="filters.keyword" 
+              placeholder="Tìm theo Mã / Tên ngân hàng" 
+              @keyup.enter="applyFilters" 
+            />
+          </b-input-group>
+        </b-col>
 
-      <!-- Thao tác -->
-      <template #cell(actions)="data">
-        <b-dropdown right variant="link" toggle-class="text-dark p-0">
-          <template #button-content>
-            <i class="fa fa-ellipsis-v"></i>
-          </template>
-          <b-dropdown-item>Cập nhật</b-dropdown-item>
-          <b-dropdown-item>Xóa</b-dropdown-item>
-        </b-dropdown>
-      </template>
-    </b-table>
+        <b-col md="4" class="mb-2">
+          <b-form-select v-model="filters.status" :options="statusOptions">
+            <template #first>
+              <b-form-select-option :value="null">Tất cả trạng thái</b-form-select-option>
+            </template>
+          </b-form-select>
+        </b-col>
+        <b-col md="4" class="text-right mb-2">
+          <b-button size="sm" variant="primary" @click="applyFilters">
+            Tìm kiếm
+          </b-button>
+        </b-col>
+      </b-row>
+    </b-card>
+
+    <b-card class="shadow-sm">
+      <b-table
+        bordered hover responsive small show-empty
+        :items="list.data"
+        :fields="fields"
+        :busy="isBusy"
+        empty-text="Không có dữ liệu"
+      >
+        <template #cell(index)="{ index }">
+          {{ index + 1 + (list.current_page - 1) * list.per_page }}
+        </template>
+
+        <template #cell(abbreviation)="data">
+          <b-badge variant="light" class="text-primary font-weight-bold border">
+            {{ data.item.abbreviation }}
+          </b-badge>
+        </template>
+
+        <template #cell(name)="data">
+          <div class="font-weight-bold">{{ data.item.name }}</div>
+        </template>
+
+        <template #cell(status)="data">
+          <b-badge :variant="data.item.status == 1 ? 'success' : 'secondary'">
+            {{ data.item.status == 1 ? 'Hoạt động' : 'Đã khóa' }}
+          </b-badge>
+        </template>
+
+        <template #cell(option)="{ item }">
+          <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret>
+            <template #button-content>
+              <i class="fas fa-ellipsis-h text-muted"></i>
+            </template>
+            <b-dropdown-item @click="openEdit(item)">
+              <i class="fas fa-edit mr-2"></i>Cập nhật
+            </b-dropdown-item>
+            <b-dropdown-item @click="toggleLock(item)">
+              <i class="fas mr-2" :class="item.status == 1 ? 'fa-lock text-warning' : 'fa-unlock text-success'"></i>
+              {{ item.status == 1 ? 'Khóa' : 'Mở khóa' }}
+            </b-dropdown-item>
+          </b-dropdown>
+        </template>
+      </b-table>
+
+      <b-row class="mt-3" v-if="list.total > 0">
+        <b-col cols="6" class="d-flex align-items-center">
+          <span class="text-muted small mr-2">Hiển thị</span>
+          <b-form-select
+            size="sm"
+            style="width: 80px"
+            v-model.number="list.per_page"
+            :options="pageSizes"
+            @change="onPageSizeChange"
+          />
+          <span class="text-muted small ml-2">
+            từ {{ list.from }} đến {{ list.to }} trong {{ list.total }} bản ghi.
+          </span>
+        </b-col>
+        <b-col cols="6">
+          <b-pagination
+            align="right"
+            v-model="list.current_page"
+            :total-rows="list.total"
+            :per-page="list.per_page"
+            @change="onPageChange" 
+            v-if="list.total > list.per_page" 
+            size="sm"
+            pills
+          />
+        </b-col>
+      </b-row>
+    </b-card>
+
+    <b-modal
+      ref="modalForm"
+      :title="form.id ? 'Cập nhật ngân hàng' : 'Thêm ngân hàng mới'"
+      ok-title="Lưu lại"
+      cancel-title="Hủy"
+      @ok.prevent="saveData"
+      :busy="isSaving"
+    >
+      <form ref="formRef" @submit.stop.prevent="saveData">
+        <b-form-group label="Mã ngân hàng (Viết tắt)" label-for="input-abbr">
+          <b-form-input
+            id="input-abbr"
+            v-model="form.abbreviation"
+            placeholder="VD: VCB, ACB..."
+            required
+          ></b-form-input>
+        </b-form-group>
+
+        <b-form-group label="Tên đầy đủ" label-for="input-name">
+          <b-form-input
+            id="input-name"
+            v-model="form.name"
+            placeholder="VD: Ngân hàng TMCP Ngoại thương..."
+            required
+          ></b-form-input>
+        </b-form-group>
+
+        <b-form-group label="Trạng thái">
+          <b-form-checkbox v-model="form.status" value="1" unchecked-value="0" switch>
+            {{ form.status == 1 ? 'Đang hoạt động' : 'Tạm khóa' }}
+          </b-form-checkbox>
+        </b-form-group>
+      </form>
+    </b-modal>
 
   </div>
 </template>
 
 <script>
+import axios from '@/plugins/axios'
+
 export default {
+  name: 'BankList',
   data() {
     return {
-      searchKeyword: "",
-      selectedProvince: null,
-
-      provinceOptions: [
-        { value: null, text: "Chọn cục thuế Tỉnh/Thành" },
-        { value: 1, text: "Tổng cục thuế UAT" },
-        { value: 2, text: "Thuế Thành phố Huế" },
-        { value: 3, text: "Thuế TP Hồ Chí Minh" }
+      isBusy: false,
+      isSaving: false,
+      list: {
+        current_page: 1,
+        data: [],
+        per_page: 10,
+        total: 0,
+        from: 0,
+        to: 0
+      },
+      pageSizes: [10, 20, 50, 100],
+      filters: {
+        keyword: '',
+        status: null
+      },
+      statusOptions: [
+        { value: 1, text: 'Hoạt động' },
+        { value: 0, text: 'Đã khóa' }
       ],
-
       fields: [
-        { key: "index", label: "#", sortable: false },
-        { key: "code", label: "Mã cơ quan thuế" },
-        { key: "province", label: "Cục thuế Tỉnh/Thành" },
-        { key: "manager", label: "Cơ quan thuế quản lý" },
-        { key: "status", label: "Trạng thái" },
-        { key: "created", label: "Ngày tạo" },
-        { key: "actions", label: "Thao tác" }
+        { key: 'index', label: '#', thStyle: { width: '50px' }, class: 'text-center' },
+        { key: 'abbreviation', label: 'Mã NH', sortable: true },
+        { key: 'name', label: 'Tên Ngân Hàng', sortable: true },
+        { key: 'status', label: 'Trạng thái', thStyle: { width: '120px' }, class: 'text-center' },
+        { key: 'option', label: 'Thao tác', thStyle: { width: '100px' }, class: 'text-right' }
       ],
-
-      items: [
-        {
-          index: 1,
-          code: "97100",
-          province: "Tổng cục thuế UAT",
-          manager: "Tổng cục thuế quản lý UAT",
-          created: "14/06/2025",
-        },
-        {
-          index: 2,
-          code: "41119",
-          province: "Thuế Thành phố Huế",
-          manager: "Quận Phú Xuân - Thuế cơ sở 1 Thành phố Huế",
-          created: "20/03/2025",
-        },
-        {
-          index: 3,
-          code: "70143",
-          province: "Thuế Thành phố Hồ Chí Minh",
-          manager: "Thuế cơ sở 20 TP Hồ Chí Minh",
-          created: "04/12/2021",
-        },
-        {
-          index: 4,
-          code: "70141",
-          province: "Thuế Thành phố Hồ Chí Minh",
-          manager: "Xã Nhà Bè - Thuế cơ sở 7 TP Hồ Chí Minh",
-          created: "04/12/2021",
-        }
-      ]
-    };
+      form: {
+        id: null,
+        abbreviation: '',
+        name: '',
+        status: 1
+      }
+    }
   },
+  mounted() {
+    this.loadData()
+  },
+  methods: {
+    async loadData() {
+      this.isBusy = true;
+      try {
+        const rawStatus = this.filters.status;
+        const cleanStatus = (rawStatus === null || rawStatus === '') ? null : Number(rawStatus);
 
-  computed: {
-    filteredItems() {
-      const keyword = this.searchKeyword.toLowerCase();
-      return this.items.filter(item => 
-        item.code.toLowerCase().includes(keyword) ||
-        item.province.toLowerCase().includes(keyword) ||
-        item.manager.toLowerCase().includes(keyword)
-      );
+        const filterBody = {
+          keyword: this.filters.keyword || null,
+          status: cleanStatus
+        };
+
+        const res = await axios.post('/administrator/bank/list', filterBody, {
+          params: {
+            page: this.list.current_page - 1,
+            size: this.list.per_page
+          }
+        });
+
+        const d = res.data;
+        
+        //	Cập nhật dữ liệu vào bảng
+		this.list.data = d.content || d.data || [];
+		this.list.total = d.totalElements || d.total || 0;
+        
+        // Tính toán hiển thị "Từ ... đến ..."
+		this.list.from = Number(d.from ?? ((this.list.total === 0) ? 0 : ((this.list.current_page - 1) * this.list.per_page + 1)))
+		const numberOfElements = Array.isArray(this.list.data) ? this.list.data.length : 0
+		this.list.to = Number(d.to ?? ((this.list.total === 0) ? 0 : (this.list.from + numberOfElements - 1)))
+
+      } catch (error) {
+        console.error("Lỗi tải dữ liệu:", error);
+        this.$bvToast.toast('Không thể tải danh sách ngân hàng', { variant: 'danger' });
+      } finally {
+        this.isBusy = false;
+      }
+    },
+    
+    reload() {
+      this.filters.keyword = '';
+      this.filters.status = null;
+      this.list.current_page = 1;
+      this.loadData();
+    },
+
+    applyFilters() {
+      this.list.current_page = 1;
+      this.loadData();
+    },
+
+    onPageChange(page) {
+      this.list.current_page = page; 
+      this.loadData();
+    },
+
+    onPageSizeChange(size) {
+      this.list.per_page = size;
+      this.list.current_page = 1;
+      this.loadData();
+    },
+
+    openCreate() {
+      this.form = { id: null, abbreviation: '', name: '', status: 1 };
+      this.$refs.modalForm.show();
+    },
+
+    openEdit(item) {
+      this.form = { ...item }; 
+      this.$refs.modalForm.show();
+    },
+
+	async saveData() {
+	  if (!this.form.abbreviation || !this.form.name) {
+	    this.$bvToast.toast('Vui lòng nhập đầy đủ Mã và Tên ngân hàng', { 
+	      variant: 'warning', 
+	      title: 'Chú ý' 
+	    });
+	    return;
+	  }
+
+	  this.isSaving = true;
+	  try {
+	    const response = await axios.post('/administrator/bank/save', this.form);
+
+	    this.$bvToast.toast(this.form.id ? 'Cập nhật thành công' : 'Thêm mới thành công', { 
+	      variant: 'success', 
+	      title: 'Thông báo' 
+	    });
+
+	    this.$refs.modalForm.hide();
+	    this.loadData();
+
+	  } catch (error) {
+	    const errorMsg = error.response?.data || 'Đã có lỗi xảy ra khi lưu dữ liệu';
+	    this.$bvToast.toast(errorMsg, { 
+	      variant: 'danger', 
+	      title: 'Lỗi' 
+	    });
+	  } finally {
+	    this.isSaving = false;
+	  }
+	},
+
+    async toggleLock(item) {
+      try {
+        const newStatus = item.status == 1 ? 0 : 1;
+        await axios.post('/administrator/bank/save', { ...item, status: newStatus });
+        this.$bvToast.toast('Cập nhật trạng thái thành công', { variant: 'success' });
+        this.loadData();
+      } catch (e) {
+        this.$bvToast.toast('Lỗi cập nhật trạng thái', { variant: 'danger' });
+      }
     }
   }
-};
+}
 </script>
 
 <style scoped>
-.badge {
-  font-size: 14px;
-}
+.bank-list .card { border-radius: 8px; border: none; }
+.btn-outline-primary:hover { background-color: #e8f0fe; color: #007bff; }
 </style>

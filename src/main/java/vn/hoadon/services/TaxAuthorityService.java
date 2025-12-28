@@ -16,7 +16,8 @@ public interface TaxAuthorityService {
     List<TaxAuthorityEntity> listByParentActive(Long parentId);
     Optional<TaxAuthorityEntity> findByCode(Integer code);
     // Tìm kiếm phân trang + lọc theo từ khóa
-    Page<TaxAuthorityResponse> search(String keyword, Pageable pageable);
+    // Trong file TaxAuthorityService.java
+Page<TaxAuthorityResponse> search(String keyword, Long parentId, Integer status, Pageable pageable);
 
     // Lấy chi tiết
     TaxAuthorityResponse findById(Long id);
