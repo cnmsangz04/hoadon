@@ -17725,3 +17725,993 @@ Caused by: com.microsoft.sqlserver.jdbc.SQLServerException: Login failed for use
 	at org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl.getIsolatedConnection(DdlTransactionIsolatorNonJtaImpl.java:46) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
 	... 127 common frames omitted
 
+2025-12-28T09:53:30.043+07:00  INFO 4672 --- [hoadon] [restartedMain] vn.hoadon.HoadonApplication              : Starting HoadonApplication using Java 21.0.8 with PID 4672 (C:\Users\Tan\Desktop\hoadon\target\classes started by Tan in C:\Users\Tan\Desktop\hoadon)
+2025-12-28T09:53:30.045+07:00 DEBUG 4672 --- [hoadon] [restartedMain] vn.hoadon.HoadonApplication              : Running with Spring Boot v3.5.7, Spring v6.2.12
+2025-12-28T09:53:30.046+07:00  INFO 4672 --- [hoadon] [restartedMain] vn.hoadon.HoadonApplication              : No active profile set, falling back to 1 default profile: "default"
+2025-12-28T09:53:30.096+07:00  INFO 4672 --- [hoadon] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2025-12-28T09:53:30.097+07:00  INFO 4672 --- [hoadon] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2025-12-28T09:53:30.876+07:00  INFO 4672 --- [hoadon] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2025-12-28T09:53:30.878+07:00  INFO 4672 --- [hoadon] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JDBC repositories in DEFAULT mode.
+2025-12-28T09:53:30.925+07:00  INFO 4672 --- [hoadon] [restartedMain] .RepositoryConfigurationExtensionSupport : Spring Data JDBC - Could not safely identify store assignment for repository candidate interface vn.hoadon.repositories.BankRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-12-28T09:53:30.927+07:00  INFO 4672 --- [hoadon] [restartedMain] .RepositoryConfigurationExtensionSupport : Spring Data JDBC - Could not safely identify store assignment for repository candidate interface vn.hoadon.repositories.BuyInvoiceRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-12-28T09:53:30.929+07:00  INFO 4672 --- [hoadon] [restartedMain] .RepositoryConfigurationExtensionSupport : Spring Data JDBC - Could not safely identify store assignment for repository candidate interface vn.hoadon.repositories.CompanyBankRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-12-28T09:53:30.931+07:00  INFO 4672 --- [hoadon] [restartedMain] .RepositoryConfigurationExtensionSupport : Spring Data JDBC - Could not safely identify store assignment for repository candidate interface vn.hoadon.repositories.CompanyRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-12-28T09:53:30.934+07:00  INFO 4672 --- [hoadon] [restartedMain] .RepositoryConfigurationExtensionSupport : Spring Data JDBC - Could not safely identify store assignment for repository candidate interface vn.hoadon.repositories.LegalRepresentativeRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-12-28T09:53:30.936+07:00  INFO 4672 --- [hoadon] [restartedMain] .RepositoryConfigurationExtensionSupport : Spring Data JDBC - Could not safely identify store assignment for repository candidate interface vn.hoadon.repositories.PermissionCategoryRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-12-28T09:53:30.939+07:00  INFO 4672 --- [hoadon] [restartedMain] .RepositoryConfigurationExtensionSupport : Spring Data JDBC - Could not safely identify store assignment for repository candidate interface vn.hoadon.repositories.PermissionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-12-28T09:53:30.943+07:00  INFO 4672 --- [hoadon] [restartedMain] .RepositoryConfigurationExtensionSupport : Spring Data JDBC - Could not safely identify store assignment for repository candidate interface vn.hoadon.repositories.TaxAuthorityRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-12-28T09:53:30.945+07:00  INFO 4672 --- [hoadon] [restartedMain] .RepositoryConfigurationExtensionSupport : Spring Data JDBC - Could not safely identify store assignment for repository candidate interface vn.hoadon.repositories.UserPermissionRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-12-28T09:53:30.949+07:00  INFO 4672 --- [hoadon] [restartedMain] .RepositoryConfigurationExtensionSupport : Spring Data JDBC - Could not safely identify store assignment for repository candidate interface vn.hoadon.repositories.UserRepository; If you want this repository to be a JDBC repository, consider annotating your entities with one of these annotations: org.springframework.data.relational.core.mapping.Table.
+2025-12-28T09:53:30.951+07:00  INFO 4672 --- [hoadon] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 68 ms. Found 0 JDBC repository interfaces.
+2025-12-28T09:53:30.967+07:00  INFO 4672 --- [hoadon] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2025-12-28T09:53:30.969+07:00  INFO 4672 --- [hoadon] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-12-28T09:53:31.041+07:00  INFO 4672 --- [hoadon] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 65 ms. Found 10 JPA repository interfaces.
+2025-12-28T09:53:31.595+07:00  INFO 4672 --- [hoadon] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
+2025-12-28T09:53:31.607+07:00  INFO 4672 --- [hoadon] [restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-12-28T09:53:31.607+07:00  INFO 4672 --- [hoadon] [restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
+2025-12-28T09:53:31.806+07:00  INFO 4672 --- [hoadon] [restartedMain] org.apache.jasper.servlet.TldScanner     : At least one JAR was scanned for TLDs yet contained no TLDs. Enable debug logging for this logger for a complete list of JARs that were scanned but no TLDs were found in them. Skipping unneeded JARs during scanning can improve startup time and JSP compilation time.
+2025-12-28T09:53:31.813+07:00  INFO 4672 --- [hoadon] [restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-12-28T09:53:31.814+07:00  INFO 4672 --- [hoadon] [restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1716 ms
+2025-12-28T09:53:32.001+07:00  INFO 4672 --- [hoadon] [restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-12-28T09:53:32.050+07:00  INFO 4672 --- [hoadon] [restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
+2025-12-28T09:53:32.083+07:00  INFO 4672 --- [hoadon] [restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-12-28T09:53:32.329+07:00  INFO 4672 --- [hoadon] [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-12-28T09:53:32.372+07:00  INFO 4672 --- [hoadon] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-12-28T09:53:32.794+07:00  INFO 4672 --- [hoadon] [restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection ConnectionID:1 ClientConnectionId: 6dbcf26d-3625-4894-a8f5-cfb5f6dec39f
+2025-12-28T09:53:32.796+07:00  INFO 4672 --- [hoadon] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-12-28T09:53:32.867+07:00  WARN 4672 --- [hoadon] [restartedMain] org.hibernate.orm.deprecation            : HHH90000025: SQLServerDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-12-28T09:53:32.885+07:00  INFO 4672 --- [hoadon] [restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 16.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-12-28T09:53:33.907+07:00  INFO 4672 --- [hoadon] [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-12-28T09:53:34.295+07:00  WARN 4672 --- [hoadon] [restartedMain] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "alter table banks alter column id bigint" via JDBC [The object 'PK__banks__3213E83F7EE6420E' is dependent on column 'id'.]
+
+org.hibernate.tool.schema.spi.CommandAcceptanceException: Error executing DDL "alter table banks alter column id bigint" via JDBC [The object 'PK__banks__3213E83F7EE6420E' is dependent on column 'id'.]
+	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:94) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.applySqlString(AbstractSchemaMigrator.java:576) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.applySqlStrings(AbstractSchemaMigrator.java:516) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.migrateTable(AbstractSchemaMigrator.java:334) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.GroupedSchemaMigratorImpl.performTablesMigration(GroupedSchemaMigratorImpl.java:84) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.performMigration(AbstractSchemaMigrator.java:233) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.doMigration(AbstractSchemaMigrator.java:112) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.performDatabaseAction(SchemaManagementToolCoordinator.java:280) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.lambda$process$5(SchemaManagementToolCoordinator.java:144) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at java.base/java.util.HashMap.forEach(HashMap.java:1429) ~[na:na]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.process(SchemaManagementToolCoordinator.java:141) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.boot.internal.SessionFactoryObserverForSchemaExport.sessionFactoryCreated(SessionFactoryObserverForSchemaExport.java:37) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.internal.SessionFactoryObserverChain.sessionFactoryCreated(SessionFactoryObserverChain.java:35) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.internal.SessionFactoryImpl.<init>(SessionFactoryImpl.java:324) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.boot.internal.SessionFactoryBuilderImpl.build(SessionFactoryBuilderImpl.java:463) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1517) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:66) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:390) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:419) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:400) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:366) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1873) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1822) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:607) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveReference(BeanDefinitionValueResolver.java:365) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveValueIfNecessary(BeanDefinitionValueResolver.java:135) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveConstructorArguments(ConstructorResolver.java:691) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:513) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1375) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1205) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveReference(BeanDefinitionValueResolver.java:365) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveValueIfNecessary(BeanDefinitionValueResolver.java:135) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.applyPropertyValues(AbstractAutowireCapableBeanFactory.java:1725) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1474) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:606) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1708) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1653) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:785) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:768) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:146) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:509) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1459) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:606) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1770) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1653) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:913) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:546) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1375) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1205) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:207) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.getOrderedBeansOfType(ServletContextInitializerBeans.java:230) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:184) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:179) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAdaptableBeans(ServletContextInitializerBeans.java:164) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.<init>(ServletContextInitializerBeans.java:96) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.getServletContextInitializerBeans(ServletWebServerApplicationContext.java:271) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.selfInitialize(ServletWebServerApplicationContext.java:245) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatStarter.onStartup(TomcatStarter.java:52) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.apache.catalina.core.StandardContext.startInternal(StandardContext.java:4452) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1191) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:81) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:747) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardHost.startInternal(StandardHost.java:770) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1191) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:81) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:747) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardEngine.startInternal(StandardEngine.java:201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardService.startInternal(StandardService.java:410) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardServer.startInternal(StandardServer.java:868) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.startup.Tomcat.start(Tomcat.java:436) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.initialize(TomcatWebServer.java:128) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.<init>(TomcatWebServer.java:107) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getTomcatWebServer(TomcatServletWebServerFactory.java:517) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getWebServer(TomcatServletWebServerFactory.java:219) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.createWebServer(ServletWebServerApplicationContext.java:193) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.onRefresh(ServletWebServerApplicationContext.java:167) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:621) ~[spring-context-6.2.12.jar:6.2.12]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.5.7.jar:3.5.7]
+	at vn.hoadon.HoadonApplication.main(HoadonApplication.java:10) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.boot.devtools.restart.RestartLauncher.run(RestartLauncher.java:50) ~[spring-boot-devtools-3.5.7.jar:3.5.7]
+Caused by: com.microsoft.sqlserver.jdbc.SQLServerException: The object 'PK__banks__3213E83F7EE6420E' is dependent on column 'id'.
+	at com.microsoft.sqlserver.jdbc.SQLServerException.makeFromDatabaseError(SQLServerException.java:278) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.getNextResult(SQLServerStatement.java:1787) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.doExecuteStatement(SQLServerStatement.java:975) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement$StmtExecCmd.doExecute(SQLServerStatement.java:869) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.TDSCommand.execute(IOBuffer.java:7745) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerConnection.executeCommand(SQLServerConnection.java:4706) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.executeCommand(SQLServerStatement.java:321) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.executeStatement(SQLServerStatement.java:253) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.execute(SQLServerStatement.java:842) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.zaxxer.hikari.pool.ProxyStatement.execute(ProxyStatement.java:95) ~[HikariCP-6.3.3.jar:na]
+	at com.zaxxer.hikari.pool.HikariProxyStatement.execute(HikariProxyStatement.java) ~[HikariCP-6.3.3.jar:na]
+	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	... 125 common frames omitted
+
+2025-12-28T09:53:34.308+07:00  WARN 4672 --- [hoadon] [restartedMain] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "alter table banks alter column status int" via JDBC [The object 'DF__banks__status__5CD6CB2B' is dependent on column 'status'.]
+
+org.hibernate.tool.schema.spi.CommandAcceptanceException: Error executing DDL "alter table banks alter column status int" via JDBC [The object 'DF__banks__status__5CD6CB2B' is dependent on column 'status'.]
+	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:94) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.applySqlString(AbstractSchemaMigrator.java:576) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.applySqlStrings(AbstractSchemaMigrator.java:516) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.migrateTable(AbstractSchemaMigrator.java:334) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.GroupedSchemaMigratorImpl.performTablesMigration(GroupedSchemaMigratorImpl.java:84) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.performMigration(AbstractSchemaMigrator.java:233) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.doMigration(AbstractSchemaMigrator.java:112) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.performDatabaseAction(SchemaManagementToolCoordinator.java:280) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.lambda$process$5(SchemaManagementToolCoordinator.java:144) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at java.base/java.util.HashMap.forEach(HashMap.java:1429) ~[na:na]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.process(SchemaManagementToolCoordinator.java:141) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.boot.internal.SessionFactoryObserverForSchemaExport.sessionFactoryCreated(SessionFactoryObserverForSchemaExport.java:37) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.internal.SessionFactoryObserverChain.sessionFactoryCreated(SessionFactoryObserverChain.java:35) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.internal.SessionFactoryImpl.<init>(SessionFactoryImpl.java:324) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.boot.internal.SessionFactoryBuilderImpl.build(SessionFactoryBuilderImpl.java:463) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1517) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:66) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:390) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:419) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:400) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:366) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1873) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1822) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:607) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveReference(BeanDefinitionValueResolver.java:365) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveValueIfNecessary(BeanDefinitionValueResolver.java:135) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveConstructorArguments(ConstructorResolver.java:691) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:513) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1375) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1205) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveReference(BeanDefinitionValueResolver.java:365) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveValueIfNecessary(BeanDefinitionValueResolver.java:135) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.applyPropertyValues(AbstractAutowireCapableBeanFactory.java:1725) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1474) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:606) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1708) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1653) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:785) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:768) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:146) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:509) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1459) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:606) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1770) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1653) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:913) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:546) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1375) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1205) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:207) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.getOrderedBeansOfType(ServletContextInitializerBeans.java:230) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:184) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:179) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAdaptableBeans(ServletContextInitializerBeans.java:164) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.<init>(ServletContextInitializerBeans.java:96) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.getServletContextInitializerBeans(ServletWebServerApplicationContext.java:271) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.selfInitialize(ServletWebServerApplicationContext.java:245) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatStarter.onStartup(TomcatStarter.java:52) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.apache.catalina.core.StandardContext.startInternal(StandardContext.java:4452) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1191) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:81) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:747) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardHost.startInternal(StandardHost.java:770) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1191) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:81) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:747) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardEngine.startInternal(StandardEngine.java:201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardService.startInternal(StandardService.java:410) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardServer.startInternal(StandardServer.java:868) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.startup.Tomcat.start(Tomcat.java:436) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.initialize(TomcatWebServer.java:128) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.<init>(TomcatWebServer.java:107) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getTomcatWebServer(TomcatServletWebServerFactory.java:517) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getWebServer(TomcatServletWebServerFactory.java:219) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.createWebServer(ServletWebServerApplicationContext.java:193) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.onRefresh(ServletWebServerApplicationContext.java:167) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:621) ~[spring-context-6.2.12.jar:6.2.12]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.5.7.jar:3.5.7]
+	at vn.hoadon.HoadonApplication.main(HoadonApplication.java:10) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.boot.devtools.restart.RestartLauncher.run(RestartLauncher.java:50) ~[spring-boot-devtools-3.5.7.jar:3.5.7]
+Caused by: com.microsoft.sqlserver.jdbc.SQLServerException: The object 'DF__banks__status__5CD6CB2B' is dependent on column 'status'.
+	at com.microsoft.sqlserver.jdbc.SQLServerException.makeFromDatabaseError(SQLServerException.java:278) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.getNextResult(SQLServerStatement.java:1787) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.doExecuteStatement(SQLServerStatement.java:975) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement$StmtExecCmd.doExecute(SQLServerStatement.java:869) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.TDSCommand.execute(IOBuffer.java:7745) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerConnection.executeCommand(SQLServerConnection.java:4706) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.executeCommand(SQLServerStatement.java:321) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.executeStatement(SQLServerStatement.java:253) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.execute(SQLServerStatement.java:842) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.zaxxer.hikari.pool.ProxyStatement.execute(ProxyStatement.java:95) ~[HikariCP-6.3.3.jar:na]
+	at com.zaxxer.hikari.pool.HikariProxyStatement.execute(HikariProxyStatement.java) ~[HikariCP-6.3.3.jar:na]
+	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	... 125 common frames omitted
+
+2025-12-28T09:53:34.315+07:00  WARN 4672 --- [hoadon] [restartedMain] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "alter table buy_invoices alter column id bigint" via JDBC [The object 'PK_buy_invoices' is dependent on column 'id'.]
+
+org.hibernate.tool.schema.spi.CommandAcceptanceException: Error executing DDL "alter table buy_invoices alter column id bigint" via JDBC [The object 'PK_buy_invoices' is dependent on column 'id'.]
+	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:94) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.applySqlString(AbstractSchemaMigrator.java:576) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.applySqlStrings(AbstractSchemaMigrator.java:516) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.migrateTable(AbstractSchemaMigrator.java:334) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.GroupedSchemaMigratorImpl.performTablesMigration(GroupedSchemaMigratorImpl.java:84) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.performMigration(AbstractSchemaMigrator.java:233) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.doMigration(AbstractSchemaMigrator.java:112) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.performDatabaseAction(SchemaManagementToolCoordinator.java:280) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.lambda$process$5(SchemaManagementToolCoordinator.java:144) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at java.base/java.util.HashMap.forEach(HashMap.java:1429) ~[na:na]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.process(SchemaManagementToolCoordinator.java:141) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.boot.internal.SessionFactoryObserverForSchemaExport.sessionFactoryCreated(SessionFactoryObserverForSchemaExport.java:37) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.internal.SessionFactoryObserverChain.sessionFactoryCreated(SessionFactoryObserverChain.java:35) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.internal.SessionFactoryImpl.<init>(SessionFactoryImpl.java:324) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.boot.internal.SessionFactoryBuilderImpl.build(SessionFactoryBuilderImpl.java:463) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1517) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:66) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:390) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:419) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:400) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:366) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1873) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1822) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:607) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveReference(BeanDefinitionValueResolver.java:365) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveValueIfNecessary(BeanDefinitionValueResolver.java:135) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveConstructorArguments(ConstructorResolver.java:691) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:513) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1375) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1205) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveReference(BeanDefinitionValueResolver.java:365) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveValueIfNecessary(BeanDefinitionValueResolver.java:135) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.applyPropertyValues(AbstractAutowireCapableBeanFactory.java:1725) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1474) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:606) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1708) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1653) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:785) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:768) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:146) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:509) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1459) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:606) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1770) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1653) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:913) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:546) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1375) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1205) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:207) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.getOrderedBeansOfType(ServletContextInitializerBeans.java:230) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:184) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:179) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAdaptableBeans(ServletContextInitializerBeans.java:164) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.<init>(ServletContextInitializerBeans.java:96) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.getServletContextInitializerBeans(ServletWebServerApplicationContext.java:271) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.selfInitialize(ServletWebServerApplicationContext.java:245) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatStarter.onStartup(TomcatStarter.java:52) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.apache.catalina.core.StandardContext.startInternal(StandardContext.java:4452) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1191) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:81) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:747) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardHost.startInternal(StandardHost.java:770) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1191) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:81) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:747) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardEngine.startInternal(StandardEngine.java:201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardService.startInternal(StandardService.java:410) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardServer.startInternal(StandardServer.java:868) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.startup.Tomcat.start(Tomcat.java:436) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.initialize(TomcatWebServer.java:128) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.<init>(TomcatWebServer.java:107) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getTomcatWebServer(TomcatServletWebServerFactory.java:517) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getWebServer(TomcatServletWebServerFactory.java:219) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.createWebServer(ServletWebServerApplicationContext.java:193) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.onRefresh(ServletWebServerApplicationContext.java:167) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:621) ~[spring-context-6.2.12.jar:6.2.12]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.5.7.jar:3.5.7]
+	at vn.hoadon.HoadonApplication.main(HoadonApplication.java:10) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.boot.devtools.restart.RestartLauncher.run(RestartLauncher.java:50) ~[spring-boot-devtools-3.5.7.jar:3.5.7]
+Caused by: com.microsoft.sqlserver.jdbc.SQLServerException: The object 'PK_buy_invoices' is dependent on column 'id'.
+	at com.microsoft.sqlserver.jdbc.SQLServerException.makeFromDatabaseError(SQLServerException.java:278) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.getNextResult(SQLServerStatement.java:1787) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.doExecuteStatement(SQLServerStatement.java:975) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement$StmtExecCmd.doExecute(SQLServerStatement.java:869) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.TDSCommand.execute(IOBuffer.java:7745) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerConnection.executeCommand(SQLServerConnection.java:4706) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.executeCommand(SQLServerStatement.java:321) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.executeStatement(SQLServerStatement.java:253) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.execute(SQLServerStatement.java:842) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.zaxxer.hikari.pool.ProxyStatement.execute(ProxyStatement.java:95) ~[HikariCP-6.3.3.jar:na]
+	at com.zaxxer.hikari.pool.HikariProxyStatement.execute(HikariProxyStatement.java) ~[HikariCP-6.3.3.jar:na]
+	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	... 125 common frames omitted
+
+2025-12-28T09:53:34.323+07:00  WARN 4672 --- [hoadon] [restartedMain] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "alter table buy_invoices alter column status int" via JDBC [The object 'DF__buy_invoi__statu__70DDC3D8' is dependent on column 'status'.]
+
+org.hibernate.tool.schema.spi.CommandAcceptanceException: Error executing DDL "alter table buy_invoices alter column status int" via JDBC [The object 'DF__buy_invoi__statu__70DDC3D8' is dependent on column 'status'.]
+	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:94) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.applySqlString(AbstractSchemaMigrator.java:576) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.applySqlStrings(AbstractSchemaMigrator.java:516) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.migrateTable(AbstractSchemaMigrator.java:334) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.GroupedSchemaMigratorImpl.performTablesMigration(GroupedSchemaMigratorImpl.java:84) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.performMigration(AbstractSchemaMigrator.java:233) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.doMigration(AbstractSchemaMigrator.java:112) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.performDatabaseAction(SchemaManagementToolCoordinator.java:280) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.lambda$process$5(SchemaManagementToolCoordinator.java:144) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at java.base/java.util.HashMap.forEach(HashMap.java:1429) ~[na:na]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.process(SchemaManagementToolCoordinator.java:141) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.boot.internal.SessionFactoryObserverForSchemaExport.sessionFactoryCreated(SessionFactoryObserverForSchemaExport.java:37) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.internal.SessionFactoryObserverChain.sessionFactoryCreated(SessionFactoryObserverChain.java:35) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.internal.SessionFactoryImpl.<init>(SessionFactoryImpl.java:324) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.boot.internal.SessionFactoryBuilderImpl.build(SessionFactoryBuilderImpl.java:463) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1517) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:66) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:390) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:419) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:400) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:366) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1873) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1822) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:607) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveReference(BeanDefinitionValueResolver.java:365) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveValueIfNecessary(BeanDefinitionValueResolver.java:135) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveConstructorArguments(ConstructorResolver.java:691) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:513) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1375) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1205) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveReference(BeanDefinitionValueResolver.java:365) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveValueIfNecessary(BeanDefinitionValueResolver.java:135) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.applyPropertyValues(AbstractAutowireCapableBeanFactory.java:1725) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1474) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:606) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1708) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1653) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:785) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:768) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:146) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:509) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1459) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:606) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1770) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1653) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:913) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:546) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1375) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1205) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:207) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.getOrderedBeansOfType(ServletContextInitializerBeans.java:230) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:184) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:179) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAdaptableBeans(ServletContextInitializerBeans.java:164) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.<init>(ServletContextInitializerBeans.java:96) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.getServletContextInitializerBeans(ServletWebServerApplicationContext.java:271) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.selfInitialize(ServletWebServerApplicationContext.java:245) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatStarter.onStartup(TomcatStarter.java:52) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.apache.catalina.core.StandardContext.startInternal(StandardContext.java:4452) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1191) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:81) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:747) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardHost.startInternal(StandardHost.java:770) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1191) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:81) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:747) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardEngine.startInternal(StandardEngine.java:201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardService.startInternal(StandardService.java:410) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardServer.startInternal(StandardServer.java:868) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.startup.Tomcat.start(Tomcat.java:436) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.initialize(TomcatWebServer.java:128) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.<init>(TomcatWebServer.java:107) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getTomcatWebServer(TomcatServletWebServerFactory.java:517) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getWebServer(TomcatServletWebServerFactory.java:219) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.createWebServer(ServletWebServerApplicationContext.java:193) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.onRefresh(ServletWebServerApplicationContext.java:167) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:621) ~[spring-context-6.2.12.jar:6.2.12]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.5.7.jar:3.5.7]
+	at vn.hoadon.HoadonApplication.main(HoadonApplication.java:10) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.boot.devtools.restart.RestartLauncher.run(RestartLauncher.java:50) ~[spring-boot-devtools-3.5.7.jar:3.5.7]
+Caused by: com.microsoft.sqlserver.jdbc.SQLServerException: The object 'DF__buy_invoi__statu__70DDC3D8' is dependent on column 'status'.
+	at com.microsoft.sqlserver.jdbc.SQLServerException.makeFromDatabaseError(SQLServerException.java:278) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.getNextResult(SQLServerStatement.java:1787) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.doExecuteStatement(SQLServerStatement.java:975) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement$StmtExecCmd.doExecute(SQLServerStatement.java:869) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.TDSCommand.execute(IOBuffer.java:7745) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerConnection.executeCommand(SQLServerConnection.java:4706) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.executeCommand(SQLServerStatement.java:321) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.executeStatement(SQLServerStatement.java:253) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.execute(SQLServerStatement.java:842) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.zaxxer.hikari.pool.ProxyStatement.execute(ProxyStatement.java:95) ~[HikariCP-6.3.3.jar:na]
+	at com.zaxxer.hikari.pool.HikariProxyStatement.execute(HikariProxyStatement.java) ~[HikariCP-6.3.3.jar:na]
+	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	... 125 common frames omitted
+
+2025-12-28T09:53:34.339+07:00  WARN 4672 --- [hoadon] [restartedMain] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "alter table permissions alter column level int" via JDBC [The object 'DF__permissio__level__07C12930' is dependent on column 'level'.]
+
+org.hibernate.tool.schema.spi.CommandAcceptanceException: Error executing DDL "alter table permissions alter column level int" via JDBC [The object 'DF__permissio__level__07C12930' is dependent on column 'level'.]
+	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:94) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.applySqlString(AbstractSchemaMigrator.java:576) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.applySqlStrings(AbstractSchemaMigrator.java:516) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.migrateTable(AbstractSchemaMigrator.java:334) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.GroupedSchemaMigratorImpl.performTablesMigration(GroupedSchemaMigratorImpl.java:84) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.performMigration(AbstractSchemaMigrator.java:233) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.doMigration(AbstractSchemaMigrator.java:112) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.performDatabaseAction(SchemaManagementToolCoordinator.java:280) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.lambda$process$5(SchemaManagementToolCoordinator.java:144) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at java.base/java.util.HashMap.forEach(HashMap.java:1429) ~[na:na]
+	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.process(SchemaManagementToolCoordinator.java:141) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.boot.internal.SessionFactoryObserverForSchemaExport.sessionFactoryCreated(SessionFactoryObserverForSchemaExport.java:37) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.internal.SessionFactoryObserverChain.sessionFactoryCreated(SessionFactoryObserverChain.java:35) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.internal.SessionFactoryImpl.<init>(SessionFactoryImpl.java:324) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.boot.internal.SessionFactoryBuilderImpl.build(SessionFactoryBuilderImpl.java:463) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1517) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:66) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:390) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:419) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:400) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:366) ~[spring-orm-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1873) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1822) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:607) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveReference(BeanDefinitionValueResolver.java:365) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveValueIfNecessary(BeanDefinitionValueResolver.java:135) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveConstructorArguments(ConstructorResolver.java:691) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:513) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1375) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1205) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveReference(BeanDefinitionValueResolver.java:365) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.BeanDefinitionValueResolver.resolveValueIfNecessary(BeanDefinitionValueResolver.java:135) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.applyPropertyValues(AbstractAutowireCapableBeanFactory.java:1725) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1474) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:606) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1708) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1653) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:785) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:768) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:146) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:509) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1459) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:606) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1770) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1653) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:913) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:791) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:546) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1375) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1205) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:569) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:529) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:339) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:373) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:337) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:207) ~[spring-beans-6.2.12.jar:6.2.12]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.getOrderedBeansOfType(ServletContextInitializerBeans.java:230) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:184) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAsRegistrationBean(ServletContextInitializerBeans.java:179) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.addAdaptableBeans(ServletContextInitializerBeans.java:164) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.ServletContextInitializerBeans.<init>(ServletContextInitializerBeans.java:96) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.getServletContextInitializerBeans(ServletWebServerApplicationContext.java:271) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.selfInitialize(ServletWebServerApplicationContext.java:245) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatStarter.onStartup(TomcatStarter.java:52) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.apache.catalina.core.StandardContext.startInternal(StandardContext.java:4452) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1191) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:81) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:747) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardHost.startInternal(StandardHost.java:770) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.ContainerBase$StartChild.call(ContainerBase.java:1191) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at org.apache.tomcat.util.threads.InlineExecutorService.execute(InlineExecutorService.java:81) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at java.base/java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:145) ~[na:na]
+	at org.apache.catalina.core.ContainerBase.startInternal(ContainerBase.java:747) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardEngine.startInternal(StandardEngine.java:201) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardService.startInternal(StandardService.java:410) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.core.StandardServer.startInternal(StandardServer.java:868) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:164) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.apache.catalina.startup.Tomcat.start(Tomcat.java:436) ~[tomcat-embed-core-10.1.48.jar:10.1.48]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.initialize(TomcatWebServer.java:128) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatWebServer.<init>(TomcatWebServer.java:107) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getTomcatWebServer(TomcatServletWebServerFactory.java:517) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory.getWebServer(TomcatServletWebServerFactory.java:219) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.createWebServer(ServletWebServerApplicationContext.java:193) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.onRefresh(ServletWebServerApplicationContext.java:167) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:621) ~[spring-context-6.2.12.jar:6.2.12]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.5.7.jar:3.5.7]
+	at vn.hoadon.HoadonApplication.main(HoadonApplication.java:10) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.boot.devtools.restart.RestartLauncher.run(RestartLauncher.java:50) ~[spring-boot-devtools-3.5.7.jar:3.5.7]
+Caused by: com.microsoft.sqlserver.jdbc.SQLServerException: The object 'DF__permissio__level__07C12930' is dependent on column 'level'.
+	at com.microsoft.sqlserver.jdbc.SQLServerException.makeFromDatabaseError(SQLServerException.java:278) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.getNextResult(SQLServerStatement.java:1787) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.doExecuteStatement(SQLServerStatement.java:975) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement$StmtExecCmd.doExecute(SQLServerStatement.java:869) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.TDSCommand.execute(IOBuffer.java:7745) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerConnection.executeCommand(SQLServerConnection.java:4706) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.executeCommand(SQLServerStatement.java:321) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.executeStatement(SQLServerStatement.java:253) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.microsoft.sqlserver.jdbc.SQLServerStatement.execute(SQLServerStatement.java:842) ~[mssql-jdbc-12.10.2.jre11.jar:na]
+	at com.zaxxer.hikari.pool.ProxyStatement.execute(ProxyStatement.java:95) ~[HikariCP-6.3.3.jar:na]
+	at com.zaxxer.hikari.pool.HikariProxyStatement.execute(HikariProxyStatement.java) ~[HikariCP-6.3.3.jar:na]
+	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.6.33.Final.jar:6.6.33.Final]
+	... 125 common frames omitted
+
+2025-12-28T09:53:34.661+07:00  INFO 4672 --- [hoadon] [restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-12-28T09:53:34.941+07:00 DEBUG 4672 --- [hoadon] [restartedMain] v.h.security.JwtAuthenticationFilter     : Filter 'jwtAuthenticationFilter' configured for use
+2025-12-28T09:53:35.172+07:00  WARN 4672 --- [hoadon] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-12-28T09:53:35.192+07:00  INFO 4672 --- [hoadon] [restartedMain] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-12-28T09:53:35.339+07:00  WARN 4672 --- [hoadon] [restartedMain] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: 5dda29d9-9062-497a-aa07-c60cf703515f
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2025-12-28T09:53:35.347+07:00  INFO 4672 --- [hoadon] [restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2025-12-28T09:53:35.635+07:00  INFO 4672 --- [hoadon] [restartedMain] o.s.b.a.h2.H2ConsoleAutoConfiguration    : H2 console available at '/h2-console'. Database available at 'jdbc:sqlserver://DESKTOP-0UI0TDB:1433;connectRetryInterval=10;connectRetryCount=1;maxResultBuffer=-1;sendTemporalDataTypesAsStringForBulkCopy=true;delayLoadingLobs=true;useFmtOnly=false;cacheBulkCopyMetadata=false;bulkCopyForBatchInsertAllowEncryptedValueModifications=false;bulkCopyForBatchInsertTableLock=false;bulkCopyForBatchInsertKeepNulls=false;bulkCopyForBatchInsertKeepIdentity=false;bulkCopyForBatchInsertFireTriggers=false;bulkCopyForBatchInsertCheckConstraints=false;bulkCopyForBatchInsertBatchSize=0;useBulkCopyForBatchInsert=false;cancelQueryTimeout=-1;sslProtocol=TLS;calcBigDecimalPrecision=false;useDefaultJaasConfig=false;jaasConfigurationName=SQLJDBCDriver;statementPoolingCacheSize=0;serverPreparedStatementDiscardThreshold=10;enablePrepareOnFirstPreparedStatementCall=false;fips=false;socketTimeout=0;authentication=NotSpecified;authenticationScheme=nativeAuthentication;xopenStates=false;datetimeParameterType=datetime2;sendTimeAsDatetime=true;replication=false;trustStoreType=JKS;trustServerCertificate=false;TransparentNetworkIPResolution=true;iPAddressPreference=IPv4First;serverNameAsACE=false;sendStringParametersAsUnicode=true;selectMethod=direct;responseBuffering=adaptive;queryTimeout=-1;packetSize=8000;multiSubnetFailover=false;loginTimeout=30;lockTimeout=-1;lastUpdateCount=true;useDefaultGSSCredential=false;prepareMethod=prepexec;encrypt=false;disableStatementPooling=true;databaseName=hoadon_database;columnEncryptionSetting=Disabled;applicationName=Microsoft JDBC Driver for SQL Server;applicationIntent=readwrite;'
+2025-12-28T09:53:35.691+07:00  INFO 4672 --- [hoadon] [restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2025-12-28T09:53:35.725+07:00  INFO 4672 --- [hoadon] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path '/'
+2025-12-28T09:53:35.733+07:00  INFO 4672 --- [hoadon] [restartedMain] vn.hoadon.HoadonApplication              : Started HoadonApplication in 6.084 seconds (process running for 6.455)
+2025-12-28T09:55:13.154+07:00  INFO 4672 --- [hoadon] [http-nio-8081-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-12-28T09:55:13.154+07:00  INFO 4672 --- [hoadon] [http-nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-12-28T09:55:13.156+07:00  INFO 4672 --- [hoadon] [http-nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2025-12-28T09:55:13.188+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/auth/info, Method: GET, Authorization Header Present: true
+2025-12-28T09:55:13.188+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:55:13.266+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:13.838+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:13.840+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:13.842+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:19.646+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/auth/info, Method: GET, Authorization Header Present: true
+2025-12-28T09:55:19.647+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4ODg3NywiZXhwIjoxNzY2OTAzMjc3fQ.3-M1A2O1xWxpbvTsnmvYTYlFfzBNUu39QWj6bL3FypU
+2025-12-28T09:55:19.648+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:19.654+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:19.655+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:19.655+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:20.295+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-2] v.h.security.JwtAuthenticationFilter     : Request URI: /uploads/1/avatars/60fca0b6-78de-4830-82cf-fe5b2c5350c5.png, Method: GET, Authorization Header Present: false
+2025-12-28T09:55:20.295+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Request URI: /uploads/1/logo/ae90f58b-8373-48c7-987b-b741c0ea88a8.png, Method: GET, Authorization Header Present: false
+2025-12-28T09:55:20.298+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-2] v.h.security.JwtAuthenticationFilter     : No Authorization header found, skipping JWT filter
+2025-12-28T09:55:20.299+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : No Authorization header found, skipping JWT filter
+2025-12-28T09:55:20.303+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/auth/info, Method: GET, Authorization Header Present: true
+2025-12-28T09:55:20.304+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4ODg3NywiZXhwIjoxNzY2OTAzMjc3fQ.3-M1A2O1xWxpbvTsnmvYTYlFfzBNUu39QWj6bL3FypU
+2025-12-28T09:55:20.315+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:20.349+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:20.349+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:20.349+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:25.631+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : Request URI: /uploads/1/avatars/60fca0b6-78de-4830-82cf-fe5b2c5350c5.png, Method: GET, Authorization Header Present: false
+2025-12-28T09:55:25.633+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : No Authorization header found, skipping JWT filter
+2025-12-28T09:55:25.846+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/auth/info, Method: GET, Authorization Header Present: true
+2025-12-28T09:55:25.846+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:55:25.848+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:25.853+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:25.853+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:25.853+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:25.930+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Request URI: /uploads/1/logo/ae90f58b-8373-48c7-987b-b741c0ea88a8.png, Method: GET, Authorization Header Present: false
+2025-12-28T09:55:25.930+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : No Authorization header found, skipping JWT filter
+2025-12-28T09:55:27.073+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/tax-authorities, Method: GET, Authorization Header Present: true
+2025-12-28T09:55:27.075+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:55:27.078+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:27.089+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:27.089+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:27.092+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:27.387+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/tax-authorities, Method: GET, Authorization Header Present: true
+2025-12-28T09:55:27.387+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:55:27.394+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:27.394+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:27.394+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:27.394+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:35.130+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/tax-authorities, Method: GET, Authorization Header Present: true
+2025-12-28T09:55:35.130+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:55:35.136+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:35.144+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:35.144+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:35.144+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:37.563+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/tax-authorities, Method: GET, Authorization Header Present: true
+2025-12-28T09:55:37.563+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:55:37.568+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:37.579+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:37.580+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:37.580+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:39.525+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/tax-authorities, Method: GET, Authorization Header Present: true
+2025-12-28T09:55:39.525+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:55:39.525+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:39.535+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:39.535+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:39.535+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:40.803+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-2] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/tax-authorities, Method: GET, Authorization Header Present: true
+2025-12-28T09:55:40.803+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-2] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:55:40.803+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-2] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:40.810+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-2] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:40.810+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-2] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:40.810+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-2] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:42.305+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/tax-authorities, Method: GET, Authorization Header Present: true
+2025-12-28T09:55:42.305+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:55:42.307+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:42.319+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:42.319+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:42.326+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:50.611+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/tax-authorities, Method: GET, Authorization Header Present: true
+2025-12-28T09:55:50.616+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:55:50.618+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:50.624+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:50.624+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:50.624+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:52.296+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/tax-authorities, Method: GET, Authorization Header Present: true
+2025-12-28T09:55:52.296+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:55:52.296+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:52.303+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:52.303+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:52.303+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:53.485+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/administrator/bank/list, Method: POST, Authorization Header Present: true
+2025-12-28T09:55:53.486+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:55:53.502+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:53.511+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:53.512+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:53.512+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:55:56.622+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/administrator/bank/list, Method: POST, Authorization Header Present: true
+2025-12-28T09:55:56.622+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:55:56.622+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:55:56.630+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:55:56.630+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:55:56.632+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:00.367+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/administrator/bank/list, Method: POST, Authorization Header Present: true
+2025-12-28T09:56:00.368+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:56:00.368+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:00.388+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:00.397+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:00.398+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:03.450+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/administrator/bank/list, Method: POST, Authorization Header Present: true
+2025-12-28T09:56:03.450+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:56:03.450+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:03.460+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:03.460+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:03.462+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:05.612+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/administrator/bank/list, Method: POST, Authorization Header Present: true
+2025-12-28T09:56:05.612+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:56:05.616+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:05.622+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:05.623+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:05.623+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:10.286+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-2] v.h.security.JwtAuthenticationFilter     : Request URI: /uploads/1/logo/ae90f58b-8373-48c7-987b-b741c0ea88a8.png, Method: GET, Authorization Header Present: false
+2025-12-28T09:56:10.286+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Request URI: /uploads/1/avatars/60fca0b6-78de-4830-82cf-fe5b2c5350c5.png, Method: GET, Authorization Header Present: false
+2025-12-28T09:56:10.286+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-2] v.h.security.JwtAuthenticationFilter     : No Authorization header found, skipping JWT filter
+2025-12-28T09:56:10.287+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : No Authorization header found, skipping JWT filter
+2025-12-28T09:56:10.490+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/auth/info, Method: GET, Authorization Header Present: true
+2025-12-28T09:56:10.490+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4ODg3NywiZXhwIjoxNzY2OTAzMjc3fQ.3-M1A2O1xWxpbvTsnmvYTYlFfzBNUu39QWj6bL3FypU
+2025-12-28T09:56:10.490+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:10.497+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:10.497+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:10.497+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:10.622+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/setting/account/info, Method: GET, Authorization Header Present: true
+2025-12-28T09:56:10.622+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4ODg3NywiZXhwIjoxNzY2OTAzMjc3fQ.3-M1A2O1xWxpbvTsnmvYTYlFfzBNUu39QWj6bL3FypU
+2025-12-28T09:56:10.622+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:10.622+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:10.622+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:10.622+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:10.652+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : Request URI: /uploads/1/avatars/60fca0b6-78de-4830-82cf-fe5b2c5350c5.png, Method: GET, Authorization Header Present: false
+2025-12-28T09:56:10.652+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : No Authorization header found, skipping JWT filter
+2025-12-28T09:56:13.121+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/administrator/permission-categories/list, Method: POST, Authorization Header Present: true
+2025-12-28T09:56:13.121+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4ODg3NywiZXhwIjoxNzY2OTAzMjc3fQ.3-M1A2O1xWxpbvTsnmvYTYlFfzBNUu39QWj6bL3FypU
+2025-12-28T09:56:13.123+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:13.132+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:13.133+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:13.133+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:13.333+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/administrator/permissions/list, Method: POST, Authorization Header Present: true
+2025-12-28T09:56:13.334+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4ODg3NywiZXhwIjoxNzY2OTAzMjc3fQ.3-M1A2O1xWxpbvTsnmvYTYlFfzBNUu39QWj6bL3FypU
+2025-12-28T09:56:13.335+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:13.338+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:13.338+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:13.339+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:13.435+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/setting/members/list, Method: POST, Authorization Header Present: true
+2025-12-28T09:56:13.435+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4ODg3NywiZXhwIjoxNzY2OTAzMjc3fQ.3-M1A2O1xWxpbvTsnmvYTYlFfzBNUu39QWj6bL3FypU
+2025-12-28T09:56:13.435+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:13.435+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:13.435+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:13.442+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:13.864+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/setting/profile/ini, Method: POST, Authorization Header Present: true
+2025-12-28T09:56:13.864+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4ODg3NywiZXhwIjoxNzY2OTAzMjc3fQ.3-M1A2O1xWxpbvTsnmvYTYlFfzBNUu39QWj6bL3FypU
+2025-12-28T09:56:13.869+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:13.875+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:13.875+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:13.876+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:13.894+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/setting/profile/get, Method: POST, Authorization Header Present: true
+2025-12-28T09:56:13.896+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4ODg3NywiZXhwIjoxNzY2OTAzMjc3fQ.3-M1A2O1xWxpbvTsnmvYTYlFfzBNUu39QWj6bL3FypU
+2025-12-28T09:56:13.898+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:13.911+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:13.911+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:13.912+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:14.025+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-2] v.h.security.JwtAuthenticationFilter     : Request URI: /uploads/1/logo/ae90f58b-8373-48c7-987b-b741c0ea88a8.png, Method: GET, Authorization Header Present: false
+2025-12-28T09:56:14.025+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-2] v.h.security.JwtAuthenticationFilter     : No Authorization header found, skipping JWT filter
+2025-12-28T09:56:14.163+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/setting/profile/get-tax-authority, Method: POST, Authorization Header Present: true
+2025-12-28T09:56:14.163+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4ODg3NywiZXhwIjoxNzY2OTAzMjc3fQ.3-M1A2O1xWxpbvTsnmvYTYlFfzBNUu39QWj6bL3FypU
+2025-12-28T09:56:14.163+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:14.169+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:14.169+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:14.169+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:14.331+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Request URI: /uploads/1/favicon/3c8c3b78-06fc-4e07-867a-dd5afa9b00f0.png, Method: GET, Authorization Header Present: false
+2025-12-28T09:56:14.331+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : No Authorization header found, skipping JWT filter
+2025-12-28T09:56:34.421+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/setting/profile/update-bank, Method: POST, Authorization Header Present: true
+2025-12-28T09:56:34.431+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4ODg3NywiZXhwIjoxNzY2OTAzMjc3fQ.3-M1A2O1xWxpbvTsnmvYTYlFfzBNUu39QWj6bL3FypU
+2025-12-28T09:56:34.434+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:34.457+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:34.457+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:34.459+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-6] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:34.837+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/setting/profile/get, Method: POST, Authorization Header Present: true
+2025-12-28T09:56:34.837+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4ODg3NywiZXhwIjoxNzY2OTAzMjc3fQ.3-M1A2O1xWxpbvTsnmvYTYlFfzBNUu39QWj6bL3FypU
+2025-12-28T09:56:34.837+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:34.847+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:34.847+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:34.847+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-9] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:35.092+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/setting/profile/get-tax-authority, Method: POST, Authorization Header Present: true
+2025-12-28T09:56:35.092+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4ODg3NywiZXhwIjoxNzY2OTAzMjc3fQ.3-M1A2O1xWxpbvTsnmvYTYlFfzBNUu39QWj6bL3FypU
+2025-12-28T09:56:35.096+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:35.104+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:35.105+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:35.105+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:38.780+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Request URI: /uploads/1/logo/ae90f58b-8373-48c7-987b-b741c0ea88a8.png, Method: GET, Authorization Header Present: false
+2025-12-28T09:56:38.780+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : No Authorization header found, skipping JWT filter
+2025-12-28T09:56:39.089+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/auth/info, Method: GET, Authorization Header Present: true
+2025-12-28T09:56:39.090+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : Request URI: /uploads/1/avatars/60fca0b6-78de-4830-82cf-fe5b2c5350c5.png, Method: GET, Authorization Header Present: false
+2025-12-28T09:56:39.090+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:56:39.090+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-1] v.h.security.JwtAuthenticationFilter     : No Authorization header found, skipping JWT filter
+2025-12-28T09:56:39.091+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:39.098+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:39.098+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:39.098+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-8] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
+2025-12-28T09:56:41.160+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/administrator/bank/list, Method: POST, Authorization Header Present: true
+2025-12-28T09:56:41.160+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yIiwidXNlcklkIjoyLCJyb2xlIjowLCJjb21wYW55SWQiOjEsImlhdCI6MTc2Njg4NjQ2MiwiZXhwIjoxNzY2OTAwODYyfQ.4torckhe57oYBh1EADjjMCEVTartnAfB6fP9s5sYNtQ
+2025-12-28T09:56:41.160+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-2
+2025-12-28T09:56:41.170+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : User found: id=2, username=cp-2, status=1
+2025-12-28T09:56:41.170+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-2: [ROLE_ADMIN, ROLE_USER]
+2025-12-28T09:56:41.170+07:00 DEBUG 4672 --- [hoadon] [http-nio-8081-exec-3] v.h.security.JwtAuthenticationFilter     : User cp-2 authenticated successfully
