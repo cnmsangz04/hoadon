@@ -26,7 +26,7 @@
             </b-col>
             <b-col cols="12" md="6">
               <b-form-group label="Ngày lập" label-class="font-weight-bold">
-                <div class="form-control-plaintext">{{ formatDate(frmData.declaration_date) }}</div>
+                <b-form-datepicker v-model="frmData.declaration_date" :date-format-options="dateFmt" locale="vi" />
               </b-form-group>
             </b-col>
           </b-row>
@@ -39,10 +39,10 @@
         <b-card-body>
           <b-row>
             <b-col cols="12" md="6">
-              <div class="mb-2"><span class="font-weight-bold">Tên người nộp thuế:</span> <span>{{ frmData.company_name }}</span></div>
+              <div class="mb-2"><span class="font-weight-bold">Tên người nộp thuế:</span> <span>{{ company.name }}</span></div>
             </b-col>
             <b-col cols="12" md="6">
-              <div class="mb-2"><span class="font-weight-bold">Mã số thuế:</span> <span>{{ frmData.tax_code }}</span></div>
+              <div class="mb-2"><span class="font-weight-bold">Mã số thuế:</span> <span>{{ company.tax_code }}</span></div>
             </b-col>
           </b-row>
 
@@ -60,28 +60,28 @@
         <b-card-body>
           <b-row>
             <b-col cols="12" md="6">
-              <div class="mb-2"><span class="font-weight-bold">Tên người đại diện pháp luật:</span> <span>{{ frmData.contact_name }}</span></div>
+              <div class="mb-2"><span class="font-weight-bold">Tên người đại diện pháp luật:</span> <span>{{ legalRep.fullname }}</span></div>
             </b-col>
             <b-col cols="12" md="6">
-              <div class="mb-2"><span class="font-weight-bold">Điện thoại người đại diện pháp luật:</span> <span>{{ frmData.contact_phone }}</span></div>
-            </b-col>
-          </b-row>
-
-          <b-row>
-            <b-col cols="12" md="6">
-              <div class="mb-2"><span class="font-weight-bold">Căn cước công dân:</span> <span>{{ frmData.contact_cccd }}</span></div>
-            </b-col>
-            <b-col cols="12" md="6">
-              <div class="mb-2"><span class="font-weight-bold">Số hộ chiếu:</span> <span>{{ frmData.contact_passport }}</span></div>
+              <div class="mb-2"><span class="font-weight-bold">Điện thoại người đại diện pháp luật:</span> <span>{{ legalRep.phone }}</span></div>
             </b-col>
           </b-row>
 
           <b-row>
             <b-col cols="12" md="6">
-              <div class="mb-2"><span class="font-weight-bold">Ngày sinh:</span> <span>{{ formatDate(frmData.contact_dob) }}</span></div>
+              <div class="mb-2"><span class="font-weight-bold">Căn cước công dân:</span> <span>{{ legalRep.citizen_id }}</span></div>
             </b-col>
             <b-col cols="12" md="6">
-              <div class="mb-2"><span class="font-weight-bold">Giới tính:</span> <span>{{ genderOptions.find(g=>g.value===frmData.contact_gender)?.text || '' }}</span></div>
+              <div class="mb-2"><span class="font-weight-bold">Số hộ chiếu:</span> <span>{{ legalRep.passport_no }}</span></div>
+            </b-col>
+          </b-row>
+
+          <b-row>
+            <b-col cols="12" md="6">
+              <div class="mb-2"><span class="font-weight-bold">Ngày sinh:</span> <span>{{ formatDate(legalRep.date_of_birth) }}</span></div>
+            </b-col>
+            <b-col cols="12" md="6">
+              <div class="mb-2"><span class="font-weight-bold">Giới tính:</span> <span>{{ genderText(legalRep.gender) }}</span></div>
             </b-col>
           </b-row>
         </b-card-body>
@@ -93,10 +93,10 @@
         <b-card-body>
           <b-row>
             <b-col cols="12" md="6">
-              <div class="mb-2"><span class="font-weight-bold">Địa chỉ liên hệ:</span> <span>{{ frmData.contact_address }}</span></div>
+              <div class="mb-2"><span class="font-weight-bold">Địa chỉ liên hệ:</span> <span>{{ company.address }}</span></div>
             </b-col>
             <b-col cols="12" md="6">
-              <div class="mb-2"><span class="font-weight-bold">Thư điện tử:</span> <span>{{ frmData.contact_email }}</span></div>
+              <div class="mb-2"><span class="font-weight-bold">Thư điện tử:</span> <span>{{ company.email }}</span></div>
             </b-col>
           </b-row>
         </b-card-body>
@@ -114,7 +114,7 @@
           <b-form-checkbox-group class="ml-3" stacked v-model="frmData.invoice_forms">
             <b-form-checkbox class="mb-2" value="CMa">Hóa đơn có mã</b-form-checkbox>
             <b-form-checkbox class="mb-2" value="KCMa">Hóa đơn không có mã</b-form-checkbox>
-            <b-form-checkbox value="CMaMCTTien">Hóa đơn có mã từ máy tính tiền</b-form-checkbox>
+            <b-form-checkbox value="CMTMTTien">Hóa đơn có mã từ máy tính tiền</b-form-checkbox>
           </b-form-checkbox-group>
         </b-col>
       </b-row>
@@ -374,11 +374,13 @@ export default {
       sendToggleC: false,
       dateFmt: { year: 'numeric', month: 'numeric', day: 'numeric' },
       app: { provinces: [] },
+      company: { address: '', email: '', name: '', tax_code: '' },
+      legalRep: { fullname: '', phone: '', citizen_id: '', passport_no: '', date_of_birth: null, gender: null },
       options: {
         sigRegMethod: [
-          { code: 'ADD', label: 'Thêm mới' },
-          { code: 'EXTEND', label: 'Gia hạn' },
-          { code: 'STOP', label: 'Ngừng sử dụng' }
+          { code: 1, label: 'Thêm mới' },
+          { code: 2, label: 'Gia hạn' },
+          { code: 3, label: 'Ngừng sử dụng' }
         ]
       },
       frmData: {
@@ -386,18 +388,9 @@ export default {
         declaration_type: 1,
         form_pattern: '01/ĐKTĐ-HĐĐT',
         declaration_date: isoToday,
-        company_name: '',
-        tax_code: '',
         tax_authority_name: '',
         tax_authority_code: '',
-        contact_name: '',
-        contact_phone: '',
-        contact_cccd: '',
-        contact_passport: '',
-        contact_dob: null,
-        contact_gender: null,
-        contact_address: '',
-        contact_email: '',
+        // contact_* removed from payload usage; display comes from legalRep/company
         invoice_forms: [],
         send_methods_a: [],
         send_methods_b: [],
@@ -416,8 +409,7 @@ export default {
         serialNo: '',
         signFromDate: null,
         signToDate: null,
-        // default "Thêm mới"
-        sigRegMethod: 'ADD'
+        sigRegMethod: 1 // default: Thêm mới
       },
       declarationTypeOptions: [
         { value: 1, text: 'Đăng ký mới' },
@@ -439,6 +431,48 @@ export default {
   created() {
     this.bootstrap()
   },
+  watch: {
+    // Parent A toggled: apply to children
+    sendToggleA(val) {
+      const allA = [
+        'NNTDBKKhan',
+        'NNTKTDNUBND'
+      ]
+      if (val) {
+        // check all children
+        this.frmData.send_methods_a = Array.from(new Set([...(this.frmData.send_methods_a||[]), ...allA]))
+      } else {
+        // clear children
+        this.frmData.send_methods_a = []
+      }
+    },
+    // Children A changed: reflect parent
+    'frmData.send_methods_a'(val) {
+      const hasAny = Array.isArray(val) && val.length > 0
+      this.sendToggleA = hasAny
+    },
+    // Parent B toggled: apply to children
+    sendToggleB(val) {
+      const allB = [
+        'CDLTTDCQT',
+        'CDLQTCTN'
+      ]
+      if (val) {
+        this.frmData.send_methods_b = Array.from(new Set([...(this.frmData.send_methods_b||[]), ...allB]))
+      } else {
+        this.frmData.send_methods_b = []
+      }
+    },
+    // Children B changed: reflect parent
+    'frmData.send_methods_b'(val) {
+      const hasAny = Array.isArray(val) && val.length > 0
+      this.sendToggleB = hasAny
+    },
+    // C has no children; keep as-is, but ensure boolean
+    sendToggleC(val) {
+      this.sendToggleC = !!val
+    }
+  },
   methods: {
     bootstrap() {
       this.loadProvinces()
@@ -447,9 +481,25 @@ export default {
         this.frmData.action = 'update'
         this.loadDetail(id)
       } else {
-        // create mode: prefill from backend
         this.loadPrefill()
       }
+    },
+    formatDate(d) {
+      if (!d) return ''
+      try {
+        const dt = typeof d === 'string' ? new Date(d) : d
+        const yyyy = dt.getFullYear()
+        const mm = String(dt.getMonth() + 1).padStart(2, '0')
+        const dd = String(dt.getDate()).padStart(2, '0')
+        return `${dd}/${mm}/${yyyy}`
+      } catch (e) {
+        return String(d)
+      }
+    },
+    genderText(v) {
+      if (v === null || v === undefined) return ''
+      const map = { 'M': 'Nam', 'F': 'Nữ', 'O': 'Khác', 1: 'Nam', 0: 'Nữ' }
+      return map[v] || (String(v).toLowerCase() === 'male' ? 'Nam' : String(v).toLowerCase() === 'female' ? 'Nữ' : 'Khác')
     },
     async loadProvinces() {
       try {
@@ -461,183 +511,195 @@ export default {
     },
     async loadPrefill() {
       try {
-        const params = {
-          declarationType: this.frmData.declaration_type,
-          effectiveDate: this.frmData.effective_date
-        }
-        const { data } = await axios.get('/register-invoices/prefill', { params })
-        this.applyPrefill(data)
-      } catch (e) {
-        console.error('[register-invoices] prefill failed', e)
-        // silent fail; keep defaults
-      }
-    },
-    applyPrefill(data) {
-      // Support both flat and nested backend response shapes according to mapping requirements
-      const company = data?.company || data || {}
-      const legal = company?.legalRepresentative || data?.legalRepresentative || {}
-      const taxAuthority = data?.taxAuthority || company?.taxAuthority || {}
-
-      const genderMap = (g) => {
-        // Support numeric and string gender codes
-        if (g === 1 || g === 'M' || g === 'm') return 'M'
-        if (g === 0 || g === 'F' || g === 'f') return 'F'
-        return 'O'
-      }
-
-      // Resolve tax authority name possibly from id
-      const taxAuthorityId = company?.tax_authority_city_id || company?.taxAuthorityCityId || data?.taxAuthorityId || null
-      const taxAuthorityName = data?.taxAuthorityName || taxAuthority?.name || (() => {
-        const found = this.app.provinces.find(p => p.id === taxAuthorityId)
-        return found ? found.name : ''
-      })()
-
-      this.frmData = {
-        ...this.frmData,
-        // declaration_type and effective_date come from Vue defaults per request
-        company_name: company?.name || data?.companyName || '',
-        tax_code: company?.taxcode || data?.taxCode || '',
-        tax_authority_name: taxAuthorityName,
-        tax_authority_code: data?.taxAuthorityCode || taxAuthority?.code || '',
-        contact_name: legal?.fullname || data?.legalFullname || '',
-        contact_phone: legal?.phone || data?.legalPhone || '',
-        contact_cccd: legal?.citizen_id || data?.legalCitizenId || '',
-        contact_passport: legal?.passport_no || data?.legalPassportNo || '',
-        contact_dob: legal?.date_of_birth || data?.legalDateOfBirth || null,
-        contact_gender: (legal?.gender != null || data?.legalGender != null)
-          ? genderMap(legal?.gender ?? data?.legalGender)
-          : this.frmData.contact_gender,
-        contact_address: company?.address || data?.contactAddress || '',
-        contact_email: company?.email || data?.contactEmail || ''
-      }
-    },
-    formatDate(d) {
-      try {
-        const dt = new Date(d)
-        const yyyy = dt.getFullYear()
-        const mm = String(dt.getMonth() + 1).padStart(2, '0')
-        const dd = String(dt.getDate()).padStart(2, '0')
-        return `${dd}/${mm}/${yyyy}`
-      } catch (e) {
-        return d
-      }
-    },
-    goBack() {
-      this.$router.back()
+        const { data } = await axios.get('/register-invoices/prefill')
+        // Flexible mapping for company and legal representative
+        const comp = data.company || {}
+        const legal = data.legalRepresentative || data.legalRep || {}
+        this.company.address = comp.address || data.contactAddress || ''
+        this.company.email = comp.email || data.contactEmail || ''
+        this.company.name = comp.name || data.companyName || ''
+        this.company.tax_code = comp.taxCode || data.taxCode || ''
+        this.legalRep.fullname = legal.fullname || data.legalFullname || ''
+        this.legalRep.phone = legal.phone || data.legalPhone || ''
+        this.legalRep.citizen_id = legal.citizen_id || legal.citizenId || data.legalCitizenId || ''
+        this.legalRep.passport_no = legal.passport_no || legal.passportNo || data.legalPassportNo || ''
+        this.legalRep.date_of_birth = legal.date_of_birth || legal.dateOfBirth || data.legalDateOfBirth || null
+        this.legalRep.gender = legal.gender != null ? legal.gender : (data.legalGender != null ? data.legalGender : null)
+        // Prefill authority name if available
+        this.frmData.tax_authority_name = data.taxAuthorityName || ''
+        if (!this.frmData.create_date) this.frmData.create_date = this.frmData.declaration_date
+      } catch (e) {}
     },
     async loadDetail(id) {
       this.btnLoading = true
       try {
         const { data } = await axios.get(`/register-invoices/${id}`)
         this.applyDetail(data)
+        // also refresh prefill to show company/legal info from current user company
+        await this.loadPrefill()
       } catch (e) {
         // handle
       } finally {
         this.btnLoading = false
       }
     },
+    // --- Normalizers to align backend -> UI values ---
+    normalizeArray(raw, mapDict) {
+      let arr = []
+      if (Array.isArray(raw)) arr = raw
+      else if (typeof raw === 'string' && raw.trim()) {
+        try {
+          let p = JSON.parse(raw)
+          // Handle double-encoded JSON: if result is string, parse again
+          if (typeof p === 'string' && p.trim()) {
+            try { p = JSON.parse(p) } catch {}
+          }
+          arr = Array.isArray(p) ? p : []
+        } catch { arr = [] }
+      } else if (raw && typeof raw === 'object') {
+        arr = [raw]
+      }
+      // Map to UI codes if a dict provided
+      if (mapDict && Array.isArray(arr)) {
+        return arr.map(item => {
+          if (typeof item === 'string') return mapDict[item] || item
+          if (item && typeof item === 'object') {
+            const code = item.code || item.value || item.id || item.type || item.kind
+            return mapDict[code] || code
+          }
+          return item
+        }).filter(Boolean)
+      }
+      return arr
+    },
+    normalizeInvoiceForms(raw) {
+      // Backend may use codes: CMa, KCMa, CMTMTTien; align to same
+      const dict = { CMa: 'CMa', KCMa: 'KCMa', CMTMTTien: 'CMTMTTien', 'CO_MA': 'CMa', 'KHONG_MA': 'KCMa', 'MA_MAY_TINH_TIEN': 'CMTMTTien' }
+      return Array.from(new Set(this.normalizeArray(raw, dict)))
+    },
+    normalizeInvoiceTypes(raw) {
+      const dict = {
+        HDGTGT: 'HDGTGT', HDGTGT_BienLai: 'HDGTGT_BienLai', HDBHang: 'HDBHang', HDBHang_BienLai: 'HDBHang_BienLai',
+        HDThuongMai: 'HDThuongMai', HDBTSCong: 'HDBTSCong', HDBHDTQGia: 'HDBHDTQGia', HDKhac: 'HDKhac', CTu: 'CTu'
+      }
+      return Array.from(new Set(this.normalizeArray(raw, dict)))
+    },
+    normalizeTransferMethods(raw) {
+      const dict = { CDDu: 'CDDu', CBTHop: 'CBTHop', 'CHUYEN_DAY_DU': 'CDDu', 'BANG_TONG_HOP': 'CBTHop' }
+      return Array.from(new Set(this.normalizeArray(raw, dict)))
+    },
+    normalizeDigitalCertificates(raw) {
+      let arr = []
+      if (Array.isArray(raw)) arr = raw
+      else if (typeof raw === 'string' && raw.trim()) {
+        try {
+          let p = JSON.parse(raw)
+          if (typeof p === 'string' && p.trim()) {
+            try { p = JSON.parse(p) } catch {}
+          }
+          arr = Array.isArray(p) ? p : []
+        } catch { arr = [] }
+      } else if (raw && typeof raw === 'object') arr = [raw]
+      return arr.map(x => ({
+        orgName: x.orgName || x.org_name || x.organizationName || '',
+        serialNo: x.serialNo || x.serial_no || x.serial || '',
+        signFromDate: x.signFromDate || x.sign_from_date || x.from || null,
+        signToDate: x.signToDate || x.sign_to_date || x.to || null,
+        sigRegMethod: (typeof x.sigRegMethod === 'number' || /^\d+$/.test(String(x.sigRegMethod))) ? Number(x.sigRegMethod) : (typeof x.sig_reg_method === 'number' || /^\d+$/.test(String(x.sig_reg_method)) ? Number(x.sig_reg_method) : (String(x.method||'').toUpperCase()==='EXTEND'?2:String(x.method||'').toUpperCase()==='STOP'?3:1))
+      }))
+    },
     applyDetail(data) {
-      const map = (v) => (Array.isArray(v) ? v : (v ? JSON.parse(v) : []))
+      const val = (obj, keys, def) => {
+        for (const k of keys) {
+          if (obj && typeof obj[k] !== 'undefined' && obj[k] !== null) return obj[k]
+        }
+        return def
+      }
+      const sendMethodsRaw = val(data, ['send_methods', 'sendMethods'], null)
+      const sendParsed = (() => {
+        if (!sendMethodsRaw) return { a: [], b: [], c: [] }
+        if (typeof sendMethodsRaw === 'string') {
+          try { return JSON.parse(sendMethodsRaw) } catch { return { a: [], b: [], c: [] } }
+        }
+        if (typeof sendMethodsRaw === 'object') return sendMethodsRaw
+        return { a: [], b: [], c: [] }
+      })()
+
+      const createPlaceRaw = val(data, ['create_place','createPlace'], '')
+      const createPlaceNum = createPlaceRaw === '' || createPlaceRaw == null ? '' : Number(createPlaceRaw)
+
       this.frmData = {
         ...this.frmData,
         action: 'update',
-        declaration_type: Number(data.declaration_type) || 1,
-        form_pattern: data.form_pattern || '01/ĐKTĐ-HĐĐT',
-        declaration_date: data.declaration_date || this.frmData.declaration_date,
-        company_name: data.company_name || '',
-        tax_code: data.tax_code || '',
-        tax_authority_name: data.tax_authority_name || '',
-        tax_authority_code: data.tax_authority_code || '',
-        contact_name: data.contact_name || '',
-        contact_phone: data.contact_phone || '',
-        contact_cccd: data.contact_cccd || '',
-        contact_passport: data.contact_passport || '',
-        contact_dob: data.contact_dob || null,
-        contact_gender: data.contact_gender ?? null,
-        contact_address: data.contact_address || '',
-        contact_email: data.contact_email || '',
-        invoice_forms: map(data.invoice_forms),
-        send_methods_a: map(data.send_methods_a),
-        send_methods_b: map(data.send_methods_b),
-        transfer_methods: map(data.transfer_methods),
-        invoice_types: map(data.invoice_types),
-        digital_certificates: map(data.digital_certificates),
-        create_place: data.create_place || '',
-        effective_date: data.effective_date || this.frmData.effective_date,
-        signature: data.signature || null,
-        signed_xml: data.signed_xml || null,
-        date_sign: data.date_sign || null
+        declaration_type: Number(val(data, ['declaration_type','declarationType'], 1)) || 1,
+        form_pattern: val(data, ['form_pattern','formPattern'], '01/ĐKTĐ-HĐĐT'),
+        declaration_date: val(data, ['declaration_date','declarationDate'], this.frmData.declaration_date),
+        tax_authority_name: val(data, ['tax_authority_name','taxAuthorityName'], ''),
+        tax_authority_code: val(data, ['tax_authority_code','taxAuthorityCode'], ''),
+        // contact_* intentionally not mapped; UI shows from legalRep/company
+        invoice_forms: this.normalizeInvoiceForms(val(data, ['invoice_forms','invoiceForms'], [])),
+        send_methods_a: this.normalizeArray(val(sendParsed, ['a'], [])),
+        send_methods_b: this.normalizeArray(val(sendParsed, ['b'], [])),
+        transfer_methods: this.normalizeTransferMethods(val(data, ['transfer_methods','transferMethods'], [])),
+        invoice_types: this.normalizeInvoiceTypes(val(data, ['invoice_types','invoiceTypes'], [])),
+        digital_certificates: this.normalizeDigitalCertificates(val(data, ['digital_certificates','digitalCertificates'], [])),
+        create_place: createPlaceNum,
+        effective_date: val(data, ['effective_date','effectiveDate'], this.frmData.effective_date),
+        signature: val(data, ['signature','signatureInfo'], null),
+        signed_xml: val(data, ['signed_xml','signedXml'], null),
+        date_sign: val(data, ['date_sign','dateSign','signatureDate'], null)
       }
+      this.sendToggleC = Array.isArray(sendParsed.c) && sendParsed.c.length > 0
     },
     async onSubmit() {
       this.btnLoading = true
       try {
         const payload = this.buildPayload()
         if (this.frmData.action === 'update') {
-          await axios.put(`/register-invoices/${this.$route.params.id}`, payload)
+          await axios.put(`/register-invoices/${this.$route.params.id}/get`, payload, { successMessage: 'Đã cập nhật tờ khai thành công' })
         } else {
-          const { data } = await axios.post('/register-invoices', {
-            // map payload to entity fields expected by backend
-            userId: this.$store?.state?.user?.id || null,
-            declarationCode: null,
-            declarationType: payload.declaration_type,
-            formPattern: payload.form_pattern,
-            declarationDate: payload.declaration_date,
-            companyName: payload.company_name,
-            taxCode: payload.tax_code,
-            taxAuthorityCode: this.frmData.tax_authority_code,
-            taxAuthorityName: payload.tax_authority_name,
-            contactName: this.frmData.contact_name,
-            contactPhone: this.frmData.contact_phone,
-            contactEmail: this.frmData.contact_email,
-            contactAddress: this.frmData.contact_address,
-            createPlace: payload.create_place,
-            effectiveDate: payload.effective_date,
-            invoiceForms: payload.invoice_forms,
-            invoiceTypes: payload.invoice_types,
-            sendMethods: payload.send_methods,
-            transferMethods: payload.transfer_methods,
-            digitalCertificates: payload.digital_certificates,
-            solutionProviders: null,
-            transmitProviders: null,
-            status: 0
-          })
-          this.$router.replace({ name: this.$route.name, params: { id: data.id } })
+          const { data } = await axios.post('/register-invoices', payload, { successMessage: 'Đã tạo tờ khai thành công' })
+          this.$router.push({ name: 'CustomerRegisterInvoiceEdit', params: { id: data.id } })
         }
-        this.goBack()
       } catch (e) {
-        // this.$bvToast.toast('Lưu thất bại', { title: 'Lỗi', variant: 'danger' })
       } finally {
         this.btnLoading = false
       }
     },
     buildPayload() {
-      const toJson = (v) => (Array.isArray(v) ? JSON.stringify(v) : v)
+      const digitalCertificates = (this.frmData.digital_certificates || []).map(x => ({
+        orgName: x.orgName,
+        serialNo: x.serialNo,
+        signFromDate: x.signFromDate,
+        signToDate: x.signToDate,
+        sigRegMethod: (typeof x.sigRegMethod === 'number' ? x.sigRegMethod : parseInt(x.sigRegMethod) || 1)
+      }))
       return {
-        declaration_type: this.frmData.declaration_type,
-        form_pattern: this.frmData.form_pattern,
-        declaration_date: this.frmData.declaration_date,
-        company_name: this.frmData.company_name,
-        tax_code: this.frmData.tax_code,
-        tax_authority_name: this.frmData.tax_authority_name,
-        tax_authority_code: this.frmData.tax_authority_code,
-        contact_name: this.frmData.contact_name,
-        contact_phone: this.frmData.contact_phone,
-        contact_address: this.frmData.contact_address,
-        contact_email: this.frmData.contact_email,
-        create_place: this.frmData.create_place,
-        effective_date: this.frmData.effective_date,
-        // JSON business fields
-        invoice_forms: toJson(this.frmData.invoice_forms),
-        invoice_types: toJson(this.frmData.invoice_types),
-        send_methods: toJson({ a: this.frmData.send_methods_a, b: this.frmData.send_methods_b, c: this.sendToggleC ? ['CQT_TSCC'] : [] }),
-        transfer_methods: toJson(this.frmData.transfer_methods),
-        digital_certificates: toJson(this.frmData.digital_certificates)
+        declarationType: this.frmData.declaration_type,
+        formPattern: this.frmData.form_pattern,
+        declarationDate: this.frmData.declaration_date,
+        createPlace: this.frmData.create_place,
+        effectiveDate: this.frmData.effective_date,
+        invoiceForms: this.frmData.invoice_forms,
+        invoiceTypes: this.frmData.invoice_types,
+        sendMethods: { a: this.frmData.send_methods_a, b: this.frmData.send_methods_b, c: this.sendToggleC ? ['CQT'] : [] },
+        transferMethods: this.frmData.transfer_methods,
+        digitalCertificates,
+        solutionProviders: null,
+        transmitProviders: null
       }
     },
     sendData() {
       if (!this.$route?.params?.id) return
       return axios.post(`/register-invoices/${this.$route.params.id}/send`)
+    },
+    goBack() {
+      // Prefer router navigation; fallback to browser history
+      if (this.$router && typeof this.$router.back === 'function') {
+        this.$router.back()
+      } else if (window && typeof window.history?.back === 'function') {
+        window.history.back()
+      }
     },
     onSignature() {
       this.btnSignature = true
@@ -646,9 +708,9 @@ export default {
     showSignatureModal(index) {
       if (index !== false && index != null) {
         const v = this.frmData.digital_certificates[index]
-        this.signatureModal = { index, orgName: v.orgName, serialNo: v.serialNo, signFromDate: v.signFromDate, signToDate: v.signToDate, sigRegMethod: v.sigRegMethod || 'ADD' }
+        this.signatureModal = { index, orgName: v.orgName, serialNo: v.serialNo, signFromDate: v.signFromDate, signToDate: v.signToDate, sigRegMethod: (typeof v.sigRegMethod === 'number' ? v.sigRegMethod : parseInt(v.sigRegMethod) || 1) }
       } else {
-        this.signatureModal = { index: false, orgName: '', serialNo: '', signFromDate: null, signToDate: null, sigRegMethod: 'ADD' }
+        this.signatureModal = { index: false, orgName: '', serialNo: '', signFromDate: null, signToDate: null, sigRegMethod: 1 }
       }
       this.$refs.modalSignature.show()
     },
@@ -665,7 +727,7 @@ export default {
         serialNo: payload.serialNo,
         signFromDate: payload.signFromDate,
         signToDate: payload.signToDate,
-        sigRegMethod: payload.sigRegMethod || 'ADD'
+        sigRegMethod: (typeof payload.sigRegMethod === 'number' ? payload.sigRegMethod : parseInt(payload.sigRegMethod) || 1)
       }
       if (payload.index !== false && payload.index != null) {
         this.$set(this.frmData.digital_certificates, payload.index, entry)
@@ -678,8 +740,11 @@ export default {
       this.frmData.digital_certificates.splice(index, 1)
     },
     getNameRegMethod(code) {
-      const f = this.options.sigRegMethod.find(x => x.code === code)
-      return f ? f.label : '—'
+      const n = (typeof code === 'number' || /^\d+$/.test(String(code))) ? Number(code) : null
+      if (n === 1) return 'Thêm mới'
+      if (n === 2) return 'Gia hạn'
+      if (n === 3) return 'Ngừng sử dụng'
+      return '—'
     },
     mockDetail(id) {
       // no longer used; data comes from backend

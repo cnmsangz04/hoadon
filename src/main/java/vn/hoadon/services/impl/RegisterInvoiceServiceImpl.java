@@ -1,15 +1,19 @@
 package vn.hoadon.services.impl;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.hoadon.dto.registerinvoice.RegisterInvoicePrefillDto;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.RegisterInvoiceEntity;
 import vn.hoadon.entity.TaxAuthorityEntity;
+import vn.hoadon.entity.LegalRepresentativeEntity;
 import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.LegalRepresentativeRepository;
 import vn.hoadon.repositories.RegisterInvoiceRepository;
 import vn.hoadon.services.RegisterInvoiceService;
+import vn.hoadon.util.RegisterInvoiceXmlBuilder;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -59,14 +63,6 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
             existing.setDeclarationType(patch.getDeclarationType());
             existing.setFormPattern(patch.getFormPattern());
             existing.setDeclarationDate(patch.getDeclarationDate());
-            existing.setCompanyName(patch.getCompanyName());
-            existing.setTaxCode(patch.getTaxCode());
-            existing.setTaxAuthorityCode(patch.getTaxAuthorityCode());
-            existing.setTaxAuthorityName(patch.getTaxAuthorityName());
-            existing.setContactName(patch.getContactName());
-            existing.setContactPhone(patch.getContactPhone());
-            existing.setContactEmail(patch.getContactEmail());
-            existing.setContactAddress(patch.getContactAddress());
             existing.setCreatePlace(patch.getCreatePlace());
             existing.setEffectiveDate(patch.getEffectiveDate());
             existing.setInvoiceForms(patch.getInvoiceForms());
@@ -124,5 +120,89 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
             dto.setLegalGender(legal.getGender());
         });
         return Optional.of(dto);
+    }
+
+    @Override
+    public Page<RegisterInvoiceEntity> pageByCompany(Long companyId, Pageable pageable) {
+        return repository.findByCompanyIdOrderByCreatedAtDesc(companyId, pageable);
+    }
+
+    @Override
+    public Page<RegisterInvoiceEntity> pageByCompanyAndStatus(Long companyId, Integer status, Pageable pageable) {
+        return repository.findByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, status, pageable);
+    }
+
+    @Override
+    public Page<RegisterInvoiceEntity> pageAll(Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+
+    @Override
+    public String buildUnsignedXml(RegisterInvoiceEntity entity) {
+        String contactName = null;
+        String contactPhone = null;
+        String contactEmail = null;
+        String contactAddress = null;
+        String citizenId = null;
+        String passportNo = null;
+        String dateOfBirth = null;
+        String gender = null;
+        String taxAuthorityCode = null;
+        String taxAuthorityName = null;
+        String companyName = "";
+        String taxCode = "";
+        CompanyEntity company = companyRepository.findById(entity.getCompanyId()).orElse(null);
+        LegalRepresentativeEntity legal = legalRepresentativeRepository.findByCompanyId(entity.getCompanyId()).orElse(null);
+        if (company != null) {
+            companyName = company.getName() != null ? company.getName() : "";
+            taxCode = company.getTaxcode() != null ? company.getTaxcode() : "";
+            contactEmail = company.getEmail();
+            contactAddress = company.getAddress();
+            TaxAuthorityEntity ta = company.getTaxAuthority();
+            if (ta != null) {
+                taxAuthorityCode = ta.getCode() != null ? String.valueOf(ta.getCode()) : "";
+                taxAuthorityName = ta.getName() != null ? ta.getName() : "";
+            } else if (company.getTaxAuthorityCity() != null) {
+                taxAuthorityCode = company.getTaxAuthorityCity().getCode() != null ? String.valueOf(company.getTaxAuthorityCity().getCode()) : "";
+                taxAuthorityName = company.getTaxAuthorityCity().getName() != null ? company.getTaxAuthorityCity().getName() : "";
+            } else {
+                taxAuthorityCode = "";
+                taxAuthorityName = "";
+            }
+        }
+        if (legal != null) {
+            contactName = legal.getFullname();
+            contactPhone = legal.getPhone();
+            citizenId = legal.getCitizenId();
+            passportNo = legal.getPassportNo();
+            dateOfBirth = legal.getDateOfBirth() != null ? legal.getDateOfBirth().toString() : null;
+            gender = legal.getGender() != null ? String.valueOf(legal.getGender()) : null;
+        }
+        return RegisterInvoiceXmlBuilder.buildUnsigned(
+                entity,
+                contactName,
+                contactPhone,
+                contactEmail,
+                contactAddress,
+                citizenId,
+                passportNo,
+                dateOfBirth,
+                gender,
+                taxAuthorityCode,
+                taxAuthorityName,
+                companyName,
+                taxCode
+        );
+    }
+
+    @Override
+    public Optional<String> getXmlForDownload(Long id) {
+        return repository.findById(id).map(e -> {
+            if (e.getStatus() != null && e.getStatus() > 0) {
+                return e.getSignedXml();
+            }
+            // status == 0 => unsigned built from legal/company info
+            return buildUnsignedXml(e);
+        });
     }
 }

@@ -31,33 +31,6 @@ public class RegisterInvoiceEntity {
     @Column(name = "declaration_date", nullable = false)
     private LocalDate declarationDate;
 
-    // Doanh nghiệp
-    @Column(name = "company_name", length = 255, nullable = false)
-    private String companyName;
-
-    @Column(name = "tax_code", length = 16, nullable = false)
-    private String taxCode;
-
-    // Cơ quan thuế
-    @Column(name = "tax_authority_code", length = 10, nullable = false)
-    private String taxAuthorityCode;
-
-    @Column(name = "tax_authority_name", length = 255, nullable = false)
-    private String taxAuthorityName;
-
-    // Người liên hệ
-    @Column(name = "contact_name", length = 255, nullable = false)
-    private String contactName;
-
-    @Column(name = "contact_phone", length = 32, nullable = false)
-    private String contactPhone;
-
-    @Column(name = "contact_email", length = 255, nullable = false)
-    private String contactEmail;
-
-    @Column(name = "contact_address", length = 500, nullable = false)
-    private String contactAddress;
-
     // Địa danh, hiệu lực
     @Column(name = "create_place", length = 255, nullable = false)
     private String createPlace;
@@ -114,8 +87,7 @@ public class RegisterInvoiceEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Getters and setters omitted for brevity
-    // ...existing code...
+    // Getters and setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getCompanyId() { return companyId; }
@@ -130,22 +102,6 @@ public class RegisterInvoiceEntity {
     public void setFormPattern(String formPattern) { this.formPattern = formPattern; }
     public LocalDate getDeclarationDate() { return declarationDate; }
     public void setDeclarationDate(LocalDate declarationDate) { this.declarationDate = declarationDate; }
-    public String getCompanyName() { return companyName; }
-    public void setCompanyName(String companyName) { this.companyName = companyName; }
-    public String getTaxCode() { return taxCode; }
-    public void setTaxCode(String taxCode) { this.taxCode = taxCode; }
-    public String getTaxAuthorityCode() { return taxAuthorityCode; }
-    public void setTaxAuthorityCode(String taxAuthorityCode) { this.taxAuthorityCode = taxAuthorityCode; }
-    public String getTaxAuthorityName() { return taxAuthorityName; }
-    public void setTaxAuthorityName(String taxAuthorityName) { this.taxAuthorityName = taxAuthorityName; }
-    public String getContactName() { return contactName; }
-    public void setContactName(String contactName) { this.contactName = contactName; }
-    public String getContactPhone() { return contactPhone; }
-    public void setContactPhone(String contactPhone) { this.contactPhone = contactPhone; }
-    public String getContactEmail() { return contactEmail; }
-    public void setContactEmail(String contactEmail) { this.contactEmail = contactEmail; }
-    public String getContactAddress() { return contactAddress; }
-    public void setContactAddress(String contactAddress) { this.contactAddress = contactAddress; }
     public String getCreatePlace() { return createPlace; }
     public void setCreatePlace(String createPlace) { this.createPlace = createPlace; }
     public LocalDate getEffectiveDate() { return effectiveDate; }

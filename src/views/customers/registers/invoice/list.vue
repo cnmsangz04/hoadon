@@ -48,10 +48,24 @@
       </b-row>
       <b-row class="mt-2">
         <b-col md="3" class="mb-2">
-          <b-form-datepicker v-model="filters.dateFrom" :max="filters.dateTo || undefined" placeholder="Từ ngày" size="sm" />
+          <b-form-datepicker
+            v-model="filters.dateFrom"
+            :max="filters.dateTo || undefined"
+            placeholder="Từ ngày"
+            size="sm"
+            locale="vi"
+            :date-format-options="{ day: '2-digit', month: '2-digit', year: 'numeric' }"
+          />
         </b-col>
         <b-col md="3" class="mb-2">
-          <b-form-datepicker v-model="filters.dateTo" :min="filters.dateFrom || undefined" placeholder="Đến ngày" size="sm" />
+          <b-form-datepicker
+            v-model="filters.dateTo"
+            :min="filters.dateFrom || undefined"
+            placeholder="Đến ngày"
+            size="sm"
+            locale="vi"
+            :date-format-options="{ day: '2-digit', month: '2-digit', year: 'numeric' }"
+          />
         </b-col>
         <b-col md="6" class="mb-2 d-flex align-items-center justify-content-end">
           <b-button size="sm" variant="outline-secondary" class="mr-2" @click="resetFilters">Xóa lọc</b-button>
@@ -240,9 +254,9 @@ export default {
       }
     },
     summarizeInvoiceForms(json) {
-      // json may be string or object/array
       try {
-        const data = typeof json === 'string' ? JSON.parse(json) : json
+        let data = typeof json === 'string' ? JSON.parse(json) : json
+        if (typeof data === 'string') { try { data = JSON.parse(data) } catch {} }
         if (Array.isArray(data)) {
           return data.map(x => x.name || x.code || x).join(', ')
         }
@@ -277,22 +291,80 @@ export default {
       if (n === 1) return 'light'
       return 'secondary'
     },
+    mapItem(raw) {
+      // Convert camelCase keys from backend into snake_case expected by the table
+      if (!raw || typeof raw !== 'object') return raw
+      const m = {
+        formPattern: 'form_pattern',
+        declarationDate: 'declaration_date',
+        declarationType: 'declaration_type',
+        invoiceForms: 'invoice_forms',
+        invoiceTypes: 'invoice_types',
+        sendMethods: 'send_methods',
+        transferMethods: 'transfer_methods',
+        digitalCertificates: 'digital_certificates',
+        responseReceiveFile: 'response_receive_file',
+        responseAcceptFile: 'response_accept_file'
+      }
+      const out = { ...raw }
+      Object.keys(m).forEach(k => {
+        const target = m[k]
+        if (typeof raw[k] !== 'undefined' && raw[k] !== null && typeof out[target] === 'undefined') {
+          out[target] = raw[k]
+        }
+      })
+      return out
+    },
+    normalizePageResponse(raw) {
+      const out = { ...this.list }
+      // Laravel style
+      if (Array.isArray(raw.data)) {
+        // Map items
+        out.data = raw.data.map(this.mapItem)
+        out.total = Number(raw.total || raw.data.length) || 0
+        // Pagination links
+        out.current_page = Number(raw.current_page) || 1
+        out.last_page = Math.ceil(out.total / out.per_page) || 1
+        out.from = (out.current_page - 1) * out.per_page + 1
+        out.to = Math.min(out.from + out.per_page - 1, out.total) || 0
+        return out
+      }
+      // Fallback: array
+      if (Array.isArray(raw)) {
+        out.data = raw.map(this.mapItem)
+        out.total = raw.length
+        out.current_page = 1
+        out.last_page = 1
+        out.from = 1
+        out.to = raw.length
+        return out
+      }
+      // Unknown format
+      return out
+    },
     async fetchList() {
       this.isBusy = true
       try {
-        // Placeholder API; replace with backend endpoint
-        // const { data } = await axios.get('/api/register-invoices', { params: this.buildQuery() })
-        // this.list = { ...this.list, ...data }
-        // For now, fill with mock data to visualize UI
-        const mock = this.mockData()
-        this.list.data = mock.items
-        this.list.total = mock.total
-        this.list.last_page = 1
-        this.list.from = 1
-        this.list.to = mock.items.length
+        const params = this.buildQuery()
+        const { data } = await axios.get('/register-invoices/list', { params })
+        let normalized = this.normalizePageResponse(data)
+        // Client-side fallback: enforce declaration type filter if backend did not
+        if (this.filters.declarationType != null) {
+          const want = Number(this.filters.declarationType)
+          const filtered = (normalized.data || []).filter(item => Number((item.declaration_type ?? item.declarationType)) === want)
+          // Recompute simple page metrics based on filtered data
+          normalized = {
+            ...normalized,
+            data: filtered,
+            total: filtered.length,
+            last_page: 1,
+            from: filtered.length ? 1 : 0,
+            to: filtered.length
+          }
+        }
+        this.list = { ...this.list, ...normalized }
       } catch (e) {
-        // handle error toast later
-        // console.error(e)
+        // leave previous list
       } finally {
         this.isBusy = false
       }
@@ -300,22 +372,31 @@ export default {
     buildQuery() {
       const q = {
         page: this.list.current_page,
-        per_page: this.list.per_page
+        size: this.list.per_page
       }
-      if (this.filters.keyword) q.keyword = this.filters.keyword
-      if (this.filters.declarationType != null) q.declaration_type = this.filters.declarationType
-      if (this.filters.status != null) q.status = this.filters.status
-      if (this.filters.dateFrom) q.date_from = this.filters.dateFrom
-      if (this.filters.dateTo) q.date_to = this.filters.dateTo
+      if (this.filters.keyword) q.keyword = this.filters.keyword.trim()
+      if (this.filters.declarationType != null) {
+        const dt = Number(this.filters.declarationType)
+        q.declarationType = dt
+        q.declaration_type = dt
+      }
+      if (this.filters.status != null) q.status = Number(this.filters.status)
+      // Date filters: backend expects dateFrom/dateTo in YYYY-MM-DD
+      const fmt = (v) => {
+        if (!v) return null
+        try {
+          const d = typeof v === 'string' ? new Date(v) : v
+          const yyyy = d.getFullYear()
+          const mm = String(d.getMonth() + 1).padStart(2, '0')
+          const dd = String(d.getDate()).padStart(2, '0')
+          return `${yyyy}-${mm}-${dd}`
+        } catch { return null }
+      }
+      const df = fmt(this.filters.dateFrom)
+      const dt2 = fmt(this.filters.dateTo)
+      if (df) q.dateFrom = df
+      if (dt2) q.dateTo = dt2
       return q
-    },
-    applyFilters() {
-      this.list.current_page = 1
-      this.fetchList()
-    },
-    resetFilters() {
-      this.filters = { keyword: '', declarationType: null, status: null, dateFrom: null, dateTo: null }
-      this.applyFilters()
     },
     onPageSizeChange() {
       this.list.current_page = 1
@@ -324,59 +405,80 @@ export default {
     onPageChange() {
       this.fetchList()
     },
-    reload() {
+    applyFilters() {
+      this.list.current_page = 1
+      this.fetchList()
+    },
+    resetFilters() {
+      this.filters = {
+        keyword: '',
+        declarationType: null,
+        status: null,
+        dateFrom: null,
+        dateTo: null
+      }
       this.fetchList()
     },
     openCreate() {
-      // TODO: navigate to create page or open modal
-      this.$router.push({ name: 'CustomerRegisterInvoiceCreate' }).catch(() => {})
+      this.$router.push({ name: 'CustomerRegisterInvoiceCreate' })
     },
     openEdit(item) {
-      this.$router.push({ name: 'CustomerRegisterInvoiceEdit', params: { id: item.id } }).catch(() => {})
-    },
-    sendToTaxAuthority(item) {
-      // TODO: implement send action
-      // Placeholder: show notification
-      // this.$bvToast.toast('Đã gửi yêu cầu tới Cơ quan thuế', { title: 'Gửi CQT', variant: 'info' })
-    },
-    downloadXml(item) {
-      // TODO: call backend to download
-      // window.open(`/api/register-invoices/${item.id}/xml`, '_blank')
+      this.$router.push({ name: 'CustomerRegisterInvoiceEdit', params: { id: item.id } })
     },
     openHistory(item) {
-      // TODO: open history modal or navigate
-      this.$router.push({ name: 'CustomerRegisterInvoiceHistory', params: { id: item.id } }).catch(() => {})
+      this.$router.push({ name: 'register-invoice-history', params: { id: item.id } })
     },
-    mockData() {
-      // Simple mock dataset
-      const items = [
-        {
-          id: 1,
-          form_pattern: '01/ĐKTĐ-HĐĐT',
-          declaration_date: new Date().toISOString(),
-          declaration_type: 1,
-          invoice_forms: JSON.stringify([{ code: 'T', name: 'Có mã' }, { code: 'K', name: 'Không mã' }]),
-          response_receive_file: null,
-          response_accept_file: null,
-          status: 1
-        },
-        {
-          id: 2,
-          form_pattern: '01/ĐKTĐ-HĐĐT',
-          declaration_date: new Date(Date.now() - 86400000).toISOString(),
-          declaration_type: 2,
-          invoice_forms: JSON.stringify([{ code: 'T', name: 'Có mã' }]),
-          response_receive_file: 'TB_TiepNhan_2025_12_26.pdf',
-          response_accept_file: 'TB_ChapNhan_2025_12_27.pdf',
-          status: 5
-        }
-      ]
-      return { items, total: items.length }
+    sendToTaxAuthority(item) {
+      this.$bvModal.show('send-to-tax-authority-modal')
+      this.$nextTick(() => {
+        this.$refs.sendToTaxAuthorityModal.setItem(item)
+      })
+    },
+    downloadXml(item) {
+      try {
+        const base = axios.defaults.baseURL || ''
+        const url = `${base}/register-invoices/${item.id}/download-xml`
+        // Use fetch to get XML and download with a filename
+        fetch(url, {
+          headers: {
+            'Accept': 'application/xml',
+            'Authorization': (axios.defaults.headers?.Authorization) || ''
+          },
+          credentials: 'include'
+        }).then(async (res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          const text = await res.text()
+          const blob = new Blob([text], { type: 'application/xml;charset=utf-8' })
+          const link = document.createElement('a')
+          const fnCompany = (item.company_name || item.companyName || 'to-khai').replace(/[^a-zA-Z0-9-_]+/g, '_')
+          const fnDate = (item.declaration_date || item.declarationDate || '').toString().slice(0, 10)
+          const filename = `to-khai-hddt_${fnCompany}_${fnDate || 'unknown'}.xml`
+          link.href = URL.createObjectURL(blob)
+          link.download = filename
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(link.href)
+        }).catch(() => {
+          // Fallback: open in new tab
+          window.open(url, '_blank')
+        })
+      } catch {
+        const base = axios.defaults.baseURL || ''
+        const url = `${base}/register-invoices/${item.id}/download-xml`
+        window.open(url, '_blank')
+      }
+    },
+    reload() {
+      this.fetchList()
     }
   }
 }
 </script>
 
 <style scoped>
-.register-invoices .role-pill { font-size: 12px; }
+.register-invoices {
+  max-width: 1200px;
+  margin: 0 auto;
+}
 </style>
