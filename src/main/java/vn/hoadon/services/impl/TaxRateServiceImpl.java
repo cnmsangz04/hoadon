@@ -2,7 +2,7 @@ package vn.hoadon.services.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import vn.hoadon.entity.TaxRate;
+import vn.hoadon.entity.TaxRateEntity;
 import vn.hoadon.repositories.TaxRateRepository;
 import vn.hoadon.services.TaxRateService;
 
@@ -15,23 +15,23 @@ public class TaxRateServiceImpl implements TaxRateService {
     private TaxRateRepository taxRateRepository;
 
     @Override
-    public TaxRate create(TaxRate taxRate) {
+    public TaxRateEntity create(TaxRateEntity taxRate) {
         return taxRateRepository.save(taxRate);
     }
 
     @Override
-    public List<TaxRate> findAll() {
+    public List<TaxRateEntity> findAll() {
         return taxRateRepository.findAll();
     }
 
     @Override
-    public TaxRate findById(Integer id) {
+    public TaxRateEntity findById(Integer id) {
         return taxRateRepository.findById(id).orElse(null);
     }
 
     @Override
-    public TaxRate update(Integer id, TaxRate taxRate) {
-        TaxRate existing = taxRateRepository.findById(id).orElse(null);
+    public TaxRateEntity update(Integer id, TaxRateEntity taxRate) {
+        TaxRateEntity existing = taxRateRepository.findById(id).orElse(null);
         if (existing == null) {
             return null;
         }

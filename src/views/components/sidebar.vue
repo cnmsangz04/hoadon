@@ -68,7 +68,7 @@ export default {
           title: 'Đăng ký phát hành',
           icon: 'far fa-edit',
           children: [
-            { title: 'Đăng ký/Thay đổi HĐ điện tử', to: '/register/invoice' },
+            { title: 'Tờ khai hóa đơn điện tử', to: '/register/invoice/list' },
             { title: 'Mẫu hóa đơn', to: '/register/form-invoice' },
           ],
         },
