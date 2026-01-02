@@ -113,14 +113,6 @@
           <span v-else>{{ summarizeInvoiceForms(item.invoice_forms) }}</span>
         </template>
 
-        <template #cell(response_receive_file)="{ item }">
-          <span>{{ item.response_receive_file || '—' }}</span>
-        </template>
-
-        <template #cell(response_accept_file)="{ item }">
-          <span>{{ item.response_accept_file || '—' }}</span>
-        </template>
-
         <template #cell(status)="{ item }">
           <b-badge :variant="statusVariant(item.status)">{{ statusText(item.status) }}</b-badge>
         </template>
@@ -131,9 +123,13 @@
               <i class="fas fa-ellipsis-h"></i>
             </template>
             <b-dropdown-item class="text-center" href="#" @click.prevent="openEdit(item)">Cập nhật</b-dropdown-item>
-            <b-dropdown-item class="text-center" href="#" @click.prevent="sendToTaxAuthority(item)">Gửi CQT</b-dropdown-item>
             <b-dropdown-item class="text-center" href="#" @click.prevent="downloadXml(item)">Download XML</b-dropdown-item>
-            <b-dropdown-item class="text-center" href="#" @click.prevent="openHistory(item)">Lịch sử truyền nhận</b-dropdown-item>
+            <!-- Chỉ hiển thị Ký số nếu status = 0 -->
+            <b-dropdown-item v-if="Number(item.status) === 0" class="text-center" href="#" @click.prevent="onSignature(item)">Ký số</b-dropdown-item>
+            <!-- Chỉ hiển thị Gửi CQT nếu status = 1 -->
+            <b-dropdown-item v-if="Number(item.status) === 1" class="text-center" href="#" @click.prevent="sendToTaxAuthority(item)">Gửi CQT</b-dropdown-item>
+            <!-- Chỉ hiển thị Xóa nếu status = 0 -->
+            <b-dropdown-item v-if="Number(item.status) === 0" class="text-center text-danger" href="#" @click.prevent="deleteItem(item)">Xóa tờ khai</b-dropdown-item>
           </b-dropdown>
         </template>
       </b-table>
@@ -217,8 +213,6 @@ export default {
         { key: 'declaration_date', label: 'Ngày lập', thStyle: { width: '130px' } },
         { key: 'declaration_type', label: 'Hình thức tờ khai', thStyle: { width: '140px' } },
         { key: 'invoice_forms', label: 'Hình thức hóa đơn' },
-        { key: 'response_receive_file', label: 'Thông báo tiếp nhận', thStyle: { width: '200px' } },
-        { key: 'response_accept_file', label: 'Thông báo chấp nhận', thStyle: { width: '200px' } },
         { key: 'status', label: 'Trạng thái', thStyle: { width: '120px' } },
         { key: 'option', label: 'Chức năng', thStyle: { width: '140px' } }
       ],
@@ -272,24 +266,25 @@ export default {
     statusText(s) {
       const m = {
         0: 'Khởi tạo',
-        1: 'Đã tạo XML',
-        2: 'Đã ký',
-        3: 'Đã gửi',
+        1: 'Đã ký',
+        2: 'Đã gửi',
+		3: 'Không tiếp nhận',
         4: 'Đã tiếp nhận',
-        5: 'Đã chấp nhận',
-        6: 'Từ chối / Lỗi'
+		5: 'Không chấp nhận',
+        6: 'Đã chấp nhận',
+        7: 'Từ chối / Lỗi'
       }
       return m[Number(s)] || '—'
     },
     statusVariant(s) {
       const n = Number(s)
-      if (n === 5) return 'success'
-      if (n === 6) return 'danger'
-      if (n === 4) return 'primary'
-      if (n === 3) return 'info'
-      if (n === 2) return 'warning'
-      if (n === 1) return 'light'
-      return 'secondary'
+      if (n === 6) return 'success' // Đã chấp nhận
+      if (n === 5 || n === 7) return 'danger' // Không chấp nhận / Từ chối
+      if (n === 4) return 'primary' // Đã tiếp nhận
+      if (n === 3) return 'info' // Không tiếp nhận
+      if (n === 2) return 'warning' // Đã gửi
+      if (n === 1) return 'light' // Đã ký
+      return 'secondary' // Khởi tạo hoặc khác
     },
     mapItem(raw) {
       // Convert camelCase keys from backend into snake_case expected by the table
@@ -428,12 +423,6 @@ export default {
     openHistory(item) {
       this.$router.push({ name: 'register-invoice-history', params: { id: item.id } })
     },
-    sendToTaxAuthority(item) {
-      this.$bvModal.show('send-to-tax-authority-modal')
-      this.$nextTick(() => {
-        this.$refs.sendToTaxAuthorityModal.setItem(item)
-      })
-    },
     downloadXml(item) {
       try {
         const base = axios.defaults.baseURL || ''
@@ -468,6 +457,178 @@ export default {
         const url = `${base}/register-invoices/${item.id}/download-xml`
         window.open(url, '_blank')
       }
+    },
+    async updateStatus(id, status) {
+      try {
+        await axios.put(`/register-invoices/${id}/get`, { status })
+      } catch (e) {
+        // ignore; global error handler will show toast
+      }
+    },
+    async deleteItem(item) {
+      try {
+        const ok = await this.$bvModal.msgBoxConfirm(
+          `Bạn có chắc muốn đặt trạng thái tờ khai #${item.id} về Khởi tạo?`,
+          {
+            title: 'Xác nhận',
+            size: 'sm',
+            buttonSize: 'sm',
+            okVariant: 'danger',
+            okTitle: 'Xác nhận',
+            cancelTitle: 'Hủy',
+            footerClass: 'p-2',
+            hideHeaderClose: false
+          }
+        )
+        if (!ok) return
+        const id = item.id || item.ID || item.Id
+        await this.updateStatus(id, 0)
+        await this.refreshRow(id)
+      } catch (e) {
+        // handled globally
+      }
+    },
+    async onSignature(item) {
+      try {
+        const id = item.id || item.ID || item.Id
+        if (!id) return
+        let ok = true
+        if (typeof window.$?.confirm === 'function') {
+          ok = await new Promise(resolve => {
+            window.$.confirm({
+              title: 'Xác nhận ký số',
+              content: `Bạn có chắc chắn muốn ký số tờ khai #${id}?`,
+              theme: 'bootstrap',
+              type: 'blue',
+              icon: 'fas fa-signature',
+              animation: 'zoom',
+              closeAnimation: 'scale',
+              boxWidth: '420px',
+              useBootstrap: true,
+              backgroundDismiss: true,
+              escapeKey: 'cancel',
+              buttons: {
+                cancel: { text: 'Hủy', btnClass: 'btn-light', action: function(){ resolve(false) } },
+                ok: { text: 'Đồng ý', btnClass: 'btn-primary', action: function(){ resolve(true) } }
+              }
+            })
+          })
+        } else {
+          ok = window.confirm(`Xác nhận ký số tờ khai #${id}?`)
+        }
+        if (!ok) return
+        const { data } = await axios.post(`/register-invoices/${id}/sign`, null, { successMessage: 'Đã ký số tờ khai thành công' })
+        // Update the row item with returned fields
+        const signatureName = data?.signatureInfo || data?.signature_info || null
+        const signDate = data?.signDate || data?.sign_date || new Date().toISOString()
+        const signedXml = data?.signedXml || data?.signed_xml || null
+        const updated = {
+          ...item,
+          signatureInfo: signatureName,
+          signature_info: signatureName,
+          signDate: signDate,
+          sign_date: signDate,
+          signedXml: signedXml,
+          signed_xml: signedXml,
+          status: 0 // per requirement: Ký -> status = 0
+        }
+        const idx = this.list.data.findIndex(x => (x.id||x.ID||x.Id) === id)
+        if (idx >= 0) this.$set(this.list.data, idx, updated)
+        // Persist status change
+        await this.updateStatus(id, 0)
+      } catch (e) {
+        // ignore
+      }
+    },
+    async sendToTaxAuthority(item) {
+      try {
+        const id = item.id || item.ID || item.Id
+        if (!id) return
+        let ok = true
+        if (typeof window.$?.confirm === 'function') {
+          ok = await new Promise(resolve => {
+            window.$.confirm({
+              title: 'Xác nhận gửi tờ khai',
+              content: 'Xác nhận gửi tờ khai lên Cơ quan thuế',
+              theme: 'bootstrap',
+              type: 'blue',
+              icon: 'fas fa-paper-plane',
+              animation: 'zoom',
+              closeAnimation: 'scale',
+              boxWidth: '420px',
+              useBootstrap: true,
+              backgroundDismiss: true,
+              escapeKey: 'cancel',
+              buttons: {
+                cancel: { text: 'Hủy', btnClass: 'btn-light', action: function(){ resolve(false) } },
+                ok: { text: 'Gửi', btnClass: 'btn-primary', action: function(){ resolve(true) } }
+              }
+            })
+          })
+        } else {
+          ok = window.confirm('Xác nhận gửi tờ khai lên Cơ quan thuế?')
+        }
+        if (!ok) return
+        this.isBusy = true
+        await axios.post(`/register-invoices/${id}/send`, null, { successMessage: 'Đã gửi tờ khai lên Cơ quan thuế' })
+        // Align with create.vue: do not force a local status update; refresh row from backend
+        await this.refreshRow(id)
+        // Start polling for async tax responses with user notifications
+        this.pollTaxStatusForRow(id)
+      } catch (e) {
+        // Error toast handled globally by axios plugin
+      } finally {
+        this.isBusy = false
+      }
+    },
+    async refreshRow(id) {
+      try {
+        const { data } = await axios.get(`/register-invoices/${id}`)
+        // Map camelCase to snake_case for the table
+        const mapped = this.mapItem(data)
+        const idx = this.list.data.findIndex(x => (x.id||x.ID||x.Id) === id)
+        if (idx >= 0) this.$set(this.list.data, idx, { ...this.list.data[idx], ...mapped })
+      } catch (e) {
+        // ignore refresh errors
+      }
+    },
+    pollTaxStatusForRow(id) {
+      let tries = 0
+      let notifiedReceive = false
+      let notifiedAccept = false
+      const timer = setInterval(async () => {
+        try {
+          tries++
+          const { data } = await axios.get(`/register-invoices/${id}`)
+          const status = Number(data?.status)
+          // Notify receive stage (102)
+          if (!notifiedReceive && (status === 3 || status === 4)) {
+            notifiedReceive = true
+            if (status === 4) {
+              this.$bvToast && this.$bvToast.toast('Cơ quan thuế đã tiếp nhận tờ khai', { title: 'Thông báo', variant: 'success', solid: true, autoHideDelay: 4000 })
+            } else {
+              this.$bvToast && this.$bvToast.toast('Cơ quan thuế không tiếp nhận tờ khai', { title: 'Thông báo', variant: 'warning', solid: true, autoHideDelay: 4000 })
+            }
+          }
+          // Notify accept stage (103)
+          if (!notifiedAccept && (status === 5 || status === 6)) {
+            notifiedAccept = true
+            if (status === 6) {
+              this.$bvToast && this.$bvToast.toast('Cơ quan thuế đã chấp nhận tờ khai', { title: 'Thông báo', variant: 'success', solid: true, autoHideDelay: 4000 })
+            } else {
+              this.$bvToast && this.$bvToast.toast('Cơ quan thuế không chấp nhận tờ khai', { title: 'Thông báo', variant: 'danger', solid: true, autoHideDelay: 4000 })
+            }
+          }
+          // Update row in list with latest data
+          this.refreshRow(id)
+          // Stop when done or timeout
+          if ((notifiedReceive && notifiedAccept) || tries >= 10) {
+            clearInterval(timer)
+          }
+        } catch (err) {
+          if (tries >= 10) clearInterval(timer)
+        }
+      }, 2000)
     },
     reload() {
       this.fetchList()

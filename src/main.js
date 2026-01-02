@@ -17,6 +17,12 @@ import 'vue-advanced-cropper/dist/style.css'
 
 import i18n from './i18n'
 
+import $ from 'jquery'
+import 'jquery-confirm/dist/jquery-confirm.min.css'
+import 'jquery-confirm/dist/jquery-confirm.min.js'
+
+window.$ = window.jQuery = $
+
 Vue.prototype.$toastr = toastr
 
 toastr.options = {

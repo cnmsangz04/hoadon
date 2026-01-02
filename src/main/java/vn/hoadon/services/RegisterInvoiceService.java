@@ -24,4 +24,6 @@ public interface RegisterInvoiceService {
     String buildUnsignedXml(RegisterInvoiceEntity entity);
     /** Get XML for download: if status == 0, return unsigned; else return signed_xml */
     Optional<String> getXmlForDownload(Long id);
+    /** Delete a register invoice by id */
+    void delete(Long id);
 }

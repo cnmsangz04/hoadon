@@ -90,6 +90,9 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
             existing.setSignedXml(signedXml);
             existing.setSignatureInfo(signatureInfo);
             existing.setSignDate(java.time.LocalDateTime.now());
+            // Update status to 1 (signed) as required by spec
+            existing.setStatus(1);
+            existing.setUpdatedAt(java.time.LocalDateTime.now());
             return repository.save(existing);
         });
     }
@@ -198,11 +201,18 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
     @Override
     public Optional<String> getXmlForDownload(Long id) {
         return repository.findById(id).map(e -> {
-            if (e.getStatus() != null && e.getStatus() > 0) {
-                return e.getSignedXml();
+            String signed = e.getSignedXml();
+            if (signed != null && !signed.isBlank()) {
+                return signed;
             }
-            // status == 0 => unsigned built from legal/company info
+            // Fallback: build unsigned XML from legal/company info
             return buildUnsignedXml(e);
         });
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void delete(Long id) {
+        repository.deleteById(id);
     }
 }

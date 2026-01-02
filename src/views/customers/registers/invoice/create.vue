@@ -256,9 +256,6 @@
               placeholder="Chọn nơi lập"
               append-to-body />
           </b-form-group>
-          <b-form-group label="Ngày có hiệu lực" label-class="font-weight-bold">
-            <b-form-datepicker v-model="frmData.effective_date" :date-format-options="dateFmt" locale="vi" />
-          </b-form-group>
         </b-col>
         <b-col cols="12" md="6" class="text-center">
           <p>{{ selectedPlaceName }}, ngày {{ formatDate(new Date()) }}</p>
@@ -290,14 +287,19 @@
             </b-button>
           </div>
           <div>
-            <b-button v-if="!btnLoading" size="sm" variant="primary" class="btn-save" @click="onSubmit">
-              <i class="fas fa-save"></i> {{ frmData.action === 'create' ? 'Lưu' : 'Cập nhật' }}
+            <!-- Chỉ hiển thị Cập nhật nếu status = 0 -->
+            <b-button v-if="!btnLoading && frmData.action === 'update' && Number(frmData.status) === 0" size="sm" variant="primary" class="btn-save" @click="onSubmit">
+              <i class="fas fa-save"></i> Cập nhật
             </b-button>
-            <b-button v-else size="sm" class="btn btn-default" disabled>
+            <b-button v-else-if="btnLoading" size="sm" class="btn btn-default" disabled>
               <b-spinner small type="grow"></b-spinner>
               Đang lưu...
             </b-button>
-            <b-button type="button" size="sm" class="ml-2" @click="sendData" v-if="frmData.action === 'update' && frmData.signed_xml">Gửi CQT</b-button>
+            <!-- Chỉ hiển thị Gửi CQT nếu status = 1 -->
+            <b-button type="button" size="sm" class="ml-2" @click="sendData" v-if="frmData.action === 'update' && Number(frmData.status) === 1">Gửi CQT</b-button>
+            <b-button type="button" size="sm" class="ml-2" variant="outline-info" @click="openHistory" v-if="frmData.action === 'update'">
+              <i class="fas fa-history"></i> Lịch sử truyền nhận
+            </b-button>
           </div>
         </div>
       </div>
@@ -390,7 +392,6 @@ export default {
         declaration_date: isoToday,
         tax_authority_name: '',
         tax_authority_code: '',
-        // contact_* removed from payload usage; display comes from legalRep/company
         invoice_forms: [],
         send_methods_a: [],
         send_methods_b: [],
@@ -398,10 +399,10 @@ export default {
         invoice_types: [],
         digital_certificates: [],
         create_place: '',
-        effective_date: isoToday,
         signature: null,
         signed_xml: null,
-        date_sign: null
+        date_sign: null,
+        status: 0
       },
       signatureModal: {
         index: false,
@@ -471,6 +472,16 @@ export default {
     // C has no children; keep as-is, but ensure boolean
     sendToggleC(val) {
       this.sendToggleC = !!val
+    },
+    // React to route param changes (create -> edit or vice versa) without full reload
+    '$route.params.id'(id, oldId) {
+      if (id && id !== oldId) {
+        this.frmData.action = 'update'
+        this.loadDetail(id)
+      } else if (!id) {
+        this.frmData.action = 'create'
+        this.loadPrefill()
+      }
     }
   },
   methods: {
@@ -624,10 +635,11 @@ export default {
         if (typeof sendMethodsRaw === 'object') return sendMethodsRaw
         return { a: [], b: [], c: [] }
       })()
-
       const createPlaceRaw = val(data, ['create_place','createPlace'], '')
       const createPlaceNum = createPlaceRaw === '' || createPlaceRaw == null ? '' : Number(createPlaceRaw)
-
+      const sigInfo = val(data, ['signature','signatureInfo','signature_info'], null)
+      const signatureObj = (sigInfo && typeof sigInfo === 'object' && sigInfo.name) ? sigInfo : (sigInfo ? { name: String(sigInfo) } : null)
+      const dateSign = val(data, ['date_sign','dateSign','signatureDate','signDate','sign_date'], null)
       this.frmData = {
         ...this.frmData,
         action: 'update',
@@ -636,7 +648,6 @@ export default {
         declaration_date: val(data, ['declaration_date','declarationDate'], this.frmData.declaration_date),
         tax_authority_name: val(data, ['tax_authority_name','taxAuthorityName'], ''),
         tax_authority_code: val(data, ['tax_authority_code','taxAuthorityCode'], ''),
-        // contact_* intentionally not mapped; UI shows from legalRep/company
         invoice_forms: this.normalizeInvoiceForms(val(data, ['invoice_forms','invoiceForms'], [])),
         send_methods_a: this.normalizeArray(val(sendParsed, ['a'], [])),
         send_methods_b: this.normalizeArray(val(sendParsed, ['b'], [])),
@@ -644,10 +655,10 @@ export default {
         invoice_types: this.normalizeInvoiceTypes(val(data, ['invoice_types','invoiceTypes'], [])),
         digital_certificates: this.normalizeDigitalCertificates(val(data, ['digital_certificates','digitalCertificates'], [])),
         create_place: createPlaceNum,
-        effective_date: val(data, ['effective_date','effectiveDate'], this.frmData.effective_date),
-        signature: val(data, ['signature','signatureInfo'], null),
+        signature: signatureObj,
         signed_xml: val(data, ['signed_xml','signedXml'], null),
-        date_sign: val(data, ['date_sign','dateSign','signatureDate'], null)
+        date_sign: dateSign,
+        status: Number(val(data, ['status'], this.frmData.status)) || 0
       }
       this.sendToggleC = Array.isArray(sendParsed.c) && sendParsed.c.length > 0
     },
@@ -679,7 +690,6 @@ export default {
         formPattern: this.frmData.form_pattern,
         declarationDate: this.frmData.declaration_date,
         createPlace: this.frmData.create_place,
-        effectiveDate: this.frmData.effective_date,
         invoiceForms: this.frmData.invoice_forms,
         invoiceTypes: this.frmData.invoice_types,
         sendMethods: { a: this.frmData.send_methods_a, b: this.frmData.send_methods_b, c: this.sendToggleC ? ['CQT'] : [] },
@@ -689,9 +699,83 @@ export default {
         transmitProviders: null
       }
     },
-    sendData() {
+    async sendData() {
       if (!this.$route?.params?.id) return
-      return axios.post(`/register-invoices/${this.$route.params.id}/send`)
+      const id = this.$route.params.id
+      try {
+        let ok = true
+        if (typeof window.$?.confirm === 'function') {
+          ok = await new Promise(resolve => {
+            window.$.confirm({
+              title: 'Xác nhận gửi tờ khai',
+              content: 'Xác nhận gửi tờ khai lên Cơ quan thuế',
+              theme: 'bootstrap',
+              type: 'blue',
+              icon: 'fas fa-paper-plane',
+              animation: 'zoom',
+              closeAnimation: 'scale',
+              boxWidth: '420px',
+              useBootstrap: true,
+              backgroundDismiss: true,
+              escapeKey: 'cancel',
+              buttons: {
+                cancel: { text: 'Hủy', btnClass: 'btn-light', action: function(){ resolve(false) } },
+                ok: { text: 'Gửi', btnClass: 'btn-primary', action: function(){ resolve(true) } }
+              }
+            })
+          })
+        } else {
+          ok = window.confirm('Xác nhận gửi tờ khai lên Cơ quan thuế?')
+        }
+        if (!ok) return
+        this.btnLoading = true
+        await axios.post(`/register-invoices/${id}/send`, null, { successMessage: 'Đã gửi tờ khai lên Cơ quan thuế' })
+        // Refresh detail and start polling for async tax responses
+        await this.loadDetail(id)
+        this.pollTaxStatus(id)
+      } catch (e) {
+        // Error toast handled globally by axios plugin
+      } finally {
+        this.btnLoading = false
+      }
+    },
+    pollTaxStatus(id) {
+      let tries = 0
+      let notifiedReceive = false
+      let notifiedAccept = false
+      const timer = setInterval(async () => {
+        try {
+          tries++
+          const { data } = await axios.get(`/register-invoices/${id}`)
+          const status = Number(data?.status)
+          // Receive stage (102)
+          if (!notifiedReceive && (status === 3 || status === 4)) {
+            notifiedReceive = true
+            if (status === 4) {
+              this.$bvToast && this.$bvToast.toast('Cơ quan thuế đã tiếp nhận tờ khai', { title: 'Thông báo', variant: 'success', solid: true, autoHideDelay: 4000 })
+            } else {
+              this.$bvToast && this.$bvToast.toast('Cơ quan thuế không tiếp nhận tờ khai', { title: 'Thông báo', variant: 'warning', solid: true, autoHideDelay: 4000 })
+            }
+          }
+          // Accept stage (103)
+          if (!notifiedAccept && (status === 5 || status === 6)) {
+            notifiedAccept = true
+            if (status === 6) {
+              this.$bvToast && this.$bvToast.toast('Cơ quan thuế đã chấp nhận tờ khai', { title: 'Thông báo', variant: 'success', solid: true, autoHideDelay: 4000 })
+            } else {
+              this.$bvToast && this.$bvToast.toast('Cơ quan thuế không chấp nhận tờ khai', { title: 'Thông báo', variant: 'danger', solid: true, autoHideDelay: 4000 })
+            }
+          }
+          // Update UI detail
+          this.applyDetail(data)
+          // Stop when both notifications done or timeout
+          if ((notifiedReceive && notifiedAccept) || tries >= 10) {
+            clearInterval(timer)
+          }
+        } catch (err) {
+          if (tries >= 10) clearInterval(timer)
+        }
+      }, 2000)
     },
     goBack() {
       // Prefer router navigation; fallback to browser history
@@ -701,9 +785,57 @@ export default {
         window.history.back()
       }
     },
-    onSignature() {
-      this.btnSignature = true
-      setTimeout(() => { this.btnSignature = false; this.frmData.signature = { name: 'Demo Signer' }; this.frmData.date_sign = new Date().toISOString(); this.frmData.signed_xml = '<XML />' }, 1200)
+    async onSignature() {
+      try {
+        const id = this.$route?.params?.id
+        if (!id) return
+        let ok = true
+        if (typeof window.$?.confirm === 'function') {
+          const vm = this
+          ok = await new Promise(resolve => {
+            window.$.confirm({
+              title: 'Xác nhận ký số',
+              content: `Thông tin chữ ký và ngày ký sẽ được cập nhật lại. Bạn vẫn muốn tiếp tục ký tờ khai #${id}?`,
+              // Visual improvements
+              theme: 'bootstrap',
+              type: 'blue',
+              icon: 'fas fa-signature',
+              animation: 'zoom',
+              closeAnimation: 'scale',
+              animateFromElement: false,
+              boxWidth: '420px',
+              useBootstrap: true,
+              // Layout tweaks
+              columnClass: 'col-md-6 offset-md-3',
+              backgroundDismiss: true,
+              escapeKey: 'cancel',
+              buttons: {
+                cancel: {
+                  text: 'Hủy',
+                  btnClass: 'btn-light',
+                  action: function () { resolve(false) }
+                },
+                ok: {
+                  text: 'Đồng ý',
+                  btnClass: 'btn-primary',
+                  action: function () { resolve(true) }
+                }
+              }
+            })
+          })
+        } else {
+          ok = window.confirm(`Xác nhận ký số tờ khai #${id}?`)
+        }
+        if (!ok) return
+        this.btnSignature = true
+        const { data } = await axios.post(`/register-invoices/${id}/sign`, null, { successMessage: 'Đã ký số tờ khai thành công' })
+        this.frmData.signed_xml = data?.signedXml || data?.signed_xml || this.frmData.signed_xml
+        this.frmData.date_sign = data?.signDate || data?.sign_date || new Date().toISOString()
+        this.frmData.signature = data?.signatureInfo ? { name: data.signatureInfo } : (data?.signature_info ? { name: data.signature_info } : this.frmData.signature)
+      } catch (e) {
+      } finally {
+        this.btnSignature = false
+      }
     },
     showSignatureModal(index) {
       if (index !== false && index != null) {
@@ -749,6 +881,11 @@ export default {
     mockDetail(id) {
       // no longer used; data comes from backend
       return { id }
+    },
+    openHistory() {
+      const id = this.$route?.params?.id
+      if (!id) return
+      this.$router.push({ name: 'register-invoice-history', params: { id } })
     }
   }
 }

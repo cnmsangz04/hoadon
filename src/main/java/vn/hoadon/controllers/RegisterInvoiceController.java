@@ -3,6 +3,7 @@ package vn.hoadon.controllers;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,9 +15,12 @@ import vn.hoadon.entity.RegisterInvoiceEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.services.RegisterInvoiceService;
+import vn.hoadon.services.HistoryService;
+import vn.hoadon.dto.history.HistoryDto;
 
 import java.net.URI;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,16 +30,31 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 @RestController
 @RequestMapping("/v1/register-invoices")
 public class RegisterInvoiceController extends BaseController {
     private final RegisterInvoiceService service;
     private final CompanyRepository companyRepository;
+    // Replace repository with service per 3-layer architecture
+    private HistoryService historyService;
     private final ObjectMapper mapper = new ObjectMapper();
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public RegisterInvoiceController(RegisterInvoiceService service, CompanyRepository companyRepository) {
         this.service = service;
         this.companyRepository = companyRepository;
+    }
+
+    // Overloaded constructor with HistoryService
+    public RegisterInvoiceController(RegisterInvoiceService service, CompanyRepository companyRepository, HistoryService historyService) {
+        this.service = service;
+        this.companyRepository = companyRepository;
+        this.historyService = historyService;
     }
 
     @GetMapping("/{id}")
@@ -127,7 +146,8 @@ public class RegisterInvoiceController extends BaseController {
         entity.setFormPattern(req.getFormPattern() != null ? req.getFormPattern() : "01/ĐKTĐ-HĐĐT");
         entity.setDeclarationDate(parseDate(req.getDeclarationDate(), LocalDate.now()));
         entity.setCreatePlace(req.getCreatePlace());
-        entity.setEffectiveDate(parseDate(req.getEffectiveDate(), LocalDate.now()));
+        // Stop using effectiveDate from request; leave null initially
+        entity.setEffectiveDate(null);
         // JSON fields
         entity.setInvoiceForms(toJson(req.getInvoiceForms()));
         entity.setInvoiceTypes(toJson(req.getInvoiceTypes()));
@@ -164,7 +184,8 @@ public class RegisterInvoiceController extends BaseController {
         patch.setDeclarationDate(parseDate(req.getDeclarationDate(), existing.getDeclarationDate()));
         // company_name, tax_code derived; ignore request values
         patch.setCreatePlace(req.getCreatePlace() != null ? req.getCreatePlace() : existing.getCreatePlace());
-        patch.setEffectiveDate(parseDate(req.getEffectiveDate(), existing.getEffectiveDate()));
+        // Ignore effectiveDate from request; preserve existing until status logic sets it
+        patch.setEffectiveDate(existing.getEffectiveDate());
         patch.setInvoiceForms(req.getInvoiceForms() != null ? toJson(req.getInvoiceForms()) : existing.getInvoiceForms());
         patch.setInvoiceTypes(req.getInvoiceTypes() != null ? toJson(req.getInvoiceTypes()) : existing.getInvoiceTypes());
         patch.setTransferMethods(req.getTransferMethods() != null ? toJson(req.getTransferMethods()) : existing.getTransferMethods());
@@ -181,7 +202,152 @@ public class RegisterInvoiceController extends BaseController {
 
     @PostMapping("/{id}/send")
     public ResponseEntity<Void> sendToCQT(@PathVariable Long id) {
+        UserEntity user = currentUser();
+        if (user == null) return ResponseEntity.status(403).build();
+        Optional<RegisterInvoiceEntity> opt = service.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        RegisterInvoiceEntity entity = opt.get();
+        // permission: non-root must match company
+        Integer role = user.getRole();
+        boolean isRoot = role != null && role == 0;
+        if (!isRoot) {
+            if (user.getCompanyId() == null || !user.getCompanyId().equals(entity.getCompanyId())) {
+                return ResponseEntity.status(403).build();
+            }
+        }
+        // Must be signed before sending
+        if (entity.getSignedXml() == null || entity.getSignedXml().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        // 1) Insert history row
+        insertHistoryRow(user.getCompanyId(), user.getId(), "register_invoices", entity.getId(),
+                "Gửi Đăng ký/Thay đổi thông tin sử dụng hóa đơn điện tử", "Mã thông điệp 100", 1, 1, 100, "");
+        // 2) Update status to 2 (Đã ký) per requirement on send success
+        // Preserve all existing fields to avoid accidental data loss if update is a full overwrite
+        RegisterInvoiceEntity patch = cloneEntityPreserveAll(entity);
+        // Mutating fields only
+        patch.setStatus(2);
+        patch.setResponseReceiveFile(null);
+        patch.setResponseAcceptFile(null);
+        service.update(id, patch);
+        // 3) Simulate async tax responses
+        simulateAsyncTaxResponses(entity);
         return ResponseEntity.accepted().build();
+    }
+
+    // Helper: JPA-based history save replacing raw SQL
+    private void insertHistoryRow(Long companyId, Long userId, String tableName, Long tableId,
+                                  String title, String description, Integer showNotify, Integer status,
+                                  Integer type, String xmlData) {
+        try {
+            if (historyService == null) return;
+            HistoryDto dto = new HistoryDto();
+            dto.setCompanyId(companyId);
+            dto.setUserId(userId);
+            dto.setTableName(tableName);
+            dto.setTableId(tableId);
+            dto.setTitle(title);
+            dto.setDescription(description);
+            dto.setShowNotify(showNotify);
+            dto.setStatus(status);
+            dto.setType(type);
+            dto.setXmlData(xmlData);
+            historyService.save(dto);
+        } catch (Exception ignored) {
+        }
+    }
+
+    // Helper: clone an entity and preserve all fields, used for safe overwrites
+    private RegisterInvoiceEntity cloneEntityPreserveAll(RegisterInvoiceEntity src) {
+        if (src == null) return new RegisterInvoiceEntity();
+        RegisterInvoiceEntity e = new RegisterInvoiceEntity();
+        // Identity and required fields
+        e.setCompanyId(src.getCompanyId());
+        e.setUserId(src.getUserId());
+        e.setDeclarationCode(src.getDeclarationCode());
+        e.setDeclarationType(src.getDeclarationType());
+        e.setFormPattern(src.getFormPattern());
+        e.setDeclarationDate(src.getDeclarationDate());
+        e.setCreatePlace(src.getCreatePlace());
+        e.setEffectiveDate(src.getEffectiveDate());
+        // JSON/text fields
+        e.setInvoiceForms(src.getInvoiceForms());
+        e.setInvoiceTypes(src.getInvoiceTypes());
+        e.setTransferMethods(src.getTransferMethods());
+        e.setSendMethods(src.getSendMethods());
+        e.setDigitalCertificates(src.getDigitalCertificates());
+        e.setSolutionProviders(src.getSolutionProviders());
+        e.setTransmitProviders(src.getTransmitProviders());
+        // Signing and responses
+        e.setSignedXml(src.getSignedXml());
+        e.setSignatureInfo(src.getSignatureInfo());
+        // Preserve signature date
+        try { e.setSignDate(src.getSignDate()); } catch (NoSuchMethodError | Exception ignored) {}
+        e.setResponseReceiveFile(src.getResponseReceiveFile());
+        e.setResponseAcceptFile(src.getResponseAcceptFile());
+        // Status and any other fields
+        e.setStatus(src.getStatus());
+        return e;
+    }
+
+    private void simulateAsyncTaxResponses(RegisterInvoiceEntity entity) {
+        // Clone basic info needed
+        final Long id = entity.getId();
+        final Long companyId = entity.getCompanyId();
+        // Simulate 102 after ~2 seconds
+        new Thread(() -> {
+            try { Thread.sleep(2000L); } catch (InterruptedException ignored) {}
+            boolean acceptedReceive = decideByCompany(companyId);
+            String xml = buildResponseXml(102, acceptedReceive ? 1 : 0);
+            RegisterInvoiceEntity patch = cloneEntityPreserveAll(entity);
+            patch.setStatus(acceptedReceive ? 4 : 3);
+            patch.setResponseReceiveFile(xml);
+            service.update(id, patch);
+            // Insert history row for message 102
+            String desc102 = acceptedReceive ? "Mã thông điệp 102 đã tiếp nhận" : "Mã thông điệp 102 không tiếp nhận";
+            insertHistoryRow(companyId, 0L, "register_invoices", id,
+                    "Thông điệp 102 tiếp nhận thông tin tờ khai hóa đơn điện tử", desc102, 1, 1, 102, xml);
+        }).start();
+        // Simulate 103 after ~5 seconds
+        new Thread(() -> {
+            try { Thread.sleep(5000L); } catch (InterruptedException ignored) {}
+            boolean accepted = decideByCompany(companyId);
+            String xml = buildResponseXml(103, accepted ? 1 : 0);
+            RegisterInvoiceEntity patch = cloneEntityPreserveAll(entity);
+            patch.setStatus(accepted ? 6 : 5);
+            patch.setResponseAcceptFile(xml);
+            // When status = 6 (accepted), set effectiveDate to current time
+            if (accepted) {
+                try { patch.setEffectiveDate(java.time.LocalDate.now()); } catch (Exception ignored) {}
+            }
+            service.update(id, patch);
+            // Insert history row for message 103
+            String desc103 = accepted ? "Mã thông điệp 103 đã chấp nhận" : "Mã thông điệp 103 không chấp nhận";
+            insertHistoryRow(companyId, 0L, "register_invoices", id,
+                    "Thông điệp 103 tiếp nhận thông tin tờ khai hóa đơn điện tử", desc103, 1, 1, 103, xml);
+        }).start();
+    }
+
+    private boolean decideByCompany(Long companyId) {
+        if (companyId == null) return true;
+        // simple deterministic pseudo-random decision based on companyId
+        return Math.abs(Objects.hash(companyId)) % 2 == 0;
+    }
+
+    private String buildResponseXml(int mltDiep, int flag) {
+        // TTChung->MLTDiep and DLieu->TBao->DLTBao->THop or TTXNCQT per requirement
+        StringBuilder sb = new StringBuilder();
+        sb.append("<TBaoCQT>");
+        sb.append("<TTChung><MLTDiep>").append(mltDiep).append("</MLTDiep></TTChung>");
+        sb.append("<DLieu><TBao><DLTBao>");
+        if (mltDiep == 102) {
+            sb.append("<THop>").append(flag).append("</THop>");
+        } else {
+            sb.append("<TTXNCQT>").append(flag).append("</TTXNCQT>");
+        }
+        sb.append("</DLTBao></TBao></DLieu>");
+        sb.append("</TBaoCQT>");
+        return sb.toString();
     }
 
     @GetMapping("/list")
@@ -205,8 +371,8 @@ public class RegisterInvoiceController extends BaseController {
             companyId = actorCompanyId;
         }
 
-        // Spring pages are 0-based
-        Pageable pageable = PageRequest.of(Math.max(0, page - 1), size);
+        // Spring pages are 0-based; apply default sort desc by createdAt
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<RegisterInvoiceEntity> p;
 
         // If root and no companyId provided, allow global listing
@@ -333,11 +499,9 @@ public class RegisterInvoiceController extends BaseController {
                             java.time.LocalDate d = e.getDeclarationDate();
                             if (d == null) return false;
                             if (from != null && to == null) {
-                                // Single date provided: match exactly that day
                                 return d.equals(from);
                             }
                             if (from == null && to != null) {
-                                // Single date provided: match exactly that day
                                 return d.equals(to);
                             }
                             // Both bounds provided: inclusive range
@@ -492,4 +656,104 @@ public class RegisterInvoiceController extends BaseController {
         Optional<String> xmlOpt = service.getXmlForDownload(id);
         return xmlOpt.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        UserEntity user = currentUser();
+        if (user == null || user.getCompanyId() == null) {
+            return ResponseEntity.status(403).build();
+        }
+        Optional<RegisterInvoiceEntity> opt = service.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        RegisterInvoiceEntity e = opt.get();
+        // Allow delete only within company scope (or root)
+        Integer role = user.getRole();
+        boolean isRoot = role != null && role == 0;
+        if (!isRoot && !user.getCompanyId().equals(e.getCompanyId())) {
+            return ResponseEntity.status(403).build();
+        }
+        service.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/sign")
+    public ResponseEntity<RegisterInvoiceEntity> simulateSign(@PathVariable Long id) {
+        UserEntity user = currentUser();
+        if (user == null) return ResponseEntity.status(403).build();
+        Optional<RegisterInvoiceEntity> opt = service.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        RegisterInvoiceEntity entity = opt.get();
+        Integer role = user.getRole();
+        boolean isRoot = role != null && role == 0;
+        if (!isRoot) {
+            if (user.getCompanyId() == null || !user.getCompanyId().equals(entity.getCompanyId())) {
+                return ResponseEntity.status(403).build();
+            }
+        }
+        Optional<CompanyEntity> companyOpt = companyRepository.findById(entity.getCompanyId());
+        if (companyOpt.isEmpty()) return ResponseEntity.badRequest().build();
+        CompanyEntity company = companyOpt.get();
+        String companyName = company.getName() != null ? company.getName() : "";
+        String taxCode = company.getTaxcode() != null ? company.getTaxcode() : "";
+
+        String unsignedXml = service.buildUnsignedXml(entity);
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        String signedXml = injectSignatureIntoXml(unsignedXml, companyName, taxCode, now);
+
+        // Per requirement: signature_info should display signer company name only
+        String signatureInfo = companyName;
+
+        Optional<RegisterInvoiceEntity> updated = service.attachSignedXml(id, signedXml, signatureInfo);
+        return updated.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    // --- Helpers to inject a simulated signature block into XML ---
+    private String injectSignatureIntoXml(String xml, String companyName, String taxCode, java.time.LocalDateTime signedAt) {
+        if (xml == null) xml = "";
+        String safeCompany = escapeXml(companyName);
+        String safeTax = escapeXml(taxCode);
+        String ts = signedAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+        String sigVal = java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
+        String block = "<Signature>"
+                + tag("SignerName", safeCompany)
+                + tag("SignerTaxCode", safeTax)
+                + tag("SignedAt", ts)
+                + tag("SignatureValue", "SIMULATED-" + sigVal)
+                + "</Signature>";
+
+        // Try to insert into <DSCKS><NNT>...</NNT></DSCKS>
+        String marker = "<DSCKS><NNT>";
+        int idx = xml.indexOf(marker);
+        if (idx >= 0) {
+            int closeIdx = xml.indexOf("</NNT>", idx);
+            if (closeIdx >= 0) {
+                String prefix = xml.substring(0, idx + marker.length());
+                String suffix = xml.substring(closeIdx);
+                return prefix + block + suffix;
+            }
+        }
+        // Fallback: replace empty NNT
+        String emptyNnt = "<NNT></NNT>";
+        if (xml.contains(emptyNnt)) {
+            return xml.replace(emptyNnt, "<NNT>" + block + "</NNT>");
+        }
+        // Last resort: append DSCKS at the end, before </TKhai>
+        int endIdx = xml.lastIndexOf("</TKhai>");
+        String dscks = "<DSCKS><NNT>" + block + "</NNT></DSCKS>";
+        if (endIdx > 0) {
+            return xml.substring(0, endIdx) + dscks + xml.substring(endIdx);
+        }
+        return xml + dscks;
+    }
+
+    private String escapeXml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
+    }
+
+    private String tag(String name, String value) { return "<" + name + ">" + (value == null ? "" : value) + "</" + name + ">"; }
 }
