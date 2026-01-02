@@ -45,6 +45,7 @@
 
             <div class="d-flex justify-content-between mb-3">
               <b-form-checkbox v-model="remember">Ghi nhớ đăng nhập</b-form-checkbox>
+              <b-link :to="{ name: 'auth-forgot-password' }" @click.prevent="$router.push({ name: 'auth-forgot-password' })">Quên mật khẩu?</b-link>
             </div>
 
             <b-button type="submit" block variant="primary"
@@ -77,7 +78,7 @@ export default {
       showPassword: false,
       remember: true,
       loading: false,
-      error: ""
+      error: "",
     };
   },
   methods: {
