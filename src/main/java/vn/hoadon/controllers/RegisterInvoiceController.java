@@ -32,6 +32,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @RestController
 @RequestMapping("/v1/register-invoices")
@@ -39,6 +40,7 @@ public class RegisterInvoiceController extends BaseController {
     private final RegisterInvoiceService service;
     private final CompanyRepository companyRepository;
     // Replace repository with service per 3-layer architecture
+    @Autowired(required = false)
     private HistoryService historyService;
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -48,13 +50,6 @@ public class RegisterInvoiceController extends BaseController {
     public RegisterInvoiceController(RegisterInvoiceService service, CompanyRepository companyRepository) {
         this.service = service;
         this.companyRepository = companyRepository;
-    }
-
-    // Overloaded constructor with HistoryService
-    public RegisterInvoiceController(RegisterInvoiceService service, CompanyRepository companyRepository, HistoryService historyService) {
-        this.service = service;
-        this.companyRepository = companyRepository;
-        this.historyService = historyService;
     }
 
     @GetMapping("/{id}")
