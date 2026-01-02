@@ -79,17 +79,17 @@ public class Auth {
         boolean isRoot = role != null && role == 0;
         boolean isSystemAdmin = role != null && role == 1;
 
-        if (!isRoot) {
-            if (user.getAdminPassword() == null || user.getAdminPassword().isEmpty())
-                return ResponseEntity.status(403).body("No admin password set");
-
-            boolean adminPasswordMatch = passwordEncoder.matches(req.getPassword(), user.getAdminPassword());
-            if (!adminPasswordMatch)
-                return ResponseEntity.status(401).body("Invalid admin credentials");
-        }
-
+        // Must be admin account
         if (!(isRoot || isSystemAdmin))
             return ResponseEntity.status(403).body("Not an admin account");
+
+        // Always require and validate admin password for admin login
+        if (user.getAdminPassword() == null || user.getAdminPassword().isEmpty())
+            return ResponseEntity.status(403).body("No admin password set");
+
+        boolean adminPasswordMatch = passwordEncoder.matches(req.getPassword(), user.getAdminPassword());
+        if (!adminPasswordMatch)
+            return ResponseEntity.status(401).body("Invalid admin credentials");
 
         String token = jwtUtil.generateToken(user);
         return ResponseEntity.ok(new AuthResponse(token, "Bearer", user.getId(), user.getRole()));
