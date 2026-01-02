@@ -72,7 +72,7 @@ export default {
             { title: '', to: '/register/form-invoice' },
           ],
         },
-        { title: 'Mẫu hóa đơn', icon: 'fas fa-file-invoice', to: '/register/form-invoice' },
+        { title: 'Mẫu hóa đơn', icon: 'fas fa-file-invoice', to: '/form-invoice/list' },
         {
           title: 'Hóa đơn',
           icon: 'fas fa-file-invoice',
