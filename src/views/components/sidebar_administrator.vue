@@ -74,7 +74,7 @@ export default {
         { title: 'Mua hóa đơn', icon: 'fas fa-file-invoice-dollar', to: '/administrator/buy-invoice/list' },
         { title: 'Ngân hàng', icon: 'fas fa-piggy-bank', to: '/administrator/bank/list' },
         { title: 'Cơ quan thuế', icon: 'fas fa-landmark', to: '/administrator/tax-authority/list' },
-        {title: 'Thuế suất', icon: 'fas fa-university', to: '/administrator/tax-rate/list'},
+        { title: 'Thuế suất', icon: 'fas fa-percent', to: '/administrator/tax-rate/list' },
         {
           title: 'Phân quyền',
           icon: 'fas fa-user-shield',

@@ -66,23 +66,24 @@ export default {
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
         {
           title: 'Đăng ký phát hành',
-          icon: 'far fa-edit',
+          icon: 'fas fa-file-signature',
           children: [
             { title: 'Tờ khai hóa đơn điện tử', to: '/register/invoice/list' },
-            { title: 'Mẫu hóa đơn', to: '/register/form-invoice' },
+            { title: '', to: '/register/form-invoice' },
           ],
         },
+        { title: 'Mẫu hóa đơn', icon: 'fas fa-file-invoice', to: '/register/form-invoice' },
         {
           title: 'Hóa đơn',
-          icon: 'far fa-file-alt',
+          icon: 'fas fa-file-invoice',
           children: [
             { title: 'Hóa đơn GTGT', to: '/invoice/list' },
           ],
         },
-        { title: 'Báo cáo', icon: 'fas fa-file-signature', to: '/reports' },
+        { title: 'Báo cáo', icon: 'fas fa-chart-line', to: '/reports' },
         {
           title: 'Danh mục',
-          icon: 'far fa-file-alt',
+          icon: 'fas fa-list-ul',
           children: [
             { title: 'Sản phẩm', to: '/categories/product/list' },
             { title: 'Khách hàng', to: '/categories/customer/list' },

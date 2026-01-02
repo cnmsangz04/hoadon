@@ -1,7 +1,7 @@
 <template>
   <footer class="footer">
     <div class="container">
-      &copy; 2025 PInvoice - Hóa đơn điện tử. All rights reserved.
+      &copy; 2025 Invoice - Hóa đơn điện tử. All rights reserved.
     </div>
   </footer>
 </template>
