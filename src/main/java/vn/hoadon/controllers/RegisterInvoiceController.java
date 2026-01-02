@@ -751,4 +751,15 @@ public class RegisterInvoiceController extends BaseController {
     }
 
     private String tag(String name, String value) { return "<" + name + ">" + (value == null ? "" : value) + "</" + name + ">"; }
+
+    @GetMapping("/{id}/history")
+    public ResponseEntity<List<HistoryDto>> getHistory(@PathVariable Long id) {
+        UserEntity user = currentUser();
+        if (user == null || user.getCompanyId() == null) {
+            return ResponseEntity.status(403).build();
+        }
+        if (historyService == null) return ResponseEntity.ok(List.of());
+        List<HistoryDto> rows = historyService.listByRegisterInvoice(user.getCompanyId(), id);
+        return ResponseEntity.ok(rows);
+    }
 }

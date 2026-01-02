@@ -288,8 +288,8 @@
           </div>
           <div>
             <!-- Chỉ hiển thị Cập nhật nếu status = 0 -->
-            <b-button v-if="!btnLoading && frmData.action === 'update' && Number(frmData.status) === 0" size="sm" variant="primary" class="btn-save" @click="onSubmit">
-              <i class="fas fa-save"></i> Cập nhật
+            <b-button v-if="!btnLoading && (frmData.action === 'create' || frmData.action === 'update' && Number(frmData.status) === 0)" size="sm" variant="primary" class="btn-save" @click="onSubmit">
+              <i class="fas fa-save"></i> {{ frmData.action === 'create' ? 'Lưu' : 'Cập nhật' }}
             </b-button>
             <b-button v-else-if="btnLoading" size="sm" class="btn btn-default" disabled>
               <b-spinner small type="grow"></b-spinner>
@@ -297,9 +297,6 @@
             </b-button>
             <!-- Chỉ hiển thị Gửi CQT nếu status = 1 -->
             <b-button type="button" size="sm" class="ml-2" @click="sendData" v-if="frmData.action === 'update' && Number(frmData.status) === 1">Gửi CQT</b-button>
-            <b-button type="button" size="sm" class="ml-2" variant="outline-info" @click="openHistory" v-if="frmData.action === 'update'">
-              <i class="fas fa-history"></i> Lịch sử truyền nhận
-            </b-button>
           </div>
         </div>
       </div>
@@ -778,11 +775,11 @@ export default {
       }, 2000)
     },
     goBack() {
-      // Prefer router navigation; fallback to browser history
-      if (this.$router && typeof this.$router.back === 'function') {
-        this.$router.back()
-      } else if (window && typeof window.history?.back === 'function') {
-        window.history.back()
+      // Navigate back to the list view route explicitly
+      if (this.$router) {
+        this.$router.push({ name: 'registers-invoice' })
+      } else if (window && typeof window.location !== 'undefined') {
+        window.location.href = '/register/invoice/list'
       }
     },
     async onSignature() {
@@ -832,6 +829,8 @@ export default {
         this.frmData.signed_xml = data?.signedXml || data?.signed_xml || this.frmData.signed_xml
         this.frmData.date_sign = data?.signDate || data?.sign_date || new Date().toISOString()
         this.frmData.signature = data?.signatureInfo ? { name: data.signatureInfo } : (data?.signature_info ? { name: data.signature_info } : this.frmData.signature)
+        // After signing successfully, move status to 1 so UI shows "Gửi CQT" and hides "Cập nhật"
+        this.frmData.status = 1
       } catch (e) {
       } finally {
         this.btnSignature = false
@@ -882,11 +881,6 @@ export default {
       // no longer used; data comes from backend
       return { id }
     },
-    openHistory() {
-      const id = this.$route?.params?.id
-      if (!id) return
-      this.$router.push({ name: 'register-invoice-history', params: { id } })
-    }
   }
 }
 </script>

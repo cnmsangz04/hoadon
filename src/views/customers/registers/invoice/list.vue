@@ -124,11 +124,9 @@
             </template>
             <b-dropdown-item class="text-center" href="#" @click.prevent="openEdit(item)">Cập nhật</b-dropdown-item>
             <b-dropdown-item class="text-center" href="#" @click.prevent="downloadXml(item)">Download XML</b-dropdown-item>
-            <!-- Chỉ hiển thị Ký số nếu status = 0 -->
             <b-dropdown-item v-if="Number(item.status) === 0" class="text-center" href="#" @click.prevent="onSignature(item)">Ký số</b-dropdown-item>
-            <!-- Chỉ hiển thị Gửi CQT nếu status = 1 -->
             <b-dropdown-item v-if="Number(item.status) === 1" class="text-center" href="#" @click.prevent="sendToTaxAuthority(item)">Gửi CQT</b-dropdown-item>
-            <!-- Chỉ hiển thị Xóa nếu status = 0 -->
+            <b-dropdown-item v-if="Number(item.status) > 1" class="text-center" href="#" @click.prevent="showHistory(item)">Lịch sử truyền nhận</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) === 0" class="text-center text-danger" href="#" @click.prevent="deleteItem(item)">Xóa tờ khai</b-dropdown-item>
           </b-dropdown>
         </template>
@@ -177,6 +175,38 @@
         </b-col>
       </b-row>
     </b-card>
+
+    <!-- History modal -->
+    <b-modal ref="historyModal" size="lg" title="Lịch sử truyền nhận" hide-header-close>
+      <div>
+        <b-table-simple bordered small responsive show-empty :busy="historyBusy" empty-text="Không có dữ liệu">
+          <b-thead>
+            <b-tr>
+              <b-th class="text-center" style="width:60px">STT</b-th>
+              <b-th>Tiêu đề</b-th>
+              <b-th>Mô tả</b-th>
+              <b-th style="width:160px">Người thao tác</b-th>
+              <b-th style="width:160px">Ngày thực hiện</b-th>
+            </b-tr>
+          </b-thead>
+          <b-tbody>
+            <b-tr v-for="(row, idx) in historyRows" :key="row.id || idx">
+              <b-td class="text-center">{{ idx + 1 }}</b-td>
+              <b-td>{{ row.title || '—' }}</b-td>
+              <b-td>{{ row.description || '—' }}</b-td>
+              <b-td>{{ row.username || row.user_id || row.userId || '—' }}</b-td>
+              <b-td>{{ formatDateTime(row.created_at || row.createdAt) }}</b-td>
+            </b-tr>
+            <b-tr v-if="!historyRows || historyRows.length === 0">
+              <b-td colspan="5" class="text-center">Không có dữ liệu</b-td>
+            </b-tr>
+          </b-tbody>
+        </b-table-simple>
+      </div>
+      <template #modal-footer>
+        <b-button size="sm" variant="light" @click="$refs.historyModal.hide()">Đóng</b-button>
+      </template>
+    </b-modal>
   </div>
 </template>
 
@@ -222,13 +252,17 @@ export default {
       ],
       statusOptions: [
         { value: 0, text: 'Khởi tạo' },
-        { value: 1, text: 'Đã tạo XML' },
-        { value: 2, text: 'Đã ký' },
-        { value: 3, text: 'Đã gửi' },
+        { value: 1, text: 'Đã ký' },
+        { value: 2, text: 'Đã gửi' },
+        { value: 3, text: 'Không tiếp nhận' },
         { value: 4, text: 'Đã tiếp nhận' },
-        { value: 5, text: 'Đã chấp nhận' },
-        { value: 6, text: 'Từ chối / Lỗi' }
-      ]
+       	{ value: 5, text: 'Không chấp nhận' },
+        { value: 6, text: 'Đã chấp nhận' },
+        { value: 7, text: 'Từ chối / Lỗi' }
+      ],
+      historyBusy: false,
+      historyRows: [],
+      historyForId: null,
     }
   },
   created() {
@@ -245,6 +279,21 @@ export default {
         return `${dd}/${mm}/${yyyy}`
       } catch {
         return d
+      }
+    },
+    formatDateTime(d) {
+      if (!d) return '—'
+      try {
+        const dt = new Date(d)
+        const yyyy = dt.getFullYear()
+        const mm = String(dt.getMonth() + 1).padStart(2, '0')
+        const dd = String(dt.getDate()).padStart(2, '0')
+        const HH = String(dt.getHours()).padStart(2, '0')
+        const MM = String(dt.getMinutes()).padStart(2, '0')
+        const SS = String(dt.getSeconds()).padStart(2, '0')
+        return `${dd}/${mm}/${yyyy} ${HH}:${MM}:${SS}`
+      } catch {
+        return String(d)
       }
     },
     summarizeInvoiceForms(json) {
@@ -530,12 +579,12 @@ export default {
           sign_date: signDate,
           signedXml: signedXml,
           signed_xml: signedXml,
-          status: 0 // per requirement: Ký -> status = 0
+          status: 1 // align with create.vue: after signing, set status = 1 to show "Gửi CQT"
         }
         const idx = this.list.data.findIndex(x => (x.id||x.ID||x.Id) === id)
         if (idx >= 0) this.$set(this.list.data, idx, updated)
-        // Persist status change
-        await this.updateStatus(id, 0)
+        // Persist status change to 1
+        await this.updateStatus(id, 1)
       } catch (e) {
         // ignore
       }
@@ -632,7 +681,32 @@ export default {
     },
     reload() {
       this.fetchList()
-    }
+    },
+    async showHistory(item) {
+      try {
+        const id = item.id || item.ID || item.Id
+        if (!id) return
+        this.historyBusy = true
+        this.historyRows = []
+        this.historyForId = id
+        const { data } = await axios.get(`/register-invoices/${id}/history`)
+        // Normalize keys to snake_case for view
+        this.historyRows = Array.isArray(data) ? data.map(r => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          username: r.username || r.userName || r.user_name || null,
+          user_id: r.userId || r.user_id || null,
+          created_at: r.createdAt || r.created_at || null,
+        })) : []
+        this.$refs.historyModal.show()
+      } catch (e) {
+        this.historyRows = []
+        this.$refs.historyModal && this.$refs.historyModal.show()
+      } finally {
+        this.historyBusy = false
+      }
+    },
   }
 }
 </script>
