@@ -3,6 +3,7 @@ import VueRouter from 'vue-router'
 
 import authRoute from "./modules/auth";
 import settingRoute from './modules/setting';
+import categoryRoute from './modules/category';
 import administratorRoute from './modules/administrator';
 import CustomerIndex from '@/views/customers/index.vue'
 import SettingsIndex from '@/views/settings/index.vue'
@@ -80,7 +81,7 @@ const router = new VueRouter({
             ]
         },
 
-        authRoute, settingRoute, administratorRoute,
+        authRoute, settingRoute, administratorRoute, categoryRoute,
         { path: '*', redirect: '/auth/login' }
     ]
 })
