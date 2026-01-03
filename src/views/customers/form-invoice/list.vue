@@ -279,7 +279,7 @@ export default {
     resetFilters() { this.filters = { keyword: '', category: null, type: null }; this.list.current_page = 1; this.fetchList() },
     reload() { this.fetchList() },
 
-    goCreate() { this.$router.push({ name: 'CustomerFormInvoiceCreate' }) },
+    goCreate() { this.$router.push({ name: 'CustomerFormInvoiceTemplate' }) },
     goEdit(it) { this.$router.push({ name: 'CustomerFormInvoiceEdit', params: { id: it.id } }) },
     goView(it) { this.$router.push({ name: 'CustomerFormInvoiceView', params: { id: it.id } }) },
     async onDelete(it) {

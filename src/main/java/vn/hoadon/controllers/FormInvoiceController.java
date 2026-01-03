@@ -88,6 +88,72 @@ public class FormInvoiceController extends BaseController {
         return res;
     }
 
+    @GetMapping("/templates")
+    public Map<String, Object> listTemplates(
+            @RequestParam(required = false) Integer category,
+            @RequestParam(required = false) Integer type,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        UserEntity user = currentUser();
+        Long companyId = user != null ? user.getCompanyId() : null;
+        if (companyId == null) return empty(page, size);
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "updatedAt"));
+        Page<FormInvoiceEntity> p = service.pageByCompanySystem(companyId, 0, pageable);
+        List<FormInvoiceEntity> filtered = p.getContent();
+        if (category != null) filtered = filtered.stream().filter(it -> Objects.equals(category, it.getCategory())).toList();
+        if (type != null) filtered = filtered.stream().filter(it -> Objects.equals(type, it.getType())).toList();
+        List<Map<String, Object>> items = filtered.stream().map(it -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", it.getId());
+            m.put("name", it.getName());
+            m.put("photo", it.getPhoto());
+            m.put("type", it.getType());
+            m.put("category", it.getCategory());
+            return m;
+        }).toList();
+        Map<String, Object> res = new HashMap<>();
+        res.put("items", items);
+        res.put("total", p.getTotalElements());
+        res.put("per_page", p.getSize());
+        res.put("current_page", p.getNumber() + 1);
+        res.put("last_page", Math.max(1, p.getTotalPages()));
+        return res;
+    }
+
+    @GetMapping("/templates/{id}")
+    public ResponseEntity<?> getTemplate(@PathVariable Long id) {
+        UserEntity user = currentUser();
+        if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
+        Optional<FormInvoiceEntity> opt = service.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        FormInvoiceEntity e = opt.get();
+        // Restrict to same company and system templates only
+        if (!Objects.equals(e.getCompanyId(), user.getCompanyId()) || !Objects.equals(e.getSystem(), 0)) {
+            return ResponseEntity.status(403).build();
+        }
+        Map<String, Object> item = new HashMap<>();
+        item.put("id", e.getId());
+        item.put("name", e.getName());
+        item.put("serial", e.getSerial());
+        item.put("file", e.getFile());
+        item.put("photo", e.getPhoto());
+        item.put("type", e.getType());
+        item.put("category", e.getCategory());
+        return ResponseEntity.ok(item);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> detail(@PathVariable Long id) {
+        UserEntity user = currentUser();
+        if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
+        Optional<FormInvoiceEntity> opt = service.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        FormInvoiceEntity e = opt.get();
+        if (!Objects.equals(e.getCompanyId(), user.getCompanyId())) return ResponseEntity.status(403).build();
+        return ResponseEntity.ok(e);
+    }
+
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Map<String, Object> body) {
         UserEntity user = currentUser();
@@ -99,6 +165,9 @@ public class FormInvoiceController extends BaseController {
         Integer category = Optional.ofNullable(body.get("category")).map(v -> Integer.valueOf(v.toString())).orElse(null);
         Integer type = Optional.ofNullable(body.get("type")).map(v -> Integer.valueOf(v.toString())).orElse(null);
         Integer status = Optional.ofNullable(body.get("status")).map(v -> Integer.valueOf(v.toString())).orElse(1);
+        Integer system = Optional.ofNullable(body.get("system")).map(v -> Integer.valueOf(v.toString())).orElse(1);
+        String file = Optional.ofNullable(body.get("file")).map(Object::toString).orElse(null);
+        String photo = Optional.ofNullable(body.get("photo")).map(Object::toString).orElse(null);
 
         if (name == null || name.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Tên mẫu không được để trống"));
@@ -111,6 +180,9 @@ public class FormInvoiceController extends BaseController {
         e.setCategory(category);
         e.setType(type);
         e.setStatus(status);
+        e.setSystem(system);
+        e.setFile(file);
+        e.setPhoto(photo);
         e.setCreatedAt(LocalDateTime.now());
         e.setUpdatedAt(LocalDateTime.now());
 
@@ -119,6 +191,44 @@ public class FormInvoiceController extends BaseController {
         resp.put("id", saved.getId());
         resp.put("message", "Đã tạo mẫu hóa đơn");
         return ResponseEntity.ok(resp);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        UserEntity user = currentUser();
+        if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
+        Optional<FormInvoiceEntity> opt = service.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        FormInvoiceEntity ex = opt.get();
+        if (!Objects.equals(ex.getCompanyId(), user.getCompanyId())) return ResponseEntity.status(403).build();
+
+        FormInvoiceEntity patch = new FormInvoiceEntity();
+        patch.setName(Optional.ofNullable(body.get("name")).map(Object::toString).orElse(null));
+        patch.setSerial(Optional.ofNullable(body.get("serial")).map(Object::toString).orElse(null));
+        patch.setCategory(Optional.ofNullable(body.get("category")).map(v -> Integer.valueOf(v.toString())).orElse(null));
+        patch.setType(Optional.ofNullable(body.get("type")).map(v -> Integer.valueOf(v.toString())).orElse(null));
+        patch.setStatus(Optional.ofNullable(body.get("status")).map(v -> Integer.valueOf(v.toString())).orElse(null));
+        patch.setSystem(Optional.ofNullable(body.get("system")).map(v -> Integer.valueOf(v.toString())).orElse(null));
+        patch.setFile(Optional.ofNullable(body.get("file")).map(Object::toString).orElse(null));
+        patch.setPhoto(Optional.ofNullable(body.get("photo")).map(Object::toString).orElse(null));
+
+        Optional<FormInvoiceEntity> updated = service.update(id, patch);
+        if (updated.isEmpty()) return ResponseEntity.status(500).body(Map.of("message", "Cập nhật thất bại"));
+        return ResponseEntity.ok(Map.of("message", "Đã cập nhật mẫu"));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        UserEntity user = currentUser();
+        if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
+        Optional<FormInvoiceEntity> opt = service.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        FormInvoiceEntity e = opt.get();
+        if (!Objects.equals(e.getCompanyId(), user.getCompanyId())) {
+            return ResponseEntity.status(403).build();
+        }
+        service.delete(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/users/by-ids")
@@ -138,20 +248,6 @@ public class FormInvoiceController extends BaseController {
             m.put("name", u.getName());
             return m;
         }).toList();
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        UserEntity user = currentUser();
-        if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
-        Optional<FormInvoiceEntity> opt = service.findById(id);
-        if (opt.isEmpty()) return ResponseEntity.notFound().build();
-        FormInvoiceEntity e = opt.get();
-        if (!Objects.equals(e.getCompanyId(), user.getCompanyId())) {
-            return ResponseEntity.status(403).build();
-        }
-        service.delete(id);
-        return ResponseEntity.noContent().build();
     }
 
     private List<FormInvoiceListItemDto> mapToDto(List<FormInvoiceEntity> list, Map<Long, String> usernameMap) {

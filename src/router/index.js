@@ -54,6 +54,12 @@ const router = new VueRouter({
                     meta: { requiresUser: true, title: 'Danh sách mẫu hóa đơn' }
                 },
                 {
+                    path: '/form-invoice/template',
+                    name: 'CustomerFormInvoiceTemplate',
+                    component: () => import('@/views/customers/form-invoice/template.vue'),
+                    meta: { requiresUser: true, title: 'Chọn mẫu hóa đơn' }
+                },
+                {
                     path: '/form-invoice/create',
                     name: 'CustomerFormInvoiceCreate',
                     component: () => import('@/views/customers/form-invoice/create.vue'),
