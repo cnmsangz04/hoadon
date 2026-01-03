@@ -71,8 +71,8 @@
         </template>
 
         <template #cell(status)="data">
-          <b-badge :variant="data.item.status === 1 ? 'success' : 'secondary'">
-            {{ data.item.status === 1 ? 'Kích hoạt' : 'Ngưng hoạt động' }}
+          <b-badge :variant="statusVariant(data.item.status)">
+            {{ statusText(data.item.status) }}
           </b-badge>
         </template>
 
@@ -243,6 +243,23 @@ export default {
         this.companyOptions = [];
         this.companyNameById = {};
       }
+    },
+
+    // Map status code to label text
+    statusText(s) {
+      const n = Number(s)
+      if (Number.isNaN(n)) return '—'
+      const map = {
+        1: 'Kích hoạt',
+        0: 'Ngưng hoạt động'
+      }
+      return map[n] ?? '—'
+    },
+    // Map status code to badge variant
+    statusVariant(s) {
+      const n = Number(s)
+      if (Number.isNaN(n)) return 'light'
+      return n === 1 ? 'success' : n === 0 ? 'secondary' : 'light'
     }
   },
 

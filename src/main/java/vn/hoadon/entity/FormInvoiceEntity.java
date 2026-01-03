@@ -28,16 +28,16 @@ public class FormInvoiceEntity {
     @Column(name = "photo")
     private String photo;
 
-    @Column(name = "system")
+    @Column(name = "system", columnDefinition = "tinyint")
     private Integer system; // 0/1
 
-    @Column(name = "type")
+    @Column(name = "type", columnDefinition = "tinyint")
     private Integer type; // 1: one rate, 2: multi rate
 
-    @Column(name = "category")
+    @Column(name = "category", columnDefinition = "tinyint")
     private Integer category; // 1: VAT, 2: Sales
 
-    @Column(name = "status")
+    @Column(name = "status", columnDefinition = "tinyint")
     private Integer status; // generic status
 
     @Column(name = "created_at")

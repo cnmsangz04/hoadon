@@ -42,7 +42,7 @@
             </template>
           </b-form-select>
         </b-col>
-        <b-col md="2" class="text-right">
+        <b-col md="2" class="mb-2 text-right">
           <b-button size="sm" variant="primary" @click="applyFilters">Tìm kiếm</b-button>
         </b-col>
       </b-row>
@@ -86,6 +86,10 @@
           <b-badge :variant="typeVariant(item.type)">{{ item.typeLabel || typeLabel(item.type) }}</b-badge>
         </template>
 
+        <template #cell(status)="{ item }">
+          <b-badge :variant="statusVariant(item.status)">{{ statusText(item.status) }}</b-badge>
+        </template>
+
         <template #cell(username)="{ item }">
           {{ item.username || usernameOf(item.userId || item.user_id) }}
         </template>
@@ -101,7 +105,7 @@
             </template>
             <b-dropdown-item class="text-center" href="#" @click.prevent="goEdit(item)">Cập nhật</b-dropdown-item>
             <b-dropdown-item class="text-center" href="#" @click.prevent="goView(item)">Xem</b-dropdown-item>
-            <b-dropdown-item class="text-center text-danger" href="#" @click.prevent="onDelete(item)">Xóa</b-dropdown-item>
+            <b-dropdown-item v-if="Number(item.status) === 0" class="text-center text-danger" href="#" @click.prevent="onDelete(item)">Xóa</b-dropdown-item>
           </b-dropdown>
         </template>
       </b-table>
@@ -176,7 +180,8 @@ export default {
       filters: {
         keyword: '',
         category: null,
-        type: null
+        type: null,
+        status: null,
       },
       fields: [
         { key: 'index', label: '#', thStyle: { width: '50px' } },
@@ -184,6 +189,7 @@ export default {
         { key: 'serial', label: 'Ký hiệu', thStyle: { width: '140px' } },
         { key: 'category', label: 'Loại hóa đơn', thStyle: { width: '180px' } },
         { key: 'type', label: 'Loại thuế suất', thStyle: { width: '160px' } },
+        { key: 'status', label: 'Trạng thái', thStyle: { width: '120px' } },
         { key: 'username', label: 'Người tạo', thStyle: { width: '160px' } },
         { key: 'updated_at', label: 'Ngày cập nhật', thStyle: { width: '140px' } },
         { key: 'option', label: 'Chức năng', thStyle: { width: '140px' } }
@@ -195,7 +201,11 @@ export default {
       typeOptions: [
         { value: 1, text: 'Một thuế suất' },
         { value: 2, text: 'Nhiều thuế suất' }
-      ]
+      ],
+      statusOptions: [
+        { value: 1, text: 'Kích hoạt' },
+        { value: 0, text: 'Chưa kích hoạt' },
+      ],
     }
   },
   created() { this.fetchList() },
@@ -214,6 +224,8 @@ export default {
     categoryVariant(v) { return Number(v) === 1 ? 'info' : Number(v) === 2 ? 'secondary' : 'light' },
     typeLabel(v) { return Number(v) === 1 ? 'Một thuế suất' : Number(v) === 2 ? 'Nhiều thuế suất' : '—' },
     typeVariant(v) { return Number(v) === 1 ? 'success' : Number(v) === 2 ? 'warning' : 'light' },
+    statusText(s) { const n = Number(s); return n === 1 ? 'Kích hoạt' : n === 0 ? 'Chưa kích hoạt' : '—' },
+    statusVariant(s) { const n = Number(s); return n === 1 ? 'success' : n === 0 ? 'secondary' : 'light' },
     usernameOf(uid) { return uid ? (this.usersMap[uid] || `#${uid}`) : '—' },
 
     buildQuery() {
@@ -224,6 +236,7 @@ export default {
       if (this.filters.keyword) params.q = this.filters.keyword
       if (this.filters.category != null) params.category = this.filters.category
       if (this.filters.type != null) params.type = this.filters.type
+      if (this.filters.status != null) params.status = this.filters.status
       return params
     },
     normalizePageResponse(raw) {
@@ -276,7 +289,7 @@ export default {
     onPageSizeChange() { this.list.current_page = 1; this.fetchList() },
     onPageChange() { this.fetchList() },
     applyFilters() { this.list.current_page = 1; this.fetchList() },
-    resetFilters() { this.filters = { keyword: '', category: null, type: null }; this.list.current_page = 1; this.fetchList() },
+    resetFilters() { this.filters = { keyword: '', category: null, type: null, status: null }; this.list.current_page = 1; this.fetchList() },
     reload() { this.fetchList() },
 
     goCreate() { this.$router.push({ name: 'CustomerFormInvoiceTemplate' }) },
@@ -296,4 +309,10 @@ export default {
 
 <style scoped>
 .font-weight-bold { font-weight: 700; }
+
+/* Remove custom grid styles to align with registers/invoice layout */
+.filters-grid, .filter-item, .span-4, .span-3, .span-2, .filter-actions { display: unset; grid-column: unset; }
+
+/* Keep compact control polish similar to registers page */
+.shadow-sm { border-radius: 10px; }
 </style>

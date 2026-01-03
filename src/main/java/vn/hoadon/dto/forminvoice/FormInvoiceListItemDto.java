@@ -10,6 +10,7 @@ public class FormInvoiceListItemDto {
     private String categoryLabel;
     private Integer type;
     private String typeLabel;
+    private Integer status; // added status
     private Long userId;
     private String username;
     private LocalDateTime updatedAt;
@@ -28,6 +29,8 @@ public class FormInvoiceListItemDto {
     public void setType(Integer type) { this.type = type; }
     public String getTypeLabel() { return typeLabel; }
     public void setTypeLabel(String typeLabel) { this.typeLabel = typeLabel; }
+    public Integer getStatus() { return status; }
+    public void setStatus(Integer status) { this.status = status; }
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
     public String getUsername() { return username; }

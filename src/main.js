@@ -21,6 +21,11 @@ import $ from 'jquery'
 import 'jquery-confirm/dist/jquery-confirm.min.css'
 import 'jquery-confirm/dist/jquery-confirm.min.js'
 
+// Register vue-select globally
+import 'vue-select/dist/vue-select.css'
+import VSelect from 'vue-select'
+Vue.component('v-select', VSelect)
+
 window.$ = window.jQuery = $
 
 Vue.prototype.$toastr = toastr
