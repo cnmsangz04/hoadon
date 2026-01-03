@@ -78,13 +78,13 @@ const router = new VueRouter({
 					meta: { requiresUser: true, title: 'Xem mẫu hóa đơn' }
 				},
 				{
-					path: 'product/list',
+					path: '/categories/product/list',
 					name: 'category-product-list',
 					component: () => import('@/views/customers/categories/product/list.vue'),
 					meta: { requiresUser: true, title: 'Danh mục sản phẩm' }
 				},
 				{
-					path: 'customer/list',
+					path: '/categories/customer/list',
 					name: 'category-customer-list',
 					component: () => import('@/views/customers/categories/customer/list.vue'),
 					meta: { requiresUser: true, title: 'Danh mục khách hàng' }

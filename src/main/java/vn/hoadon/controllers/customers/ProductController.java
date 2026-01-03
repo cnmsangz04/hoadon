@@ -10,6 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,7 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.dto.product.ProductFilterDTO;
 import vn.hoadon.entity.ProductsEntity;
+import vn.hoadon.entity.UserEntity;
 import vn.hoadon.services.ProductService;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/v1/categories/product")
@@ -31,7 +34,15 @@ public class ProductController extends BaseController {
 	@PostMapping("/list")
 	public Map<String, Object> list(@RequestBody ProductFilterDTO filterDTO, @RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
-
+		
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserEntity) {
+            UserEntity user = (UserEntity) auth.getPrincipal();
+            // Gán companyId vào filter để Service lọc dữ liệu
+            filterDTO.setCompanyId(user.getCompanyId());
+        }
+		
+		
 		Pageable pageable = PageRequest.of(page, size,
 				Sort.by(Sort.Order.desc("status"), Sort.Order.asc("code"), Sort.Order.asc("name"))
 		);
@@ -67,9 +78,17 @@ public class ProductController extends BaseController {
 	@PostMapping("/save")
 	public ResponseEntity<?> save(@RequestBody ProductsEntity product) {
 		try {
+			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+	        if (auth != null && auth.getPrincipal() instanceof UserEntity) {
+	            UserEntity user = (UserEntity) auth.getPrincipal();
+	            // Gán companyId vào filter để Service lọc dữ liệu
+	            product.setCompanyId(user.getCompanyId());
+	        }
+	        
 			ProductsEntity savedProduct = productService.saveOrUpdate(product);
 			return ResponseEntity.ok(savedProduct);
 		} catch (Exception e) {
+			e.printStackTrace();
 			return ResponseEntity.internalServerError().body("Lỗi hệ thống: " + e.getMessage());
 		}
 	}

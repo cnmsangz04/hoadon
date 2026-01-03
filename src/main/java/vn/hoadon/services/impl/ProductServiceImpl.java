@@ -29,7 +29,9 @@ public class ProductServiceImpl implements ProductService {
 	public Page<ProductsEntity> list(ProductFilterDTO filter, Pageable pageable) {
 		Specification<ProductsEntity> spec = (root, query, criteriaBuilder) -> {
 			List<Predicate> predicates = new ArrayList<>();
-
+			if (filter.getCompanyId() != null) {
+                predicates.add(criteriaBuilder.equal(root.get("companyId"), filter.getCompanyId()));
+            }
 			if (filter.getKeyword() != null && !filter.getKeyword().isBlank()) {
 				String like = "%" + filter.getKeyword().trim() + "%";
 				predicates.add(criteriaBuilder.or(criteriaBuilder.like(root.get("name"), like),
