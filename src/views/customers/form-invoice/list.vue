@@ -235,7 +235,7 @@ export default {
       },
       fields: [
         { key: 'index', label: '#', thStyle: { width: '50px' } },
-        { key: 'name', label: 'Tên mẫu' },
+        { key: 'name', label: 'Tên mẫu', thStyle: { width: '160px' } },
         { key: 'serial', label: 'Ký hiệu', thStyle: { width: '140px' } },
         { key: 'category', label: 'Loại hóa đơn', thStyle: { width: '180px' } },
         { key: 'type', label: 'Loại thuế suất', thStyle: { width: '160px' } },

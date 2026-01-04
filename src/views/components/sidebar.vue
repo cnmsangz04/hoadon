@@ -84,8 +84,8 @@ export default {
           title: 'Danh mục',
           icon: 'fas fa-list-ul',
           children: [
-            { title: 'Sản phẩm', to: '/product/list' },
-            { title: 'Khách hàng', to: '/customer/list' },
+            { title: 'Sản phẩm', to: '/categories/product/list' },
+            { title: 'Khách hàng', to: '/categories/customer/list' },
           ],
         },
         { title: 'Cài đặt', icon: 'fas fa-cog', to: '/setting' },
