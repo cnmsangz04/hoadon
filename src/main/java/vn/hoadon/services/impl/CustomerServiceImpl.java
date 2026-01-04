@@ -30,7 +30,9 @@ public class CustomerServiceImpl implements CustomerService{
 	public Page<CustomersEntity> list(CustomerFilterDTO filter, Pageable pageable) {
 		Specification<CustomersEntity> spec = (root, query, criteriaBuilder) -> {
 			List<Predicate> predicates = new ArrayList<>();
-
+			if (filter.getCompanyId() != null) {
+                predicates.add(criteriaBuilder.equal(root.get("companyId"), filter.getCompanyId()));
+            }
 			if (filter.getKeyword() != null && !filter.getKeyword().isBlank()) {
 				String like = "%" + filter.getKeyword().trim() + "%";
 				predicates.add(criteriaBuilder.or(

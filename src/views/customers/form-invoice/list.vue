@@ -104,7 +104,7 @@
               <i class="fas fa-ellipsis-h"></i>
             </template>
             <b-dropdown-item class="text-center" href="#" @click.prevent="goEdit(item)">Cập nhật</b-dropdown-item>
-            <b-dropdown-item class="text-center" href="#" @click.prevent="goView(item)">Xem</b-dropdown-item>
+            <b-dropdown-item class="text-center" href="#" @click.prevent="btnView(item)">Xem</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) === 0" class="text-center text-danger" href="#" @click.prevent="onDelete(item)">Xóa</b-dropdown-item>
           </b-dropdown>
         </template>
@@ -153,6 +153,50 @@
         </b-col>
       </b-row>
     </b-card>
+
+    <!-- Invoice view modal with iframe -->
+    <b-modal
+      id="modalFormInvoice"
+      size="lg"
+      :no-close-on-esc="false"
+      :hide-header="true"
+      body-class="p-0"
+    >
+      <iframe
+        id="viewInv"
+        :src="iframe.src"
+        scrolling="no"
+        frameborder="0"
+        width="100%"
+        onload="((obj) => {try{obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';}catch(e){obj.style.height = 0;}})(this)"
+      ></iframe>
+      <template #modal-footer>
+        <div class="d-flex align-items-center w-100 justify-content-between">
+          <div>
+            <b-button variant="light" size="sm" @click="closeModal('modalFormInvoice')">Đóng</b-button>
+          </div>
+          <div class="text-center">
+            <b-nav pills>
+              <b-dropdown
+                id="ddown-right"
+                text="Tải mẫu"
+                extra-toggle-classes="nav-link-custom"
+                center
+                variant="success"
+                size="sm"
+              >
+                <b-dropdown-item :href="'/v1/file/' + iframe.form_id + '/pdf-download'">
+                  Download PDF
+                </b-dropdown-item>
+                <b-dropdown-item :href="'/v1/file/' + iframe.form_id + '/xml-download'">
+                  Download XML
+                </b-dropdown-item>
+              </b-dropdown>
+            </b-nav>
+          </div>
+        </div>
+      </template>
+    </b-modal>
   </div>
 </template>
 
@@ -165,6 +209,12 @@ export default {
     return {
       isBusy: false,
       usersMap: {},
+      // iframe state for invoice viewing
+      iframe: {
+        src: null,
+        form_id: null,
+        status: null,
+      },
       list: {
         current_page: 1,
         data: [],
@@ -210,99 +260,111 @@ export default {
   },
   created() { this.fetchList() },
   methods: {
-    formatDate(d) {
-      if (!d) return '—'
-      try {
-        const dt = new Date(d)
-        const yyyy = dt.getFullYear()
-        const mm = String(dt.getMonth() + 1).padStart(2, '0')
-        const dd = String(dt.getDate()).padStart(2, '0')
-        return `${dd}/${mm}/${yyyy}`
-      } catch { return String(d) }
+    closeModal(id) {
+      this.$root.$emit('bv::hide::modal', id)
     },
-    categoryLabel(v) { return Number(v) === 1 ? 'Hóa đơn giá trị gia tăng' : Number(v) === 2 ? 'Hóa đơn bán hàng' : '—' },
-    categoryVariant(v) { return Number(v) === 1 ? 'info' : Number(v) === 2 ? 'secondary' : 'light' },
-    typeLabel(v) { return Number(v) === 1 ? 'Một thuế suất' : Number(v) === 2 ? 'Nhiều thuế suất' : '—' },
-    typeVariant(v) { return Number(v) === 1 ? 'success' : Number(v) === 2 ? 'warning' : 'light' },
-    statusText(s) { const n = Number(s); return n === 1 ? 'Kích hoạt' : n === 0 ? 'Chưa kích hoạt' : '—' },
-    statusVariant(s) { const n = Number(s); return n === 1 ? 'success' : n === 0 ? 'secondary' : 'light' },
-    usernameOf(uid) { return uid ? (this.usersMap[uid] || `#${uid}`) : '—' },
+    print(formId) {
+      const iframe = document.getElementById('viewInv')
+      if (iframe && iframe.contentWindow) {
+        try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) {}
+      }
+    },
+    btnView(item) {
+      const formId = item.form_id != null ? item.form_id : (item.id != null ? item.id : null)
+      if (!formId) return false
+      this.iframe.form_id = formId
+      // Use unauthenticated endpoint (no token required)
+      this.iframe.src = `/v1/file/${formId}/view`
+      this.$root.$emit('bv::show::modal', 'modalFormInvoice')
+      return false
+    },
 
-    buildQuery() {
-      const params = {
-        page: this.list.current_page,
-        size: this.list.per_page,
-      }
-      if (this.filters.keyword) params.q = this.filters.keyword
-      if (this.filters.category != null) params.category = this.filters.category
-      if (this.filters.type != null) params.type = this.filters.type
-      if (this.filters.status != null) params.status = this.filters.status
-      return params
-    },
-    normalizePageResponse(raw) {
-      const out = { ...this.list }
-      if (raw && Array.isArray(raw.items)) {
-        out.data = raw.items
-        out.total = Number(raw.total || raw.items.length) || 0
-        out.current_page = Number(raw.current_page || out.current_page) || 1
-        out.last_page = Number(raw.last_page || Math.ceil(out.total / out.per_page) || 1)
-        out.from = (out.current_page - 1) * out.per_page + 1
-        out.to = Math.min(out.from + out.per_page - 1, out.total) || 0
-        return out
-      }
-      if (Array.isArray(raw)) {
-        out.data = raw
-        out.total = raw.length
-        out.current_page = 1
-        out.last_page = 1
-        out.from = 1
-        out.to = raw.length
-        return out
-      }
-      return out
-    },
     async fetchList() {
       this.isBusy = true
       try {
-        const params = this.buildQuery()
-        const { data } = await axios.get('/form-invoices', { params })
-        let normalized = this.normalizePageResponse(data)
-        // Fallback: username resolution
-        const ids = [...new Set((normalized.data || []).map(x => x.userId || x.user_id).filter(Boolean))]
-        if (ids.length) {
-          try {
-            const ur = await axios.get('/form-invoices/users/by-ids', { params: { ids: ids.join(',') } })
-            const list = Array.isArray(ur?.data) ? ur.data : (ur?.data?.items || [])
-            const map = {}
-            list.forEach(u => { if (u && u.id != null) map[u.id] = u.username || u.name })
-            this.usersMap = map
-            normalized.data = (normalized.data || []).map(it => ({ ...it, username: it.username || map[it.userId || it.user_id] }))
-          } catch {}
+        const params = {
+          page: this.list.current_page,
+          size: this.list.per_page,
+          q: this.filters.keyword || undefined,
+          category: this.filters.category || undefined,
+          type: this.filters.type || undefined,
+          status: this.filters.status || undefined,
         }
-        this.list = normalized
+        const { data } = await axios.get('/form-invoices', { params })
+        const items = (data.items || data.data || []).map(it => ({
+          id: it.id,
+          name: it.name,
+          serial: it.serial,
+          category: it.category,
+          type: it.type,
+          status: it.status,
+          userId: it.userId || it.user_id,
+          username: it.username,
+          updatedAt: it.updatedAt || it.updated_at,
+          file: it.file,
+          photo: it.photo,
+        }))
+        this.list.data = items
+        this.list.total = data.total || 0
+        this.list.per_page = data.per_page || this.list.per_page
+        this.list.current_page = data.current_page || this.list.current_page
+        this.list.last_page = data.last_page || 1
+        const from = (this.list.current_page - 1) * this.list.per_page + (items.length ? 1 : 0)
+        const to = from + items.length - (items.length ? 0 : 0)
+        this.list.from = from
+        this.list.to = to
       } catch (e) {
-        // handled by axios interceptor
+        // Handle silently
       } finally {
         this.isBusy = false
       }
     },
+    reload() { this.fetchList() },
+    goCreate() { this.$router.push({ name: 'CustomerFormInvoiceTemplate' }) },
+    goEdit(item) { this.$router.push({ name: 'CustomerFormInvoiceEdit', params: { id: item.id } }) },
+    async onDelete(item) {
+      try {
+        const id = item.id != null ? item.id : (item.form_id != null ? item.form_id : null)
+        if (!id) return
+        const ok = await this.$bvModal.msgBoxConfirm(
+          `Bạn có chắc muốn xóa mẫu hóa đơn #${id}?`,
+          {
+            title: 'Xác nhận',
+            size: 'sm',
+            buttonSize: 'sm',
+            okVariant: 'danger',
+            okTitle: 'Xóa',
+            cancelTitle: 'Hủy',
+            footerClass: 'p-2',
+            hideHeaderClose: false
+          }
+        )
+        if (!ok) return
+        await axios.delete(`/form-invoices/${id}`)
+        this.$bvToast && this.$bvToast.toast('Đã xóa mẫu hóa đơn', { title: 'Thành công', variant: 'success', solid: true, autoHideDelay: 3000 })
+        // Refresh list after delete
+        this.applyFilters()
+      } catch (e) {
+        const msg = (e && e.response && e.response.status === 400)
+          ? 'Chỉ được xóa khi trạng thái là Chưa kích hoạt'
+          : 'Xóa mẫu hóa đơn thất bại'
+        this.$bvToast && this.$bvToast.toast(msg, { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 4000 })
+      }
+    },
+
     onPageSizeChange() { this.list.current_page = 1; this.fetchList() },
     onPageChange() { this.fetchList() },
     applyFilters() { this.list.current_page = 1; this.fetchList() },
-    resetFilters() { this.filters = { keyword: '', category: null, type: null, status: null }; this.list.current_page = 1; this.fetchList() },
-    reload() { this.fetchList() },
+    resetFilters() { this.filters = { keyword: '', category: null, type: null, status: null }; this.applyFilters() },
 
-    goCreate() { this.$router.push({ name: 'CustomerFormInvoiceTemplate' }) },
-    goEdit(it) { this.$router.push({ name: 'CustomerFormInvoiceEdit', params: { id: it.id } }) },
-    goView(it) { this.$router.push({ name: 'CustomerFormInvoiceView', params: { id: it.id } }) },
-    async onDelete(it) {
-      const ok = window.confirm(`Xóa mẫu "${it.name}"?`)
-      if (!ok) return
-      try {
-        await axios.delete(`/form-invoices/${it.id}`, { successMessage: 'Đã xóa mẫu' })
-        this.fetchList()
-      } catch {}
-    }
+    categoryLabel(v) { return v === 1 ? 'Giá trị gia tăng' : v === 2 ? 'Bán hàng' : '—' },
+    categoryVariant(v) { return v === 1 ? 'primary' : v === 2 ? 'info' : 'secondary' },
+    typeLabel(v) { return v === 1 ? 'Một thuế suất' : v === 2 ? 'Nhiều thuế suất' : '—' },
+    typeVariant(v) { return v === 1 ? 'success' : v === 2 ? 'warning' : 'secondary' },
+    statusText(v) { return Number(v) === 1 ? 'Kích hoạt' : 'Chưa kích hoạt' },
+    statusVariant(v) { return Number(v) === 1 ? 'success' : 'secondary' },
+    usernameOf(uid) { return this.usersMap[uid] || '—' },
+    formatDate(dt) { try { return (dt || '').toString().replace('T', ' ') } catch { return '—' } },
   }
 }
 </script>
@@ -315,4 +377,6 @@ export default {
 
 /* Keep compact control polish similar to registers page */
 .shadow-sm { border-radius: 10px; }
+
+#viewInv { min-height: 300px; }
 </style>

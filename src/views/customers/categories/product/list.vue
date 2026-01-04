@@ -1,7 +1,9 @@
 <template>
     <div class="container-fluid py-3 product-list">
         <div class="d-flex align-items-center justify-content-between mb-3">
-            <h4 class="mb-0 font-weight-bold">Danh mục hàng hóa</h4>
+            <h4 class="mb-0 font-weight-bold">
+                Danh mục hàng hóa
+            </h4>
             <div>
                 <b-button
                     size="sm"
@@ -21,9 +23,9 @@
             <b-row>
                 <b-col md="5" class="mb-2">
                     <b-input-group>
-                        <b-input-group-prepend is-text
-                            ><i class="fas fa-search"></i
-                        ></b-input-group-prepend>
+                        <b-input-group-prepend is-text>
+                            <i class="fas fa-search"></i>
+                        </b-input-group-prepend>
                         <b-form-input
                             v-model.trim="filters.keyword"
                             placeholder="Tìm theo Mã hoặc Tên sản phẩm..."
@@ -55,7 +57,6 @@
             <b-table
                 bordered
                 hover
-                responsive
                 small
                 show-empty
                 :items="list.data"
@@ -81,8 +82,8 @@
                 </template>
 
                 <template #cell(company)="data">
-                    <div class="font-weight-bold">
-                        {{ companyNameById[data.item.companyId || "—"] }}
+                    <div class="font-weight-bold text-dark">
+                        {{ currentCompanyName || "---" }}
                     </div>
                 </template>
 
@@ -209,18 +210,14 @@
 
                     <b-col md="12">
                         <b-form-group label="Thuộc Công ty">
-                            <b-form-select
-                                v-model="form.companyId"
-                                :options="companyOptions"
-                                required
-                            >
-                                <template #first>
-                                    <b-form-select-option :value="null"
-                                        >-- Chọn công ty
-                                        --</b-form-select-option
-                                    >
-                                </template>
-                            </b-form-select>
+                            <b-form-input
+                                :value="
+                                    currentCompanyName ||
+                                    'Đang tải thông tin...'
+                                "
+                                readonly
+                                class="bg-light font-weight-bold text-dark"
+                            />
                         </b-form-group>
                     </b-col>
                 </b-row>
@@ -284,6 +281,7 @@ export default {
         return {
             isBusy: false,
             isSaving: false,
+            currentCompanyName: "", // Biến chứa tên công ty của User đăng nhập
             list: {
                 data: [],
                 total: 0,
@@ -293,8 +291,6 @@ export default {
                 to: 0,
             },
             pageSizes: [10, 20, 50, 100],
-            companyOptions: [],
-            companyNameById: {},
             vatOptions: [],
             vatNameById: {},
             filters: { keyword: "", status: null },
@@ -302,7 +298,7 @@ export default {
                 { value: 1, text: "Đang bán" },
                 { value: 0, text: "Đã khóa" },
             ],
-            vatOptions: [],
+            // Cấu hình các cột của bảng
             fields: [
                 {
                     key: "index",
@@ -313,7 +309,7 @@ export default {
                 },
                 { key: "code", label: "Mã hàng", sortable: true },
                 { key: "name", label: "Tên hàng hóa", sortable: true },
-                { key: "company", label: "Tên công ty", sortable: true },
+                { key: "company", label: "Tên công ty", sortable: true }, // Hiển thị tên công ty
                 { key: "unit", label: "ĐVT", tdClass: "text-center" },
                 { key: "price", label: "Đơn giá", tdClass: "text-right" },
                 { key: "vatRate", label: "Thuế", tdClass: "text-center" },
@@ -326,18 +322,37 @@ export default {
                 name: "",
                 price: 0,
                 unit: "",
-                vatRate: "",
+                vatRate: 10,
                 description: "",
                 status: 1,
             },
         };
     },
     mounted() {
-        this.loadData();
-        this.loadCompanies();
+        this.loadProfile(); // Lấy thông tin User & Công ty ngay khi load trang
         this.loadVatOptions();
+        this.loadData();
     },
     methods: {
+        // 1. Lấy thông tin công ty từ Profile User (Backend tự xử lý token)
+        async loadProfile() {
+            try {
+                // Gọi API ProfileController mà bạn đã cung cấp
+                const res = await axios.post("/setting/profile/get");
+                if (res.data) {
+                    // Mapping theo DTO: dto.companyName
+                    this.currentCompanyName =
+                        res.data.companyName || res.data.name || "";
+                }
+            } catch (e) {
+                console.error("Lỗi lấy thông tin công ty:", e);
+                this.$bvToast.toast("Không thể lấy thông tin doanh nghiệp", {
+                    variant: "warning",
+                });
+            }
+        },
+
+        // 2. Load danh sách sản phẩm
         async loadData() {
             this.isBusy = true;
             try {
@@ -353,9 +368,11 @@ export default {
                 );
                 const d = res.data;
 
+                // Xử lý dữ liệu trả về từ Page (Spring Boot)
                 this.list.data = d.content || d.data || [];
                 this.list.total = d.totalElements || d.total || 0;
 
+                // Tính toán hiển thị "Từ dòng X đến Y"
                 this.list.from = Number(
                     d.from ??
                         (this.list.total === 0
@@ -382,27 +399,7 @@ export default {
             }
         },
 
-        async loadCompanies() {
-            try {
-                const res = await axios.post(
-                    "/administrator/company/list",
-                    {},
-                    { params: { page: 0, size: 5000 } }
-                );
-                const list = res.data?.data || res.data?.content || [];
-                const map = {};
-                this.companyOptions = list.map((c) => {
-                    const id = c.id;
-                    const name = c.name || c.companyName || `#${id}`;
-                    map[id] = name;
-                    return { value: id, text: name };
-                });
-                this.companyNameById = map;
-            } catch (e) {
-                console.error("Lỗi load công ty:", e);
-            }
-        },
-
+        // 3. Load danh sách thuế suất
         async loadVatOptions() {
             try {
                 const res = await axios.post(
@@ -412,7 +409,7 @@ export default {
                 );
                 const list = res.data?.data || res.data?.content || [];
                 const map = {};
-                this.vatOptions = list.map((c) => {
+                this.vatOptions = list.map((v) => {
                     const val = v.value !== undefined ? v.value : v.id;
                     const label = v.name || `${v.value}%`;
                     map[val] = label;
@@ -421,16 +418,11 @@ export default {
                 this.vatNameById = map;
             } catch (e) {
                 console.error("Lỗi load thuế:", e);
-                this.$bvToast.toast("Không thể tải danh sách thuế suất", {
-                    variant: "danger",
-                });
             }
         },
 
+        // Các hàm xử lý sự kiện
         applyFilters() {
-            if (!this.companyOptions || this.companyOptions.length === 0) {
-                this.loadCompanies();
-            }
             this.list.current_page = 1;
             this.loadData();
         },
@@ -443,19 +435,19 @@ export default {
             this.list.current_page = 1;
             this.loadData();
         },
-
         onPageSizeChange(size) {
             this.list.per_page = size;
             this.list.current_page = 1;
             this.loadData();
         },
-
         formatMoney(val) {
             return new Intl.NumberFormat("vi-VN", {
                 style: "currency",
                 currency: "VND",
             }).format(val);
         },
+
+        // Mở Modal Thêm mới
         openCreate() {
             this.form = {
                 id: null,
@@ -463,17 +455,21 @@ export default {
                 name: "",
                 price: 0,
                 unit: "",
-                companyId: null,
                 vatRate: 10,
                 description: "",
                 status: 1,
             };
+            // Không cần gán companyId vì Backend tự lấy
             this.$refs.productModal.show();
         },
+
+        // Mở Modal Cập nhật
         openEdit(item) {
             this.form = { ...item };
             this.$refs.productModal.show();
         },
+
+        // Lưu dữ liệu
         async saveData() {
             if (!this.form.code || !this.form.name) {
                 this.$bvToast.toast("Mã và Tên không được để trống", {
@@ -483,7 +479,10 @@ export default {
             }
             this.isSaving = true;
             try {
+                // Gửi dữ liệu lên Server.
+                // Lưu ý: Không gửi companyId hoặc nếu có gửi thì Backend cũng sẽ override bằng ID của user đang login.
                 await axios.post("/categories/product/save", this.form);
+
                 this.$bvToast.toast("Lưu sản phẩm thành công", {
                     variant: "success",
                 });
@@ -498,6 +497,8 @@ export default {
                 this.isSaving = false;
             }
         },
+
+        // Khóa/Mở khóa nhanh
         async toggleLock(item) {
             try {
                 const newStatus = item.status === 1 ? 0 : 1;
@@ -525,5 +526,9 @@ export default {
 }
 .text-right {
     text-align: right;
+}
+/* Style cho ô input readonly nhìn đẹp hơn */
+.bg-light {
+    background-color: #f8f9fa !important;
 }
 </style>
