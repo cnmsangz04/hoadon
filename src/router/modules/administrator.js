@@ -36,7 +36,7 @@ export default {
 		{
 			path: 'tax-rate/list',
 			name: 'admin-tax-rate-list',
-			component: () => import('../../views/administrators/tax-rate/list.vue'),
+			component: () => import('../../views/administrators/vat-rate/list.vue'),
 			meta: { requiresAdmin: true, title: 'Thuế suất' }
 		},
 		{
