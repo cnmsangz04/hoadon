@@ -22126,3 +22126,8 @@ Caused by: java.lang.NumberFormatException: For input string: "active"
 	... 191 common frames omitted
 
 2026-01-04T17:57:21.879+07:00  WARN 116519 --- [hoadon] [http-nio-8081-exec-9] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.orm.jpa.JpaSystemException: Could not extract column [24] from JDBC ResultSet [An error occurred while converting the varchar value to JDBC data type INTEGER.] [n/a]]
+2026-01-04T17:57:50.582+07:00  INFO 116519 --- [hoadon] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-01-04T17:57:50.585+07:00  INFO 116519 --- [hoadon] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-01-04T17:57:50.597+07:00  INFO 116519 --- [hoadon] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-01-04T17:57:50.604+07:00  INFO 116519 --- [hoadon] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-01-04T17:57:50.609+07:00  INFO 116519 --- [hoadon] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
