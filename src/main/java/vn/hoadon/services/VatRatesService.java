@@ -1,6 +1,8 @@
 package vn.hoadon.services;
 
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import vn.hoadon.entity.VatRatesEntity;
 
 import java.util.List;
@@ -21,4 +23,7 @@ public interface VatRatesService {
 
     // Delete
     void delete(Integer id);
+
+    // Pagination by user
+    Page<VatRatesEntity> pageByUser(Integer userId, Integer status, Pageable pageable, String keyword);
 }

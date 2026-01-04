@@ -1,37 +1,42 @@
 package vn.hoadon.services.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import vn.hoadon.entity.VatRatesEntity;
-import vn.hoadon.repositories.VaRatesRepository;
+import vn.hoadon.repositories.VatRatesRepository;
 import vn.hoadon.services.VatRatesService;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class VatRatesServiceImpl implements VatRatesService {
 
     @Autowired
-    private VaRatesRepository vaRatesRepository;
+    private VatRatesRepository vatRatesRepository;
 
     @Override
     public VatRatesEntity create(VatRatesEntity taxRate) {
-        return vaRatesRepository.save(taxRate);
+        return vatRatesRepository.save(taxRate);
     }
 
     @Override
     public List<VatRatesEntity> findAll() {
-        return vaRatesRepository.findAll();
+        return vatRatesRepository.findAll();
     }
 
     @Override
     public VatRatesEntity findById(Integer id) {
-        return vaRatesRepository.findById(id).orElse(null);
+        return vatRatesRepository.findById(id).orElse(null);
     }
 
     @Override
     public VatRatesEntity update(Integer id, VatRatesEntity taxRate) {
-        VatRatesEntity existing = vaRatesRepository.findById(id).orElse(null);
+        VatRatesEntity existing = vatRatesRepository.findById(id).orElse(null);
         if (existing == null) {
             return null;
         }
@@ -41,11 +46,30 @@ public class VatRatesServiceImpl implements VatRatesService {
         existing.setStatus(taxRate.getStatus());
         existing.setUpdatedAt(taxRate.getUpdatedAt());
 
-        return vaRatesRepository.save(existing);
+        return vatRatesRepository.save(existing);
     }
 
     @Override
     public void delete(Integer id) {
-        vaRatesRepository.deleteById(id);
+        vatRatesRepository.deleteById(id);
+    }
+
+    @Override
+    public Page<VatRatesEntity> pageByUser(Integer userId, Integer status, Pageable pageable, String keyword) {
+        Page<VatRatesEntity> page = (status == null)
+                ? vatRatesRepository.findByUserId(userId, pageable)
+                : vatRatesRepository.findByUserIdAndStatus(userId, status, pageable);
+
+        if (keyword == null || keyword.isBlank()) {
+            return page;
+        }
+        String kw = keyword.trim().toLowerCase();
+        List<VatRatesEntity> filtered = page.getContent().stream()
+                .filter(it -> {
+                    String label = it.getLabel() != null ? it.getLabel().toLowerCase() : "";
+                    String codeStr = it.getCode() != null ? it.getCode().toString() : "";
+                    return label.contains(kw) || codeStr.contains(kw);
+                }).collect(Collectors.toList());
+        return new PageImpl<>(filtered, pageable, page.getTotalElements());
     }
 }

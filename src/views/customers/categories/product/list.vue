@@ -403,7 +403,7 @@ export default {
         async loadVatOptions() {
             try {
                 const res = await axios.post(
-                    "/administrator/tax-rate/list",
+                    "/administrator/vat-rate/list",
                     {},
                     { params: { page: 0, size: 5000 } }
                 );
