@@ -239,7 +239,7 @@
                     <b-col md="4">
                         <b-form-group label="Thuế suất">
                             <b-form-select
-                                v-model="form.vatRate"
+                                v-model.number="form.vatRate"
                                 :options="vatOptions"
                             />
                         </b-form-group>
@@ -322,7 +322,7 @@ export default {
                 name: "",
                 price: 0,
                 unit: "",
-                vatRate: 10,
+                vatRate: -1,
                 description: "",
                 status: 1,
             },
@@ -402,22 +402,17 @@ export default {
         // 3. Load danh sách thuế suất
         async loadVatOptions() {
             try {
-                const res = await axios.post(
-                    "/administrator/vat-rate/list",
-                    {},
-                    { params: { page: 0, size: 5000 } }
-                );
-                const list = res.data?.data || res.data?.content || [];
-                const map = {};
-                this.vatOptions = list.map((v) => {
-                    const val = v.value !== undefined ? v.value : v.id;
-                    const label = v.name || `${v.value}%`;
-                    map[val] = label;
-                    return { value: val, text: label };
-                });
-                this.vatNameById = map;
+                const res = await axios.get("/categories/product/vat-rates");
+                const items = Array.isArray(res.data) ? res.data : [];
+                // Build options for select and map for display
+                this.vatOptions = items.map(it => ({ value: it.code, text: it.label }));
+                this.vatNameById = items.reduce((acc, it) => {
+                    acc[it.code] = it.label;
+                    return acc;
+                }, {});
             } catch (e) {
                 console.error("Lỗi load thuế:", e);
+                this.$bvToast && this.$bvToast.toast("Không thể tải thuế suất", { variant: "warning" });
             }
         },
 
@@ -455,7 +450,7 @@ export default {
                 name: "",
                 price: 0,
                 unit: "",
-                vatRate: 10,
+                vatRate: -1,
                 description: "",
                 status: 1,
             };

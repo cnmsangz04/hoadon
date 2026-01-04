@@ -3,7 +3,9 @@ package vn.hoadon.controllers.customers;
 import org.springframework.data.domain.Page;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -12,6 +14,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,7 +24,9 @@ import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.dto.product.ProductFilterDTO;
 import vn.hoadon.entity.ProductsEntity;
 import vn.hoadon.entity.UserEntity;
+import vn.hoadon.entity.VatRatesEntity;
 import vn.hoadon.services.ProductService;
+import vn.hoadon.services.VatRatesService;
 import org.springframework.security.core.Authentication;
 
 @RestController
@@ -30,6 +35,9 @@ public class ProductController extends BaseController {
 
 	@Autowired
 	private ProductService productService;
+
+    @Autowired
+    private VatRatesService vatRatesService;
 
 	@PostMapping("/list")
 	public Map<String, Object> list(@RequestBody ProductFilterDTO filterDTO, @RequestParam(defaultValue = "0") int page,
@@ -92,5 +100,24 @@ public class ProductController extends BaseController {
 			return ResponseEntity.internalServerError().body("Lỗi hệ thống: " + e.getMessage());
 		}
 	}
+
+    // Provide VAT rates (code and label) for current user, only active ones
+    @GetMapping("/vat-rates")
+    public List<Map<String, Object>> getVatRates() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Integer userId = null;
+        if (auth != null && auth.getPrincipal() instanceof UserEntity) {
+            userId = Math.toIntExact(((UserEntity) auth.getPrincipal()).getId());
+        }
+        // Default pagination: up to 100 items, sort by code asc
+        Pageable pageable = PageRequest.of(0, 100, Sort.by(Sort.Direction.ASC, "code"));
+        Page<VatRatesEntity> page = vatRatesService.pageByUser(userId, 1, pageable, null);
+        return page.getContent().stream().map(it -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("code", it.getCode());
+            m.put("label", it.getLabel());
+            return m;
+        }).collect(Collectors.toList());
+    }
 	
 }
