@@ -516,25 +516,31 @@ export default {
     },
     async deleteItem(item) {
       try {
+        const id = item.id || item.ID || item.Id
+        if (!id) return
         const ok = await this.$bvModal.msgBoxConfirm(
-          `Bạn có chắc muốn đặt trạng thái tờ khai #${item.id} về Khởi tạo?`,
+          `Bạn có chắc muốn xóa tờ khai #${id}?`,
           {
             title: 'Xác nhận',
             size: 'sm',
             buttonSize: 'sm',
             okVariant: 'danger',
-            okTitle: 'Xác nhận',
+            okTitle: 'Xóa',
             cancelTitle: 'Hủy',
             footerClass: 'p-2',
             hideHeaderClose: false
           }
         )
         if (!ok) return
-        const id = item.id || item.ID || item.Id
-        await this.updateStatus(id, 0)
-        await this.refreshRow(id)
+        // Backend allows delete; we show delete only when status === 0
+        await axios.delete(`/register-invoices/${id}`)
+        this.$bvToast && this.$bvToast.toast('Đã xóa tờ khai', { title: 'Thành công', variant: 'success', solid: true, autoHideDelay: 3000 })
+        // Refresh list after delete
+        this.applyFilters()
       } catch (e) {
-        // handled globally
+        const code = e?.response?.status
+        const msg = code === 403 ? 'Không có quyền xóa tờ khai' : code === 404 ? 'Tờ khai không tồn tại' : 'Xóa tờ khai thất bại'
+        this.$bvToast && this.$bvToast.toast(msg, { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 4000 })
       }
     },
     async onSignature(item) {

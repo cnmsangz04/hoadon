@@ -160,6 +160,7 @@ export default {
         category: null,
         status: 1,
         system: 1,
+        form_code: '', // first character stored separately on backend
       },
       // Serial builder state
       serialCK: 'C',
@@ -252,10 +253,11 @@ export default {
           this.form.photo = it.photo || this.form.photo
           this.form.type = it.type != null ? Number(it.type) : this.form.type
           this.form.category = it.category != null ? Number(it.category) : this.form.category
-          // Parse existing serial if valid
-          if (typeof it.serial === 'string' && it.serial.length >= 7) {
-            const s = it.serial
-            // s[0] category, s[1] C/K, s[2-3] year, s[4] T, s[5-6] suffix
+          // Reconstruct full serial if backend returns split fields
+          const sFull = `${(it.formCode || it.form_code || '')}${(it.serial || '')}`
+          const serialStr = (typeof it.serial === 'string' && it.serial.length >= 7) ? it.serial : (sFull.length >= 7 ? sFull : '')
+          if (serialStr) {
+            const s = serialStr
             this.serialCK = ['C','K'].includes(s[1]) ? s[1] : this.serialCK
             this.serialYear = s.substring(2,4)
             this.serialSuffix = s.substring(5,7).toUpperCase()
@@ -278,9 +280,11 @@ export default {
           this.form.photo = it.photo || ''
           this.form.type = it.type != null ? Number(it.type) : null
           this.form.category = it.category != null ? Number(it.category) : null
-          // Parse existing serial
-          if (typeof it.serial === 'string' && it.serial.length >= 7) {
-            const s = it.serial
+          // Reconstruct full serial from formCode + serial when present
+          const sFull = `${(it.formCode || it.form_code || '')}${(it.serial || '')}`
+          const serialStr = sFull.length >= 7 ? sFull : (typeof it.serial === 'string' ? it.serial : '')
+          if (serialStr && serialStr.length >= 7) {
+            const s = serialStr
             this.serialCK = ['C','K'].includes(s[1]) ? s[1] : this.serialCK
             this.serialYear = s.substring(2,4)
             this.serialSuffix = s.substring(5,7).toUpperCase()
@@ -290,6 +294,7 @@ export default {
           }
           this.form.status = it.status != null ? Number(it.status) : 1
           this.form.system = it.system != null ? Number(it.system) : 1
+          this.form.form_code = (it.formCode || it.form_code || '')
         }
       } catch (e) {
         // Removed notify assignment
@@ -343,7 +348,6 @@ export default {
         if (id) {
           await axios.put(`/form-invoices/${id}`, payload, { successMessage: 'Đã cập nhật mẫu' })
         } else {
-          // Pass templateId to backend to handle copying file/photo
           const templateId = this.$route.query.templateId
           if (templateId) payload.templateId = templateId
           await axios.post('/form-invoices', payload, { successMessage: 'Đã tạo mẫu' })

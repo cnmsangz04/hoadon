@@ -172,6 +172,7 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
             }
 
             ex.setName(patch.getName() != null ? patch.getName() : ex.getName());
+            ex.setFormCode(patch.getFormCode() != null ? patch.getFormCode() : ex.getFormCode());
             ex.setSerial(patch.getSerial() != null ? patch.getSerial() : ex.getSerial());
             ex.setFile(patch.getFile() != null ? patch.getFile() : ex.getFile());
             ex.setPhoto(patch.getPhoto() != null ? patch.getPhoto() : ex.getPhoto());

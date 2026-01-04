@@ -22,6 +22,9 @@ public class FormInvoiceEntity {
     @Column(name = "serial")
     private String serial;
 
+    @Column(name = "form_code")
+    private String formCode; // NVARCHAR(50) NOT NULL DEFAULT ''
+
     @Column(name = "`file`")
     private String file;
 
@@ -57,6 +60,8 @@ public class FormInvoiceEntity {
     public void setName(String name) { this.name = name; }
     public String getSerial() { return serial; }
     public void setSerial(String serial) { this.serial = serial; }
+    public String getFormCode() { return formCode; }
+    public void setFormCode(String formCode) { this.formCode = formCode; }
     public String getFile() { return file; }
     public void setFile(String file) { this.file = file; }
     public String getPhoto() { return photo; }

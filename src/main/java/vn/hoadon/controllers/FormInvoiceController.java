@@ -5,25 +5,46 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.dto.forminvoice.FormInvoiceListItemDto;
+import vn.hoadon.entity.CompanyEntity;
+import vn.hoadon.entity.CompanyBankEntity;
 import vn.hoadon.entity.FormInvoiceEntity;
 import vn.hoadon.entity.InvoiceNumberEntity;
+import vn.hoadon.entity.LegalRepresentativeEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.repositories.UserRepository;
+import vn.hoadon.repositories.CompanyRepository;
+import vn.hoadon.repositories.CompanyBankRepository;
+import vn.hoadon.repositories.LegalRepresentativeRepository;
 import vn.hoadon.services.FormInvoiceService;
 import vn.hoadon.services.InvoiceNumberService;
 
 import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.UUID;
+
+import javax.xml.transform.Templates;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ContentDisposition;
+import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import java.io.ByteArrayOutputStream;
 
 @RestController
 @RequestMapping("/v1/form-invoices")
@@ -34,6 +55,9 @@ public class FormInvoiceController extends BaseController {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired private CompanyRepository companyRepository;
+    @Autowired private CompanyBankRepository companyBankRepository;
+    @Autowired private LegalRepresentativeRepository legalRepresentativeRepository;
 
     @Autowired
     public FormInvoiceController(FormInvoiceService service, InvoiceNumberService invoiceNumberService) {
@@ -63,8 +87,8 @@ public class FormInvoiceController extends BaseController {
             String kw = q.toLowerCase();
             filtered = filtered.stream().filter(it -> {
                 String name = it.getName() != null ? it.getName().toLowerCase() : "";
-                String serial = it.getSerial() != null ? it.getSerial().toLowerCase() : "";
-                return name.contains(kw) || serial.contains(kw);
+                String combinedSerial = ((it.getFormCode() != null ? it.getFormCode() : "") + (it.getSerial() != null ? it.getSerial() : "")).toLowerCase();
+                return name.contains(kw) || combinedSerial.contains(kw);
             }).toList();
         }
         if (category != null) {
@@ -179,6 +203,155 @@ public class FormInvoiceController extends BaseController {
         return ResponseEntity.ok(e);
     }
 
+    // --- Render HTML preview by applying XSLT template to sample XML ---
+    @GetMapping(value = "/{id}/view", produces = MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<?> viewHtml(@PathVariable Long id) {
+        UserEntity user = currentUser();
+        if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
+
+        Optional<FormInvoiceEntity> opt = service.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        FormInvoiceEntity e = opt.get();
+        if (!Objects.equals(e.getCompanyId(), user.getCompanyId())) return ResponseEntity.status(403).build();
+
+        String xsltPublicPath = e.getFile();
+        if (!StringUtils.hasText(xsltPublicPath)) {
+            return ResponseEntity.status(404).body("<html><body>Không tìm thấy tệp XSLT của mẫu</body></html>");
+        }
+        Path xsltFsPath = toFilesystemPath(xsltPublicPath);
+        if (xsltFsPath == null || !Files.exists(xsltFsPath)) {
+            return ResponseEntity.status(404).body("<html><body>Không tồn tại tệp XSLT trên hệ thống</body></html>");
+        }
+
+        // Build sample XML using SampleInvoiceXmlBuilder with mapped data
+        CompanyEntity company = null;
+        CompanyBankEntity bank = null;
+        LegalRepresentativeEntity rep = null;
+        if (e.getCompanyId() != null) {
+            company = companyRepository.findById(e.getCompanyId()).orElse(null);
+            if (company != null) {
+                java.util.List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
+                if (banks != null && !banks.isEmpty()) bank = banks.get(0);
+            }
+            rep = legalRepresentativeRepository.findByCompanyId(e.getCompanyId()).orElse(null);
+        }
+        String sampleXml = vn.hoadon.util.SampleInvoiceXmlBuilder.build(user, e, company, bank, rep);
+
+        try {
+            TransformerFactory factory = TransformerFactory.newInstance();
+            // Enable secure processing when available
+            try { factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true); } catch (Exception ignored) {}
+            // Allow local file includes/imports if the stylesheet uses them
+            try { factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "file"); } catch (Exception ignored) {}
+
+            StreamSource xsltSource = new StreamSource(xsltFsPath.toFile());
+            Transformer transformer = factory.newTransformer(xsltSource);
+            // Provide common default parameters expected by templates
+            transformer.setParameter("qrcode", sampleQrDataUrl());
+            transformer.setParameter("code_cqt", sampleCodeCqt());
+            transformer.setParameter("status", sampleStatus());
+            transformer.setParameter("lookup_code", sampleLookupCode());
+
+            StreamSource xmlSource = new StreamSource(new StringReader(sampleXml));
+            StringWriter outWriter = new StringWriter();
+            StreamResult result = new StreamResult(outWriter);
+            transformer.transform(xmlSource, result);
+            String html = outWriter.toString();
+
+            if (!StringUtils.hasText(html)) html = "<html><body>Không thể hiển thị nội dung mẫu</body></html>";
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(html);
+        } catch (TransformerConfigurationException tce) {
+            // Attempt to inject missing xsl:param declarations then retry
+            String missing = extractUndefinedParam(tce.getMessage());
+            if (StringUtils.hasText(missing)) {
+                try {
+                    TransformerFactory factory = TransformerFactory.newInstance();
+                    try { factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true); } catch (Exception ignored) {}
+                    try { factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "file"); } catch (Exception ignored) {}
+                    String html = transformWithInjectedParams(factory, xsltFsPath, sampleXml, new java.util.LinkedHashSet<>(java.util.Arrays.asList(missing)));
+                    if (!StringUtils.hasText(html)) html = "<html><body>Không thể hiển thị nội dung mẫu</body></html>";
+                    return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(html);
+                } catch (Exception retryEx) {
+                    String msg = "<html><body>Lỗi xử lý mẫu (inject): " + escapeHtml(retryEx.getMessage()) + "</body></html>";
+                    return ResponseEntity.status(500).contentType(MediaType.TEXT_HTML).body(msg);
+                }
+            }
+            String msg = "<html><body>Lỗi cấu hình XSLT: " + escapeHtml(tce.getMessage()) + "</body></html>";
+            return ResponseEntity.status(500).contentType(MediaType.TEXT_HTML).body(msg);
+        } catch (Exception ex) {
+            String msg = "<html><body>Lỗi xử lý mẫu: " + escapeHtml(ex.getMessage()) + "</body></html>";
+            return ResponseEntity.status(500).contentType(MediaType.TEXT_HTML).body(msg);
+        }
+    }
+
+    private String sampleQrDataUrl() {
+        // Tiny 1x1 transparent PNG data URL as a safe placeholder QR image
+        return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMAAQAABQABDQottQAAAABJRU5ErkJggg==";
+    }
+
+    private String sampleCodeCqt() {
+        return "CQT123456789";
+    }
+
+    private String sampleStatus() {
+        // Use numeric status default per requirement
+        return "0";
+    }
+
+    private String sampleLookupCode() {
+        return "LOOKUP-001";
+    }
+
+    private String extractUndefinedParam(String message) {
+        if (!StringUtils.hasText(message)) return null;
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("Variable or parameter '([^']+)' is undefined", java.util.regex.Pattern.CASE_INSENSITIVE);
+        java.util.regex.Matcher m = p.matcher(message);
+        if (m.find()) return m.group(1);
+        p = java.util.regex.Pattern.compile("(variable|parameter)\\s+\\$?([a-zA-Z0-9_:-]+)\\s+undefined", java.util.regex.Pattern.CASE_INSENSITIVE);
+        m = p.matcher(message);
+        if (m.find()) return m.group(2);
+        return null;
+    }
+
+    private String transformWithInjectedParams(TransformerFactory factory, Path originalXsltPath, String sampleXml, java.util.Set<String> missingNames) throws Exception {
+        String xsltText = Files.readString(originalXsltPath);
+        int start = xsltText.indexOf("<xsl:stylesheet");
+        if (start < 0) throw new IllegalStateException("Không tìm thấy thẻ xsl:stylesheet trong XSLT");
+        int tagEnd = xsltText.indexOf('>', start);
+        if (tagEnd < 0) throw new IllegalStateException("Không hợp lệ thẻ xsl:stylesheet");
+        StringBuilder injected = new StringBuilder();
+        injected.append(xsltText, 0, tagEnd + 1);
+        injected.append("<xsl:param name=\"qrcode\"/>");
+        injected.append("<xsl:param name=\"code_cqt\"/>");
+        injected.append("<xsl:param name=\"status\"/>");
+        injected.append("<xsl:param name=\"lookup_code\"/>");
+        for (String name : missingNames) {
+            if (name == null) continue;
+            String n = name.trim();
+            if (n.isEmpty()) continue;
+            if ("qrcode".equals(n) || "code_cqt".equals(n) || "status".equals(n) || "lookup_code".equals(n)) continue;
+            injected.append("<xsl:param name=\"" + n.replace("\"", "&quot;") + "\"/>");
+        }
+        injected.append(xsltText.substring(tagEnd + 1));
+
+        StreamSource xsltSource = new StreamSource(new StringReader(injected.toString()));
+        Transformer transformer = factory.newTransformer(xsltSource);
+        transformer.setParameter("qrcode", sampleQrDataUrl());
+        transformer.setParameter("code_cqt", sampleCodeCqt());
+        transformer.setParameter("status", sampleStatus());
+        transformer.setParameter("lookup_code", sampleLookupCode());
+        for (String name : missingNames) {
+            transformer.setParameter(name, "");
+        }
+        StreamSource xmlSource = new StreamSource(new StringReader(sampleXml));
+        StringWriter outWriter = new StringWriter();
+        StreamResult result = new StreamResult(outWriter);
+        transformer.transform(xmlSource, result);
+        return outWriter.toString();
+    }
+    
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Map<String, Object> body) {
         UserEntity user = currentUser();
@@ -188,7 +361,7 @@ public class FormInvoiceController extends BaseController {
         Long companyId = user.getCompanyId();
 
         String name = Optional.ofNullable(body.get("name")).map(Object::toString).orElse(null);
-        String serial = Optional.ofNullable(body.get("serial")).map(Object::toString).orElse(null);
+        String serialFull = Optional.ofNullable(body.get("serial")).map(Object::toString).orElse(null);
         Integer category = Optional.ofNullable(body.get("category")).map(v -> Integer.valueOf(v.toString())).orElse(null);
         Integer type = Optional.ofNullable(body.get("type")).map(v -> Integer.valueOf(v.toString())).orElse(null);
         Integer status = Optional.ofNullable(body.get("status")).map(v -> Integer.valueOf(v.toString())).orElse(1);
@@ -198,9 +371,17 @@ public class FormInvoiceController extends BaseController {
         String photo = Optional.ofNullable(body.get("photo")).map(Object::toString).orElse(null);
         Long templateId = Optional.ofNullable(body.get("templateId")).map(v -> Long.valueOf(v.toString())).orElse(null);
 
+        // Validate name
         if (name == null || name.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Tên mẫu không được để trống"));
         }
+        // Validate serial (full): must have at least 2 chars to split
+        if (serialFull == null || serialFull.trim().length() < 2) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Ký hiệu không hợp lệ"));
+        }
+        serialFull = serialFull.trim();
+        String formCode = serialFull.substring(0, 1);
+        String serialRemainder = serialFull.substring(1);
 
         // If creating from a system template, copy its file/photo into company uploads and use those new paths
         if (templateId != null) {
@@ -232,7 +413,8 @@ public class FormInvoiceController extends BaseController {
         e.setCompanyId(companyId);
         e.setUserId(user.getId());
         e.setName(name);
-        e.setSerial(serial);
+        e.setFormCode(formCode);
+        e.setSerial(serialRemainder);
         e.setCategory(category);
         e.setType(type);
         e.setStatus(status);
@@ -328,7 +510,16 @@ public class FormInvoiceController extends BaseController {
 
         FormInvoiceEntity patch = new FormInvoiceEntity();
         patch.setName(Optional.ofNullable(body.get("name")).map(Object::toString).orElse(null));
-        patch.setSerial(Optional.ofNullable(body.get("serial")).map(Object::toString).orElse(null));
+        String serialFull = Optional.ofNullable(body.get("serial")).map(Object::toString).orElse(null);
+        if (serialFull != null) {
+            String s = serialFull.trim();
+            if (s.length() >= 2) {
+                patch.setFormCode(s.substring(0,1));
+                patch.setSerial(s.substring(1));
+            } else {
+                return ResponseEntity.badRequest().body(Map.of("message", "Ký hiệu không hợp lệ"));
+            }
+        }
         patch.setCategory(Optional.ofNullable(body.get("category")).map(v -> Integer.valueOf(v.toString())).orElse(null));
         patch.setType(Optional.ofNullable(body.get("type")).map(v -> Integer.valueOf(v.toString())).orElse(null));
         patch.setStatus(Optional.ofNullable(body.get("status")).map(v -> Integer.valueOf(v.toString())).orElse(null));
@@ -428,7 +619,9 @@ public class FormInvoiceController extends BaseController {
             FormInvoiceListItemDto d = new FormInvoiceListItemDto();
             d.setId(it.getId());
             d.setName(it.getName());
-            d.setSerial(it.getSerial());
+            // Use combined serial: formCode + serial
+            String combinedSerial = (it.getFormCode() != null ? it.getFormCode() : "") + (it.getSerial() != null ? it.getSerial() : "");
+            d.setSerial(combinedSerial);
             d.setCategory(it.getCategory());
             d.setCategoryLabel(categoryLabel(it.getCategory()));
             d.setType(it.getType());
@@ -466,5 +659,164 @@ public class FormInvoiceController extends BaseController {
         res.put("current_page", page);
         res.put("last_page", 1);
         return res;
+    }
+
+    private String escapeHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    @GetMapping(value = "/{id}/xml-download", produces = MediaType.APPLICATION_XML_VALUE)
+    public ResponseEntity<?> xmlDownload(@PathVariable Long id) {
+        UserEntity user = currentUser();
+        if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
+        Optional<FormInvoiceEntity> opt = service.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        FormInvoiceEntity e = opt.get();
+        if (!Objects.equals(e.getCompanyId(), user.getCompanyId())) return ResponseEntity.status(403).build();
+
+        CompanyEntity company = null; CompanyBankEntity bank = null; LegalRepresentativeEntity rep = null;
+        if (e.getCompanyId() != null) {
+            company = companyRepository.findById(e.getCompanyId()).orElse(null);
+            if (company != null) {
+                java.util.List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
+                if (banks != null && !banks.isEmpty()) bank = banks.get(0);
+            }
+            rep = legalRepresentativeRepository.findByCompanyId(e.getCompanyId()).orElse(null);
+        }
+        String sampleXml = vn.hoadon.util.SampleInvoiceXmlBuilder.build(user, e, company, bank, rep);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentDisposition(ContentDisposition.attachment().filename("invoice-" + id + ".xml").build());
+        return new ResponseEntity<>(sampleXml, headers, HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/{id}/pdf-download", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<?> pdfDownload(@PathVariable Long id) {
+        UserEntity user = currentUser();
+        if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
+        Optional<FormInvoiceEntity> opt = service.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        FormInvoiceEntity e = opt.get();
+        if (!Objects.equals(e.getCompanyId(), user.getCompanyId())) return ResponseEntity.status(403).build();
+
+        String xsltPublicPath = e.getFile();
+        if (!StringUtils.hasText(xsltPublicPath)) {
+            return ResponseEntity.status(404).contentType(MediaType.TEXT_PLAIN).body("Không tìm thấy tệp XSLT của mẫu");
+        }
+        Path xsltFsPath = toFilesystemPath(xsltPublicPath);
+        if (xsltFsPath == null || !Files.exists(xsltFsPath)) {
+            return ResponseEntity.status(404).contentType(MediaType.TEXT_PLAIN).body("Không tồn tại tệp XSLT trên hệ thống");
+        }
+
+        CompanyEntity company = null; CompanyBankEntity bank = null; LegalRepresentativeEntity rep = null;
+        if (e.getCompanyId() != null) {
+            company = companyRepository.findById(e.getCompanyId()).orElse(null);
+            if (company != null) {
+                java.util.List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
+                if (banks != null && !banks.isEmpty()) bank = banks.get(0);
+            }
+            rep = legalRepresentativeRepository.findByCompanyId(e.getCompanyId()).orElse(null);
+        }
+        String sampleXml = vn.hoadon.util.SampleInvoiceXmlBuilder.build(user, e, company, bank, rep);
+
+        try {
+            TransformerFactory factory = TransformerFactory.newInstance();
+            try { factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true); } catch (Exception ignored) {}
+            try { factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "file"); } catch (Exception ignored) {}
+
+            StreamSource xsltSource = new StreamSource(xsltFsPath.toFile());
+            Transformer transformer = factory.newTransformer(xsltSource);
+
+            StreamSource xmlSource = new StreamSource(new StringReader(sampleXml));
+            StringWriter outWriter = new StringWriter();
+            StreamResult result = new StreamResult(outWriter);
+            transformer.transform(xmlSource, result);
+            String html = outWriter.toString();
+
+            // Resolve named HTML entities to avoid XML parser errors in the renderer
+            html = resolveNamedHtmlEntities(html);
+
+            // Normalize to XHTML-ish by self-closing void tags like <meta>, <link>, <img>, etc.
+            html = normalizeToXhtml(html);
+
+            // Convert HTML to PDF
+            ByteArrayOutputStream pdfOut = new ByteArrayOutputStream();
+            PdfRendererBuilder builder = new PdfRendererBuilder();
+            String baseUri = xsltFsPath.getParent() != null ? xsltFsPath.getParent().toUri().toString() : null;
+            builder.useFastMode();
+            if (baseUri != null) builder.withHtmlContent(html, baseUri); else builder.withHtmlContent(html, null);
+            builder.toStream(pdfOut);
+            builder.run();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentDisposition(ContentDisposition.attachment().filename("invoice-" + id + ".pdf").build());
+            return new ResponseEntity<>(pdfOut.toByteArray(), headers, HttpStatus.OK);
+        } catch (TransformerConfigurationException tce) {
+            return ResponseEntity.status(500).contentType(MediaType.TEXT_PLAIN).body("Lỗi cấu hình XSLT: " + tce.getMessage());
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).contentType(MediaType.TEXT_PLAIN).body("Lỗi tạo PDF: " + ex.getMessage());
+        }
+    }
+
+    // Ensure void HTML elements are self-closed so the content is XML well-formed for parsers expecting XHTML
+    private String normalizeToXhtml(String html) {
+        if (html == null || html.isEmpty()) return html;
+        String[] voidTags = {"meta","link","img","br","hr","input","source","track","area","base","col","embed","param","wbr"};
+        for (String tag : voidTags) {
+            String pattern = "(?i)<" + tag + "(\\b[^>]*?)(?<!/)>";
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile(pattern);
+            java.util.regex.Matcher m = p.matcher(html);
+            StringBuffer sb = new StringBuffer();
+            while (m.find()) {
+                String attrs = m.group(1);
+                String repl = "<" + tag + attrs + "/>";
+                m.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(repl));
+            }
+            m.appendTail(sb);
+            html = sb.toString();
+        }
+        return html;
+    }
+
+    // Minimal resolver to replace common named HTML entities with Unicode characters
+    private String resolveNamedHtmlEntities(String html) {
+        if (html == null || html.isEmpty()) return html;
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("&([a-zA-Z][a-zA-Z0-9]+);");
+        java.util.regex.Matcher m = p.matcher(html);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            String name = m.group(1);
+            if ("amp".equals(name) || "lt".equals(name) || "gt".equals(name) || "quot".equals(name) || "apos".equals(name)) {
+                m.appendReplacement(sb, m.group(0));
+                continue;
+            }
+            String repl = ENTITY_MAP.get(name);
+            if (repl == null) repl = " ";
+            m.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(repl));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    private static final java.util.Map<String, String> ENTITY_MAP = new java.util.HashMap<>();
+    static {
+        ENTITY_MAP.put("nbsp", "\u00A0");
+        ENTITY_MAP.put("aacute", "\u00E1");
+        ENTITY_MAP.put("eacute", "\u00E9");
+        ENTITY_MAP.put("iacute", "\u00ED");
+        ENTITY_MAP.put("oacute", "\u00F3");
+        ENTITY_MAP.put("uacute", "\u00FA");
+        ENTITY_MAP.put("yacute", "\u00FD");
+        ENTITY_MAP.put("agrave", "\u00E0");
+        ENTITY_MAP.put("ograve", "\u00F2");
+        ENTITY_MAP.put("ntilde", "\u00F1");
+        ENTITY_MAP.put("ocirc", "\u00F4");
+        ENTITY_MAP.put("ouml", "\u00F6");
+        ENTITY_MAP.put("uuml", "\u00FC");
+        ENTITY_MAP.put("ccedil", "\u00E7");
+        ENTITY_MAP.put("quot", "\"");
+        ENTITY_MAP.put("apos", "'");
+        ENTITY_MAP.put("lt", "<");
+        ENTITY_MAP.put("gt", ">");
     }
 }

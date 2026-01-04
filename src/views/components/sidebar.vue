@@ -69,7 +69,6 @@ export default {
           icon: 'fas fa-file-signature',
           children: [
             { title: 'Tờ khai hóa đơn điện tử', to: '/register/invoice/list' },
-            { title: '', to: '/register/form-invoice' },
           ],
         },
         { title: 'Mẫu hóa đơn', icon: 'fas fa-file-invoice', to: '/form-invoice/list' },
