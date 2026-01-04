@@ -42,6 +42,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/uploads/**",
                                 "/v1/auth/**",
+                                "/v1/file/**",
                                 "/h2-console/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/register-invoices/*/download-xml").permitAll()

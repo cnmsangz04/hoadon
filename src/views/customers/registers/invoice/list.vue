@@ -98,6 +98,11 @@
           <code>{{ item.form_pattern || '—' }}</code>
         </template>
 
+        <!-- New column: Ký hiệu (form_code + serial) -->
+        <template #cell(form_serial)="{ item }">
+          <code>{{ getFormSerial(item) }}</code>
+        </template>
+
         <template #cell(declaration_date)="{ item }">
           {{ formatDate(item.declaration_date) }}
         </template>
@@ -240,6 +245,7 @@ export default {
       fields: [
         { key: 'index', label: '#', thStyle: { width: '50px' } },
         { key: 'form_pattern', label: 'Mẫu số', thStyle: { width: '140px' } },
+        { key: 'form_serial', label: 'Ký hiệu', thStyle: { width: '160px' } },
         { key: 'declaration_date', label: 'Ngày lập', thStyle: { width: '130px' } },
         { key: 'declaration_type', label: 'Hình thức tờ khai', thStyle: { width: '140px' } },
         { key: 'invoice_forms', label: 'Hình thức hóa đơn' },
@@ -516,25 +522,31 @@ export default {
     },
     async deleteItem(item) {
       try {
+        const id = item.id || item.ID || item.Id
+        if (!id) return
         const ok = await this.$bvModal.msgBoxConfirm(
-          `Bạn có chắc muốn đặt trạng thái tờ khai #${item.id} về Khởi tạo?`,
+          `Bạn có chắc muốn xóa tờ khai #${id}?`,
           {
             title: 'Xác nhận',
             size: 'sm',
             buttonSize: 'sm',
             okVariant: 'danger',
-            okTitle: 'Xác nhận',
+            okTitle: 'Xóa',
             cancelTitle: 'Hủy',
             footerClass: 'p-2',
             hideHeaderClose: false
           }
         )
         if (!ok) return
-        const id = item.id || item.ID || item.Id
-        await this.updateStatus(id, 0)
-        await this.refreshRow(id)
+        // Backend allows delete; we show delete only when status === 0
+        await axios.delete(`/register-invoices/${id}`)
+        this.$bvToast && this.$bvToast.toast('Đã xóa tờ khai', { title: 'Thành công', variant: 'success', solid: true, autoHideDelay: 3000 })
+        // Refresh list after delete
+        this.applyFilters()
       } catch (e) {
-        // handled globally
+        const code = e?.response?.status
+        const msg = code === 403 ? 'Không có quyền xóa tờ khai' : code === 404 ? 'Tờ khai không tồn tại' : 'Xóa tờ khai thất bại'
+        this.$bvToast && this.$bvToast.toast(msg, { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 4000 })
       }
     },
     async onSignature(item) {
@@ -705,6 +717,42 @@ export default {
         this.$refs.historyModal && this.$refs.historyModal.show()
       } finally {
         this.historyBusy = false
+      }
+    },
+    getFormSerial(item) {
+      // Accept item.form_invoices or item.invoice_forms; can be array/object/stringified JSON
+      const joinSerial = (arr) => {
+        try {
+          return arr
+            .map(x => {
+              const o = typeof x === 'string' ? JSON.parse(x) : x
+              const code = o?.form_code || o?.formCode || o?.code || ''
+              const serial = o?.serial || o?.form_serial || o?.symbol || ''
+              const combined = `${(code || '').toString()}${(serial || '').toString()}`
+              return combined || null
+            })
+            .filter(Boolean)
+            .join(', ')
+        } catch {
+          return '—'
+        }
+      }
+      try {
+        let v = item?.form_invoices ?? item?.invoice_forms
+        if (!v) return '—'
+        if (typeof v === 'string') {
+          try { v = JSON.parse(v) } catch { /* keep as string */ }
+        }
+        if (Array.isArray(v)) {
+          return joinSerial(v) || '—'
+        }
+        if (typeof v === 'object') {
+          const values = Object.values(v)
+          return joinSerial(values) || '—'
+        }
+        return '—'
+      } catch {
+        return '—'
       }
     },
   }

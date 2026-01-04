@@ -69,7 +69,6 @@ export default {
           icon: 'fas fa-file-signature',
           children: [
             { title: 'Tờ khai hóa đơn điện tử', to: '/register/invoice/list' },
-            { title: '', to: '/register/form-invoice' },
           ],
         },
         { title: 'Mẫu hóa đơn', icon: 'fas fa-file-invoice', to: '/form-invoice/list' },
@@ -85,8 +84,8 @@ export default {
           title: 'Danh mục',
           icon: 'fas fa-list-ul',
           children: [
-            { title: 'Sản phẩm', to: '/categories/product/list' },
-            { title: 'Khách hàng', to: '/categories/customer/list' },
+            { title: 'Sản phẩm', to: '/product/list' },
+            { title: 'Khách hàng', to: '/customer/list' },
           ],
         },
         { title: 'Cài đặt', icon: 'fas fa-cog', to: '/setting' },
