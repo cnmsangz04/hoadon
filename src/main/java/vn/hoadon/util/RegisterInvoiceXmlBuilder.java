@@ -83,11 +83,11 @@ public final class RegisterInvoiceXmlBuilder {
         String ddanh = nullToEmpty(e.getCreatePlace());
         String nlap = e.getDeclarationDate() != null ? e.getDeclarationDate().toString() : java.time.LocalDate.now().toString();
 
-        // Parse JSON fields from entity
-        Set<String> invoiceForms = parseStringSet(e.getInvoiceForms());
-        Set<String> sendMethodCodes = parseSendMethods(e.getSendMethods());
-        Set<String> transferMethods = parseStringSet(e.getTransferMethods());
-        Set<String> invoiceTypes = parseStringSet(e.getInvoiceTypes());
+        // Convert list fields from entity
+        Set<String> invoiceForms = toSet(e.getInvoiceForms());
+        Set<String> sendMethodCodes = toSet(e.getSendMethods());
+        Set<String> transferMethods = toSet(e.getTransferMethods());
+        Set<String> invoiceTypes = toSet(e.getInvoiceTypes());
         List<CertificateRow> certs = parseCertificates(e.getDigitalCertificates());
 
         StringBuilder sb = new StringBuilder();
@@ -210,134 +210,15 @@ public final class RegisterInvoiceXmlBuilder {
         return "0";
     }
 
-    private static Set<String> parseStringSet(String json) {
+    private static Set<String> toSet(List<String> list) {
         Set<String> out = new HashSet<>();
-        if (json == null || json.isBlank()) return out;
-        try {
-            JsonNode node = parseLenient(json);
-            if (node == null) return out;
-            fillStringSetFromNode(out, node);
-        } catch (Exception ignored) {}
-        return out;
-    }
-
-    private static void fillStringSetFromNode(Set<String> out, JsonNode node) {
-        if (node == null) return;
-        if (node.isArray()) {
-            for (JsonNode n : node) {
-                if (n.isTextual()) out.add(n.asText().trim());
-                else if (n.isObject()) {
-                    JsonNode code = n.get("code");
-                    if (code != null && code.isTextual()) out.add(code.asText().trim());
-                    else out.add(n.toString());
-                } else if (n.isValueNode()) out.add(n.asText().trim());
-            }
-        } else if (node.isObject()) {
-            // some payloads might be { list: [...] } or similar
-            boolean consumed = false;
-            for (Iterator<String> it = node.fieldNames(); it.hasNext(); ) {
-                String key = it.next();
-                JsonNode arr = node.get(key);
-                if (arr != null && arr.isArray()) {
-                    consumed = true;
-                    for (JsonNode n : arr) {
-                        if (n.isTextual() || n.isValueNode()) out.add(n.asText().trim());
-                    }
-                }
-            }
-            if (!consumed) {
-                // fallback: try common fields like code/value
-                JsonNode code = node.get("code");
-                if (code != null && code.isValueNode()) out.add(code.asText().trim());
-            }
-        } else if (node.isTextual()) {
-            // Try nested JSON string: e.g. "[\"CMa\",...]"
-            String txt = node.asText();
-            try {
-                JsonNode nested = MAPPER.readTree(txt);
-                if (nested != null && !nested.isMissingNode()) {
-                    fillStringSetFromNode(out, nested);
-                } else {
-                    out.add(txt.trim());
-                }
-            } catch (Exception ex) {
-                out.add(txt.trim());
-            }
-        } else if (node.isValueNode()) {
-            out.add(node.asText().trim());
-        }
-    }
-
-    private static Set<String> parseSendMethods(String json) {
-        // send_methods could be array, object with keys a,b,c, or a JSON string of those
-        Set<String> out = new HashSet<>();
-        if (json == null || json.isBlank()) return out;
-        try {
-            JsonNode node = parseLenient(json);
-            if (node == null) return out;
-            if (node.isArray()) {
-                for (JsonNode n : node) if (n.isValueNode()) out.add(n.asText().trim());
-            } else if (node.isObject()) {
-                // known keys a,b,c
-                for (String key : Arrays.asList("a","b","c","items","list","codes")) {
-                    JsonNode arr = node.get(key);
-                    if (arr != null && arr.isArray()) {
-                        for (JsonNode n : arr) if (n.isValueNode()) out.add(n.asText().trim());
-                    }
-                }
-            } else if (node.isTextual()) {
-                // nested JSON string
-                try {
-                    JsonNode nested = MAPPER.readTree(node.asText());
-                    if (nested != null) {
-                        if (nested.isArray()) {
-                            for (JsonNode n : nested) if (n.isValueNode()) out.add(n.asText().trim());
-                        } else if (nested.isObject()) {
-                            for (Iterator<String> it = nested.fieldNames(); it.hasNext();) {
-                                String key = it.next();
-                                JsonNode arr = nested.get(key);
-                                if (arr != null && arr.isArray()) for (JsonNode n : arr) if (n.isValueNode()) out.add(n.asText().trim());
-                            }
-                        } else if (nested.isValueNode()) {
-                            out.add(nested.asText().trim());
-                        }
-                    }
-                } catch (Exception ex) {
-                    out.add(node.asText().trim());
-                }
-            }
-        } catch (Exception ignored) {}
-        return out;
-    }
-
-    private static Set<String> mapInvoiceTypeCodes(Set<String> input) {
-        if (input == null || input.isEmpty()) return input;
-        Set<String> out = new HashSet<>();
-        Map<String,String> map = new HashMap<>();
-        map.put("HDThuongMai", "HDTMai");
-        map.put("HDGTGT_BienLai", "HDGTGTTHBLai");
-        map.put("HDBHang_BienLai", "HDBHTHBLai");
-        // identity for others
-        for (String s : input) {
-            out.add(map.getOrDefault(s, s));
+        if (list == null) return out;
+        for (String s : list) {
+            if (s == null) continue;
+            String v = s.trim();
+            if (!v.isEmpty()) out.add(v);
         }
         return out;
-    }
-
-    private static JsonNode parseLenient(String json) throws JsonProcessingException {
-        if (json == null) return null;
-        try {
-            return MAPPER.readTree(json);
-        } catch (JsonProcessingException ex) {
-            // if it's quoted JSON string, try once more
-            if (json.startsWith("\"") && json.endsWith("\"")) {
-                String unq = json.substring(1, json.length()-1)
-                        .replace("\\\"", "\"")
-                        .replace("\\n", "\n");
-                return MAPPER.readTree(unq);
-            }
-            throw ex;
-        }
     }
 
     private static class CertificateRow {
@@ -348,47 +229,25 @@ public final class RegisterInvoiceXmlBuilder {
         String sigRegMethod;
     }
 
-    private static List<CertificateRow> parseCertificates(String json) {
-        List<CertificateRow> out = new ArrayList<>();
-        if (json == null || json.isBlank()) return out;
+    private static List<CertificateRow> parseCertificates(List<String> list) {
+        // With new List<String> storage, we don't have structured certificate details.
+        // Return empty to avoid emitting invalid data.
+        return List.of();
+    }
+
+    // Legacy helpers retained in case other callers use them
+    private static JsonNode parseLenient(String json) throws JsonProcessingException {
+        if (json == null) return null;
         try {
-            JsonNode node = parseLenient(json);
-            if (node == null) return out;
-            if (node.isArray()) {
-                for (JsonNode n : node) addCertNode(out, n);
-            } else if (node.isObject()) {
-                // single object
-                addCertNode(out, node);
-            } else if (node.isTextual()) {
-                // try parse nested json string
-                try {
-                    JsonNode n2 = MAPPER.readTree(node.asText());
-                    if (n2 != null) {
-                        if (n2.isArray()) for (JsonNode n : n2) addCertNode(out, n);
-                        else if (n2.isObject()) addCertNode(out, n2);
-                    }
-                } catch (Exception ignored) {}
+            return MAPPER.readTree(json);
+        } catch (JsonProcessingException ex) {
+            if (json.startsWith("\"") && json.endsWith("\"")) {
+                String unq = json.substring(1, json.length()-1)
+                        .replace("\\\"", "\"")
+                        .replace("\\n", "\n");
+                return MAPPER.readTree(unq);
             }
-        } catch (Exception ignored) {}
-        return out;
-    }
-
-    private static void addCertNode(List<CertificateRow> out, JsonNode n) {
-        if (n == null || !n.isObject()) return;
-        CertificateRow c = new CertificateRow();
-        c.orgName = text(n, "orgName", "org_name", "organizationName");
-        c.serialNo = text(n, "serialNo", "serial_no", "serial");
-        c.signFromDate = text(n, "signFromDate", "sign_from_date", "from");
-        c.signToDate = text(n, "signToDate", "sign_to_date", "to");
-        c.sigRegMethod = text(n, "sigRegMethod", "sig_reg_method", "method");
-        out.add(c);
-    }
-
-    private static String text(JsonNode obj, String... keys) {
-        for (String k : keys) {
-            JsonNode v = obj.get(k);
-            if (v != null && v.isValueNode()) return v.asText();
+            throw ex;
         }
-        return null;
     }
 }

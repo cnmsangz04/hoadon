@@ -9,10 +9,12 @@ import vn.hoadon.entity.FormInvoiceEntity;
 import vn.hoadon.entity.InvoiceEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.repositories.FormInvoiceRepository;
+import vn.hoadon.repositories.InvoiceNumberRepository;
 import vn.hoadon.repositories.InvoiceRepository;
 import vn.hoadon.repositories.UserRepository;
 import vn.hoadon.services.InvoiceService;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,6 +29,11 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private InvoiceNumberRepository invoiceNumberRepository;
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
 
     @Override
     public Page<InvoiceDTO> search(String q, Short status, Pageable pageable) {
@@ -61,5 +68,138 @@ public class InvoiceServiceImpl implements InvoiceService {
             }
             return dto;
         });
+    }
+
+    @Override
+    public InvoiceEntity create(InvoicePayload payload, Long companyId, Long userId) {
+        InvoiceEntity e = new InvoiceEntity();
+        applyPayload(e, payload, companyId, userId, true);
+        // Ensure invoice_number_id from formId
+        assignInvoiceNumberId(e, companyId, payload);
+        // Generate unique id_attr (32 uppercase hex) and lookup_code (10 uppercase alphanumeric)
+        e.setIdAttr(generateUniqueIdAttr());
+        e.setLookupCode(generateUniqueLookupCode());
+        e.setCreatedAt(java.time.LocalDateTime.now());
+        e.setUpdatedAt(java.time.LocalDateTime.now());
+        return invoiceRepository.save(e);
+    }
+
+    @Override
+    public InvoiceEntity update(Long id, InvoicePayload payload, Long companyId, Long userId) {
+        InvoiceEntity e = invoiceRepository.findById(id).orElse(null);
+        if (e == null) return null;
+        applyPayload(e, payload, companyId, userId, false);
+        // Re-assign invoice_number_id if formId changed or missing
+        assignInvoiceNumberId(e, companyId, payload);
+        // Keep existing id_attr/lookup_code; generate if missing
+        if (e.getIdAttr() == null || e.getIdAttr().isEmpty()) {
+            e.setIdAttr(generateUniqueIdAttr());
+        }
+        if (e.getLookupCode() == null || e.getLookupCode().isEmpty()) {
+            e.setLookupCode(generateUniqueLookupCode());
+        }
+        e.setUpdatedAt(java.time.LocalDateTime.now());
+        return invoiceRepository.save(e);
+    }
+
+    private void assignInvoiceNumberId(InvoiceEntity e, Long companyId, InvoicePayload p) {
+        if (e == null) return;
+        Long formId = (p != null && p.formId != null) ? p.formId : (e.getFormId() != null ? e.getFormId().longValue() : null);
+        if (companyId == null || formId == null) return;
+        java.util.List<vn.hoadon.entity.InvoiceNumberEntity> lst = invoiceNumberRepository.findByCompanyIdAndFormId(companyId, formId);
+        if (lst != null && !lst.isEmpty()) {
+            // Strategy: pick the first active (status=1), else first item
+            vn.hoadon.entity.InvoiceNumberEntity selected = lst.stream().filter(x -> java.util.Objects.equals(x.getStatus(), 1)).findFirst().orElse(lst.get(0));
+            if (selected != null && selected.getId() != null) {
+                e.setInvoiceNumberId(selected.getId().intValue());
+            }
+        }
+    }
+
+    private String generateUniqueIdAttr() {
+        // 32-character uppercase hex derived from UUID without hyphens
+        for (int attempt = 0; attempt < 10; attempt++) {
+            String s = java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase(); // 32 chars
+            if (!invoiceRepository.existsByIdAttr(s)) return s;
+        }
+        // Fallback: nanoTime + random, truncated to 32, uppercase
+        String s = (Long.toHexString(System.nanoTime()) + java.util.UUID.randomUUID().toString().replace("-", "")).toUpperCase();
+        if (s.length() > 32) s = s.substring(0, 32);
+        return s;
+    }
+
+    private String generateUniqueLookupCode() {
+        // 10-character uppercase alphanumeric
+        final String ALPHANUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        java.util.concurrent.ThreadLocalRandom rnd = java.util.concurrent.ThreadLocalRandom.current();
+        for (int attempt = 0; attempt < 20; attempt++) {
+            String s = randomString(rnd, ALPHANUM, 10);
+            if (!invoiceRepository.existsByLookupCode(s)) return s;
+        }
+        // Fallback with timestamp prefix trimmed to 10
+        String s = ("LK" + Long.toString(System.currentTimeMillis(), 36).toUpperCase() + randomString(rnd, ALPHANUM, 6)).toUpperCase();
+        if (s.length() > 10) s = s.substring(0, 10);
+        return s;
+    }
+
+    private String randomString(java.util.concurrent.ThreadLocalRandom rnd, String chars, int len) {
+        StringBuilder sb = new StringBuilder(len);
+        for (int i = 0; i < len; i++) {
+            sb.append(chars.charAt(rnd.nextInt(chars.length())));
+        }
+        return sb.toString();
+    }
+
+    private void applyPayload(InvoiceEntity e, InvoicePayload p, Long companyId, Long userId, boolean isCreate) {
+        if (e == null || p == null) return;
+        // Core identifiers
+        if (companyId != null) e.setCompanyId(companyId.intValue());
+        if (userId != null) e.setUserId(userId.intValue());
+        if (p.formId != null) e.setFormId(p.formId.intValue());
+        // Basic info
+        // Prefer incoming name if later expanded; for now set a clean default label
+        e.setName("Hóa đơn GTGT");
+        e.setNo(p.no);
+        e.setDateExport(p.dateExport);
+        e.setPaymentType(p.paymentType != null ? p.paymentType : 1);
+        e.setPayment((short)1);
+        e.setStatus(p.status != null ? p.status : (short)0);
+        e.setCurrency(p.currency != null ? p.currency : "VND");
+        e.setExchangeRate(p.exchangeRate != null ? p.exchangeRate : 0d);
+        // Totals
+        e.setTotal(p.total != null ? p.total : 0d);
+        e.setVatAmount(p.vatAmount != null ? p.vatAmount : 0d);
+        e.setAmount(p.amount != null ? p.amount : 0d);
+        e.setAmountInWords(p.amountInWords);
+        e.setVatRate(p.vatRate != null ? p.vatRate : (short)-1);
+        e.setVatRateOther(p.vatRateOther != null ? p.vatRateOther : 0);
+        // JSON blobs
+        e.setBill(null);
+        e.setOthers(null);
+        e.setRelated(null);
+        // Serialize customer and detail as JSON strings if objects provided
+        e.setCustomer(serializeSafely(p.customer));
+        e.setDetail(serializeSafely(p.detail));
+        // Do not set lookupCode from payload; backend will generate unique code
+        // Defaults for fields not yet used
+        if (isCreate) {
+            e.setSendMailDirectly((short)0);
+            e.setDiscount(0d);
+            e.setDiscountAmount(0d);
+            e.setVatAmountDiscount(0d);
+            e.setTypeApi((short)0);
+            e.setInvoiceType((short)0);
+            e.setInvoiceTypeAdjust((short)0);
+            e.setStatusConvert((short)0);
+        }
+    }
+
+    private String serializeSafely(Object o) {
+        if (o == null) return null;
+        try {
+            return JSON.writeValueAsString(o);
+        } catch (Exception ex) {
+            return String.valueOf(o);
+        }
     }
 }

@@ -3,6 +3,8 @@ package vn.hoadon.entity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import vn.hoadon.entity.converters.JsonListConverter;
 
 @Entity
 @Table(name = "register_invoices")
@@ -35,30 +37,37 @@ public class RegisterInvoiceEntity {
     @Column(name = "create_place", length = 255, nullable = false)
     private String createPlace;
 
-    @Column(name = "effective_date", nullable = false)
-    private LocalDate effectiveDate;
+    @Column(name = "effective_date", nullable = true)
+    private LocalDateTime effectiveDate;
 
     // Dữ liệu nghiệp vụ (JSON as NVARCHAR(MAX))
+    @Convert(converter = JsonListConverter.class)
     @Column(name = "invoice_forms", columnDefinition = "NVARCHAR(MAX)", nullable = false)
-    private String invoiceForms;
+    private List<String> invoiceForms;
 
+    @Convert(converter = JsonListConverter.class)
     @Column(name = "invoice_types", columnDefinition = "NVARCHAR(MAX)", nullable = false)
-    private String invoiceTypes;
+    private List<String> invoiceTypes;
 
+    @Convert(converter = JsonListConverter.class)
     @Column(name = "send_methods", columnDefinition = "NVARCHAR(MAX)", nullable = false)
-    private String sendMethods;
+    private List<String> sendMethods;
 
+    @Convert(converter = JsonListConverter.class)
     @Column(name = "transfer_methods", columnDefinition = "NVARCHAR(MAX)", nullable = false)
-    private String transferMethods;
+    private List<String> transferMethods;
 
+    @Convert(converter = JsonListConverter.class)
     @Column(name = "digital_certificates", columnDefinition = "NVARCHAR(MAX)", nullable = false)
-    private String digitalCertificates;
+    private List<String> digitalCertificates;
 
+    @Convert(converter = JsonListConverter.class)
     @Column(name = "solution_providers", columnDefinition = "NVARCHAR(MAX)")
-    private String solutionProviders;
+    private List<String> solutionProviders;
 
+    @Convert(converter = JsonListConverter.class)
     @Column(name = "transmit_providers", columnDefinition = "NVARCHAR(MAX)")
-    private String transmitProviders;
+    private List<String> transmitProviders;
 
     // XML & chữ ký
     @Column(name = "signed_xml", columnDefinition = "NVARCHAR(MAX)")
@@ -104,22 +113,22 @@ public class RegisterInvoiceEntity {
     public void setDeclarationDate(LocalDate declarationDate) { this.declarationDate = declarationDate; }
     public String getCreatePlace() { return createPlace; }
     public void setCreatePlace(String createPlace) { this.createPlace = createPlace; }
-    public LocalDate getEffectiveDate() { return effectiveDate; }
-    public void setEffectiveDate(LocalDate effectiveDate) { this.effectiveDate = effectiveDate; }
-    public String getInvoiceForms() { return invoiceForms; }
-    public void setInvoiceForms(String invoiceForms) { this.invoiceForms = invoiceForms; }
-    public String getInvoiceTypes() { return invoiceTypes; }
-    public void setInvoiceTypes(String invoiceTypes) { this.invoiceTypes = invoiceTypes; }
-    public String getSendMethods() { return sendMethods; }
-    public void setSendMethods(String sendMethods) { this.sendMethods = sendMethods; }
-    public String getTransferMethods() { return transferMethods; }
-    public void setTransferMethods(String transferMethods) { this.transferMethods = transferMethods; }
-    public String getDigitalCertificates() { return digitalCertificates; }
-    public void setDigitalCertificates(String digitalCertificates) { this.digitalCertificates = digitalCertificates; }
-    public String getSolutionProviders() { return solutionProviders; }
-    public void setSolutionProviders(String solutionProviders) { this.solutionProviders = solutionProviders; }
-    public String getTransmitProviders() { return transmitProviders; }
-    public void setTransmitProviders(String transmitProviders) { this.transmitProviders = transmitProviders; }
+    public LocalDateTime getEffectiveDate() { return effectiveDate; }
+    public void setEffectiveDate(LocalDateTime effectiveDate) { this.effectiveDate = effectiveDate; }
+    public List<String> getInvoiceForms() { return invoiceForms; }
+    public void setInvoiceForms(List<String> invoiceForms) { this.invoiceForms = invoiceForms; }
+    public List<String> getInvoiceTypes() { return invoiceTypes; }
+    public void setInvoiceTypes(List<String> invoiceTypes) { this.invoiceTypes = invoiceTypes; }
+    public List<String> getSendMethods() { return sendMethods; }
+    public void setSendMethods(List<String> sendMethods) { this.sendMethods = sendMethods; }
+    public List<String> getTransferMethods() { return transferMethods; }
+    public void setTransferMethods(List<String> transferMethods) { this.transferMethods = transferMethods; }
+    public List<String> getDigitalCertificates() { return digitalCertificates; }
+    public void setDigitalCertificates(List<String> digitalCertificates) { this.digitalCertificates = digitalCertificates; }
+    public List<String> getSolutionProviders() { return solutionProviders; }
+    public void setSolutionProviders(List<String> solutionProviders) { this.solutionProviders = solutionProviders; }
+    public List<String> getTransmitProviders() { return transmitProviders; }
+    public void setTransmitProviders(List<String> transmitProviders) { this.transmitProviders = transmitProviders; }
     public String getSignedXml() { return signedXml; }
     public void setSignedXml(String signedXml) { this.signedXml = signedXml; }
     public String getSignatureInfo() { return signatureInfo; }

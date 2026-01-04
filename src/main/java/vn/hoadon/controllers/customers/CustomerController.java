@@ -87,4 +87,35 @@ public class CustomerController extends BaseController {
 		}
 
 	}
+
+	@PostMapping("/get")
+	public ResponseEntity<?> get(@RequestBody Map<String, Object> payload) {
+		String code = null;
+		if (payload != null && payload.get("code") != null) {
+			code = String.valueOf(payload.get("code")).trim();
+		}
+		if (code == null || code.isEmpty()) {
+			return ResponseEntity.badRequest().body("Thiếu mã khách hàng");
+		}
+
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		if (auth == null || !(auth.getPrincipal() instanceof UserEntity)) {
+			return ResponseEntity.status(401).body("Hết phiên làm việc");
+		}
+		UserEntity user = (UserEntity) auth.getPrincipal();
+
+		CustomerFilterDTO filterDTO = new CustomerFilterDTO();
+		filterDTO.setCompanyId(user.getCompanyId());
+		// Avoid calling setCode since DTO may not have this method; fetch a small page then filter
+		Pageable pageable = PageRequest.of(0, 200, Sort.by(Sort.Order.asc("code")));
+		Page<CustomersEntity> page = customerService.list(filterDTO, pageable);
+		if (page.hasContent()) {
+			for (CustomersEntity c : page.getContent()) {
+				if (code.equalsIgnoreCase(String.valueOf(c.getCode()))) {
+					return ResponseEntity.ok(c);
+				}
+			}
+		}
+		return ResponseEntity.status(404).body("Không tìm thấy khách hàng");
+	}
 }
