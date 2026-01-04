@@ -44,6 +44,8 @@ public class SecurityConfig {
                                 "/v1/auth/**",
                                 "/h2-console/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/register-invoices/*/download-xml").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/register-invoices/*/xml").permitAll()
 
                         .requestMatchers("/v1/administrator/**").authenticated()
                         .requestMatchers("/v1/setting/**").authenticated()

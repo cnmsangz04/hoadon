@@ -1,7 +1,7 @@
 <template>
   <footer class="footer">
     <div class="container">
-      &copy; 2025 PInvoice - Hóa đơn điện tử. All rights reserved.
+      &copy; {{ new Date().getFullYear() }} Invoice - Hóa đơn điện tử.
     </div>
   </footer>
 </template>

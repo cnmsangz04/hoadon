@@ -1,22 +1,22 @@
 package vn.hoadon.services;
 
-import vn.hoadon.entity.TaxRate;
+import vn.hoadon.entity.TaxRateEntity;
 
 import java.util.List;
 
 public interface TaxRateService {
 
     // Create
-    TaxRate create(TaxRate taxRate);
+    TaxRateEntity create(TaxRateEntity taxRate);
 
     // Read - get all
-    List<TaxRate> findAll();
+    List<TaxRateEntity> findAll();
 
     // Read - get by id
-    TaxRate findById(Integer id);
+    TaxRateEntity findById(Integer id);
 
     // Update
-    TaxRate update(Integer id, TaxRate taxRate);
+    TaxRateEntity update(Integer id, TaxRateEntity taxRate);
 
     // Delete
     void delete(Integer id);

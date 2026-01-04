@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import vn.hoadon.dto.tax.TaxRateDto;
-import vn.hoadon.entity.TaxRate;
+import vn.hoadon.entity.TaxRateEntity;
 import vn.hoadon.services.TaxRateService;
 
 import java.time.LocalDateTime;
@@ -20,8 +20,8 @@ public class TaxRateController {
 
     // 1️⃣ Create (nhận DTO)
     @PostMapping
-    public TaxRate create(@RequestBody TaxRateDto dto) {
-        TaxRate entity = new TaxRate();
+    public TaxRateEntity create(@RequestBody TaxRateDto dto) {
+        TaxRateEntity entity = new TaxRateEntity();
         entity.setRate(dto.getRate());
         entity.setStatus(dto.getStatus());
         entity.setCreatedAt(LocalDateTime.now());
@@ -31,17 +31,17 @@ public class TaxRateController {
 
     // 2️⃣ Read - get all
     @GetMapping
-    public List<TaxRate> findAll() {
+    public List<TaxRateEntity> findAll() {
         return taxRateService.findAll();
     }
 
     // 3️⃣ Update (nhận DTO)
     @PutMapping("/{id}")
-    public TaxRate update(
+    public TaxRateEntity update(
             @PathVariable Integer id,
             @RequestBody TaxRateDto dto
     ) {
-        TaxRate entity = new TaxRate();
+        TaxRateEntity entity = new TaxRateEntity();
         entity.setRate(dto.getRate());
         entity.setStatus(dto.getStatus());
 
@@ -55,8 +55,8 @@ public class TaxRateController {
     }
 
     @PutMapping("/{id}/toggle-status")
-    public TaxRate toggleStatus(@PathVariable Integer id) {
-        TaxRate existing = taxRateService.findById(id);
+    public TaxRateEntity toggleStatus(@PathVariable Integer id) {
+        TaxRateEntity existing = taxRateService.findById(id);
         if (existing == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "TaxRate not found");
         }

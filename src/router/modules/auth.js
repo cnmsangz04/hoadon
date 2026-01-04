@@ -13,6 +13,18 @@ export default {
       name: 'login_admin',
       component: () => import('../../views/auth/login_admin.vue'),
       meta: { guestAdmin: true }
+    },
+    {
+      path: 'forgot-password',
+      name: 'auth-forgot-password',
+      component: () => import('../../views/auth/forgot_password.vue'),
+      meta: { guestUser: true }
+    },
+    {
+      path: 'reset-password/:token',
+      name: 'auth-reset-password',
+      component: () => import('../../views/auth/reset_password.vue'),
+      meta: { guestUser: true }
     }
   ]
 }
