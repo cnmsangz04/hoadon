@@ -43,6 +43,9 @@ public class FormInvoiceEntity {
     @Column(name = "status", columnDefinition = "tinyint")
     private Integer status; // generic status
 
+    @Column(name = "have_code", columnDefinition = "smallint")
+    private Integer haveCode; // 0/1 per UI selection (K->0, C->1)
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -74,6 +77,8 @@ public class FormInvoiceEntity {
     public void setCategory(Integer category) { this.category = category; }
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
+    public Integer getHaveCode() { return haveCode; }
+    public void setHaveCode(Integer haveCode) { this.haveCode = haveCode; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

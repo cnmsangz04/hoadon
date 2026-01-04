@@ -12,4 +12,7 @@ public interface FormInvoiceRepository extends JpaRepository<FormInvoiceEntity, 
 
     boolean existsByCompanyIdAndSystemAndCategoryAndSerial(Long companyId, Integer system, Integer category, String serial);
     boolean existsByCompanyIdAndSystemAndCategoryAndSerialAndIdNot(Long companyId, Integer system, Integer category, String serial, Long id);
+
+    // Find latest active VAT form for company
+    FormInvoiceEntity findTopByCompanyIdAndStatusAndCategoryOrderByUpdatedAtDesc(Long companyId, Integer status, Integer category);
 }
