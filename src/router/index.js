@@ -78,6 +78,24 @@ const router = new VueRouter({
 					meta: { requiresUser: true, title: 'Xem mẫu hóa đơn' }
 				},
 				{
+					path: '/invoice/vat-invoice/list',
+					name: 'CustomerVatInvoiceList',
+					component: () => import('@/views/customers/invoices/vat-invoice/list.vue'),
+					meta: { requiresUser: true, title: 'Danh sách hóa đơn GTGT' }
+				},
+				{
+					path: '/invoice/create',
+					name: 'CustomerVatInvoiceCreate',
+					component: () => import('@/views/customers/invoices/vat-invoice/create.vue'),
+					meta: { requiresUser: true, title: 'Lập hóa đơn GTGT' }
+				},
+				{
+					path: '/invoice/:id/edit',
+					name: 'CustomerVatInvoiceEdit',
+					component: () => import('@/views/customers/invoices/vat-invoice/create.vue'),
+					meta: { requiresUser: true, title: 'Cập nhật hóa đơn GTGT' }
+				},
+				{
 					path: '/categories/product/list',
 					name: 'category-product-list',
 					component: () => import('@/views/customers/categories/product/list.vue'),

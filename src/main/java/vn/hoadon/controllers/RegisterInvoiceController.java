@@ -143,14 +143,14 @@ public class RegisterInvoiceController extends BaseController {
         entity.setCreatePlace(req.getCreatePlace());
         // Stop using effectiveDate from request; leave null initially
         entity.setEffectiveDate(null);
-        // JSON fields
-        entity.setInvoiceForms(toJson(req.getInvoiceForms()));
-        entity.setInvoiceTypes(toJson(req.getInvoiceTypes()));
-        entity.setTransferMethods(toJson(req.getTransferMethods()));
-        entity.setSendMethods(toJson(req.getSendMethods()));
-        entity.setDigitalCertificates(normalizeDigitalCertificates(req.getDigitalCertificates()));
-        entity.setSolutionProviders(toJson(req.getSolutionProviders()));
-        entity.setTransmitProviders(toJson(req.getTransmitProviders()));
+        // List fields
+        entity.setInvoiceForms(toStringList(req.getInvoiceForms()));
+        entity.setInvoiceTypes(toStringList(req.getInvoiceTypes()));
+        entity.setTransferMethods(toStringList(req.getTransferMethods()));
+        entity.setSendMethods(toStringList(req.getSendMethods()));
+        entity.setDigitalCertificates(toStringList(req.getDigitalCertificates()));
+        entity.setSolutionProviders(toStringList(req.getSolutionProviders()));
+        entity.setTransmitProviders(toStringList(req.getTransmitProviders()));
         entity.setStatus(req.getStatus() != null ? req.getStatus() : 0);
         RegisterInvoiceEntity created = service.create(entity);
         return ResponseEntity.created(URI.create("/v1/register-invoices/" + created.getId())).body(created);
@@ -181,13 +181,14 @@ public class RegisterInvoiceController extends BaseController {
         patch.setCreatePlace(req.getCreatePlace() != null ? req.getCreatePlace() : existing.getCreatePlace());
         // Ignore effectiveDate from request; preserve existing until status logic sets it
         patch.setEffectiveDate(existing.getEffectiveDate());
-        patch.setInvoiceForms(req.getInvoiceForms() != null ? toJson(req.getInvoiceForms()) : existing.getInvoiceForms());
-        patch.setInvoiceTypes(req.getInvoiceTypes() != null ? toJson(req.getInvoiceTypes()) : existing.getInvoiceTypes());
-        patch.setTransferMethods(req.getTransferMethods() != null ? toJson(req.getTransferMethods()) : existing.getTransferMethods());
-        patch.setSendMethods(req.getSendMethods() != null ? toJson(req.getSendMethods()) : existing.getSendMethods());
-        patch.setDigitalCertificates(req.getDigitalCertificates() != null ? normalizeDigitalCertificates(req.getDigitalCertificates()) : existing.getDigitalCertificates());
-        patch.setSolutionProviders(req.getSolutionProviders() != null ? toJson(req.getSolutionProviders()) : existing.getSolutionProviders());
-        patch.setTransmitProviders(req.getTransmitProviders() != null ? toJson(req.getTransmitProviders()) : existing.getTransmitProviders());
+        // List fields
+        patch.setInvoiceForms(req.getInvoiceForms() != null ? toStringList(req.getInvoiceForms()) : existing.getInvoiceForms());
+        patch.setInvoiceTypes(req.getInvoiceTypes() != null ? toStringList(req.getInvoiceTypes()) : existing.getInvoiceTypes());
+        patch.setTransferMethods(req.getTransferMethods() != null ? toStringList(req.getTransferMethods()) : existing.getTransferMethods());
+        patch.setSendMethods(req.getSendMethods() != null ? toStringList(req.getSendMethods()) : existing.getSendMethods());
+        patch.setDigitalCertificates(req.getDigitalCertificates() != null ? toStringList(req.getDigitalCertificates()) : existing.getDigitalCertificates());
+        patch.setSolutionProviders(req.getSolutionProviders() != null ? toStringList(req.getSolutionProviders()) : existing.getSolutionProviders());
+        patch.setTransmitProviders(req.getTransmitProviders() != null ? toStringList(req.getTransmitProviders()) : existing.getTransmitProviders());
         patch.setSignedXml(existing.getSignedXml());
         patch.setSignatureInfo(existing.getSignatureInfo());
         patch.setStatus(req.getStatus() != null ? req.getStatus() : existing.getStatus());
@@ -311,9 +312,9 @@ public class RegisterInvoiceController extends BaseController {
             RegisterInvoiceEntity patch = cloneEntityPreserveAll(entity);
             patch.setStatus(accepted ? 6 : 5);
             patch.setResponseAcceptFile(xml);
-            // When status = 6 (accepted), set effectiveDate to current time
+            // When status = 6 (accepted), set effectiveDate to current datetime
             if (accepted) {
-                try { patch.setEffectiveDate(java.time.LocalDate.now()); } catch (Exception ignored) {}
+                try { patch.setEffectiveDate(java.time.LocalDateTime.now()); } catch (Exception ignored) {}
             }
             service.update(id, patch);
             // Insert history row for message 103
@@ -534,13 +535,265 @@ public class RegisterInvoiceController extends BaseController {
         return res;
     }
 
+    // --- Helpers for flexible JSON binding ---
     private LocalDate parseDate(String v, LocalDate def) {
         if (v == null || v.isBlank()) return def;
         try { return LocalDate.parse(v); } catch (Exception e) { return def; }
     }
+
+    private List<String> toStringList(Object v) {
+        if (v == null) return null;
+        try {
+            if (v instanceof List<?> list) {
+                List<String> out = new ArrayList<>();
+                for (Object o : list) out.add(o == null ? null : String.valueOf(o));
+                return out;
+            }
+            if (v instanceof String s) {
+                String trimmed = s.trim();
+                if (trimmed.isEmpty()) return List.of();
+                // Try JSON array first
+                if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                    ArrayNode arr = (ArrayNode) mapper.readTree(trimmed);
+                    List<String> out = new ArrayList<>();
+                    for (JsonNode node : arr) out.add(node.isNull() ? null : node.asText());
+                    return out;
+                }
+                // Fallback: CSV
+                String[] parts = trimmed.split(",");
+                List<String> out = new ArrayList<>();
+                for (String p : parts) {
+                    if (p == null) continue;
+                    String token = p.trim();
+                    if (token.startsWith("\"") && token.endsWith("\"")) {
+                        token = token.substring(1, token.length() - 1);
+                      }
+                    if (!token.isEmpty()) out.add(token);
+                }
+                return out;
+            }
+            // Generic: serialize to JSON then parse if array
+            JsonNode node = mapper.valueToTree(v);
+            if (node != null && node.isArray()) {
+                ArrayNode arr = (ArrayNode) node;
+                List<String> out = new ArrayList<>();
+                for (JsonNode i : arr) out.add(i.isNull() ? null : i.asText());
+                return out;
+            }
+            // Single value
+            return List.of(String.valueOf(v));
+        } catch (Exception e) {
+            // Best-effort fallback
+            return List.of(String.valueOf(v));
+        }
+    }
+
+    @GetMapping("/list-old")
+    public Map<String, Object> listPagedOld(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Long companyId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String dateFrom,
+            @RequestParam(required = false) String dateTo,
+            @RequestParam(required = false) Integer declarationType
+    ) {
+        UserEntity user = currentUser();
+        Long actorCompanyId = user != null ? user.getCompanyId() : null;
+        Integer actorRole = user != null ? user.getRole() : null;
+        boolean isRoot = actorRole != null && actorRole == 0;
+
+        // If not root, restrict to user's company
+        if (!isRoot) {
+            companyId = actorCompanyId;
+        }
+
+        // Spring pages are 0-based; apply default sort desc by createdAt
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<RegisterInvoiceEntity> p;
+
+        // If root and no companyId provided, allow global listing
+        if (isRoot && companyId == null) {
+            p = service.pageAll(pageable);
+            // Optional filter by status
+            if (status != null) {
+                List<RegisterInvoiceEntity> filteredByStatus = p.getContent().stream()
+                        .filter(e -> status.equals(e.getStatus()))
+                        .toList();
+                p = new org.springframework.data.domain.PageImpl<>(filteredByStatus, pageable, filteredByStatus.size());
+            }
+            // Keyword filter by company name/tax code via companies table
+            if (keyword != null && !keyword.isBlank()) {
+                Set<Long> ids = p.getContent().stream().map(RegisterInvoiceEntity::getCompanyId).collect(Collectors.toSet());
+                Map<Long, CompanyEntity> map = new HashMap<>();
+                if (!ids.isEmpty()) {
+                    for (CompanyEntity c : companyRepository.findAllById(ids)) {
+                        map.put(c.getId(), c);
+                    }
+                }
+                String kw = keyword.toLowerCase();
+                List<RegisterInvoiceEntity> filtered = p.getContent().stream()
+                        .filter(e -> {
+                            CompanyEntity c = map.get(e.getCompanyId());
+                            String name = c != null && c.getName() != null ? c.getName().toLowerCase() : "";
+                            String tax = c != null && c.getTaxcode() != null ? c.getTaxcode().toLowerCase() : "";
+                            return name.contains(kw) || tax.contains(kw);
+                        })
+                        .toList();
+                p = new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
+            }
+            // Optional filter by declarationType for global branch
+            if (declarationType != null) {
+                List<RegisterInvoiceEntity> filteredByDecl = p.getContent().stream()
+                        .filter(e -> declarationType.equals(e.getDeclarationType()))
+                        .toList();
+                p = new org.springframework.data.domain.PageImpl<>(filteredByDecl, pageable, filteredByDecl.size());
+            }
+            // Apply date filters in global branch as well
+            try {
+                java.time.LocalDate from = (dateFrom != null && !dateFrom.isBlank()) ? java.time.LocalDate.parse(dateFrom) : null;
+                java.time.LocalDate to = (dateTo != null && !dateTo.isBlank()) ? java.time.LocalDate.parse(dateTo) : null;
+                if (from != null || to != null) {
+                    List<RegisterInvoiceEntity> filtered = p.getContent().stream()
+                            .filter(e -> {
+                                java.time.LocalDate d = e.getDeclarationDate();
+                                if (d == null) return false;
+                                if (from != null && to == null) {
+                                    return d.equals(from);
+                                }
+                                if (from == null && to != null) {
+                                    return d.equals(to);
+                                }
+                                boolean geFrom = !d.isBefore(from);
+                                boolean leTo = !d.isAfter(to);
+                                return geFrom && leTo;
+                            })
+                            .toList();
+                    p = new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
+                }
+            } catch (Exception ignored) {}
+            return toPaginationResponse(p);
+        }
+
+        // If companyId is still null (no scope), return empty pagination
+        if (companyId == null) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("data", List.of());
+            empty.put("total", 0);
+            empty.put("per_page", size);
+            empty.put("current_page", page);
+            empty.put("last_page", 1);
+            empty.put("from", 0);
+            empty.put("to", 0);
+            empty.put("prev_page_url", null);
+            empty.put("next_page_url", null);
+            return empty;
+        }
+
+        // Company-scoped filters
+        if (status != null) {
+            p = service.pageByCompanyAndStatus(companyId, status, pageable);
+        } else {
+            p = service.pageByCompany(companyId, pageable);
+        }
+
+        // Optional keyword filter by company name/tax code via companies table (within current page)
+        if (keyword != null && !keyword.isBlank()) {
+            Set<Long> ids = p.getContent().stream().map(RegisterInvoiceEntity::getCompanyId).collect(Collectors.toSet());
+            Map<Long, CompanyEntity> map = new HashMap<>();
+            if (!ids.isEmpty()) {
+                for (CompanyEntity c : companyRepository.findAllById(ids)) {
+                    map.put(c.getId(), c);
+                }
+            }
+            String kw = keyword.toLowerCase();
+            List<RegisterInvoiceEntity> filtered = p.getContent().stream()
+                    .filter(e -> {
+                        CompanyEntity c = map.get(e.getCompanyId());
+                        String name = c != null && c.getName() != null ? c.getName().toLowerCase() : "";
+                        String tax = c != null && c.getTaxcode() != null ? c.getTaxcode().toLowerCase() : "";
+                        return name.contains(kw) || tax.contains(kw);
+                    })
+                    .toList();
+            p = new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
+        }
+
+        // Optional filter by declarationType in company branch
+        if (declarationType != null) {
+            List<RegisterInvoiceEntity> filteredByDecl = p.getContent().stream()
+                    .filter(e -> declarationType.equals(e.getDeclarationType()))
+                    .toList();
+            p = new org.springframework.data.domain.PageImpl<>(filteredByDecl, pageable, filteredByDecl.size());
+        }
+
+        // Optional date range filter on declarationDate; support single-bound filters
+        try {
+            java.time.LocalDate from = (dateFrom != null && !dateFrom.isBlank()) ? java.time.LocalDate.parse(dateFrom) : null;
+            java.time.LocalDate to = (dateTo != null && !dateTo.isBlank()) ? java.time.LocalDate.parse(dateTo) : null;
+            if (from != null || to != null) {
+                List<RegisterInvoiceEntity> filtered = p.getContent().stream()
+                        .filter(e -> {
+                            java.time.LocalDate d = e.getDeclarationDate();
+                            if (d == null) return false;
+                            if (from != null && to == null) {
+                                return d.equals(from);
+                            }
+                            if (from == null && to != null) {
+                                return d.equals(to);
+                            }
+                            // Both bounds provided: inclusive range
+                            boolean geFrom = !d.isBefore(from);
+                            boolean leTo = !d.isAfter(to);
+                            return geFrom && leTo;
+                        })
+                        .toList();
+                p = new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
+            }
+        } catch (Exception ignored) {}
+
+        return toPaginationResponse(p);
+    }
+
+    private Map<String, Object> toPaginationResponseOld(Page<RegisterInvoiceEntity> p) {
+        Map<String, Object> res = new HashMap<>();
+        long total = p.getTotalElements();
+        int size = p.getSize();
+        int currentPage = p.getNumber() + 1; // 1-based for frontend
+        int lastPage = Math.max(1, p.getTotalPages());
+        int numberOfElements = p.getNumberOfElements();
+        long from = total == 0 ? 0 : ((long) (currentPage - 1) * size) + 1;
+        long to = total == 0 ? 0 : (from + numberOfElements - 1);
+
+        res.put("data", p.getContent());
+        res.put("total", total);
+        res.put("per_page", size);
+        res.put("current_page", currentPage);
+        res.put("last_page", lastPage);
+        res.put("from", from);
+        res.put("to", to);
+        res.put("prev_page_url", currentPage > 1 ? currentPage - 1 : null);
+        res.put("next_page_url", currentPage < lastPage ? currentPage + 1 : null);
+        return res;
+    }
+
     private String toJson(Object v) {
         if (v == null) return null;
-        try { return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(v); } catch (Exception e) { return String.valueOf(v); }
+        try {
+            // If already a JSON-looking string, return as-is to avoid double encoding
+            if (v instanceof String s) {
+                String trimmed = s.trim();
+                if (trimmed.startsWith("[") && trimmed.endsWith("]")) return s; // array JSON
+                if (trimmed.startsWith("{") && trimmed.endsWith("}")) return s; // object JSON
+                // otherwise, serialize as JSON string
+                return mapper.writeValueAsString(s);
+            }
+            // For collections/arrays/maps/POJOs, serialize directly
+            return mapper.writeValueAsString(v);
+        } catch (Exception e) {
+            // Fallback: string value
+            return String.valueOf(v);
+        }
     }
 
     private String normalizeDigitalCertificates(Object v) {
@@ -593,34 +846,6 @@ public class RegisterInvoiceController extends BaseController {
         if (value == 0) value = 3;
         obj.put("sigRegMethod", value);
         obj.remove(Arrays.asList("sig_reg_method","method"));
-    }
-
-    // --- Helpers for flexible JSON binding ---
-    private String str(Object v) { return v == null ? null : String.valueOf(v); }
-    private String strOrDefault(Object v, String def) { return v == null ? def : String.valueOf(v); }
-    private Integer intOrDefault(Object v, Integer def) {
-        if (v == null) return def;
-        if (v instanceof Number) return ((Number) v).intValue();
-        try { return Integer.parseInt(String.valueOf(v)); } catch (Exception e) { return def; }
-    }
-    private LocalDate localDate(Object v, LocalDate def) {
-        if (v == null) return def;
-        try { return LocalDate.parse(String.valueOf(v)); } catch (Exception e) { return def; }
-    }
-    private String jsonString(Object v) {
-        if (v == null) return null;
-        if (v instanceof String) return (String) v;
-        try {
-            // Simple JSON serialization without bringing an extra library: rely on toString for primitives; for maps/lists use Jackson if available
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            return mapper.writeValueAsString(v);
-        } catch (Exception e) {
-            return String.valueOf(v);
-        }
-    }
-    private String jsonStringOrDefault(Object v, String def) {
-        String s = jsonString(v);
-        return s == null ? def : s;
     }
 
     @GetMapping(value = "/{id}/xml", produces = MediaType.APPLICATION_XML_VALUE)

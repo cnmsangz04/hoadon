@@ -161,6 +161,7 @@ export default {
         status: 1,
         system: 1,
         form_code: '', // first character stored separately on backend
+        have_code: 0, // C -> 1, K -> 0
       },
       // Serial builder state
       serialCK: 'C',
@@ -204,7 +205,7 @@ export default {
   watch: {
     // Re-compose serial when parts change
     categoryChar() { this.composeSerial() },
-    serialCK() { this.composeSerial() },
+    serialCK() { this.form.have_code = this.serialCK === 'C' ? 1 : 0; this.composeSerial() },
     serialYear() { this.composeSerial() },
     serialSuffix() { this.composeSerial() }
   },
@@ -214,6 +215,7 @@ export default {
     const id = this.$route.params.id
     if (id) this.loadDetail(id)
     // Initial compose with defaults
+    this.form.have_code = this.serialCK === 'C' ? 1 : 0
     this.composeSerial()
   },
   methods: {
@@ -262,6 +264,8 @@ export default {
             this.serialYear = s.substring(2,4)
             this.serialSuffix = s.substring(5,7).toUpperCase()
           }
+          // Map have_code from item if present; otherwise derive from CK
+          this.form.have_code = it.have_code != null ? Number(it.have_code) : (this.serialCK === 'C' ? 1 : 0)
           this.composeSerial()
           // Ensure creating new, not system template
           this.form.system = 1
@@ -295,6 +299,7 @@ export default {
           this.form.status = it.status != null ? Number(it.status) : 1
           this.form.system = it.system != null ? Number(it.system) : 1
           this.form.form_code = (it.formCode || it.form_code || '')
+          this.form.have_code = it.have_code != null ? Number(it.have_code) : (this.serialCK === 'C' ? 1 : 0)
         }
       } catch (e) {
         // Removed notify assignment

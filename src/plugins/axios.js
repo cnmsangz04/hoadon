@@ -1,6 +1,7 @@
 import axios from 'axios'
 import toastr from 'toastr'
 import 'toastr/build/toastr.min.css'
+import { toastError, toastWarning, toastSuccess } from '@/utils/toast'
 
 axios.defaults.baseURL = process.env.VUE_APP_API_BASE_URL || '/v1'
 
@@ -47,7 +48,7 @@ axios.interceptors.response.use(
       const msg = cfg.successMessage || cfg.successText || cfg?.meta?.successMessage
       // Default: only show for mutating methods when message provided
       if (msg && ['POST','PUT','PATCH','DELETE'].includes(method)) {
-        toastr.success(msg)
+        toastSuccess(msg)
       }
     } catch {}
     return res
@@ -67,7 +68,7 @@ axios.interceptors.response.use(
       'Lỗi hệ thống'
 
     if (status === 401) {
-      if (!suppressGlobal) toastr.warning(message || 'Phiên đăng nhập đã hết hạn')
+      if (!suppressGlobal) toastWarning(message || 'Phiên đăng nhập đã hết hạn', 'HTTP_401')
       setTimeout(() => {
         localStorage.removeItem(key)
         window.location.href = admin ? '/auth/login-admin' : '/auth/login'
@@ -76,14 +77,14 @@ axios.interceptors.response.use(
     }
 
     if (status === 403) {
-      if (!suppressGlobal) toastr.error(message || 'Bạn không có quyền thao tác')
+      if (!suppressGlobal) toastError(message || 'Bạn không có quyền thao tác', 'HTTP_403')
       setTimeout(() => {
         window.location.href = admin ? '/administrator' : '/'
       }, 1200)
       return Promise.reject(err)
     }
 
-    if (!suppressGlobal) toastr.error(message)
+    if (!suppressGlobal) toastError(message, `HTTP_${status || 'ERR'}`)
     return Promise.reject(err)
   }
 )

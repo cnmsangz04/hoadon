@@ -76,7 +76,7 @@ export default {
           title: 'Hóa đơn',
           icon: 'fas fa-file-invoice',
           children: [
-            { title: 'Hóa đơn GTGT', to: '/invoice/list' },
+            { title: 'Hóa đơn GTGT', to: '/invoice/vat-invoice/list' },
           ],
         },
         { title: 'Báo cáo', icon: 'fas fa-chart-line', to: '/reports' },

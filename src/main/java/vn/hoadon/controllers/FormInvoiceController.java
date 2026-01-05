@@ -370,6 +370,7 @@ public class FormInvoiceController extends BaseController {
         String file = Optional.ofNullable(body.get("file")).map(Object::toString).orElse(null);
         String photo = Optional.ofNullable(body.get("photo")).map(Object::toString).orElse(null);
         Long templateId = Optional.ofNullable(body.get("templateId")).map(v -> Long.valueOf(v.toString())).orElse(null);
+        Integer haveCode = Optional.ofNullable(body.get("have_code")).map(v -> Integer.valueOf(v.toString())).orElse(0);
 
         // Validate name
         if (name == null || name.isBlank()) {
@@ -421,6 +422,7 @@ public class FormInvoiceController extends BaseController {
         e.setSystem(system);
         e.setFile(file);
         e.setPhoto(photo);
+        e.setHaveCode(haveCode);
         e.setCreatedAt(LocalDateTime.now());
         e.setUpdatedAt(LocalDateTime.now());
 
@@ -526,6 +528,7 @@ public class FormInvoiceController extends BaseController {
         patch.setSystem(Optional.ofNullable(body.get("system")).map(v -> Integer.valueOf(v.toString())).orElse(null));
         patch.setFile(Optional.ofNullable(body.get("file")).map(Object::toString).orElse(null));
         patch.setPhoto(Optional.ofNullable(body.get("photo")).map(Object::toString).orElse(null));
+        patch.setHaveCode(Optional.ofNullable(body.get("have_code")).map(v -> Integer.valueOf(v.toString())).orElse(null));
 
         Optional<FormInvoiceEntity> updated;
         try {
