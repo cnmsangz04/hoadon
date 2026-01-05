@@ -3,13 +3,17 @@
 
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h4 class="font-weight-bold mb-0">
-        Danh sách thuế suất
-      </h4>
-
+      <div class="d-flex align-items-center">
+        <h4 class="font-weight-bold mb-0">
+          Danh sách thuế suất
+        </h4>
+      </div>
       <div>
+        <b-button size="sm" variant="outline-primary" class="mr-2" @click="reload">
+          <i class="fas fa-sync-alt"></i> Làm mới
+        </b-button>
         <b-button variant="success" @click="$refs.addModal.show()">
-          <i class="fa fa-plus"></i> Thêm thuế suất
+          <i class="fa fa-plus"></i> Thêm mới
         </b-button>
       </div>
     </div>
@@ -31,13 +35,6 @@
                 placeholder="Tìm theo mã / tên thuế suất"
             />
           </b-input-group>
-        </b-col>
-
-        <!-- Search button -->
-        <b-col md="2">
-          <b-button variant="primary" block @click="fetchTaxRates">
-            Tìm kiếm
-          </b-button>
         </b-col>
       </b-row>
     </b-card>
@@ -203,6 +200,10 @@ export default {
       if (code === null || code === "") return "";
       if (code === -1) return "KCT";
       return `${code}%`;
+    },
+
+    reload(){
+      this.fetchTaxRates();
     },
 
     formatDate(date) {

@@ -2,6 +2,7 @@ package vn.hoadon.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -84,6 +85,13 @@ public class CompanyEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tax_authority_city_id")
     private TaxAuthorityEntity taxAuthorityCity;
+
+    @OneToMany(
+            mappedBy = "company",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<MailTemplateEntity> mailTemplates = new ArrayList<>();
 
     // One company có nhiều ngân hàng
     @OneToMany(mappedBy = "company", cascade = CascadeType.ALL, orphanRemoval = true)
