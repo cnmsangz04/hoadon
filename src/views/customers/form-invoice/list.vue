@@ -185,10 +185,10 @@
                 variant="success"
                 size="sm"
               >
-                <b-dropdown-item :href="'/v1/file/' + iframe.form_id + '/pdf-download'">
+                <b-dropdown-item :href="'/v1/file/' + iframe.form_id + '/download-pdf'">
                   Download PDF
                 </b-dropdown-item>
-                <b-dropdown-item :href="'/v1/file/' + iframe.form_id + '/xml-download'">
+                <b-dropdown-item :href="'/v1/file/' + iframe.form_id + '/download-xml'">
                   Download XML
                 </b-dropdown-item>
               </b-dropdown>
@@ -345,9 +345,16 @@ export default {
         // Refresh list after delete
         this.applyFilters()
       } catch (e) {
-        const msg = (e && e.response && e.response.status === 400)
-          ? 'Chỉ được xóa khi trạng thái là Chưa kích hoạt'
-          : 'Xóa mẫu hóa đơn thất bại'
+        let msg = 'Xóa mẫu hóa đơn thất bại'
+        if (e && e.response) {
+          if (e.response.status === 400) {
+            msg = 'Không thể xóa mẫu đã tạo hóa đơn'
+          } else if (e.response.status === 403) {
+            msg = 'Không có quyền xóa mẫu này'
+          } else if (e.response.status === 404) {
+            msg = 'Mẫu không tồn tại'
+          }
+        }
         this.$bvToast && this.$bvToast.toast(msg, { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 4000 })
       }
     },

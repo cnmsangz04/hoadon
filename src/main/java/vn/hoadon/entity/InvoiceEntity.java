@@ -65,19 +65,19 @@ public class InvoiceEntity {
     @Column(name = "reason_cancel")
     private String reasonCancel;
 
-    @Column(name = "bill")
+    @Column(name = "bill", columnDefinition = "NVARCHAR(MAX)")
     private String bill;
 
-    @Column(name = "customer")
+    @Column(name = "customer", columnDefinition = "NVARCHAR(MAX)")
     private String customer;
 
-    @Column(name = "related")
+    @Column(name = "related", columnDefinition = "NVARCHAR(MAX)")
     private String related;
 
-    @Column(name = "others")
+    @Column(name = "others", columnDefinition = "NVARCHAR(MAX)")
     private String others;
 
-    @Column(name = "detail")
+    @Column(name = "detail", columnDefinition = "NVARCHAR(MAX)")
     private String detail;
 
     @Column(name = "currency", nullable = false)

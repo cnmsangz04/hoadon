@@ -373,7 +373,11 @@
 		  <b-button size="sm" variant="outline-secondary" @click="goBack">
 		    <i class="fas fa-arrow-left mr-1"></i> Quay lại
 		  </b-button>
-          <b-button variant="success" @click="onSubmit">
+          <b-button
+            v-if="canEdit"
+            variant="success"
+            @click="onSubmit"
+          >
             <i class="fas fa-save mr-1"></i> Lưu và lập hóa đơn
           </b-button>
         </div>
@@ -461,7 +465,8 @@ export default {
       ],
       company_id: null,
       editId: null,
-      loadedInvoice: null
+      loadedInvoice: null,
+      invoiceStatus: 0
     }
   },
   computed: {
@@ -470,6 +475,11 @@ export default {
       if (v === 1) return 'Có mã của cơ quan thuế'
       if (v === 2 || v === 0) return 'Không có mã của cơ quan thuế'
       return '—'
+    },
+    canEdit () {
+      // Cho phép tạo mới (không có editId) hoặc chỉnh sửa khi status = 0
+      if (!this.editId) return true
+      return Number(this.invoiceStatus) === 0
     }
   },
   created () { 
@@ -713,6 +723,7 @@ export default {
         this.isBusy = true
         const { data } = await axios.get(`/invoices/${this.editId}`)
         this.loadedInvoice = data
+        this.invoiceStatus = data?.status ?? 0
         // Map response back to form
         this.frmData.no = data?.no ?? this.frmData.no
         this.frmData.date_export = data?.dateExport ?? this.frmData.date_export
@@ -769,6 +780,13 @@ export default {
           this.toastError('Vui lòng nhập ít nhất 1 dòng hàng hóa/dịch vụ', 'no_detail_rows')
           return
         }
+
+        // Nếu đang ở chế độ chỉnh sửa nhưng hóa đơn không còn trạng thái 0 thì chặn
+        if (this.editId && Number(this.invoiceStatus) !== 0) {
+          this.toastError('Chỉ được phép cập nhật hóa đơn ở trạng thái nháp (status = 0)', 'invalid_status_update')
+          return
+        }
+
         this.recalcTotals()
         const formId = this.formInvoices?.form_id || this.prepare?.formId || null
         const basePayload = {

@@ -122,6 +122,11 @@ public class FileController {
             // Decode any HTML named entities (e.g., &oacute;, &nbsp;) to Unicode to keep XHTML well-formed for downstream parsers
             html = resolveNamedHtmlEntities(html);
 
+            // Ensure UTF-8 meta for browsers and downstream processors
+            html = ensureUtf8Meta(html);
+            // Force replace font families that commonly miss Vietnamese glyphs
+            html = forceReplaceFontFamilies(html);
+
             // Normalize to XHTML-ish by self-closing void tags to satisfy XML parsers
             html = normalizeToXhtml(html);
 
@@ -157,7 +162,7 @@ public class FileController {
         }
     }
 
-    @GetMapping(value = "/{id}/xml-download", produces = MediaType.APPLICATION_XML_VALUE)
+    @GetMapping(value = "/{id}/download-xml", produces = MediaType.APPLICATION_XML_VALUE)
     public ResponseEntity<?> xmlDownload(@PathVariable Long id) {
         Optional<FormInvoiceEntity> opt = formInvoiceService.findById(id);
         if (opt.isEmpty()) {
@@ -182,7 +187,7 @@ public class FileController {
         return new ResponseEntity<>(sampleXml, headers, HttpStatus.OK);
     }
 
-    @GetMapping(value = "/{id}/pdf-download", produces = MediaType.APPLICATION_PDF_VALUE)
+    @GetMapping(value = "/{id}/download-pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<?> pdfDownload(@PathVariable Long id) {
         Optional<FormInvoiceEntity> opt = formInvoiceService.findById(id);
         if (opt.isEmpty()) {
@@ -229,6 +234,9 @@ public class FileController {
 
             // Decode any HTML named entities to ensure XHTML compatibility for PDF renderer
             html = resolveNamedHtmlEntities(html);
+            // Inject UTF-8 meta and robust font fallbacks to avoid missing glyphs
+            html = ensureUtf8Meta(html);
+            html = forceReplaceFontFamilies(html);
             // Normalize to XHTML-ish by self-closing void tags like <meta>, <link>, <img>, etc.
             html = normalizeToXhtml(html);
             html = injectQrPlaceholder(html);
@@ -242,6 +250,8 @@ public class FileController {
             html = ensurePdfCss(html);
             // Also enforce a font-family that supports Vietnamese glyphs if none is specified
             html = ensurePdfFontCss(html);
+            // Soften bold and improve text rendering
+            html = ensurePdfTypoCss(html);
 
             // Convert HTML to PDF using OpenHTMLToPDF
             ByteArrayOutputStream pdfOut = new ByteArrayOutputStream();
@@ -328,6 +338,8 @@ public class FileController {
             String html = outWriter.toString();
 
             html = resolveNamedHtmlEntities(html);
+            html = ensureUtf8Meta(html);
+            html = forceReplaceFontFamilies(html);
             html = normalizeToXhtml(html);
             html = injectQrPlaceholder(html);
             html = sanitizeImgSrcAttributes(html);
@@ -336,6 +348,7 @@ public class FileController {
             html = ensurePdfLayoutFallbackCss(html);
             html = ensurePdfCss(html);
             html = ensurePdfFontCss(html);
+            html = ensurePdfTypoCss(html);
 
             if (!StringUtils.hasText(html)) html = "<html><body>Không thể hiển thị nội dung mẫu</body></html>";
             return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(html);
@@ -763,7 +776,7 @@ public class FileController {
         // Always inject a strong default font stack to ensure Unicode glyphs are available in PDF
         String fontCss = "<style>" +
                 "@media all {" +
-                "  * { font-family: 'Segoe UI', Tahoma, 'Arial Unicode MS', Arial, sans-serif !important; }" +
+                "  * { font-family: 'DejaVu Sans', 'Noto Sans', 'Segoe UI', Tahoma, 'Arial Unicode MS', Arial, sans-serif !important; }" +
                 "}" +
                 "</style>";
         if (html.matches("(?is).*<head[^>]*>.*")) {
@@ -809,8 +822,42 @@ public class FileController {
         return css + html;
     }
 
+    private String ensurePdfTypoCss(String html) {
+        if (html == null || html.isBlank()) return html;
+        String css = "<style>" +
+                "@media print, all {" +
+                "  html, body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-synthesis: none; }" +
+                "  b, strong { font-weight: 600 !important; }" +
+                "  [style*='font-weight:700'] { font-weight: 600 !important; }" +
+                "  h1, h2, h3, h4, h5 { font-weight: 600 !important; }" +
+                "}" +
+                "</style>";
+        if (html.matches("(?is).*<head[^>]*>.*")) {
+            return html.replaceFirst("(?is)(<head[^>]*>)", "$1" + java.util.regex.Matcher.quoteReplacement(css));
+        }
+        if (html.matches("(?is).*<html[^>]*>.*")) {
+            return html.replaceFirst("(?is)(<html[^>]*>)", "$1" + java.util.regex.Matcher.quoteReplacement(css));
+        }
+        return css + html;
+    }
+
     private void registerAvailableUnicodeFonts(PdfRendererBuilder builder) {
-        // Try common Windows fonts that support Vietnamese; ignore failures silently
+        // Try Linux common fonts first
+        try {
+            Path dejavu = Paths.get("/usr/share/fonts/truetype/dejavu");
+            registerFontIfExists(builder, dejavu, "DejaVuSans.ttf", "DejaVu Sans");
+            registerFontIfExists(builder, dejavu, "DejaVuSans-Bold.ttf", "DejaVu Sans");
+            registerFontIfExists(builder, dejavu, "DejaVuSansCondensed.ttf", "DejaVu Sans");
+            registerFontIfExists(builder, dejavu, "DejaVuSansCondensed-Bold.ttf", "DejaVu Sans");
+        } catch (Throwable ignore) {}
+        try {
+            Path noto = Paths.get("/usr/share/fonts/noto");
+            registerFontIfExists(builder, noto, "NotoSans-Regular.ttf", "Noto Sans");
+            registerFontIfExists(builder, noto, "NotoSans-Bold.ttf", "Noto Sans");
+            registerFontIfExists(builder, noto, "NotoSansDisplay-Regular.ttf", "Noto Sans");
+            registerFontIfExists(builder, noto, "NotoSansDisplay-Bold.ttf", "Noto Sans");
+        } catch (Throwable ignore) {}
+        // Existing Windows font registration
         String windowsFonts = System.getenv("WINDIR");
         Path fontsDir = null;
         if (windowsFonts != null && !windowsFonts.isBlank()) {
@@ -824,18 +871,47 @@ public class FileController {
         registerFontIfExists(builder, fontsDir, "tahoma.ttf", "Tahoma");
         registerFontIfExists(builder, fontsDir, "tahomabd.ttf", "Tahoma");
         registerFontIfExists(builder, fontsDir, "ARIALUNI.TTF", "Arial Unicode MS");
-        // Optionally, you can add more fonts here if present on the system
     }
 
+    // Helper: register a font file with the PDF renderer if it exists at the given path
     private void registerFontIfExists(PdfRendererBuilder builder, Path fontsDir, String fileName, String family) {
         if (fontsDir == null) return;
         try {
             Path p = fontsDir.resolve(fileName);
             if (Files.exists(p)) {
                 java.io.File f = p.toFile();
-                // Use simplest overload expected to exist across versions
                 builder.useFont(f, family);
             }
         } catch (Throwable ignore) {}
+    }
+
+    // Add UTF-8 meta tag if missing at the top of the document
+    private String ensureUtf8Meta(String html) {
+        if (html == null || html.isBlank()) return html;
+        String meta = "<meta charset=\"UTF-8\"/>";
+        if (html.matches("(?is).*<head[^>]*>.*")) {
+            if (!html.matches("(?is).*<meta\\s+charset=\\\"?utf-8\\\"?.*")) {
+                html = html.replaceFirst("(?is)(<head[^>]*>)", "$1" + java.util.regex.Matcher.quoteReplacement(meta));
+            }
+            return html;
+        }
+        if (html.matches("(?is).*<html[^>]*>.*")) {
+            return html.replaceFirst("(?is)(<html[^>]*>)", "$1" + java.util.regex.Matcher.quoteReplacement("<head>" + meta + "</head>"));
+        }
+        return "<head>" + meta + "</head>" + html;
+    }
+
+    // Replace known problematic font families with robust Unicode-capable defaults
+    private String forceReplaceFontFamilies(String html) {
+        if (html == null || html.isBlank()) return html;
+        String[] badFonts = new String[] { "Times New Roman", "Times", "Georgia", "Roboto", "Tahoma", "Arial", "Helvetica", "Calibri", "Cambria" };
+        for (String f : badFonts) {
+            String patternCss = "(?is)font-family\\s*:\\s*" + java.util.regex.Pattern.quote(f) + "(\\s*,[^;]*)?;";
+            html = html.replaceAll(patternCss, "font-family: 'DejaVu Sans', 'Noto Sans', sans-serif;");
+            String patternInline = "(?is)(font-family)(\\s*=\\s*)(\\\"|')" + java.util.regex.Pattern.quote(f) + "(\\3)";
+            html = html.replaceAll(patternInline, "$1$2$3DejaVu Sans$3");
+        }
+        html = html.replaceAll("(?is)<font\\s+face=\\\"[^\\\"]+\\\"", "<font face=\"DejaVu Sans\"");
+        return html;
     }
 }

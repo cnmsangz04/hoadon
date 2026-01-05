@@ -47,6 +47,10 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/register-invoices/*/download-xml").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/register-invoices/*/xml").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/invoices/*/view").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/invoices/*/download-pdf").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/invoices/*/download-xml").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/invoices/*/xml").permitAll()
 
                         .requestMatchers("/v1/administrator/**").authenticated()
                         .requestMatchers("/v1/setting/**").authenticated()

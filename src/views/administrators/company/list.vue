@@ -101,6 +101,7 @@
             <b-dropdown-item v-if="canUpdateCompany" class="text-center" href="#" @click.prevent="editCompany(data.item)">Cập nhật</b-dropdown-item>
             <b-dropdown-item v-if="canUpdateCompany" class="text-center text-success" href="#" @click.prevent="setCompanyStatus(data.item.id, 1)">Kích hoạt</b-dropdown-item>
             <b-dropdown-item v-if="canUpdateCompany" class="text-center text-warning" href="#" @click.prevent="setCompanyStatus(data.item.id, 0)">Tạm ngưng</b-dropdown-item>
+            <b-dropdown-item v-if="canUpdateCompany" class="text-center" href="#" @click.prevent="sendAdminInfo(data.item)">Gửi thông tin</b-dropdown-item>
           </b-dropdown>
         </template>
       </b-table>
@@ -117,68 +118,197 @@
     </b-card>
 
     <!-- Modal Thêm/Cập nhật -->
-    <b-modal id="companyModal" ref="companyModal" title="Thêm/Cập nhật công ty" hide-footer>
-      <b-form @submit.prevent="saveCompany">
-        <b-row>
-          <b-col cols="12" md="6">
-            <!-- Tên công ty -->
-            <b-form-group label="Tên công ty:" label-for="name">
-              <b-form-input id="name" v-model="companyForm.name" required />
-            </b-form-group>
-          </b-col>
-          <b-col cols="12" md="6">
-            <!-- Mã số thuế -->
-            <b-form-group label="Mã số thuế:" label-for="taxcode">
-              <b-form-input id="taxcode" v-model="companyForm.taxcode" required />
-            </b-form-group>
-          </b-col>
+    <b-modal 
+      id="companyModal" 
+      ref="companyModal" 
+      :title="companyForm.id ? 'Cập nhật công ty' : 'Thêm công ty mới'"
+      hide-footer
+      size="lg"
+      modal-class="company-modal"
+      header-class="company-modal-header"
+      body-class="company-modal-body"
+    >
+      <b-form @submit.prevent="saveCompany" class="company-form">
+        
+        <!-- Thông tin cơ bản -->
+        <div class="form-section">
+          <div class="section-header">
+            <i class="fas fa-building text-primary"></i>
+            <h6 class="mb-0">Thông tin công ty</h6>
+          </div>
+          <b-row>
+            <b-col cols="12">
+              <b-form-group label="Tên công ty" label-for="name" class="required-field">
+                <b-input-group>
+                  <b-input-group-prepend is-text>
+                    <i class="fas fa-building"></i>
+                  </b-input-group-prepend>
+                  <b-form-input 
+                    id="name" 
+                    v-model.trim="companyForm.name" 
+                    placeholder="Nhập tên công ty"
+                    required 
+                  />
+                </b-input-group>
+              </b-form-group>
+            </b-col>
+            
+            <b-col cols="12" md="6">
+              <b-form-group label="Mã số thuế" label-for="taxcode" class="required-field">
+                <b-input-group>
+                  <b-input-group-prepend is-text>
+                    <i class="fas fa-hashtag"></i>
+                  </b-input-group-prepend>
+                  <b-form-input 
+                    id="taxcode" 
+                    v-model.trim="companyForm.taxcode"
+                    placeholder="Nhập mã số thuế"
+                    required 
+                  />
+                </b-input-group>
+              </b-form-group>
+            </b-col>
+            
+            <b-col cols="12" md="6">
+              <b-form-group label="Trạng thái" label-for="status">
+                <b-input-group>
+                  <b-input-group-prepend is-text>
+                    <i class="fas fa-toggle-on"></i>
+                  </b-input-group-prepend>
+                  <b-form-select 
+                    id="status" 
+                    v-model="companyForm.status" 
+                    :options="statusOptions" 
+                  />
+                </b-input-group>
+              </b-form-group>
+            </b-col>
+            
+            <b-col cols="12">
+              <b-form-group label="Địa chỉ" label-for="address">
+                <b-input-group>
+                  <b-input-group-prepend is-text>
+                    <i class="fas fa-map-marker-alt"></i>
+                  </b-input-group-prepend>
+                  <b-form-input 
+                    id="address" 
+                    v-model.trim="companyForm.address"
+                    placeholder="Nhập địa chỉ công ty"
+                  />
+                </b-input-group>
+              </b-form-group>
+            </b-col>
+          </b-row>
+        </div>
 
-          <b-col cols="12">
-            <!-- Địa chỉ -->
-            <b-form-group label="Địa chỉ:" label-for="address">
-              <b-form-input id="address" v-model="companyForm.address" />
-            </b-form-group>
-          </b-col>
+        <!-- Thông tin domain -->
+        <div class="form-section">
+          <div class="section-header">
+            <i class="fas fa-globe text-success"></i>
+            <h6 class="mb-0">Thông tin Domain</h6>
+          </div>
+          <b-row>
+            <b-col cols="12" md="6">
+              <b-form-group label="Domain" label-for="domain" class="required-field">
+                <b-input-group>
+                  <b-input-group-prepend is-text>
+                    <i class="fas fa-link"></i>
+                  </b-input-group-prepend>
+                  <b-form-input 
+                    id="domain" 
+                    v-model.trim="companyForm.domain"
+                    placeholder="example.com"
+                    required 
+                  />
+                </b-input-group>
+                <small class="form-text text-muted">
+                  <i class="fas fa-info-circle"></i> Domain chính của công ty
+                </small>
+              </b-form-group>
+            </b-col>
+            
+            <b-col cols="12" md="6">
+              <b-form-group label="Domain tra cứu" label-for="domainLookup">
+                <b-input-group>
+                  <b-input-group-prepend is-text>
+                    <i class="fas fa-search"></i>
+                  </b-input-group-prepend>
+                  <b-form-input 
+                    id="domainLookup" 
+                    v-model.trim="companyForm.domainLookup"
+                    placeholder="lookup.example.com"
+                  />
+                </b-input-group>
+                <small class="form-text text-muted">
+                  <i class="fas fa-info-circle"></i> Domain dùng để tra cứu hóa đơn
+                </small>
+              </b-form-group>
+            </b-col>
+          </b-row>
+        </div>
 
-          <b-col cols="12" md="6">
-            <!-- Domain -->
-            <b-form-group label="Domain:" label-for="domain">
-              <b-form-input id="domain" v-model="companyForm.domain" required />
-            </b-form-group>
-          </b-col>
-          <b-col cols="12" md="6">
-            <!-- Domain tra cứu -->
-            <b-form-group label="Domain tra cứu:" label-for="domainLookup">
-              <b-form-input id="domainLookup" v-model="companyForm.domainLookup" />
-            </b-form-group>
-          </b-col>
+        <!-- Thông tin liên hệ -->
+        <div class="form-section">
+          <div class="section-header">
+            <i class="fas fa-address-book text-info"></i>
+            <h6 class="mb-0">Thông tin liên hệ</h6>
+          </div>
+          <b-row>
+            <b-col cols="12" md="6">
+              <b-form-group label="Email" label-for="email">
+                <b-input-group>
+                  <b-input-group-prepend is-text>
+                    <i class="fas fa-envelope"></i>
+                  </b-input-group-prepend>
+                  <b-form-input 
+                    id="email" 
+                    v-model.trim="companyForm.email" 
+                    type="email"
+                    placeholder="contact@example.com"
+                  />
+                </b-input-group>
+              </b-form-group>
+            </b-col>
+            
+            <b-col cols="12" md="6">
+              <b-form-group label="Hotline" label-for="hotline">
+                <b-input-group>
+                  <b-input-group-prepend is-text>
+                    <i class="fas fa-phone"></i>
+                  </b-input-group-prepend>
+                  <b-form-input 
+                    id="hotline" 
+                    v-model.trim="companyForm.hotline"
+                    placeholder="1900 xxxx"
+                  />
+                </b-input-group>
+              </b-form-group>
+            </b-col>
+          </b-row>
+        </div>
 
-          <b-col cols="12" md="6">
-            <!-- Email -->
-            <b-form-group label="Email:" label-for="email">
-              <b-form-input id="email" v-model="companyForm.email" type="email" />
-            </b-form-group>
-          </b-col>
-          <b-col cols="12" md="6">
-            <!-- Hotline -->
-            <b-form-group label="Hotline:" label-for="hotline">
-              <b-form-input id="hotline" v-model="companyForm.hotline" />
-            </b-form-group>
-          </b-col>
-
-          <b-col cols="12" md="6">
-            <!-- Trạng thái -->
-            <b-form-group label="Trạng thái:" label-for="status">
-              <b-form-select id="status" v-model="companyForm.status" :options="statusOptions" />
-            </b-form-group>
-          </b-col>
-
-          <b-col cols="12" class="text-right">
-            <!-- Actions -->
-            <b-button type="submit" variant="primary">Lưu</b-button>
-            <b-button type="button" variant="secondary" @click="$refs.companyModal.hide()">Hủy</b-button>
-          </b-col>
-        </b-row>
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <b-button
+            type="button"
+            variant="secondary"
+            size="sm"
+            class="mr-2 btn-modal-cancel"
+            @click="$refs.companyModal.hide()"
+          >
+            <i class="fas fa-times mr-1"></i>
+            Hủy
+          </b-button>
+          <b-button
+            type="submit"
+            variant="primary"
+            size="sm"
+            class="btn-modal-save"
+          >
+            <i class="fas fa-save mr-1"></i>
+            {{ companyForm.id ? 'Cập nhật' : 'Thêm mới' }}
+          </b-button>
+        </div>
       </b-form>
     </b-modal>
   </div>
@@ -263,8 +393,10 @@ export default {
         this.list.current_page = res.data.number + 1;
         return res.data.content || [];
       })
-      .catch(() => {
+      .catch(err => {
         this.isBusy = false;
+        const message = err.response?.data?.message || 'Không thể tải danh sách công ty';
+        this.$toastr && this.$toastr.error(message);
         return [];
       });
     },
@@ -350,6 +482,10 @@ export default {
           this.$toastr && this.$toastr.success(payload.id ? 'Cập nhật công ty thành công' : 'Thêm công ty thành công');
           this.$refs.companyModal.hide();
           this.$refs.tblCompany.refresh();
+        })
+        .catch(err => {
+          const message = err.response?.data?.message || 'Không thể lưu thông tin công ty';
+          this.$toastr && this.$toastr.error(message);
         });
     },
 
@@ -358,16 +494,37 @@ export default {
         .then(() => {
           this.$toastr && this.$toastr.success(status === 1 ? 'Đã kích hoạt công ty' : 'Đã tạm ngưng công ty');
           this.$refs.tblCompany.refresh();
+        })
+        .catch(err => {
+          const message = err.response?.data?.message || 'Không thể cập nhật trạng thái công ty';
+          this.$toastr && this.$toastr.error(message);
         });
     },
 
     deleteCompany(id) {
       if(confirm("Bạn có chắc muốn xóa công ty này?")) {
-        axios.delete(`/administrator/company/${id}`).then(() => {
-          this.$toastr && this.$toastr.success('Đã xóa công ty');
-          this.$refs.tblCompany.refresh();
-        });
+        axios.delete(`/administrator/company/${id}`)
+          .then(() => {
+            this.$toastr && this.$toastr.success('Đã xóa công ty');
+            this.$refs.tblCompany.refresh();
+          })
+          .catch(err => {
+            const message = err.response?.data?.message || 'Không thể xóa công ty';
+            this.$toastr && this.$toastr.error(message);
+          });
       }
+    },
+
+    sendAdminInfo(item) {
+      axios.post(`/administrator/company/${item.id}/send-credentials`)
+        .then(res => {
+          const message = res?.data?.message || 'Đã gửi thông tin tài khoản quản trị tới email';
+          this.$toastr && this.$toastr.success(message);
+        })
+        .catch(err => {
+          const message = err.response?.data?.message || 'Không thể gửi thông tin tài khoản quản trị';
+          this.$toastr && this.$toastr.error(message);
+        });
     },
 
     safeRowNumber(index) {
@@ -399,4 +556,233 @@ export default {
 .badge { font-size: 13px; }
 .card { border: 1px solid #e9ecef; }
 .card-body { padding: 0.75rem 1rem; }
+
+/* Company Modal Styles */
+.company-modal .modal-dialog {
+  max-width: 800px;
+}
+
+.company-modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-bottom: none;
+  padding: 1.25rem 1.5rem;
+}
+
+.company-modal-header .modal-title {
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.company-modal-header .close {
+  color: white;
+  opacity: 0.9;
+  text-shadow: none;
+}
+
+.company-modal-header .close:hover {
+  opacity: 1;
+}
+
+.company-modal-body {
+  padding: 1.5rem;
+  background: #f8f9fa;
+}
+
+/* Form Sections */
+.company-form .form-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e9ecef;
+}
+
+.company-form .form-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.company-form .section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.company-form .section-header i {
+  font-size: 1.25rem;
+}
+
+.company-form .section-header h6 {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+/* Form Groups */
+.company-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.company-form .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.company-form label {
+  font-weight: 500;
+  color: #4a5568;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.company-form .required-field label::after {
+  content: ' *';
+  color: #e53e3e;
+}
+
+/* Input Groups */
+.company-form .input-group-text {
+  background: #f7fafc;
+  border-right: none;
+  color: #718096;
+  min-width: 40px;
+  justify-content: center;
+}
+
+.company-form .input-group .form-control {
+  border-left: none;
+}
+
+.company-form .input-group .form-control:focus {
+  border-color: #cbd5e0;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.company-form .input-group:focus-within .input-group-text {
+  border-color: #cbd5e0;
+  background: #edf2f7;
+}
+
+.company-form input.form-control,
+.company-form select.form-control {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.company-form input.form-control:focus,
+.company-form select.form-control:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.company-form .form-text {
+  font-size: 0.8rem;
+  color: #718096;
+  margin-top: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.company-form .form-text i {
+  font-size: 0.75rem;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  margin-top: 1.25rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.form-actions .btn {
+  font-weight: 500;
+  border-radius: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.btn-modal-save {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.btn-modal-save:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.btn-modal-cancel {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+  color: #4a5568;
+}
+
+.btn-modal-cancel:hover {
+  background-color: #e5e7eb;
+  border-color: #cbd5e0;
+  color: #111827;
+}
+
+@media (max-width: 768px) {
+  .company-modal-body {
+    padding: 1rem;
+  }
+  
+  .company-form .form-section {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .company-form .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .form-actions {
+    flex-direction: row-reverse;
+  }
+  
+  .form-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Animation */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.company-form .form-section {
+  animation: slideDown 0.3s ease;
+}
+
+.company-form .form-section:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.company-form .form-section:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.company-form .form-section:nth-child(3) {
+  animation-delay: 0.15s;
+}
 </style>

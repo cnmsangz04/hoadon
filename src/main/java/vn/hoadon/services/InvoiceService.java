@@ -11,6 +11,11 @@ public interface InvoiceService {
     InvoiceEntity create(InvoicePayload payload, Long companyId, Long userId);
     // Update an existing invoice by id
     InvoiceEntity update(Long id, InvoicePayload payload, Long companyId, Long userId);
+    // Clone an existing invoice, duplicating its data for the given company/user, and return the new entity
+    InvoiceEntity clone(Long sourceId, Long companyId, Long userId);
+
+    // Lọc theo ngày lập (dateExport). Nếu date=null thì bỏ qua lọc.
+    Page<InvoiceDTO> search(String q, Short status, java.time.LocalDate date, Pageable pageable);
 
     // Minimal payload contract matching Vue form
     class InvoicePayload {

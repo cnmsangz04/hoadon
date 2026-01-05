@@ -94,6 +94,52 @@ public class HistoryServiceImpl implements HistoryService {
     }
 
     @Override
+    public List<HistoryDto> listByInvoice(Long companyId, Long invoiceId) {
+        if (companyId == null || invoiceId == null) return List.of();
+        List<HistoryEntity> all = historyRepository.findAll();
+        List<HistoryEntity> filtered = new ArrayList<>();
+        for (HistoryEntity h : all) {
+            if (h == null) continue;
+            if (companyId.equals(h.getCompanyId()) && "invoices".equals(h.getTableName()) && invoiceId.equals(h.getTableId()) && h.getStatus() != null && h.getStatus() == 1 ) {
+                filtered.add(h);
+            }
+        }
+        // Sort by createdAt descending
+        filtered.sort((a, b) -> {
+            java.time.LocalDateTime ca = a.getCreatedAt();
+            java.time.LocalDateTime cb = b.getCreatedAt();
+            if (ca == null && cb == null) return 0;
+            if (ca == null) return 1;
+            if (cb == null) return -1;
+            return cb.compareTo(ca);
+        });
+        // Collect userIds and fetch usernames
+        Map<Long, String> userMap = userRepository.findAllById(
+                filtered.stream().map(HistoryEntity::getUserId).filter(id -> id != null && id > 0).collect(Collectors.toSet())
+        ).stream().collect(Collectors.toMap(UserEntity::getId, u -> u.getUsername() != null ? u.getUsername() : ""));
+
+        return filtered.stream().map(h -> {
+            HistoryDto dto = new HistoryDto();
+            dto.setId(h.getId());
+            dto.setCompanyId(h.getCompanyId());
+            dto.setUserId(h.getUserId());
+            dto.setTableName(h.getTableName());
+            dto.setTableId(h.getTableId());
+            dto.setTitle(h.getTitle());
+            dto.setDescription(h.getDescription());
+            dto.setShowNotify(h.getShowNotify());
+            dto.setStatus(h.getStatus());
+            dto.setType(h.getType());
+            dto.setXmlData(h.getXmlData());
+            dto.setCreatedAt(h.getCreatedAt());
+            dto.setUpdatedAt(h.getUpdatedAt());
+            // Enrich username
+            try { dto.setUsername(userMap.getOrDefault(h.getUserId(), null)); } catch (Exception ignored) {}
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
     public List<HistoryDto> listRecentByCompany(Long companyId, int limit) {
         if (companyId == null) return List.of();
         List<HistoryEntity> all = historyRepository.findAll();

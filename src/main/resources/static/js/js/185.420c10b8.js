@@ -1,2 +1,0 @@
-"use strict";(self["webpackChunkhoadon_vue"]=self["webpackChunkhoadon_vue"]||[]).push([[185],{6185:(e,t,a)=>{a.r(t),a.d(t,{default:()=>l});var n=function(){var e=this,t=e._self._c;return t("div",{staticClass:"auth-page container mt-5"},[t("router-view")],1)},u=[];const s={name:"AuthPage"},r=s;var c=a(1656),o=(0,c.A)(r,n,u,!1,null,"6bb410ce",null);const l=o.exports}}]);
-//# sourceMappingURL=185.420c10b8.js.map

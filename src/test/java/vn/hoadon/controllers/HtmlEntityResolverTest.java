@@ -1,6 +1,9 @@
 package vn.hoadon.controllers;
 
 import org.junit.jupiter.api.Test;
+
+import vn.hoadon.controllers.customers.FormInvoiceController;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Method;

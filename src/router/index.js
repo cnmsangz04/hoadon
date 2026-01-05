@@ -106,6 +106,12 @@ const router = new VueRouter({
 					name: 'category-customer-list',
 					component: () => import('@/views/customers/categories/customer/list.vue'),
 					meta: { requiresUser: true, title: 'Danh mục khách hàng' }
+				},
+				{
+					path: '/reports/invoice/list',
+					name: 'CustomerReportInvoiceList',
+					component: () => import('@/views/customers/reports/invoice/list.vue'),
+					meta: { requiresUser: true, title: 'Báo cáo hóa đơn' }
 				}
 			]
 		},

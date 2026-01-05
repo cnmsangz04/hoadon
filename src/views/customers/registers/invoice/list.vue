@@ -128,7 +128,7 @@
             <b-dropdown-item v-if="Number(item.status) === 1" class="text-center" href="#" @click.prevent="sendToTaxAuthority(item)">Gửi CQT</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) > 1" class="text-center" href="#" @click.prevent="showHistory(item)">Lịch sử truyền nhận</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) === 0" class="text-center text-danger" href="#" @click.prevent="deleteItem(item)">Xóa tờ khai</b-dropdown-item>
-          </b-dropdown>
+           </b-dropdown>
         </template>
       </b-table>
 
@@ -712,7 +712,7 @@ export default {
       } finally {
         this.historyBusy = false
       }
-    },
+    }
   }
 }
 </script>

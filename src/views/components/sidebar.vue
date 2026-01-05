@@ -79,7 +79,7 @@ export default {
             { title: 'Hóa đơn GTGT', to: '/invoice/vat-invoice/list' },
           ],
         },
-        { title: 'Báo cáo', icon: 'fas fa-chart-line', to: '/reports' },
+        { title: 'Báo cáo', icon: 'fas fa-chart-line', to: '/reports/invoice/list' },
         {
           title: 'Danh mục',
           icon: 'fas fa-list-ul',

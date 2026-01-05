@@ -359,13 +359,11 @@
                     font-family: 'Courier New', monospace;
                     color: #000;
                     word-break: break-all;
-                    display: block;
                     margin-left: 10px;
                     font-size: 8.5px;
                 }
                 
                 .signature-time {
-                    text-align: center;
                     margin-top: 6px;
                     font-style: italic;
                     color: #666;
@@ -578,8 +576,34 @@
                                                 <td class="text-right"><xsl:value-of select="format-number(DGia, '#,###')"/></td>
                                                 <td class="text-right"><xsl:value-of select="format-number(ThTien, '#,###')"/></td>
                                                 <td class="text-center"><xsl:value-of select="TSuat"/></td>
-                                                <td class="text-right"></td>
-                                                <td class="text-right"></td>
+                                                <td class="text-right">
+                                                    <xsl:for-each select="TTKhac/TTin">
+                                                        <xsl:if test="TTruong = 'TThue'">
+                                                            <xsl:choose>
+                                                                <xsl:when test="DLieu != ''">
+                                                                    <xsl:value-of select="format-number(DLieu, '#,###')"/>
+                                                                </xsl:when>
+                                                                <xsl:otherwise>
+                                                                     
+                                                                </xsl:otherwise>
+                                                            </xsl:choose>
+                                                        </xsl:if>
+                                                    </xsl:for-each>
+                                                </td>
+                                                <td class="text-right">
+                                                    <xsl:for-each select="TTKhac/TTin">
+                                                        <xsl:if test="TTruong = 'TCong'">
+                                                            <xsl:choose>
+                                                                <xsl:when test="DLieu != ''">
+                                                                    <xsl:value-of select="format-number(DLieu, '#,###')"/>
+                                                                </xsl:when>
+                                                                <xsl:otherwise>
+                                                                     
+                                                                </xsl:otherwise>
+                                                            </xsl:choose>
+                                                        </xsl:if>
+                                                    </xsl:for-each>
+                                                </td>
                                             </tr>
                                         </xsl:for-each>
                                     </xsl:when>
@@ -621,7 +645,7 @@
                         </div>
                         
                         <!-- TAX AUTHORITY CODE -->
-                        <xsl:if test="HDon/MCCQT">
+                        <xsl:if test="HDon/MCCQT != ''">
                             <div class="tax-authority-section">
                                 <div class="tax-authority-title">
                                     Mã của cơ quan thuế (Tax Authority Code):
@@ -664,25 +688,20 @@
                                             <div class="signature-info">
                                                 <span class="signature-label">Người ký:</span>
                                                 <span class="signature-value">
-                                                    <xsl:value-of select="HDon/DSCKS/NBan/ds:Signature/ds:KeyInfo/ds:X509Data/ds:X509SubjectName"/>
+                                                    <xsl:value-of select="HDon/DLHDon/NDHDon/NBan/Ten"/>
                                                 </span>
                                             </div>
                                         </xsl:if>
                                         
-                                        <xsl:if test="HDon/DSCKS/NBan/ds:Signature/ds:SignatureValue">
-                                            <div class="signature-info">
-                                                <span class="signature-label">Giá trị chữ ký:</span>
-                                                <span class="signature-value">
-                                                    <xsl:value-of select="substring(HDon/DSCKS/NBan/ds:Signature/ds:SignatureValue, 1, 80)"/>...
-                                                </span>
-                                            </div>
-                                        </xsl:if>
-                                        
-                                        <xsl:if test="HDon/DSCKS/NBan/ds:Signature/ds:Object/ds:SignatureProperties/ds:SignatureProperty/SigningTime">
+                                        <xsl:if test="HDon/DSCKS/NBan/ds:Signature/ds:Object/ds:SignatureProperties/ds:SignatureProperty/ds:SigningTime">
                                             <div class="signature-time">
-                                                Thời gian ký: <xsl:value-of select="HDon/DSCKS/NBan/ds:Signature/ds:Object/ds:SignatureProperties/ds:SignatureProperty/SigningTime"/>
+                                                <span class="signature-label">Thời gian ký:</span>
+                                                <span class="signature-value">
+                                                    <xsl:value-of select="HDon/DSCKS/NBan/ds:Signature/ds:Object/ds:SignatureProperties/ds:SignatureProperty/ds:SigningTime"/>
+                                                </span>
                                             </div>
                                         </xsl:if>
+
                                     </div>
                                 </xsl:if>
                             </div>
@@ -690,7 +709,19 @@
                         
                         <!-- FOOTER -->
                         <div class="footer">
-                            <div>Trang tra cứu: https://tracuu.hoadon.vn</div>
+                            <div>Trang tra cứu: https://tracuu.hoadon.vn Mã tra cứu 
+                                <b><xsl:for-each select="HDon/DLHDon/TTKhac/TTin">
+                                    <xsl:if test="TTruong = 'MTCuu'">
+                                        <xsl:choose>
+                                            <xsl:when test="DLieu != ''">
+                                                <xsl:value-of select="DLieu"/>
+                                            </xsl:when>
+                                            <xsl:otherwise>
+                                                 
+                                            </xsl:otherwise>
+                                        </xsl:choose>
+                                    </xsl:if>
+                                </xsl:for-each></b></div>
                             <div><b>Giải Pháp Hóa Đơn Điện Tử</b></div>
                         </div>
                         

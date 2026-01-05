@@ -38,6 +38,16 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     public Page<InvoiceDTO> search(String q, Short status, Pageable pageable) {
         Page<InvoiceEntity> page = invoiceRepository.search(q, status, pageable);
+        return mapToDto(page);
+    }
+
+    @Override
+    public Page<InvoiceDTO> search(String q, Short status, java.time.LocalDate date, Pageable pageable) {
+        Page<InvoiceEntity> page = invoiceRepository.search(q, status, date, pageable);
+        return mapToDto(page);
+    }
+
+    private Page<InvoiceDTO> mapToDto(Page<InvoiceEntity> page) {
         // Preload related forms and users to avoid N+1 lookups
         Map<Long, FormInvoiceEntity> formCache = new HashMap<>();
         Map<Long, UserEntity> userCache = new HashMap<>();
@@ -59,7 +69,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                     dto.serial = form.getSerial();
                 }
             }
-            dto.customerName = null; // customer info is stored as JSON/text in invoices.customer; parse if needed
+            // Populate customerName from invoices.customer JSON
+            dto.customerName = extractCustomerName(inv.getCustomer());
             Long userId = inv.getUserId() != null ? inv.getUserId().longValue() : null;
             dto.userId = userId;
             if (userId != null) {
@@ -68,6 +79,24 @@ public class InvoiceServiceImpl implements InvoiceService {
             }
             return dto;
         });
+    }
+
+    private String extractCustomerName(String customerJson) {
+        if (customerJson == null || customerJson.trim().isEmpty()) return "";
+        try {
+            String t = customerJson.trim();
+            if (t.startsWith("{") && t.endsWith("}")) {
+                java.util.Map<?,?> map = JSON.readValue(t, java.util.Map.class);
+                Object name = map.get("name");
+                Object buyer = map.get("buyer");
+                String sName = name != null ? String.valueOf(name).trim() : "";
+                String sBuyer = buyer != null ? String.valueOf(buyer).trim() : "";
+                if (!sName.isEmpty()) return sName;
+                if (!sBuyer.isEmpty()) return sBuyer;
+                return "";
+            }
+        } catch (Exception ignore) {}
+        return "";
     }
 
     @Override
@@ -99,6 +128,53 @@ public class InvoiceServiceImpl implements InvoiceService {
             e.setLookupCode(generateUniqueLookupCode());
         }
         e.setUpdatedAt(java.time.LocalDateTime.now());
+        return invoiceRepository.save(e);
+    }
+
+    @Override
+    public InvoiceEntity clone(Long sourceId, Long companyId, Long userId) {
+        InvoiceEntity src = invoiceRepository.findById(sourceId).orElse(null);
+        if (src == null) return null;
+        InvoiceEntity e = new InvoiceEntity();
+        // Copy fields from source but reset identifiers and status/number
+        e.setCompanyId(companyId != null ? companyId.intValue() : src.getCompanyId());
+        e.setUserId(userId != null ? userId.intValue() : src.getUserId());
+        e.setFormId(src.getFormId());
+        e.setName(src.getName());
+        e.setNo(null); // new invoice should not reuse number
+        e.setDateExport(src.getDateExport());
+        e.setPaymentType(src.getPaymentType());
+        e.setPayment(src.getPayment());
+        e.setStatus((short)0); // reset to draft
+        e.setCurrency(src.getCurrency());
+        e.setExchangeRate(src.getExchangeRate());
+        e.setTotal(src.getTotal());
+        e.setVatAmount(src.getVatAmount());
+        e.setAmount(src.getAmount());
+        e.setAmountInWords(src.getAmountInWords());
+        e.setVatRate(src.getVatRate());
+        e.setVatRateOther(src.getVatRateOther());
+        e.setBill(src.getBill());
+        e.setOthers(src.getOthers());
+        e.setRelated(src.getRelated());
+        e.setCustomer(src.getCustomer());
+        e.setDetail(src.getDetail());
+        e.setInvoiceType(src.getInvoiceType());
+        e.setInvoiceTypeAdjust(src.getInvoiceTypeAdjust());
+        e.setSendMailDirectly((short)0);
+        e.setDiscount(src.getDiscount());
+        e.setDiscountAmount(src.getDiscountAmount());
+        e.setVatAmountDiscount(src.getVatAmountDiscount());
+        e.setTypeApi(src.getTypeApi());
+        e.setStatusConvert((short)0);
+        // Reset code fields
+        e.setCodeCqt(null);
+        e.setLookupCode(generateUniqueLookupCode());
+        e.setIdAttr(generateUniqueIdAttr());
+        // Assign invoice number id based on form/company
+        assignInvoiceNumberId(e, companyId != null ? companyId : (src.getCompanyId() != null ? src.getCompanyId().longValue() : null), new InvoicePayload(){ { this.formId = src.getFormId() != null ? src.getFormId().longValue() : null; } });
+        e.setCreatedAt(LocalDateTime.now());
+        e.setUpdatedAt(LocalDateTime.now());
         return invoiceRepository.save(e);
     }
 
@@ -157,7 +233,6 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (userId != null) e.setUserId(userId.intValue());
         if (p.formId != null) e.setFormId(p.formId.intValue());
         // Basic info
-        // Prefer incoming name if later expanded; for now set a clean default label
         e.setName("Hóa đơn GTGT");
         e.setNo(p.no);
         e.setDateExport(p.dateExport);
@@ -165,7 +240,8 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setPayment((short)1);
         e.setStatus(p.status != null ? p.status : (short)0);
         e.setCurrency(p.currency != null ? p.currency : "VND");
-        e.setExchangeRate(p.exchangeRate != null ? p.exchangeRate : 0d);
+        // Default exchange_rate = 1 when not provided
+        e.setExchangeRate(p.exchangeRate != null ? p.exchangeRate : 1d);
         // Totals
         e.setTotal(p.total != null ? p.total : 0d);
         e.setVatAmount(p.vatAmount != null ? p.vatAmount : 0d);
@@ -177,11 +253,8 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setBill(null);
         e.setOthers(null);
         e.setRelated(null);
-        // Serialize customer and detail as JSON strings if objects provided
         e.setCustomer(serializeSafely(p.customer));
         e.setDetail(serializeSafely(p.detail));
-        // Do not set lookupCode from payload; backend will generate unique code
-        // Defaults for fields not yet used
         if (isCreate) {
             e.setSendMailDirectly((short)0);
             e.setDiscount(0d);
