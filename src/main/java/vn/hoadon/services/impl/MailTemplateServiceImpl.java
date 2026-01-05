@@ -1,7 +1,7 @@
 package vn.hoadon.services.impl;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import vn.hoadon.dto.mail.MailTemplateDto;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.MailTemplateEntity;
@@ -13,11 +13,17 @@ import java.util.List;
 
 
 @Service
-@RequiredArgsConstructor
 public class MailTemplateServiceImpl implements MailTemplateService {
 
     private final MailTemplateRepository mailTemplateRepository;
     private final CompanyRepository companyRepository;
+
+    @Autowired
+    public MailTemplateServiceImpl(MailTemplateRepository mailTemplateRepository,
+                                   CompanyRepository companyRepository) {
+        this.mailTemplateRepository = mailTemplateRepository;
+        this.companyRepository = companyRepository;
+    }
 
     /* ================= GET BY COMPANY ================= */
     public List<MailTemplateDto> getByCompanyId(Integer companyId) {

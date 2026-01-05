@@ -1,9 +1,9 @@
 package vn.hoadon.controllers.admin;
 
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import vn.hoadon.dto.mail.MailTemplateDto;
 import vn.hoadon.services.MailTemplateService;
 
@@ -11,10 +11,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("v1/administrator/mail-template")
-@RequiredArgsConstructor
 public class MailTemplateController {
 
     private final MailTemplateService mailTemplateService;
+
+    @Autowired
+    public MailTemplateController(MailTemplateService mailTemplateService) {
+        this.mailTemplateService = mailTemplateService;
+    }
 
     /**
      * Lấy danh sách mail template theo company
