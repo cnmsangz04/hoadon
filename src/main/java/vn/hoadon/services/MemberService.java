@@ -13,4 +13,6 @@ public interface MemberService {
     void removeFromCompany(Long id);
     UserEntity getById(Long id);
     void delete(Long id);
+
+    void sendCredentials(Long id);
 }

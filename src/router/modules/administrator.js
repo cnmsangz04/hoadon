@@ -40,6 +40,18 @@ export default {
 			meta: { requiresAdmin: true, title: 'Thuế suất' }
 		},
 		{
+			path: 'email-template/list',
+			name: 'admin-email-template-list',
+			component: () => import('../../views/administrators/email-template/list.vue'),
+			meta: { requiresAdmin: true, title: 'Mail Template' }
+		},
+		{
+			path: 'email-template/create',
+			name: 'admin-email-template-create',
+			component: () => import('../../views/administrators/email-template/create.vue'),
+			meta: { requiresAdmin: true, title: 'Add Template' }
+		},
+		{
 			path: 'access-control',
 			name: 'admin-access-control',
 			component: () => import('../../views/administrators/access-control/index.vue'),

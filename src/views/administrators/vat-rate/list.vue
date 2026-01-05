@@ -10,7 +10,7 @@
         </b-button>
         <b-button size="sm" variant="success" @click="showModal">
           <i class="fas fa-plus"></i>
-          Thêm thuế suất
+          Thêm mới
         </b-button>
       </div>
     </div>

@@ -22,9 +22,12 @@
         </ul>
       </b-popover>
 
-      <b-button variant="light" class="circle-btn mr-2" v-b-toggle.sidebar-right>
-        <i class="far fa-bell text-danger"></i>
-      </b-button>
+      <!-- Bell notification per sample -->
+      <li class="nav-item bell-notify pl-0 pr-1">
+        <a href="javascript:void(0)" class="info-number circle-icon-top" v-b-toggle.sidebar-right>
+          <i class="far fa-bell text-danger"></i>
+        </a>
+      </li>
 
       <b-dropdown right toggle-class="user-toggle">
         <template #button-content>
@@ -50,14 +53,14 @@
       <ul class="list-unstyled p-2">
         <b-media tag="li" v-for="item in list" :key="item.id" class="mb-2">
           <template #aside>
-            <!-- Show image avatar when available; otherwise show initial letter -->
             <b-avatar size="2rem" :src="item.avatar" v-if="item.avatar"></b-avatar>
-            <b-avatar size="2rem" variant="success" v-else>{{ nameInitial(item.name) }}</b-avatar>
+            <b-avatar size="2rem" variant="success" v-else>{{ nameInitial(item.username || 'Hệ thống') }}</b-avatar>
           </template>
-          <h6 class="mb-1">{{ item.name }}</h6>
-          <small class="text-muted">{{ item.date }}</small>
+          <h6 class="mb-1">{{ item.username || 'Hệ thống' }}</h6>
+          <small class="text-muted">{{ relativeTime(item.created_at) }}</small>
           <p class="mb-0">{{ item.title }}</p>
         </b-media>
+        <li v-if="list.length === 0" class="text-center text-muted py-2">Không có thông báo</li>
       </ul>
     </b-sidebar>
   </header>
@@ -93,12 +96,7 @@ export default {
     }
   },
   created() {
-    this.list = [
-      { id: 1, name: 'Admin', date: '2025-11-15', title: 'Thông báo 1', avatar: '' },
-      { id: 2, name: 'System', date: '2025-11-14', title: 'Thông báo 2', avatar: '' }
-    ];
-
-    // Populate auth from JWT if available and preserve companyId
+    // Populate auth from JWT if available without using localStorage companyId
     try {
       const p = window.location?.pathname || ''
       const isAdmin = /administrator|admin/.test(p)
@@ -110,19 +108,17 @@ export default {
         this.app.auth.username = payload.username || payload.user_name || payload.sub || this.app.auth.username || ''
         this.app.auth.name = payload.name || payload.full_name || payload.displayName || this.app.auth.name || ''
         this.app.auth.avatar = payload.avatar || this.app.auth.avatar || ''
-        // capture role from JWT if present
         const pr = payload.role ?? payload.roles ?? payload.authority ?? payload.auth_role
         if (typeof pr === 'number') {
           this.app.auth.role = pr
         } else if (Array.isArray(pr)) {
-          // if array of roles, treat having 'ADMIN' as admin
           this.app.auth.role = pr.includes('ADMIN') ? 1 : (pr.includes('SUPER_ADMIN') ? 0 : null)
         } else if (typeof pr === 'string') {
           const s = pr.toUpperCase()
           this.app.auth.role = s.includes('SUPER') ? 0 : (s.includes('ADMIN') ? 1 : null)
         }
 
-        // Extract company id
+        // Extract company id only from JWT payload, no localStorage fallback/persist
         const cid = (
           payload.companyId ?? payload.company_id ??
           (typeof payload.company === 'object' ? payload.company?.id : payload.company) ??
@@ -132,21 +128,11 @@ export default {
         if (nCid != null && Number.isFinite(nCid)) {
           const cur = this.$app?.info?.company || {}
           this.$app.info.company = { ...(cur || {}), id: nCid }
-          try { localStorage.setItem('companyId', String(nCid)) } catch {}
-        } else {
-          const lsCid = localStorage.getItem('companyId')
-          if (lsCid) {
-            const n = Number(lsCid)
-            if (Number.isFinite(n)) {
-              const cur = this.$app?.info?.company || {}
-              this.$app.info.company = { ...(cur || {}), id: n }
-            }
-          }
         }
       }
     } catch {}
 
-    // Use globally fetched info if available; also set local role when present
+    // Use globally fetched info if available; do not persist companyId to localStorage
     try {
       const info = this.$app?.info || {}
       if (info.user) {
@@ -159,13 +145,30 @@ export default {
         const cur = this.$app.info.company || {}
         if (info.company.id != null && !Number.isNaN(Number(info.company.id))) {
           this.$app.info.company = { ...cur, id: Number(info.company.id) }
-          try { localStorage.setItem('companyId', String(Number(info.company.id))) } catch {}
         }
+      }
+    } catch {}
+
+    // Fetch recent notifications (limit 10) from history with required conditions
+    this.fetchNotifications()
+
+    // Echo realtime sample: on message, show toast and refresh notifications
+    try {
+      if (typeof io !== 'undefined') {
+        const vm = this
+        const channel = vm.app?._channel || 'default'
+        Echo.channel('NotificationCpanel_' + channel)
+          .listen('.MessagePostedCpanel', (data) => {
+            vm.app._isRefresh = true
+            const msg = data?.message?.message || ''
+            if (msg) { window.toastr && toastr.success(msg) }
+            vm.fetchNotifications()
+          })
       }
     } catch {}
   },
   mounted() {
-    // Ensure /auth/info is fetched so role is set even if JWT lacks role
+    // Ensure /auth/info is fetched so role/company is set even if JWT lacks role; don’t write localStorage companyId
     try {
       axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
         .then(res => {
@@ -176,10 +179,8 @@ export default {
           if (info?.company?.id != null) {
             const cur = this.$app?.info?.company || {}
             this.$app.info.company = { ...cur, id: Number(info.company.id) }
-            try { localStorage.setItem('companyId', String(Number(info.company.id))) } catch {}
           }
         })
-        .catch(() => {})
     } catch {}
   },
   methods: {
@@ -191,6 +192,7 @@ export default {
     reloadData() {
       this.reloading = true;
       setTimeout(() => { this.reloading = false }, 2000);
+      this.fetchNotifications()
     },
     menuToggle() {
       document.body.classList.toggle('nav-sm');
@@ -209,6 +211,67 @@ export default {
         localStorage.removeItem('last-account');
         window.location.href = '/auth/login';
       }
+    },
+    async fetchNotifications() {
+      try {
+        const params = { limit: 10, show_notify: 1, status: 1 }
+        const res = await axios.get('/history/notifications', { params })
+        const payload = res && res.data
+
+        const arr = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload?.items)
+          ? payload.items
+          : Array.isArray(payload?.content)
+          ? payload.content
+          : Array.isArray(payload?.list)
+          ? payload.list
+          : Array.isArray(payload?.rows)
+          ? payload.rows
+          : []
+
+        this.list = arr.map(r => {
+          const created = r.createdAt ?? r.created_at ?? r.time ?? r.timestamp
+          const title = r.title ?? r.message ?? r.description ?? ''
+          const uname = r.username ?? r.userName ?? r.user_name ?? r.user ?? ''
+          const uid = r.userId ?? r.user_id
+          const hasUser = uid != null && String(uid).trim() !== '' && Number(uid) > 0
+          return {
+            id: r.id ?? r._id ?? r.uuid ?? Math.random().toString(36).slice(2),
+            title: String(title).trim(),
+            description: r.description ?? r.detail ?? '',
+            username: hasUser ? (String(uname || '').trim() || 'Hệ thống') : 'Hệ thống',
+            created_at: created,
+            avatar: r.avatar ?? null,
+          }
+        })
+
+        // Quick visual confirmation
+        try { window.toastr && toastr.info(`Thông báo: ${this.list.length}`) } catch {}
+      } catch (e) {
+        this.list = []
+      }
+    },
+    relativeTime(d) {
+      if (!d) return ''
+      try {
+        const now = Date.now()
+        const t = new Date(d).getTime()
+        const diff = Math.max(0, Math.floor((now - t) / 1000))
+        const years = Math.floor(diff / (365 * 24 * 3600))
+        if (years > 0) return `${years} năm trước`
+        const months = Math.floor(diff / (30 * 24 * 3600))
+        if (months > 0) return `${months} tháng trước`
+        const days = Math.floor(diff / (24 * 3600))
+        if (days > 0) return `${days} ngày trước`
+        const hours = Math.floor(diff / 3600)
+        if (hours > 0) return `${hours} giờ trước`
+        const minutes = Math.floor(diff / 60)
+        if (minutes > 0) return `${minutes} phút trước`
+        return 'Vừa xong'
+      } catch { return '' }
     }
   }
 };
@@ -234,6 +297,10 @@ export default {
 }
 .menu-toggle a:hover { background: #f5f7fa; color: #2c3e50; }
 
+nav.d-flex.align-items-center {
+  gap: 8px;
+}
+
 .circle-btn {
   width: 40px;
   height: 40px;
@@ -249,6 +316,21 @@ export default {
 .circle-btn i { font-size: 1rem; color: #2f3b52; }
 .circle-btn:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 .circle-btn:active { transform: scale(0.98); }
+
+/* Bell notify sample styles */
+.bell-notify { list-style: none; }
+.bell-notify .circle-icon-top {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e6e9ed;
+  border-radius: 50%;
+  background: #fff;
+  transition: box-shadow 0.2s ease, transform 0.06s ease;
+}
+.bell-notify .circle-icon-top:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 
 /* User dropdown trigger */
 .user-toggle {
@@ -271,8 +353,121 @@ export default {
 /* Sidebar tweaks */
 #sidebar-right ::v-deep .b-sidebar {
   border-left: 1px solid #e9ecef;
+  background: #ffffff;
+  height: 100vh;
+  max-height: 100vh !important; /* override default max-height: 100% */
+}
+#sidebar-right ::v-deep .b-sidebar-body {
+  padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Notification list wrapper: occupy remaining space and scroll */
+#sidebar-right .list-unstyled {
+  margin: 0;
+  /* Approximate title height (including padding) ~56px; adjust if needed */
+  max-height: calc(100vh - 56px) !important;
+  overflow-y: auto;
+  padding: 6px 8px;
+}
+
+/* Notification item layout */
+#sidebar-right .b-media {
+  position: relative;
+  padding: 12px 12px;
+  border-radius: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+#sidebar-right .b-media:hover {
+  background: #f8fafc;
+  border-color: #edf2f7;
+  box-shadow: 0 1px 2px rgba(16,24,40,0.05);
+}
+
+/* Avatar stylings */
+#sidebar-right .b-avatar {
+  box-shadow: 0 1px 3px rgba(16,24,40,0.08);
+  border: 2px solid #ffffff;
+}
+
+/* Title and meta */
+#sidebar-right h6 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 2px;
+}
+#sidebar-right small {
+  display: inline-block;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+/* Content text */
+#sidebar-right p {
+  font-size: 0.92rem;
+  color: #374151;
+  margin: 0;
+}
+
+/* Divider between items */
+#sidebar-right .b-media + .b-media::before {
+  content: "";
+  position: absolute;
+  left: 52px;
+  right: 12px;
+  top: -6px;
+  height: 1px;
+  background: #f0f2f5;
+}
+
+/* Empty state */
+#sidebar-right .text-center.text-muted {
+  color: #94a3b8 !important;
+  background: #f8fafc;
+  border: 1px dashed #e5e7eb;
+  border-radius: 12px;
 }
 
 /* Popover title style */
 ::v-deep .popover-header { background: #f9fafb; font-weight: 600; }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .top-nav { height: 56px; }
+  .circle-btn, .bell-notify .circle-icon-top { width: 36px; height: 36px; }
+  .menu-toggle a { padding: 6px 8px; }
+  /* Keep sidebar full height on mobile */
+  #sidebar-right ::v-deep .b-sidebar { max-height: 100vh !important; }
+  #sidebar-right .list-unstyled { max-height: calc(100vh - 56px) !important; }
+}
+</style>
+
+<style>
+/* Global overrides for BootstrapVue sidebar rendered in body */
+.b-sidebar#sidebar-right {
+  height: 100vh;
+  max-height: 100vh !important;
+}
+.b-sidebar#sidebar-right .b-sidebar-body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+.b-sidebar#sidebar-right .list-unstyled {
+  margin: 0;
+  max-height: calc(100vh - 56px) !important; /* leave room for title/header */
+  overflow-y: auto;
+}
+@media (max-width: 768px) {
+  .b-sidebar#sidebar-right { max-height: 100vh !important; }
+  .b-sidebar#sidebar-right .list-unstyled { max-height: calc(100vh - 56px) !important; }
+}
 </style>

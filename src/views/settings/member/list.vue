@@ -104,6 +104,7 @@
               </span>
             </b-dropdown-item>
             <b-dropdown-item v-if="canResetPassword(item)" class="text-center" href="#" @click.prevent="resetPassword(item)">Reset mật khẩu</b-dropdown-item>
+            <b-dropdown-item v-if="canSendInfo(item)" class="text-center" href="#" @click.prevent="sendInfo(item)">Gửi thông tin</b-dropdown-item>
           </b-dropdown>
         </template>
       </b-table>
@@ -355,10 +356,6 @@ export default {
         { value: 2, text: 'Nhân viên' }
       ]
     },
-    isSystemCompany() {
-      const cid = this.companyIdFromToken
-      return Number(cid) === 1
-    },
     companyIdFromToken() {
       try {
         const token = localStorage.getItem('token-admin') || localStorage.getItem('token')
@@ -367,28 +364,14 @@ export default {
           payload?.companyId ??
           payload?.company_id ??
           (typeof payload?.company === 'object' ? payload?.company?.id : payload?.company) ??
-          payload?.cid ??
-          payload?.tenantId ??
-          payload?.tenant_id ??
-          payload?.orgId ??
-          payload?.org_id
+          payload?.cid ?? payload?.tenantId ?? payload?.tenant_id ?? payload?.orgId ?? payload?.org_id
         )
-        if (cid == null || cid === '') {
-          const lsCid = localStorage.getItem('companyId') || localStorage.getItem('cid')
-          cid = lsCid
-        }
         if (cid == null || cid === '') return undefined
         const n = Number(cid)
         return Number.isFinite(n) ? n : undefined
-      } catch {
-        const lsCid = localStorage.getItem('companyId') || localStorage.getItem('cid')
-        if (lsCid == null || lsCid === '') return undefined
-        const n = Number(lsCid)
-        return Number.isFinite(n) ? n : undefined
-      }
+      } catch { return undefined }
     },
     currentCompanyId() {
-      // Prefer $app info if available
       const id = this.$app?.info?.company?.id
       if (Number.isFinite(Number(id))) return Number(id)
       return this.companyIdFromToken
@@ -534,7 +517,7 @@ export default {
           keyword: this.filters.keyword || undefined,
           role: this.filters.userRole ?? undefined,
           status: this.filters.status,
-          companyId: this.currentCompanyId,
+          // Drop companyId; backend auto-detects from authenticated user
           page: pageZero,
           size: this.list.per_page
         }
@@ -769,6 +752,19 @@ export default {
         if (catId != null && this.categoryById[catId]?.name) return this.categoryById[catId].name
         return 'Khác'
       } catch { return 'Khác' }
+    },
+    async sendInfo(item) {
+      try {
+        await axios.post(`/setting/members/${item.id}/send-credentials`)
+        this.$toastr.success('Đã gửi thông tin tài khoản tới email thành viên')
+      } catch (e) {
+        this.$toastr.error('Không thể gửi thông tin tài khoản')
+      }
+    },
+    canSendInfo(item) {
+      // Chỉ gửi khi thành viên có email
+      const email = item.email || item.user?.email
+      return !!email
     },
   }
 }

@@ -23,46 +23,96 @@ public class CompanyController {
     private CompanyService service;
 
     @PostMapping("/list")
-    public ResponseEntity<Page<CompanyEntity>> list(
+    public ResponseEntity<?> list(
             @RequestBody CompanyFilterDTO filter,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Pageable pageable =
-                PageRequest.of(page, size, Sort.by("createdAt").descending());
+        try {
+            Pageable pageable =
+                    PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        Page<CompanyEntity> pageData =
-                service.list(filter, pageable);
+            Page<CompanyEntity> pageData =
+                    service.list(filter, pageable);
 
-        return ResponseEntity.ok(pageData);
+            return ResponseEntity.ok(pageData);
+        } catch (Exception e) {
+            log.error("Error listing companies", e);
+            return ResponseEntity.status(500)
+                    .body(java.util.Map.of("message", "Không thể tải danh sách công ty"));
+        }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CompanyEntity> get(@PathVariable Long id) {
+    public ResponseEntity<?> get(@PathVariable Long id) {
+        try {
+            Optional<CompanyEntity> company = service.findById(id);
 
-        Optional<CompanyEntity> company = service.findById(id);
+            log.info("found = {}", company.isPresent());
 
-        log.info("found = {}", company.isPresent());
-
-        return ResponseEntity.of(company);
+            if (company.isPresent()) {
+                return ResponseEntity.ok(company.get());
+            } else {
+                return ResponseEntity.status(404)
+                        .body(java.util.Map.of("message", "Không tìm thấy công ty"));
+            }
+        } catch (Exception e) {
+            log.error("Error getting company", e);
+            return ResponseEntity.status(500)
+                    .body(java.util.Map.of("message", "Không thể tải thông tin công ty"));
+        }
     }
 
     @PostMapping("/saveOrUpdate")
-    public ResponseEntity<CompanyEntity> saveOrUpdate(
+    public ResponseEntity<?> saveOrUpdate(
             @RequestBody CompanyEntity company) {
-        CompanyEntity saved = service.saveOrUpdate(company);
+        try {
+            CompanyEntity saved = service.saveOrUpdate(company);
 
-        log.info("saved id = {}", saved.getId());
+            log.info("saved id = {}", saved.getId());
 
-        return ResponseEntity.ok(saved);
+            return ResponseEntity.ok(saved);
+        } catch (IllegalArgumentException e) {
+            log.warn("Validation error saving company", e);
+            return ResponseEntity.status(400)
+                    .body(java.util.Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error saving company", e);
+            return ResponseEntity.status(500)
+                    .body(java.util.Map.of("message", "Không thể lưu thông tin công ty"));
+        }
     }
 
     @PostMapping("/{id}/status")
-    public ResponseEntity<Void> updateStatus(@PathVariable Long id, @RequestBody StatusDTO req) {
-        service.updateStatus(id, req.getStatus());
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody StatusDTO req) {
+        try {
+            service.updateStatus(id, req.getStatus());
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("Validation error updating status", e);
+            return ResponseEntity.status(400)
+                    .body(java.util.Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error updating company status", e);
+            return ResponseEntity.status(500)
+                    .body(java.util.Map.of("message", "Không thể cập nhật trạng thái công ty"));
+        }
     }
 
+    @PostMapping("/{id}/send-credentials")
+    public ResponseEntity<?> sendAdminCredentials(@PathVariable("id") Long companyId) {
+        try {
+            service.sendAdminCredentials(companyId);
+            return ResponseEntity.ok(java.util.Map.of("message", "Đã gửi thông tin tài khoản quản trị tới email"));
+        } catch (IllegalArgumentException e) {
+            log.warn("Validation error sending admin credentials", e);
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error sending admin credentials", e);
+            return ResponseEntity.status(500)
+                    .body(java.util.Map.of("message", "Không thể gửi thông tin tài khoản quản trị"));
+        }
+    }
 }
 
 class StatusDTO {

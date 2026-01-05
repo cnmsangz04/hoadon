@@ -14,4 +14,5 @@ public interface CompanyService {
     Optional<CompanyEntity> findById(Long id);
     void delete(Long id);
     void updateStatus(Long id, Integer status);
+    void sendAdminCredentials(Long companyId);
 }

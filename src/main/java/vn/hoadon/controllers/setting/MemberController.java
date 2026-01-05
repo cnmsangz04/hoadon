@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
+import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.dto.member.MemberUpsertRequest;
 import vn.hoadon.services.MemberService;
@@ -17,7 +18,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/v1/setting/members")
-public class MemberController {
+public class MemberController extends BaseController {
 
     @Autowired
     private MemberService service;
@@ -35,6 +36,14 @@ public class MemberController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+        // Derive companyId from authenticated user for non-root users
+        UserEntity user = currentUser();
+        Long actorCompanyId = user != null ? user.getCompanyId() : null;
+        Integer actorRole = user != null ? user.getRole() : null;
+        boolean isRoot = actorRole != null && actorRole == 0;
+        if (!isRoot) {
+            companyId = actorCompanyId;
+        }
         Pageable pageable = PageRequest.of(page, size);
         Page<UserEntity> p = service.list(keyword, roleId, status, companyId, role, pageable);
         return toPaginationResponse(p);
@@ -50,6 +59,14 @@ public class MemberController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+        // Derive companyId from authenticated user for non-root users
+        UserEntity user = currentUser();
+        Long actorCompanyId = user != null ? user.getCompanyId() : null;
+        Integer actorRole = user != null ? user.getRole() : null;
+        boolean isRoot = actorRole != null && actorRole == 0;
+        if (!isRoot) {
+            companyId = actorCompanyId;
+        }
         Pageable pageable = PageRequest.of(page, size);
         Page<UserEntity> p = service.list(keyword, roleId, status, companyId, role, pageable);
         return toPaginationResponse(p);
@@ -80,6 +97,12 @@ public class MemberController {
 
     @PostMapping("/saveOrUpdate")
     public UserEntity saveOrUpdate(@RequestBody MemberUpsertRequest incoming) {
+        // Always derive companyId from current user; client shouldn't send company_id
+        UserEntity actor = currentUser();
+        Long companyId = actor != null ? actor.getCompanyId() : null;
+        if (companyId != null) {
+            incoming.setCompanyId(companyId);
+        }
         return service.saveOrUpdate(incoming);
     }
 
@@ -120,5 +143,18 @@ public class MemberController {
     public void removeFromCompany(@PathVariable Long id) {
         // Perform soft-delete for member
         service.delete(id);
+    }
+
+    @PostMapping("/{id}/send-credentials")
+    public Map<String, Object> sendCredentials(@PathVariable Long id) {
+        // Allow only non-guest users; detailed role checks can be added if needed
+        UserEntity actor = currentUser();
+        if (actor == null) {
+            throw new RuntimeException("Unauthenticated");
+        }
+        service.sendCredentials(id);
+        Map<String, Object> res = new HashMap<>();
+        res.put("message", "Đã gửi thông tin tài khoản tới email thành viên");
+        return res;
     }
 }

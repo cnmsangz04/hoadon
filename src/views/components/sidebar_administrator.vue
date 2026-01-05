@@ -75,6 +75,7 @@ export default {
         { title: 'Ngân hàng', icon: 'fas fa-piggy-bank', to: '/administrator/bank/list' },
         { title: 'Cơ quan thuế', icon: 'fas fa-landmark', to: '/administrator/tax-authority/list' },
         { title: 'Thuế suất', icon: 'fas fa-percent', to: '/administrator/vat-rate/list' },
+        { title: 'Email template', icon: 'fas fa-envelope', to: '/administrator/email-template/list' },
         {
           title: 'Phân quyền',
           icon: 'fas fa-user-shield',

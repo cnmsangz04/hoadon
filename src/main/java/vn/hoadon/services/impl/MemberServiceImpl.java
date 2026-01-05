@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,6 +37,9 @@ public class MemberServiceImpl implements MemberService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired(required = false)
+    private JavaMailSender mailSender;
 
     @Override
     public Page<UserEntity> list(String keyword, Long roleId, Byte status, Long companyId, Integer role, Pageable pageable) {
@@ -118,9 +123,12 @@ public class MemberServiceImpl implements MemberService {
             }
             user = new UserEntity();
             user.setCreatedAt(now);
-            user.setPassword(passwordEncoder.encode(
-                    incoming.getPassword() != null ? incoming.getPassword() : "ChangeMe123"
-            ));
+            
+            // Store plain text password temporarily for credential email
+            String plainPassword = incoming.getPassword() != null ? incoming.getPassword() : "ChangeMe123";
+            user.setTemporaryPassword(plainPassword);
+            user.setPassword(passwordEncoder.encode(plainPassword));
+            
             // Admin password on create if provided
             if (incoming.getAdminPassword() != null) {
                 String ap = incoming.getAdminPassword();
@@ -141,6 +149,7 @@ public class MemberServiceImpl implements MemberService {
 
             // Only update password if provided
             if (incoming.getPassword() != null && !incoming.getPassword().isBlank()) {
+                user.setTemporaryPassword(incoming.getPassword());
                 user.setPassword(passwordEncoder.encode(incoming.getPassword()));
             }
             // Admin password on update if provided
@@ -279,5 +288,30 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public UserEntity getById(Long id) {
         return userRepository.findById(id).orElse(null);
+    }
+
+    @Override
+    @Transactional
+    public void sendCredentials(Long id) {
+        UserEntity user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new IllegalArgumentException("Thành viên không có email");
+        }
+
+        // Luôn reset lại mật khẩu mới mỗi lần gửi thông tin
+        String newPassword = resetPassword(id);
+        // Load lại user sau khi reset mật khẩu
+        user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // Giả lập gửi email: chỉ log ra console/nội dung gửi đi, không dùng JavaMailSender
+        System.out.println("[MOCK EMAIL] Gửi thông tin tài khoản tới: " + user.getEmail());
+        System.out.println("[MOCK EMAIL] Tên tài khoản: " + user.getUsername());
+        System.out.println("[MOCK EMAIL] Mật khẩu mới: " + newPassword);
+
+        // Xóa temporaryPassword nếu còn (không dùng nữa)
+        user.setTemporaryPassword(null);
+        userRepository.save(user);
     }
 }

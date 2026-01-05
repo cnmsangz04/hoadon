@@ -4,8 +4,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import vn.hoadon.dto.company.CompanyFilterDTO;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.PermissionEntity;
@@ -26,6 +30,8 @@ import java.util.Optional;
 @Service
 public class CompanyServiceImpl implements CompanyService {
 
+    private static final Logger log = LoggerFactory.getLogger(CompanyServiceImpl.class);
+
     private final CompanyRepository repo;
 
     @Autowired
@@ -39,6 +45,9 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Autowired
     private UserPermissionRepository userPermissionRepository;
+
+    @Autowired(required = false)
+    private JavaMailSender mailSender;
 
     public CompanyServiceImpl(CompanyRepository repo) {
         this.repo = repo;
@@ -161,6 +170,8 @@ public class CompanyServiceImpl implements CompanyService {
         user.setRole(1); // Admin
         user.setStatus((byte)1);
         String rawPassword = generateStrongPassword(14);
+        // store raw password as temporaryPassword so it can be sent later
+        user.setTemporaryPassword(rawPassword);
         user.setPassword(passwordEncoder.encode(rawPassword));
 
         UserEntity savedUser = userRepository.save(user);
@@ -178,9 +189,6 @@ public class CompanyServiceImpl implements CompanyService {
             }
             userPermissionRepository.saveAll(assigns);
         }
-
-        // Optionally: store or log the generated password somewhere secure
-        // For now, no-op to avoid leaking credentials.
     }
 
     private static final String LOWER = "abcdefghijkmnopqrstuvwxyz";
@@ -208,5 +216,60 @@ public class CompanyServiceImpl implements CompanyService {
             arr[j] = t;
         }
         return new String(arr);
+    }
+
+    @Override
+    public void sendAdminCredentials(Long companyId) {
+        if (companyId == null) {
+            throw new IllegalArgumentException("Thiếu thông tin công ty");
+        }
+
+        CompanyEntity company = repo.findById(companyId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty"));
+
+        if (company.getEmail() == null || company.getEmail().isEmpty()) {
+            throw new IllegalArgumentException("Công ty chưa cấu hình email nhận thông tin");
+        }
+
+        // Find first admin user (role = 1) of this company
+        List<UserEntity> users = userRepository.findByCompanyId(companyId);
+        UserEntity admin = null;
+        if (users != null) {
+            for (UserEntity u : users) {
+                if (u != null && Integer.valueOf(1).equals(u.getRole())) {
+                    admin = u;
+                    break;
+                }
+            }
+        }
+
+        if (admin == null) {
+            throw new IllegalArgumentException("Không tìm thấy tài khoản quản trị cho công ty này");
+        }
+
+        // Reset password every time sending
+        String rawPassword = generateStrongPassword(14);
+        admin.setTemporaryPassword(rawPassword);
+        admin.setPassword(passwordEncoder.encode(rawPassword));
+        userRepository.save(admin);
+
+        // Log the credentials being sent (for audit/debug)
+        log.info("Sending admin credentials for companyId={}, username={}, temporaryPassword={}",
+                companyId, admin.getUsername(), rawPassword);
+
+        // Simulate sending email with credentials
+        if (mailSender != null) {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setTo(company.getEmail());
+            msg.setSubject("Thông tin tài khoản quản trị hệ thống hóa đơn");
+            StringBuilder body = new StringBuilder();
+            body.append("Kính gửi Quý công ty \n\n");
+            body.append("Thông tin tài khoản quản trị: \n");
+            body.append("Tên đăng nhập: ").append(admin.getUsername()).append("\n");
+            body.append("Mật khẩu: ").append(rawPassword).append("\n\n");
+            body.append("Vui lòng đăng nhập và đổi mật khẩu sau khi sử dụng lần đầu.");
+            msg.setText(body.toString());
+            mailSender.send(msg);
+        }
     }
 }
