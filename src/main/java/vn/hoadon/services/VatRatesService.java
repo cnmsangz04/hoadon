@@ -14,6 +14,9 @@ public interface VatRatesService {
 
     // Read - get all
     List<VatRatesEntity> findAll();
+    
+    // Read - get all sorted by prioritize
+    List<VatRatesEntity> findAllOrderedByPrioritize();
 
     // Read - get by id
     VatRatesEntity findById(Integer id);
@@ -26,4 +29,7 @@ public interface VatRatesService {
 
     // Pagination by user
     Page<VatRatesEntity> pageByUser(Integer userId, Integer status, Pageable pageable, String keyword);
+
+    // Reorder by priority
+    void reorder(List<Integer> orderedIds);
 }

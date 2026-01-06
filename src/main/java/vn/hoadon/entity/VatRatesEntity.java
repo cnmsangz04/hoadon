@@ -24,6 +24,9 @@ public class VatRatesEntity {
     private Integer status;
     // hoặc Boolean nếu bạn map 0/1
 
+    @Column(name = "prioritize", nullable = false)
+    private Integer prioritize;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -72,6 +75,14 @@ public class VatRatesEntity {
 
     public void setStatus(Integer status) {
         this.status = status;
+    }
+
+    public Integer getPrioritize() {
+        return prioritize;
+    }
+
+    public void setPrioritize(Integer prioritize) {
+        this.prioritize = prioritize;
     }
 
     public LocalDateTime getCreatedAt() {

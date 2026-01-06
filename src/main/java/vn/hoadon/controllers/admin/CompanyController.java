@@ -1,5 +1,6 @@
 package vn.hoadon.controllers.admin;
 
+import vn.hoadon.controllers.base.BaseController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +15,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/v1/administrator/company")
-public class CompanyController {
+public class CompanyController extends BaseController {
 
     private static final Logger log =
             LoggerFactory.getLogger(CompanyController.class);
@@ -28,6 +29,8 @@ public class CompanyController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+    	permission("buy-invoice-list");
+    	
         try {
             Pageable pageable =
                     PageRequest.of(page, size, Sort.by("createdAt").descending());

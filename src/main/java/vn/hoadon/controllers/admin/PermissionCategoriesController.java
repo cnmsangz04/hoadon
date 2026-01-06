@@ -27,7 +27,9 @@ public class PermissionCategoriesController {
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(
+                // Sắp xếp ưu tiên theo sothutu (orderIndex) tăng dần
                 Sort.Order.asc("orderIndex"),
+                // Nếu cùng sothutu thì mới xét đến createdAt (mới nhất trước)
                 Sort.Order.desc("createdAt")
         ));
         Page<PermissionCategoryEntity> data = service.list(keyword, pageable);

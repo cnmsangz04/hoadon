@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -82,16 +83,45 @@ public class BuyInvoiceServiceImpl implements BuyInvoiceService {
     }
 
     @Override
+    @Transactional
     public BuyInvoiceEntity saveOrUpdate(BuyInvoiceEntity entity) {
         if (entity.getId() == null) {
             entity.setCreatedAt(java.time.LocalDateTime.now());
         }
         entity.setUpdatedAt(java.time.LocalDateTime.now());
+        
+        // Business rule: Only one active (status = 1) buy-invoice per company
+        // If this invoice is being activated, deactivate all others for same company
+        if (entity.getStatus() != null && entity.getStatus() == 1 && entity.getCompanyId() != null) {
+            // Find all active invoices for this company (excluding current one if updating)
+            List<BuyInvoiceEntity> activeInvoices = repository.findAll((root, query, cb) -> {
+                var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+                predicates.add(cb.equal(root.get("companyId"), entity.getCompanyId()));
+                predicates.add(cb.equal(root.get("status"), 1));
+                if (entity.getId() != null) {
+                    predicates.add(cb.notEqual(root.get("id"), entity.getId()));
+                }
+                return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+            });
+            
+            // Deactivate all found active invoices
+            for (BuyInvoiceEntity active : activeInvoices) {
+                active.setStatus(0);
+                active.setUpdatedAt(java.time.LocalDateTime.now());
+                repository.save(active);
+            }
+        }
+        
         return repository.save(entity);
     }
 
     @Override
     public void delete(Long id) {
         repository.deleteById(id);
+    }
+    
+    @Override
+    public List<BuyInvoiceEntity> findAll(Specification<BuyInvoiceEntity> spec) {
+        return repository.findAll(spec);
     }
 }

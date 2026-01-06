@@ -30,6 +30,11 @@ public class VatRatesServiceImpl implements VatRatesService {
     }
 
     @Override
+    public List<VatRatesEntity> findAllOrderedByPrioritize() {
+        return vatRatesRepository.findAllByOrderByPrioritizeAsc();
+    }
+
+    @Override
     public VatRatesEntity findById(Integer id) {
         return vatRatesRepository.findById(id).orElse(null);
     }
@@ -44,6 +49,9 @@ public class VatRatesServiceImpl implements VatRatesService {
         existing.setCode(taxRate.getCode());
         existing.setLabel(taxRate.getLabel());
         existing.setStatus(taxRate.getStatus());
+        if (taxRate.getPrioritize() != null) {
+            existing.setPrioritize(taxRate.getPrioritize());
+        }
         existing.setUpdatedAt(taxRate.getUpdatedAt());
 
         return vatRatesRepository.save(existing);
@@ -71,5 +79,17 @@ public class VatRatesServiceImpl implements VatRatesService {
                     return label.contains(kw) || codeStr.contains(kw);
                 }).collect(Collectors.toList());
         return new PageImpl<>(filtered, pageable, page.getTotalElements());
+    }
+
+    @Override
+    public void reorder(List<Integer> orderedIds) {
+        for (int i = 0; i < orderedIds.size(); i++) {
+            Integer id = orderedIds.get(i);
+            VatRatesEntity entity = vatRatesRepository.findById(id).orElse(null);
+            if (entity != null) {
+                entity.setPrioritize(i);
+                vatRatesRepository.save(entity);
+            }
+        }
     }
 }

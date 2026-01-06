@@ -40,6 +40,62 @@
       </b-row>
     </b-card>
 
+    <!-- DRAGGABLE LIST -->
+    <b-card class="mb-2 shadow-sm">
+      <div class="d-flex align-items-center mb-2">
+        <h6 class="mb-0 mr-2">Thứ tự hiển thị</h6>
+        <b-badge variant="light" class="text-muted">Kéo thả để sắp xếp</b-badge>
+        <b-button size="sm" class="ml-auto" :disabled="!dirtyOrder || savingOrder" variant="warning" @click="saveOrder">
+          <i v-if="!savingOrder" class="fas fa-save"></i>
+          <b-spinner v-else small />
+          <span class="ml-1">Lưu sắp xếp</span>
+        </b-button>
+      </div>
+
+      <draggable
+        v-model="orderedItems"
+        :options="{ handle: '.drag-handle', animation: 150 }"
+        @end="onDragEnd"
+        tag="ul"
+        class="list-unstyled mb-0 draggable-list"
+      >
+        <transition-group type="transition" name="flip-list">
+          <li
+            v-for="(item, idx) in orderedItems"
+            :key="item.id"
+            class="draggable-item d-flex align-items-center justify-content-between"
+          >
+            <div class="d-flex align-items-center">
+              <span class="drag-handle mr-3" title="Kéo để thay đổi thứ tự">
+                <i class="fas fa-grip-vertical"></i>
+              </span>
+              <div>
+                <div class="item-name">{{ item.label || formatLabel(item.code) }}</div>
+                <div class="small text-muted">STT: {{ idx + 1 }}</div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center">
+              <b-form-checkbox switch size="sm" v-model="item.status" :value="1" :unchecked-value="0" @change="toggleStatus(item)">
+                <span class="ml-1" :class="item.status === 1 ? 'text-success' : 'text-muted'">
+                  {{ item.status === 1 ? 'Hiển thị' : 'Ẩn' }}
+                </span>
+              </b-form-checkbox>
+              <b-button size="sm" variant="outline-secondary" class="ml-3" @click="editVatRate(item)">
+                <i class="fas fa-edit"></i>
+              </b-button>
+              <b-button size="sm" variant="outline-danger" class="ml-2" @click="deleteVatRate(item.id)">
+                <i class="fas fa-trash"></i>
+              </b-button>
+            </div>
+          </li>
+        </transition-group>
+      </draggable>
+
+      <b-alert show variant="light" v-if="!orderedItems.length" class="text-center mb-0">
+        Không có dữ liệu
+      </b-alert>
+    </b-card>
+
     <!-- TABLE -->
     <b-card class="shadow-sm">
       <b-table
@@ -106,6 +162,10 @@
           <b-form-input type="number" v-model.number="form.code" placeholder="Nhập giá trị" required />
         </b-form-group>
 
+        <b-form-group label="Thứ tự hiển thị">
+          <b-form-input type="number" v-model.number="form.prioritize" placeholder="Nhập thứ tự hiển thị" />
+        </b-form-group>
+
         <b-form-group label="Trạng thái">
           <b-form-select v-model="form.status" :options="statusOptions" />
         </b-form-group>
@@ -121,14 +181,19 @@
 
 <script>
 import axios from "@/plugins/axios";
+import draggable from "vuedraggable";
 
 export default {
   name: "VatRateList",
+  components: { draggable },
 
   data() {
     return {
       isBusy: false,
       items: [],
+      orderedItems: [],
+      dirtyOrder: false,
+      savingOrder: false,
 
       filter: {
         keyword: "",
@@ -139,7 +204,8 @@ export default {
         id: null,
         label: "",
         code: null,
-        status: 1
+        status: 1,
+        prioritize: 0
       },
 
       statusOptions: [
@@ -157,6 +223,7 @@ export default {
         { key: "id", label: "#", thStyle: { width: "50px" } },
         { key: "label", label: "Thuế suất" },
         { key: "code", label: "Giá trị", thStyle: { width: "120px" } },
+        { key: "prioritize", label: "Thứ tự", thStyle: { width: "100px" } },
         { key: "status", label: "Trạng thái", thStyle: { width: "150px" } },
         { key: "option", label: "Chức năng", thStyle: { width: "150px" } }
       ]
@@ -190,26 +257,48 @@ export default {
       this.isBusy = true;
       try {
         const page = this.list.current_page; // send 1-based page index
-        const res = await axios.post(
+        const tableReq = axios.post(
           "/administrator/vat-rate/list",
           this.filter,
           { params: { page, size: this.list.per_page } }
         );
-        const data = res.data;
+        const orderReq = axios.post(
+          "/administrator/vat-rate/list",
+          this.filter,
+          { params: { page: 1, size: 1000 } }
+        );
+        
+        const [tableRes, orderRes] = await Promise.all([tableReq, orderReq]);
+        
+        const data = tableRes.data;
         // Adapt to { items, total, per_page, current_page, last_page }
         const rawItems = Array.isArray(data.items) ? data.items : [];
         this.items = rawItems.map(i => ({
           id: i.id,
           code: i.code,
           label: i.label || this.formatLabel(i.code),
-          status: i.status
+          status: i.status,
+          prioritize: i.prioritize || 0
         }));
         this.list.total = Number(data.total) || 0;
         this.list.per_page = Number(data.per_page) || this.list.per_page;
         this.list.current_page = Number(data.current_page) || this.list.current_page;
+        
+        // Load all items for drag-and-drop ordering
+        const allData = orderRes.data;
+        const allItems = Array.isArray(allData.items) ? allData.items : [];
+        this.orderedItems = allItems.map(i => ({
+          id: i.id,
+          code: i.code,
+          label: i.label || this.formatLabel(i.code),
+          status: i.status,
+          prioritize: i.prioritize || 0
+        })).sort((a, b) => (a.prioritize || 0) - (b.prioritize || 0));
+        this.dirtyOrder = false;
       } catch (e) {
         console.error(e);
         this.items = [];
+        this.orderedItems = [];
         this.list.total = 0;
       } finally {
         this.isBusy = false;
@@ -227,12 +316,18 @@ export default {
     },
 
     showModal() {
-      this.form = { id: null, label: "", code: null, status: 1 };
+      this.form = { id: null, label: "", code: null, status: 1, prioritize: 0 };
       this.$refs.vatRateModal.show();
     },
 
     editVatRate(item) {
-      this.form = { id: item.id, label: item.label, code: item.code, status: item.status };
+      this.form = { 
+        id: item.id, 
+        label: item.label, 
+        code: item.code, 
+        status: item.status,
+        prioritize: item.prioritize || 0
+      };
       this.$refs.vatRateModal.show();
     },
 
@@ -241,7 +336,8 @@ export default {
         id: this.form.id,
         code: this.form.code,
         label: (this.form.label || '').trim(),
-        status: this.form.status
+        status: this.form.status,
+        prioritize: this.form.prioritize || 0
       };
       if (!payload.label) {
         payload.label = this.formatLabel(this.form.code);
@@ -261,6 +357,41 @@ export default {
       if (!confirm("Xóa thuế suất này?")) return;
       await axios.delete(`/administrator/vat-rate/${id}`);
       this.$toastr && this.$toastr.success("Đã xóa thuế suất");
+      this.loadData();
+    },
+
+    onDragEnd() {
+      // mark as dirty so user can save
+      // also update visible prioritize for visual consistency
+      this.orderedItems.forEach((it, i) => (it.prioritize = i));
+      this.dirtyOrder = true;
+    },
+
+    async saveOrder() {
+      if (!this.dirtyOrder || this.savingOrder) return;
+      this.savingOrder = true;
+      try {
+        const orderedIds = this.orderedItems.map(it => it.id);
+        await axios.post("/administrator/vat-rate/reorder", orderedIds);
+        this.dirtyOrder = false;
+        this.$toastr && this.$toastr.success('Đã lưu sắp xếp thuế suất');
+        this.loadData();
+      } finally {
+        this.savingOrder = false;
+      }
+    },
+
+    async toggleStatus(item) {
+      // inline quick toggle
+      const payload = { 
+        id: item.id, 
+        label: item.label, 
+        code: item.code, 
+        status: item.status,
+        prioritize: item.prioritize 
+      };
+      await axios.put(`/administrator/vat-rate/${item.id}`, payload);
+      this.$toastr && this.$toastr.success(item.status === 1 ? 'Đã bật hiển thị' : 'Đã ẩn thuế suất');
       this.loadData();
     }
   },
@@ -291,5 +422,45 @@ export default {
 .text-mono {
   font-family: "Courier New", Courier, monospace;
   font-size: 90%;
+}
+
+.draggable-list {
+  margin: 0;
+  padding: 0;
+}
+
+.draggable-item {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 12px 15px;
+  margin-bottom: 8px;
+  cursor: default;
+  transition: all 0.2s ease;
+}
+
+.draggable-item:hover {
+  background: #f8f9fa;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.drag-handle {
+  cursor: move;
+  color: #999;
+  font-size: 18px;
+  user-select: none;
+}
+
+.drag-handle:hover {
+  color: #666;
+}
+
+.item-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.flip-list-move {
+  transition: transform 0.3s;
 }
 </style>

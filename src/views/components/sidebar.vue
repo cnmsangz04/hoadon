@@ -31,7 +31,10 @@
               <transition name="slide">
                 <ul class="sub" v-show="isOpen === index">
                   <li v-for="(c, ci) in item.children" :key="ci" :class="{ active: isActive(c) }">
-                    <router-link :to="c.to">{{ c.title }}</router-link>
+                    <router-link :to="c.to">
+                      <i v-if="c.icon" :class="c.icon"></i>
+                      <span>{{ c.title }}</span>
+                    </router-link>
                   </li>
                 </ul>
               </transition>
@@ -68,24 +71,24 @@ export default {
           title: 'Đăng ký phát hành',
           icon: 'fas fa-file-signature',
           children: [
-            { title: 'Tờ khai hóa đơn điện tử', to: '/register/invoice/list' },
+            { title: 'Tờ khai hóa đơn điện tử', icon: 'fas fa-file-alt', to: '/register/invoice/list' },
           ],
         },
-        { title: 'Mẫu hóa đơn', icon: 'fas fa-file-invoice', to: '/form-invoice/list' },
+        { title: 'Mẫu hóa đơn', icon: 'fas fa-file-contract', to: '/form-invoice/list' },
         {
           title: 'Hóa đơn',
-          icon: 'fas fa-file-invoice',
+          icon: 'fas fa-file-invoice-dollar',
           children: [
-            { title: 'Hóa đơn GTGT', to: '/invoice/vat-invoice/list' },
+            { title: 'Hóa đơn GTGT', icon: 'fas fa-receipt', to: '/invoice/vat-invoice/list' },
           ],
         },
-        { title: 'Báo cáo', icon: 'fas fa-chart-line', to: '/reports/invoice/list' },
+        { title: 'Báo cáo', icon: 'fas fa-chart-bar', to: '/reports/invoice/list' },
         {
           title: 'Danh mục',
-          icon: 'fas fa-list-ul',
+          icon: 'fas fa-th-list',
           children: [
-            { title: 'Sản phẩm', to: '/categories/product/list' },
-            { title: 'Khách hàng', to: '/categories/customer/list' },
+            { title: 'Sản phẩm', icon: 'fas fa-box', to: '/categories/product/list' },
+            { title: 'Khách hàng', icon: 'fas fa-users', to: '/categories/customer/list' },
           ],
         },
         { title: 'Cài đặt', icon: 'fas fa-cog', to: '/setting' },
@@ -187,8 +190,12 @@ export default {
 .has-children .chev.rotated { transform: rotate(-180deg); }
 .sub { list-style: none; padding-left: 8px; margin: 6px 0 10px 0; }
 .sub li { margin: 4px 0; }
-.sub li a { display: block; padding: 8px 12px; border-radius: 6px; color: #cfe6ff; text-decoration: none; background: transparent; }
+.sub li a { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 6px; color: #cfe6ff; text-decoration: none; background: transparent; }
+.sub li a i { width: 16px; text-align: center; color: #8fb3d9; font-size: 0.9em; }
+.sub li a:hover { background: rgba(255,255,255,0.02); color: #fff; }
+.sub li a:hover i { color: #a9d0ff; }
 .sub li.active > a, .sub li > a.router-link-active { background: rgba(255,255,255,0.03); color: #fff; }
+.sub li.active > a i, .sub li > a.router-link-active i { color: #a9d0ff; }
 .sidebar-footer { text-align: center; padding: 8px 0; color: #7f9ebf; font-size: 12px; }
 /* Minor animation for submenu */
 .slide-enter-active, .slide-leave-active { transition: all 240ms ease; }

@@ -82,7 +82,14 @@
               <i class="fas fa-ellipsis-h"></i>
             </template>
             <b-dropdown-item class="text-center" href="#" @click.prevent="editInvoice(data.item)">Cập nhật</b-dropdown-item>
-            <b-dropdown-item class="text-center text-danger" href="#" @click.prevent="deleteInvoice(data.item.id)">Xóa</b-dropdown-item>
+            <b-dropdown-item 
+              v-if="canDelete(data.item)"
+              class="text-center text-danger" 
+              href="#" 
+              @click.prevent="deleteInvoice(data.item)"
+            >
+              Xóa
+            </b-dropdown-item>
           </b-dropdown>
         </template>
       </b-table>
@@ -92,22 +99,34 @@
     </b-card>
 
     <!-- MODAL -->
-    <b-modal ref="buyInvoiceModal" title="Thêm / Cập nhật hóa đơn" hide-footer>
+    <b-modal ref="buyInvoiceModal" :title="invoiceForm.id ? 'Cập nhật hóa đơn' : 'Thêm hóa đơn'" hide-footer>
       <b-form @submit.prevent="saveInvoice">
-        <b-form-group label="Công ty">
-          <v-select v-model="invoiceForm.companyId" :options="companyOptions" label="label" :reduce="c => c.value" :disabled="invoiceForm.id != null" />
+        <b-form-group label="Công ty" label-class="font-weight-bold">
+          <v-select 
+            v-model="invoiceForm.companyId" 
+            :options="companyOptions" 
+            label="label" 
+            :reduce="c => c.value" 
+            :disabled="invoiceForm.id != null"
+            placeholder="Chọn công ty"
+            required
+          />
         </b-form-group>
 
-        <b-form-group label="Số lượng">
-          <b-form-input type="number" v-model.number="invoiceForm.amount" required />
+        <b-form-group label="Số lượng" label-class="font-weight-bold">
+          <b-form-input type="number" v-model.number="invoiceForm.amount" required min="1" />
+          <small v-if="invoiceForm.id && invoiceForm.amountUsed > 0" class="form-text text-muted">
+            <i class="fas fa-info-circle"></i> Đã sử dụng: <strong>{{ invoiceForm.amountUsed }}</strong> hóa đơn. 
+            Số lượng phải ≥ {{ invoiceForm.amountUsed }}
+          </small>
         </b-form-group>
 
-        <b-form-group label="Trạng thái">
+        <b-form-group label="Trạng thái" label-class="font-weight-bold">
           <b-form-select v-model="invoiceForm.status" :options="statusOptions" />
         </b-form-group>
 
         <div class="text-right">
-          <b-button type="submit" variant="primary">Lưu</b-button>
+          <b-button type="submit" variant="primary" :disabled="!canSubmit">Lưu</b-button>
           <b-button variant="secondary" @click="$refs.buyInvoiceModal.hide()">Hủy</b-button>
         </div>
       </b-form>
@@ -164,6 +183,22 @@ export default {
     };
   },
 
+  computed: {
+    canSubmit() {
+      // Basic validation
+      if (!this.invoiceForm.companyId || !this.invoiceForm.amount || this.invoiceForm.amount <= 0) {
+        return false;
+      }
+      
+      // When editing, amount must be >= amountUsed
+      if (this.invoiceForm.id && this.invoiceForm.amountUsed > 0) {
+        return this.invoiceForm.amount >= this.invoiceForm.amountUsed;
+      }
+      
+      return true;
+    }
+  },
+
   methods: {
     async loadData() {
       this.isBusy = true;
@@ -203,28 +238,72 @@ export default {
       this.loadData();
     },
 
-    showModal() {
+    async showModal() {
+      if (!this.companyOptions || this.companyOptions.length === 0) {
+        await this.loadCompanies();
+      }
       this.invoiceForm = { id: null, companyId: null, amount: 0, status: 1 };
       this.$refs.buyInvoiceModal.show();
     },
 
-    editInvoice(item) {
-      this.invoiceForm = { ...item };
+    async editInvoice(item) {
+      if (!this.companyOptions || this.companyOptions.length === 0) {
+        await this.loadCompanies();
+      }
+      // Copy fields needed for the form, including amountUsed for validation
+      this.invoiceForm = {
+        id: item.id,
+        companyId: item.companyId,
+        amount: item.amount,
+        amountUsed: item.amountUsed || 0,
+        status: item.status
+      };
       this.$refs.buyInvoiceModal.show();
     },
 
     async saveInvoice() {
-      await axios.post("/administrator/buy-invoice/create", this.invoiceForm);
-      this.$toastr && this.$toastr.success(this.invoiceForm.id ? 'Cập nhật hóa đơn thành công' : 'Thêm hóa đơn thành công');
-      this.$refs.buyInvoiceModal.hide();
-      this.loadData();
+      try {
+        await axios.post("/administrator/buy-invoice/create", this.invoiceForm);
+        this.$toastr && this.$toastr.success(this.invoiceForm.id ? 'Cập nhật hóa đơn thành công' : 'Thêm hóa đơn thành công');
+        this.$refs.buyInvoiceModal.hide();
+        this.loadData();
+      } catch (error) {
+        const message = error.response?.data?.message || 'Không thể lưu hóa đơn';
+        this.$toastr && this.$toastr.error(message);
+      }
     },
 
-    async deleteInvoice(id) {
+    async deleteInvoice(item) {
+      // Check if can delete
+      if (!this.canDelete(item)) {
+        this.$toastr && this.$toastr.warning(this.getDeleteTooltip(item));
+        return;
+      }
+      
       if (!confirm("Xóa hóa đơn này?")) return;
-      await axios.post("/administrator/buy-invoice/delete", { id });
-      this.$toastr && this.$toastr.success('Đã xóa hóa đơn');
-      this.loadData();
+      try {
+        await axios.post("/administrator/buy-invoice/delete", { id: item.id });
+        this.$toastr && this.$toastr.success('Đã xóa hóa đơn');
+        this.loadData();
+      } catch (error) {
+        const message = error.response?.data?.message || 'Không thể xóa hóa đơn';
+        this.$toastr && this.$toastr.error(message);
+      }
+    },
+
+    canDelete(item) {
+      // Cannot delete if status = 1 (active) or amountUsed > 0
+      return item.status !== 1 && item.amountUsed === 0;
+    },
+
+    getDeleteTooltip(item) {
+      if (item.status === 1) {
+        return 'Không thể xóa gói đang kích hoạt. Vui lòng ngưng kích hoạt trước';
+      }
+      if (item.amountUsed > 0) {
+        return 'Không thể xóa gói đã sử dụng (' + item.amountUsed + ' hóa đơn đã cấp số)';
+      }
+      return '';
     },
 
     async loadCompanies() {

@@ -227,10 +227,10 @@
           <b-thead>
             <b-tr>
               <b-th class="text-center" style="width:60px">STT</b-th>
-              <b-th>Tiêu đề</b-th>
+              <b-th style="width:150px">Tiêu đề</b-th>
               <b-th>Mô tả</b-th>
-              <b-th style="width:160px">Người thao tác</b-th>
-              <b-th style="width:160px">Ngày thực hiện</b-th>
+              <b-th style="width:100px">Người thao tác</b-th>
+              <b-th style="width:110px">Ngày thực hiện</b-th>
             </b-tr>
           </b-thead>
           <b-tbody>

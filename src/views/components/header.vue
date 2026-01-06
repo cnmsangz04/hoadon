@@ -31,7 +31,7 @@
 
       <b-dropdown right toggle-class="user-toggle">
         <template #button-content>
-          <b-avatar :src="app.auth.avatar" v-if="app.auth.avatar" class="user-avatar"></b-avatar>
+          <b-avatar :src="avatarSrc" v-if="avatarSrc" class="user-avatar"></b-avatar>
           <b-avatar variant="primary" v-else class="user-avatar">{{ usernameInitial }}</b-avatar>
         </template>
         <b-dropdown-item to="/setting">
@@ -93,6 +93,17 @@ export default {
     showAdminLink() {
       const role = this.app.auth.role
       return role === 0 || role === 1
+    },
+    avatarSrc() {
+      // Priority: $app.info.user.avatar (from database) > JWT payload > local data
+      try {
+        const dbAvatar = this.$app?.info?.user?.avatar
+        if (dbAvatar && typeof dbAvatar === 'string' && dbAvatar.trim() !== '') {
+          return dbAvatar
+        }
+      } catch {}
+      // Fallback to local app.auth.avatar
+      return this.app.auth.avatar || ''
     }
   },
   created() {

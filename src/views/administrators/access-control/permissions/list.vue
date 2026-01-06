@@ -283,7 +283,13 @@ export default {
         null,
         { params: { page: 0, size: 100 } }
       );
-      this.categories = res.data.content || [];
+      const cats = res.data.content || [];
+      // Sort by orderIndex (sothutu) ascending
+      this.categories = cats.sort((a, b) => {
+        const aOrder = Number(a.orderIndex ?? a.sothutu ?? 999);
+        const bOrder = Number(b.orderIndex ?? b.sothutu ?? 999);
+        return aOrder - bOrder;
+      });
     },
     onFilter() {
       this.list.current_page = 1;

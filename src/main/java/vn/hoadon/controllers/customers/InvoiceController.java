@@ -10,6 +10,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.dto.InvoiceDTO;
 import vn.hoadon.entity.FormInvoiceEntity;
 import vn.hoadon.entity.InvoiceEntity;
@@ -17,6 +19,7 @@ import vn.hoadon.entity.RegisterInvoiceEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.CompanyBankEntity;
+import vn.hoadon.entity.BuyInvoiceEntity;
 import vn.hoadon.repositories.FormInvoiceRepository;
 import vn.hoadon.repositories.InvoiceRepository;
 import vn.hoadon.repositories.RegisterInvoiceRepository;
@@ -24,6 +27,7 @@ import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.CompanyBankRepository;
 import vn.hoadon.repositories.InvoiceNumberRepository;
 import vn.hoadon.repositories.SignatureVatRepository;
+import vn.hoadon.repositories.BuyInvoiceRepository;
 import vn.hoadon.entity.InvoiceNumberEntity;
 import vn.hoadon.entity.SignatureVatEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,7 +64,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 
 @RestController
 @RequestMapping("/v1/invoices")
-public class InvoiceController {
+public class InvoiceController extends BaseController {
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -72,6 +76,7 @@ public class InvoiceController {
     @Autowired private CompanyBankRepository companyBankRepository;
     @Autowired private InvoiceNumberRepository invoiceNumberRepository;
     @Autowired private SignatureVatRepository signatureVatRepository;
+    @Autowired private BuyInvoiceRepository buyInvoiceRepository;
     @Autowired private HistoryService historyService;
     @Autowired private SignatureAuthoritiesTaxService signatureAuthoritiesTaxService;
     @Autowired private HistoryRepository historyRepository;
@@ -90,6 +95,8 @@ public class InvoiceController {
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "size", defaultValue = "10") int size
     ) {
+    	permission("invoice-list");
+    	
         int pageIndex = Math.max(page - 1, 0);
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "id"));
         Page<InvoiceDTO> result = invoiceService.search(q, status, date, pageable);
@@ -142,6 +149,8 @@ public class InvoiceController {
 
     @PostMapping
     public ResponseEntity<?> create(@AuthenticationPrincipal UserEntity user, @RequestBody CreateRequest req) {
+    	permission("invoice-save");
+    	
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Vui lòng xác định công ty/người dùng"));
         }
@@ -157,6 +166,8 @@ public class InvoiceController {
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user, @RequestBody CreateRequest req) {
+    	permission("invoice-save");
+    	
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Vui lòng xác định công ty/người dùng"));
         }
@@ -551,6 +562,22 @@ public class InvoiceController {
         if (formId == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu mẫu hóa đơn (form_id)"));
         }
+        
+        // Check buy_invoices: must have active record with available invoices
+        Optional<BuyInvoiceEntity> optBuyInvoice = buyInvoiceRepository.findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, 1);
+        if (!optBuyInvoice.isPresent()) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Công ty chưa có gói hóa đơn được kích hoạt"));
+        }
+        BuyInvoiceEntity buyInvoice = optBuyInvoice.get();
+        
+        // Validate amount_used < amount
+        Integer amount = buyInvoice.getAmount() != null ? buyInvoice.getAmount() : 0;
+        Integer amountUsed = buyInvoice.getAmountUsed() != null ? buyInvoice.getAmountUsed() : 0;
+        
+        if (amountUsed >= amount) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Quý khách đã sử dụng hết số hóa đơn"));
+        }
+        
         // Find active invoice number counter for VAT category (1) with status=1
         java.util.List<InvoiceNumberEntity> counters = invoiceNumberRepository.findByCompanyIdAndFormId(companyId, formId);
         InvoiceNumberEntity counter = null;
@@ -576,6 +603,12 @@ public class InvoiceController {
         counter.setTotal(nextNo);
         counter.setUpdatedAt(java.time.LocalDateTime.now());
         invoiceNumberRepository.save(counter);
+        
+        // Increment buy_invoice amount_used
+        buyInvoice.setAmountUsed(amountUsed + 1);
+        buyInvoice.setUpdatedAt(java.time.LocalDateTime.now());
+        buyInvoiceRepository.save(buyInvoice);
+        
         // 2) Update invoice: set invoice_number_id if missing, set no, set status=1 (Đã ký)
         if (inv.getInvoiceNumberId() == null) {
             inv.setInvoiceNumberId(counter.getId().intValue());

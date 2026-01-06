@@ -98,13 +98,13 @@
             </template>
             <b-dropdown-item class="text-center" href="#" @click.prevent="openEdit(item)">Cập nhật</b-dropdown-item>
             <b-dropdown-item v-if="canEditPermissions(item)" class="text-center" href="#" @click.prevent="openPermission(item)">Phân quyền</b-dropdown-item>
+            <b-dropdown-item v-if="canSendInfo(item)" class="text-center" href="#" @click.prevent="sendInfo(item)">Gửi thông tin</b-dropdown-item>
             <b-dropdown-item v-if="canToggleLock(item)" class="text-center" href="#" @click.prevent="toggleLock(item)">
               <span :class="Number(item.status) !== 1 ? 'text-success' : 'text-warning'">
                 {{ Number(item.status) !== 1 ? 'Mở khóa' : 'Khóa' }}
               </span>
             </b-dropdown-item>
             <b-dropdown-item v-if="canResetPassword(item)" class="text-center" href="#" @click.prevent="resetPassword(item)">Reset mật khẩu</b-dropdown-item>
-            <b-dropdown-item v-if="canSendInfo(item)" class="text-center" href="#" @click.prevent="sendInfo(item)">Gửi thông tin</b-dropdown-item>
           </b-dropdown>
         </template>
       </b-table>
@@ -156,6 +156,9 @@
     <!-- Create/Edit member modal -->
     <b-modal ref="memberModal" :title="form.id ? 'Cập nhật thành viên' : 'Thêm thành viên'" hide-footer>
       <b-form @submit.prevent="saveMember">
+        <b-form-group label="Tài khoản">
+          <b-form-input v-model.trim="form.username" required :disabled="!!form.id" placeholder="Tên đăng nhập" />
+        </b-form-group>
         <b-form-group label="Họ và tên">
           <b-form-input v-model.trim="form.fullName" required />
         </b-form-group>
@@ -419,8 +422,9 @@ export default {
       const passOk = passOkCreate && passOkUpdate
       const adminPwdProvided = (this.form.adminPassword?.length || 0) > 0 || (this.form.adminPasswordConfirm?.length || 0) > 0
       const adminPwdOk = !this.form.isAdmin ? true : (!adminPwdProvided ? true : (this.adminPasswordState === true))
-      // Username not required; it will be auto-generated from email
-      return !!this.form.fullName && passOk && adminPwdOk
+      // Username is required
+      const hasUsername = !!this.form.username && this.form.username.trim().length > 0
+      return hasUsername && !!this.form.fullName && passOk && adminPwdOk
     },
     isEditingRootTarget() {
       if (!this.form.id) return false
@@ -455,10 +459,29 @@ export default {
       const groups = {}
       for (const p of this.permVisiblePermissions) {
         const catName = this.getPermissionCategoryName(p)
-        if (!groups[catName]) groups[catName] = { categoryName: catName, items: [] }
+        if (!groups[catName]) {
+          // Get category orderIndex for sorting
+          const catObj = p?.permissionCategory || p?.category
+          const catId = (catObj && catObj.id != null) ? catObj.id : (p?.categoryId ?? p?.category_id ?? p?.permissionCategoryId ?? p?.permission_category_id ?? p?.category)
+          const category = catId != null ? this.categoryById[catId] : null
+          const orderIndex = category ? (Number(category.orderIndex ?? category.sothutu ?? 999)) : 999
+          
+          groups[catName] = { 
+            categoryName: catName, 
+            items: [],
+            orderIndex: orderIndex,
+            categoryId: catId
+          }
+        }
         groups[catName].items.push(p)
       }
       const res = Object.values(groups)
+      // Sort groups by category orderIndex (sothutu)
+      res.sort((a, b) => {
+        const aOrder = Number(a.orderIndex ?? 999)
+        const bOrder = Number(b.orderIndex ?? 999)
+        return aOrder - bOrder
+      })
       for (const g of res) {
         g._allSelected = g.items.length > 0 && g.items.every(x => this.getPermEffectiveChecked(Number(x.id)))
       }
@@ -506,7 +529,13 @@ export default {
     async loadCategories() {
       try {
         const res = await axios.post('/administrator/permission-categories/list', null, { params: { page: 0, size: 200 } })
-        this.categories = res.data?.content || []
+        // Backend already sorts by orderIndex (sothutu), but we add extra safeguard
+        const cats = res.data?.content || []
+        this.categories = cats.sort((a, b) => {
+          const aOrder = Number(a.orderIndex ?? a.sothutu ?? 999)
+          const bOrder = Number(b.orderIndex ?? b.sothutu ?? 999)
+          return aOrder - bOrder
+        })
       } catch { this.categories = [] }
     },
     async loadData() {
@@ -579,8 +608,7 @@ export default {
     openEdit(item) {
       this.form = {
         id: item.id,
-        // username removed from input; keep internal value if present
-        username: item.username || item.user?.username || item.email || '',
+        username: item.username || item.user?.username || '',
         fullName: item.name || item.fullName,
         phone: item.phone || '',
         email: item.email || '',
@@ -657,11 +685,9 @@ export default {
       }
       const isEditingRoot = this.form.id && Number(this.list.data.find(x => x.id === this.form.id)?.role) === 0
       const rolePayload = isEditingRoot ? undefined : (this.form.isAdmin ? 1 : 2)
-      // Auto-generate username from email
-      const usernamePayload = this.form.email || this.form.username || undefined
       const payload = {
         id: this.form.id || undefined,
-        username: usernamePayload,
+        username: this.form.username || undefined,
         name: this.form.fullName,
         phone: this.form.phone || undefined,
         email: this.form.email || undefined,

@@ -53,7 +53,7 @@ public class VatRatesController {
             Object kw = body.get("keyword");
             if (kw != null) keyword = kw.toString();
         }
-        Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "updatedAt"));
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.ASC, "prioritize"));
         Page<VatRatesEntity> p = vatRatesService.pageByUser(userId, status, pageable, keyword);
 
         List<Map<String, Object>> items = p.getContent().stream().map(it -> {
@@ -62,6 +62,7 @@ public class VatRatesController {
             m.put("code", it.getCode());
             m.put("label", it.getLabel());
             m.put("status", it.getStatus());
+            m.put("prioritize", it.getPrioritize());
             m.put("updatedAt", it.getUpdatedAt());
             return m;
         }).collect(Collectors.toList());
@@ -82,6 +83,7 @@ public class VatRatesController {
         entity.setCode(dto.getCode());
         entity.setLabel(dto.getLabel());
         entity.setStatus(dto.getStatus());
+        entity.setPrioritize(dto.getPrioritize() != null ? dto.getPrioritize() : 0);
         entity.setUserId(Math.toIntExact(getCurrentUserId()));
         entity.setCreatedAt(LocalDateTime.now());
         entity.setUpdatedAt(LocalDateTime.now());
@@ -92,7 +94,7 @@ public class VatRatesController {
     // 2️⃣ Read - get all
     @GetMapping
     public List<VatRatesEntity> findAll() {
-        return vatRatesService.findAll();
+        return vatRatesService.findAllOrderedByPrioritize();
     }
 
     // 3️⃣ Update (nhận DTO)
@@ -105,6 +107,9 @@ public class VatRatesController {
         entity.setLabel(dto.getLabel());
         entity.setCode(dto.getCode());
         entity.setStatus(dto.getStatus());
+        if (dto.getPrioritize() != null) {
+            entity.setPrioritize(dto.getPrioritize());
+        }
         entity.setUpdatedAt(LocalDateTime.now());
 
         return vatRatesService.update(id, entity);
@@ -129,6 +134,12 @@ public class VatRatesController {
         existing.setUpdatedAt(LocalDateTime.now());
 
         return vatRatesService.update(id, existing);
+    }
+
+    // Reorder VAT rates by priority
+    @PostMapping("/reorder")
+    public void reorder(@RequestBody List<Integer> orderedIds) {
+        vatRatesService.reorder(orderedIds);
     }
 
 }

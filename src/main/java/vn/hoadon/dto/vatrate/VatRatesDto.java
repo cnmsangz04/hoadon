@@ -13,6 +13,7 @@ public class VatRatesDto {
     private String label;
     private Integer code;
     private Integer status;
+    private Integer prioritize;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     public VatRatesDto() {
@@ -32,6 +33,9 @@ public class VatRatesDto {
 
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
+
+    public Integer getPrioritize() { return prioritize; }
+    public void setPrioritize(Integer prioritize) { this.prioritize = prioritize; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

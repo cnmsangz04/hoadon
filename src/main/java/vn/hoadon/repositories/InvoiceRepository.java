@@ -35,4 +35,25 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
             @Param("toDate") java.time.LocalDate toDate,
             Pageable pageable
     );
+
+    // Dashboard statistics queries
+    @Query("SELECT COUNT(i) FROM InvoiceEntity i WHERE i.companyId = :companyId " +
+            "AND i.status IN :statuses " +
+            "AND i.dateExport BETWEEN :startDate AND :endDate")
+    Long countByCompanyIdAndStatusInAndDateExportBetween(
+            @Param("companyId") Long companyId,
+            @Param("statuses") java.util.List<Short> statuses,
+            @Param("startDate") java.time.LocalDate startDate,
+            @Param("endDate") java.time.LocalDate endDate
+    );
+
+    @Query("SELECT COALESCE(SUM(i.amount), 0.0) FROM InvoiceEntity i WHERE i.companyId = :companyId " +
+            "AND i.status IN :statuses " +
+            "AND i.dateExport BETWEEN :startDate AND :endDate")
+    Double sumAmountByCompanyIdAndStatusInAndDateExportBetween(
+            @Param("companyId") Long companyId,
+            @Param("statuses") java.util.List<Short> statuses,
+            @Param("startDate") java.time.LocalDate startDate,
+            @Param("endDate") java.time.LocalDate endDate
+    );
 }

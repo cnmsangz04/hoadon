@@ -99,9 +99,9 @@
               <i class="fas fa-ellipsis-h"></i>
             </template>
             <b-dropdown-item v-if="canUpdateCompany" class="text-center" href="#" @click.prevent="editCompany(data.item)">Cập nhật</b-dropdown-item>
+            <b-dropdown-item v-if="canUpdateCompany" class="text-center" href="#" @click.prevent="sendAdminInfo(data.item)">Gửi thông tin</b-dropdown-item>
             <b-dropdown-item v-if="canUpdateCompany" class="text-center text-success" href="#" @click.prevent="setCompanyStatus(data.item.id, 1)">Kích hoạt</b-dropdown-item>
             <b-dropdown-item v-if="canUpdateCompany" class="text-center text-warning" href="#" @click.prevent="setCompanyStatus(data.item.id, 0)">Tạm ngưng</b-dropdown-item>
-            <b-dropdown-item v-if="canUpdateCompany" class="text-center" href="#" @click.prevent="sendAdminInfo(data.item)">Gửi thông tin</b-dropdown-item>
           </b-dropdown>
         </template>
       </b-table>
@@ -145,7 +145,7 @@
                   </b-input-group-prepend>
                   <b-form-input 
                     id="name" 
-                    v-model.trim="companyForm.name" 
+                    v-model="companyForm.name" 
                     placeholder="Nhập tên công ty"
                     required 
                   />
@@ -192,7 +192,7 @@
                   </b-input-group-prepend>
                   <b-form-input 
                     id="address" 
-                    v-model.trim="companyForm.address"
+                    v-model="companyForm.address"
                     placeholder="Nhập địa chỉ công ty"
                   />
                 </b-input-group>

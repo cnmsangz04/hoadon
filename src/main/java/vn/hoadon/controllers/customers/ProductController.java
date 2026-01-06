@@ -109,8 +109,8 @@ public class ProductController extends BaseController {
         if (auth != null && auth.getPrincipal() instanceof UserEntity) {
             userId = Math.toIntExact(((UserEntity) auth.getPrincipal()).getId());
         }
-        // Default pagination: up to 100 items, sort by code asc
-        Pageable pageable = PageRequest.of(0, 100, Sort.by(Sort.Direction.ASC, "code"));
+        // Default pagination: up to 100 items, sort by prioritize asc
+        Pageable pageable = PageRequest.of(0, 100, Sort.by(Sort.Direction.ASC, "prioritize"));
         Page<VatRatesEntity> page = vatRatesService.pageByUser(userId, 1, pageable, null);
         return page.getContent().stream().map(it -> {
             Map<String, Object> m = new HashMap<>();

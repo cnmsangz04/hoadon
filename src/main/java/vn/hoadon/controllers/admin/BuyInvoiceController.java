@@ -56,23 +56,78 @@ public class BuyInvoiceController extends BaseController {
 
     // Sử dụng DTO để nhận dữ liệu
     @PostMapping("/create")
-    public ResponseEntity<BuyInvoiceEntity> create(@RequestBody BuyInvoiceCreateDTO dto) {
+    public ResponseEntity<?> create(@RequestBody BuyInvoiceCreateDTO dto) {
         UserEntity user = currentUser();
-        Long companyId = user != null ? user.getCompanyId() : null;
+        
+        // For admin page: use companyId from DTO (selected from form)
+        // Admin can manage buy_invoice for any company
+        Long companyId = dto.getCompanyId();
+        
         if (companyId == null) {
-            throw new IllegalArgumentException("Không xác định được công ty từ người dùng hiện tại");
+            return ResponseEntity.badRequest()
+                    .body(java.util.Map.of("message", "Vui lòng chọn công ty"));
         }
-        BuyInvoiceEntity entity = new BuyInvoiceEntity();
-        entity.setId(dto.getId());
-        // Force companyId from authenticated user; do not trust client payload
-        entity.setCompanyId(companyId);
-        entity.setAmount(dto.getAmount());
-        entity.setStatus(dto.getStatus());
+        
+        BuyInvoiceEntity entity;
+        
+        // If updating (id != null), load existing entity to preserve amountUsed
+        if (dto.getId() != null) {
+            entity = service.findById(dto.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bản ghi buy_invoice với id: " + dto.getId()));
+            
+            // Validate: amount cannot be less than amountUsed
+            Integer amountUsed = entity.getAmountUsed() != null ? entity.getAmountUsed() : 0;
+            if (dto.getAmount() != null && dto.getAmount() < amountUsed) {
+                return ResponseEntity.badRequest()
+                        .body(java.util.Map.of("message", "Số lượng không được nhỏ hơn số lượng đã sử dụng (" + amountUsed + " hóa đơn đã cấp số)"));
+            }
+            
+            // Update only the fields that user can modify
+            entity.setAmount(dto.getAmount());
+            entity.setStatus(dto.getStatus());
+            // Keep amountUsed unchanged
+        } else {
+            // Creating new entity - CHECK IF COMPANY ALREADY HAS ONE
+            // Business rule: Each company can only have ONE buy_invoice record
+            java.util.List<BuyInvoiceEntity> existingInvoices = service.findAll((root, query, cb) -> 
+                cb.equal(root.get("companyId"), companyId)
+            );
+            
+            if (!existingInvoices.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(java.util.Map.of("message", "Công ty đã có gói hóa đơn. Vui lòng cập nhật gói hiện tại thay vì tạo mới"));
+            }
+            
+            entity = new BuyInvoiceEntity();
+            entity.setCompanyId(companyId);
+            entity.setAmount(dto.getAmount());
+            entity.setAmountUsed(0); // Initialize to 0 for new records
+            entity.setStatus(dto.getStatus());
+        }
+        
         return ResponseEntity.ok(service.saveOrUpdate(entity));
     }
 
     @PostMapping("/delete")
-    public ResponseEntity<Void> delete(@RequestBody @Valid IdRequestDTO request) {
+    public ResponseEntity<?> delete(@RequestBody @Valid IdRequestDTO request) {
+        // Check if buy_invoice exists
+        BuyInvoiceEntity entity = service.findById(request.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bản ghi buy_invoice với id: " + request.getId()));
+        
+        // Check if status = 1 (active)
+        Integer status = entity.getStatus() != null ? entity.getStatus() : 0;
+        if (status == 1) {
+            return ResponseEntity.badRequest()
+                    .body(java.util.Map.of("message", "Không thể xóa gói hóa đơn đang kích hoạt. Vui lòng ngưng kích hoạt trước khi xóa"));
+        }
+        
+        // Check if amount_used > 0
+        Integer amountUsed = entity.getAmountUsed() != null ? entity.getAmountUsed() : 0;
+        if (amountUsed > 0) {
+            return ResponseEntity.badRequest()
+                    .body(java.util.Map.of("message", "Không thể xóa gói hóa đơn đã được sử dụng (" + amountUsed + " hóa đơn đã cấp số)"));
+        }
+        
         service.delete(request.getId());
         return ResponseEntity.noContent().build();
     }
