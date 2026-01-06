@@ -1,5 +1,7 @@
 package vn.hoadon.controllers.setting;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -10,6 +12,7 @@ import vn.hoadon.entity.UserEntity;
 import vn.hoadon.dto.member.MemberUpsertRequest;
 import vn.hoadon.services.MemberService;
 import vn.hoadon.repositories.UserPermissionRepository;
+import vn.hoadon.repositories.UserRepository;
 
 import java.util.HashMap;
 import java.util.List;
@@ -20,11 +23,16 @@ import java.util.stream.Collectors;
 @RequestMapping("/v1/setting/members")
 public class MemberController extends BaseController {
 
+    private static final Logger log = LoggerFactory.getLogger(MemberController.class);
+
     @Autowired
     private MemberService service;
 
     @Autowired
     private UserPermissionRepository userPermissionRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @PostMapping("/list")
     public Map<String, Object> list(
@@ -133,8 +141,18 @@ public class MemberController extends BaseController {
     @PostMapping("/{id}/reset-password")
     public Map<String, Object> resetPassword(@PathVariable Long id) {
         String tempPassword = service.resetPassword(id);
+        
+        // Log the password reset with user details
+        UserEntity user = userRepository.findById(id).orElse(null);
+        if (user != null) {
+            log.info("Password reset for userId={}, username={}, email={}, newPassword={}", 
+                     id, user.getUsername(), user.getEmail(), tempPassword);
+        } else {
+            log.info("Password reset for userId={}, newPassword={}", id, tempPassword);
+        }
+        
         Map<String, Object> res = new HashMap<>();
-        res.put("temporaryPassword", tempPassword);
+        res.put("password", tempPassword);
         res.put("message", "Đã reset mật khẩu thành công");
         return res;
     }
@@ -152,7 +170,19 @@ public class MemberController extends BaseController {
         if (actor == null) {
             throw new RuntimeException("Unauthenticated");
         }
-        service.sendCredentials(id);
+        
+        // Get user info before sending
+        UserEntity user = userRepository.findById(id).orElse(null);
+        String username = user != null ? user.getUsername() : "unknown";
+        String email = user != null ? user.getEmail() : "unknown";
+        
+        // Send credentials (this will reset password internally and return it)
+        String newPassword = service.sendCredentials(id);
+        
+        // Log the account and password being sent
+        log.info("Sending credentials to userId={}, username={}, email={}, newPassword={} (by actorId={}, actorUsername={})", 
+                 id, username, email, newPassword, actor.getId(), actor.getUsername());
+        
         Map<String, Object> res = new HashMap<>();
         res.put("message", "Đã gửi thông tin tài khoản tới email thành viên");
         return res;

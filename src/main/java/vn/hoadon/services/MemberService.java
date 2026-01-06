@@ -14,5 +14,5 @@ public interface MemberService {
     UserEntity getById(Long id);
     void delete(Long id);
 
-    void sendCredentials(Long id);
+    String sendCredentials(Long id);
 }

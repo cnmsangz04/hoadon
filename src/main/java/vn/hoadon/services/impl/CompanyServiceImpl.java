@@ -170,8 +170,6 @@ public class CompanyServiceImpl implements CompanyService {
         user.setRole(1); // Admin
         user.setStatus((byte)1);
         String rawPassword = generateStrongPassword(14);
-        // store raw password as temporaryPassword so it can be sent later
-        user.setTemporaryPassword(rawPassword);
         user.setPassword(passwordEncoder.encode(rawPassword));
 
         UserEntity savedUser = userRepository.save(user);
@@ -249,12 +247,11 @@ public class CompanyServiceImpl implements CompanyService {
 
         // Reset password every time sending
         String rawPassword = generateStrongPassword(14);
-        admin.setTemporaryPassword(rawPassword);
         admin.setPassword(passwordEncoder.encode(rawPassword));
         userRepository.save(admin);
 
         // Log the credentials being sent (for audit/debug)
-        log.info("Sending admin credentials for companyId={}, username={}, temporaryPassword={}",
+        log.info("Sending admin credentials for companyId={}, username={}, password={}",
                 companyId, admin.getUsername(), rawPassword);
 
         // Simulate sending email with credentials

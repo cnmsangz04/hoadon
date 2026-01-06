@@ -124,9 +124,8 @@ public class MemberServiceImpl implements MemberService {
             user = new UserEntity();
             user.setCreatedAt(now);
             
-            // Store plain text password temporarily for credential email
+            // Store plain text password for encoding
             String plainPassword = incoming.getPassword() != null ? incoming.getPassword() : "ChangeMe123";
-            user.setTemporaryPassword(plainPassword);
             user.setPassword(passwordEncoder.encode(plainPassword));
             
             // Admin password on create if provided
@@ -149,7 +148,6 @@ public class MemberServiceImpl implements MemberService {
 
             // Only update password if provided
             if (incoming.getPassword() != null && !incoming.getPassword().isBlank()) {
-                user.setTemporaryPassword(incoming.getPassword());
                 user.setPassword(passwordEncoder.encode(incoming.getPassword()));
             }
             // Admin password on update if provided
@@ -292,7 +290,7 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     @Transactional
-    public void sendCredentials(Long id) {
+    public String sendCredentials(Long id) {
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         if (user.getEmail() == null || user.getEmail().isBlank()) {
@@ -310,8 +308,8 @@ public class MemberServiceImpl implements MemberService {
         System.out.println("[MOCK EMAIL] Tên tài khoản: " + user.getUsername());
         System.out.println("[MOCK EMAIL] Mật khẩu mới: " + newPassword);
 
-        // Xóa temporaryPassword nếu còn (không dùng nữa)
-        user.setTemporaryPassword(null);
         userRepository.save(user);
+        
+        return newPassword;
     }
 }

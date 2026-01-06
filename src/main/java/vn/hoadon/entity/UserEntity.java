@@ -41,11 +41,6 @@ public class UserEntity {
     @Column(name = "admin_password", length = 64)
     private String adminPassword;
 
-    // Temporary plain text password for sending credentials email only
-    // Should be cleared after sending email for security
-    @Column(name = "temporary_password", length = 255)
-    private String temporaryPassword;
-
     @Column(length = 255)
     private String avatar;
 
@@ -164,14 +159,6 @@ public class UserEntity {
 
     public void setAdminPassword(String adminPassword) {
         this.adminPassword = adminPassword;
-    }
-
-    public String getTemporaryPassword() {
-        return temporaryPassword;
-    }
-
-    public void setTemporaryPassword(String temporaryPassword) {
-        this.temporaryPassword = temporaryPassword;
     }
 
     public String getAvatar() {

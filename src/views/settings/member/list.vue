@@ -347,8 +347,7 @@ export default {
         adminPasswordConfirm: ''
       },
       permForm: { userId: null, username: '', name: '', role: null, status: null, email: '', phone: '' },
-      permOverrides: {},
-      tempPassword: ''
+      permOverrides: {}
     }
   },
   computed: {
@@ -706,14 +705,9 @@ export default {
       this.loadData()
     },
     async resetPassword(item) {
-      const res = await axios.post(`/setting/members/${item.id}/reset-password`)
-      const pwd = res?.data?.temporaryPassword || res?.data?.password || ''
-      if (pwd) { this.tempPassword = String(pwd); this.$refs.tempPwdModal.show() }
-      else { this.$toastr.success('Đã reset mật khẩu thành công') }
-    },
-    async copyTempPassword() {
-      try { await navigator.clipboard.writeText(this.tempPassword || ''); this.$toastr.success('Đã sao chép mật khẩu') }
-      catch { const el = this.$el.querySelector('input[readonly]'); if (el) { el.focus(); el.select() } }
+      await axios.post(`/setting/members/${item.id}/reset-password`)
+      this.$toastr.success('Đã reset mật khẩu thành công. Mật khẩu mới đã được gửi qua email.')
+      this.loadData()
     },
     onGeneratePassword() { const pwd = this.generateStrongPassword(); this.form.password = pwd; this.form.passwordConfirm = pwd },
     onGenerateAdminPassword() {
