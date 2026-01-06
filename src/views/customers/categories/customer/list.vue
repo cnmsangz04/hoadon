@@ -74,7 +74,7 @@
                 </template>
 
                 <template #cell(option)="{ item }">
-                    <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret>
+                    <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret boundary="window">
                         <template #button-content><i class="fas fa-ellipsis-h text-muted"></i></template>
                         <b-dropdown-item @click="openEdit(item)"><i class="fas fa-edit mr-2"></i>Cập nhật</b-dropdown-item>
                         <b-dropdown-item @click="toggleLock(item)">

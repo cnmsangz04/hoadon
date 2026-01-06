@@ -81,11 +81,14 @@ public class InvoiceController extends BaseController {
     @Autowired private SignatureAuthoritiesTaxService signatureAuthoritiesTaxService;
     @Autowired private HistoryRepository historyRepository;
     @Autowired(required = false) private JavaMailSender mailSender;
+    
+    @Autowired @org.springframework.context.annotation.Lazy private InvoiceController self;
 
     private static final Logger log = LoggerFactory.getLogger(InvoiceController.class);
 
     @GetMapping
     public ResponseEntity<?> list(
+            @AuthenticationPrincipal UserEntity user,
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "status", required = false) Short status,
             // Lọc theo ngày lập (dateExport). Frontend gửi yyyy-MM-dd.
@@ -97,9 +100,20 @@ public class InvoiceController extends BaseController {
     ) {
     	permission("invoice-list");
     	
+        // Get companyId from authenticated user
+        Long companyId = null;
+        if (user != null && user.getCompanyId() != null) {
+            companyId = user.getCompanyId();
+        }
+        
+        // If user doesn't have companyId (which shouldn't happen), return empty result
+        if (companyId == null) {
+            return ResponseEntity.ok(new PageDTO<>(java.util.List.of(), 1, size, 0L, 1));
+        }
+        
         int pageIndex = Math.max(page - 1, 0);
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "id"));
-        Page<InvoiceDTO> result = invoiceService.search(q, status, date, pageable);
+        Page<InvoiceDTO> result = invoiceService.search(companyId, q, status, date, pageable);
         return ResponseEntity.ok(new PageDTO<>(result.getContent(), result.getNumber() + 1, result.getSize(), result.getTotalElements(), result.getTotalPages()));
     }
 
@@ -179,6 +193,76 @@ public class InvoiceController extends BaseController {
             return ResponseEntity.badRequest().body(new ErrorDTO("Không tìm thấy hóa đơn để cập nhật"));
         }
         return ResponseEntity.ok(new CreateResponse(saved.getId()));
+    }
+
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity<?> delete(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
+        permission("invoice-delete");
+        
+        if (id == null) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu ID hóa đơn"));
+        }
+        
+        if (user == null || user.getCompanyId() == null) {
+            return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền thực hiện thao tác này"));
+        }
+        
+        Optional<InvoiceEntity> optInv = invoiceRepository.findById(id);
+        InvoiceEntity inv = optInv.orElse(null);
+        
+        if (inv == null) {
+            return ResponseEntity.status(404).body(new ErrorDTO("Không tìm thấy hóa đơn"));
+        }
+        
+        // Check company ownership
+        Long userCompanyId = user.getCompanyId();
+        Long invoiceCompanyId = inv.getCompanyId() != null ? inv.getCompanyId().longValue() : null;
+        if (invoiceCompanyId != null && !userCompanyId.equals(invoiceCompanyId)) {
+            return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền xóa hóa đơn của công ty khác"));
+        }
+        
+        // Check if invoice has a number (no > 0) - prevent deletion
+        Integer no = inv.getNo();
+        if (no != null && no > 0) {
+            return ResponseEntity.status(400).body(new ErrorDTO("Không thể xóa hóa đơn đã có số"));
+        }
+        
+        // Check status: only allow deletion if status = 0 (Mới khởi tạo)
+        Short status = inv.getStatus();
+        if (status != null && status != 0) {
+            return ResponseEntity.status(400).body(new ErrorDTO("Chỉ có thể xóa hóa đơn ở trạng thái 'Mới khởi tạo'"));
+        }
+        
+        try {
+            // Delete invoice
+            invoiceRepository.delete(inv);
+            
+            // Log deletion to history
+            try {
+                HistoryDto h = new HistoryDto();
+                h.setCompanyId(userCompanyId);
+                h.setUserId(user.getId());
+                h.setTableName("invoices");
+                h.setTableId(id);
+                h.setTitle("Xóa hóa đơn");
+                h.setDescription("Đã xóa hóa đơn ID: " + id);
+                h.setShowNotify(0);
+                h.setStatus(1);
+                h.setType(999); // Custom type for deletion
+                historyService.save(h);
+            } catch (Exception e) {
+                log.warn("Failed to save deletion history for invoice {}: {}", id, e.toString());
+            }
+            
+            return ResponseEntity.ok(new java.util.HashMap<String, Object>() {{
+                put("message", "Đã xóa hóa đơn thành công");
+                put("id", id);
+            }});
+        } catch (Exception e) {
+            log.error("Failed to delete invoice {}: {}", id, e.toString());
+            return ResponseEntity.status(500).body(new ErrorDTO("Xóa hóa đơn thất bại: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/{id}/clone")
@@ -1219,8 +1303,23 @@ public class InvoiceController extends BaseController {
         inv.setUpdatedAt(java.time.LocalDateTime.now());
         invoiceRepository.save(inv);
 
-        // Simulate asynchronous CQT response (202 or 204)
-        new Thread(() -> simulateCqtResponse(inv.getId(), uCompany, have)).start();
+        // Simulate asynchronous CQT response (202 or 204) - use a separate method with proper transaction
+        Long finalInvoiceId = inv.getId();
+        Long finalCompanyId = uCompany;
+        Integer finalHave = have;
+        new Thread(() -> {
+            try {
+                Thread.sleep(1500L);
+                // Use self-injection to ensure @Transactional works
+                if (self != null) {
+                    self.processCqtResponse(finalInvoiceId, finalCompanyId, finalHave);
+                } else {
+                    log.error("Self-injection failed, cannot process CQT response with transaction");
+                }
+            } catch (InterruptedException e) {
+                log.warn("CQT response thread interrupted: {}", e.toString());
+            }
+        }).start();
 
         java.util.Map<String, Object> resp = new java.util.LinkedHashMap<>();
         resp.put("id", inv.getId());
@@ -1228,13 +1327,16 @@ public class InvoiceController extends BaseController {
         return ResponseEntity.ok(resp);
     }
 
-    // Simulate CQT responses: for have==1 (200) -> 202 (accept) or 204 (reject);
-    // for have==0 (203) -> always 204 with LTBao==2 (accept) or LTBao!=2 (reject)
-    private void simulateCqtResponse(Long invoiceId, Long companyId, Integer have) {
-        try { Thread.sleep(1500L); } catch (InterruptedException ignore) {}
+    // Process CQT response with proper transaction handling
+    @Transactional
+    public void processCqtResponse(Long invoiceId, Long companyId, Integer have) {
         try {
             InvoiceEntity inv = invoiceRepository.findById(invoiceId).orElse(null);
-            if (inv == null) return;
+            if (inv == null) {
+                log.warn("processCqtResponse: Invoice {} not found", invoiceId);
+                return;
+            }
+            
             // Ensure we have the latest tax upload xml
             SignatureAuthoritiesTaxDTO lastTax = null;
             try {
@@ -1245,17 +1347,21 @@ public class InvoiceController extends BaseController {
                 SignatureVatEntity sig = signatureVatRepository.findTopByInvoiceIdOrderByIdDesc(inv.getId().intValue()).orElse(null);
                 xml = sig != null ? sig.getXml() : null;
             }
-            if (xml == null || xml.isBlank()) return;
+            if (xml == null || xml.isBlank()) {
+                log.warn("processCqtResponse: No XML found for invoice {}", invoiceId);
+                return;
+            }
+            
             boolean isCapMa = have != null && have == 1;
-            java.util.Random rnd = new java.util.Random();
 
             if (isCapMa) {
                 // Message 200: either accepted (202) or rejected (204)
-                boolean accepted = true;
+                boolean accepted = true; // Always accept in simulation
                 if (accepted) {
                     // 202: Chấp nhận, generate MCCQT and update invoice
                     String code = generateCqtCode(34);
                     String xmlWithCode = insertMccqt(xml, code);
+                    
                     // Persist updated xml to signature_authorities_tax
                     try {
                         SignatureAuthoritiesTaxDTO a = new SignatureAuthoritiesTaxDTO();
@@ -1263,12 +1369,16 @@ public class InvoiceController extends BaseController {
                         a.invoiceId = inv.getId().intValue();
                         a.xml = xmlWithCode;
                         signatureAuthoritiesTaxService.create(a);
-                    } catch (Exception e) { log.debug("Persist CQT xml failed: {}", e.toString()); }
+                    } catch (Exception e) { 
+                        log.error("Persist CQT xml failed for invoice {}: {}", invoiceId, e.toString()); 
+                    }
+                    
                     // Update invoice code_cqt and status = 3 (Đã phát hành)
                     try { inv.setCodeCqt(code); } catch (Exception ignore) {}
                     inv.setStatus((short)3);
                     inv.setUpdatedAt(java.time.LocalDateTime.now());
                     invoiceRepository.save(inv);
+                    
                     // History type=202, user_id=0
                     HistoryDto h202 = new HistoryDto();
                     h202.setCompanyId(companyId);
@@ -1276,17 +1386,28 @@ public class InvoiceController extends BaseController {
                     h202.setTableName("invoices");
                     h202.setTableId(inv.getId().longValue());
                     h202.setTitle("Hóa đơn số " + inv.getNo() + " đã được cấp mã từ CQT");
-                    h202.setDescription(inv.getCodeCqt());
+                    h202.setDescription("Mã CQT: " + code);
                     h202.setShowNotify(1);
                     h202.setStatus(1);
                     h202.setType(202);
                     h202.setXmlData(xmlWithCode);
-                    try { historyService.save(h202); } catch (Exception e) { log.warn("History 202 failed: {}", e.toString()); }
+                    
+                    try { 
+                        HistoryDto saved = historyService.save(h202);
+                        if (saved == null || saved.getId() == null) {
+                            log.error("History 202 save returned null for invoice {}", invoiceId);
+                        } else {
+                            log.info("History 202 saved successfully with ID {} for invoice {}", saved.getId(), invoiceId);
+                        }
+                    } catch (Exception e) { 
+                        log.error("History 202 save failed for invoice {}: {}", invoiceId, e.toString(), e); 
+                    }
                 } else {
                     // 204: Từ chối cấp mã
                     inv.setStatus((short)7); // Không đủ điều kiện
                     inv.setUpdatedAt(java.time.LocalDateTime.now());
                     invoiceRepository.save(inv);
+                    
                     HistoryDto h204rej = new HistoryDto();
                     h204rej.setCompanyId(companyId);
                     h204rej.setUserId(0L);
@@ -1297,9 +1418,14 @@ public class InvoiceController extends BaseController {
                     h204rej.setShowNotify(1);
                     h204rej.setStatus(1);
                     h204rej.setType(204);
-                    // For 200 reject, we can omit TBao or include a minimal error response (LTBao!=2)
                     h204rej.setXmlData(buildMock204ResponseXml(false, inv, null));
-                    try { historyService.save(h204rej); } catch (Exception e) { log.warn("History 204 reject failed: {}", e.toString()); }
+                    
+                    try { 
+                        historyService.save(h204rej);
+                        log.info("History 204 reject saved for invoice {}", invoiceId);
+                    } catch (Exception e) { 
+                        log.error("History 204 reject save failed for invoice {}: {}", invoiceId, e.toString(), e); 
+                    }
                 }
             } else {
                 // Message 203: always respond 204; LTBao determines acceptance
@@ -1308,22 +1434,34 @@ public class InvoiceController extends BaseController {
                     inv.setStatus((short)3); // Tiếp nhận/Chấp nhận
                     inv.setUpdatedAt(java.time.LocalDateTime.now());
                     invoiceRepository.save(inv);
+                    
                     HistoryDto h204acc = new HistoryDto();
                     h204acc.setCompanyId(companyId);
                     h204acc.setUserId(0L);
                     h204acc.setTableName("invoices");
                     h204acc.setTableId(inv.getId().longValue());
                     h204acc.setTitle("Hóa đơn số " + inv.getNo() + " đã được chấp nhận từ CQT");
-                    h204acc.setDescription("");
+                    h204acc.setDescription("Thông báo 204: Chấp nhận");
                     h204acc.setShowNotify(1);
                     h204acc.setStatus(1);
                     h204acc.setType(204);
                     h204acc.setXmlData(buildMock204ResponseXml(true, inv, null)); // LTBao==2
-                    try { historyService.save(h204acc); } catch (Exception e) { log.warn("History 204 accept failed: {}", e.toString()); }
+                    
+                    try { 
+                        HistoryDto saved = historyService.save(h204acc);
+                        if (saved == null || saved.getId() == null) {
+                            log.error("History 204 accept save returned null for invoice {}", invoiceId);
+                        } else {
+                            log.info("History 204 accept saved successfully with ID {} for invoice {}", saved.getId(), invoiceId);
+                        }
+                    } catch (Exception e) { 
+                        log.error("History 204 accept save failed for invoice {}: {}", invoiceId, e.toString(), e); 
+                    }
                 } else {
                     inv.setStatus((short)7); // Không đủ điều kiện
                     inv.setUpdatedAt(java.time.LocalDateTime.now());
                     invoiceRepository.save(inv);
+                    
                     HistoryDto h204rej = new HistoryDto();
                     h204rej.setCompanyId(companyId);
                     h204rej.setUserId(0L);
@@ -1335,11 +1473,17 @@ public class InvoiceController extends BaseController {
                     h204rej.setStatus(1);
                     h204rej.setType(204);
                     h204rej.setXmlData(buildMock204ResponseXml(false, inv, null)); // LTBao!=2
-                    try { historyService.save(h204rej); } catch (Exception e) { log.warn("History 204 reject failed: {}", e.toString()); }
+                    
+                    try { 
+                        historyService.save(h204rej);
+                        log.info("History 204 reject saved for invoice {}", invoiceId);
+                    } catch (Exception e) { 
+                        log.error("History 204 reject save failed for invoice {}: {}", invoiceId, e.toString(), e); 
+                    }
                 }
             }
         } catch (Exception e) {
-            log.warn("simulateCqtResponse failed: {}", e.toString());
+            log.error("processCqtResponse failed for invoice {}: {}", invoiceId, e.toString(), e);
         }
     }
 

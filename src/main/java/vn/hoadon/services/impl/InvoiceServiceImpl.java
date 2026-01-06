@@ -36,14 +36,14 @@ public class InvoiceServiceImpl implements InvoiceService {
     private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
 
     @Override
-    public Page<InvoiceDTO> search(String q, Short status, Pageable pageable) {
-        Page<InvoiceEntity> page = invoiceRepository.search(q, status, pageable);
+    public Page<InvoiceDTO> search(Long companyId, String q, Short status, Pageable pageable) {
+        Page<InvoiceEntity> page = invoiceRepository.search(companyId, q, status, pageable);
         return mapToDto(page);
     }
 
     @Override
-    public Page<InvoiceDTO> search(String q, Short status, java.time.LocalDate date, Pageable pageable) {
-        Page<InvoiceEntity> page = invoiceRepository.search(q, status, date, pageable);
+    public Page<InvoiceDTO> search(Long companyId, String q, Short status, java.time.LocalDate date, Pageable pageable) {
+        Page<InvoiceEntity> page = invoiceRepository.search(companyId, q, status, date, pageable);
         return mapToDto(page);
     }
 

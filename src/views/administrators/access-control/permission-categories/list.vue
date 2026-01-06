@@ -115,7 +115,7 @@
           </b-badge>
         </template>
         <template #cell(option)="data">
-          <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret v-if="true">
+          <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret boundary="window" v-if="true">
             <template #button-content>
               <i class="fas fa-ellipsis-h"></i>
             </template>

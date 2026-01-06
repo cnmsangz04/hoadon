@@ -78,7 +78,7 @@
                 </template>
 
                 <template #cell(option)="data">
-                    <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret>
+                    <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret boundary="window">
                         <template #button-content>
                             <i class="fas fa-ellipsis-h text-muted"></i>
                         </template>

@@ -13,4 +13,7 @@ public interface VatRatesRepository extends JpaRepository<VatRatesEntity, Intege
     Page<VatRatesEntity> findByUserId(Integer userId, Pageable pageable);
     Page<VatRatesEntity> findByUserIdAndStatus(Integer userId, Integer status, Pageable pageable);
     List<VatRatesEntity> findAllByOrderByPrioritizeAsc();
+    
+    // Get all vat rates by status without user_id filtering
+    Page<VatRatesEntity> findByStatus(Integer status, Pageable pageable);
 }

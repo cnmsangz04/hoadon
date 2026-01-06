@@ -15,12 +15,12 @@ public interface RegisterInvoiceRepository extends JpaRepository<RegisterInvoice
     List<RegisterInvoiceEntity> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
     List<RegisterInvoiceEntity> findByUserIdOrderByCreatedAtDesc(Long userId);
 
-    // Pagination variants
-    Page<RegisterInvoiceEntity> findByCompanyIdOrderByCreatedAtDesc(Long companyId, Pageable pageable);
-    Page<RegisterInvoiceEntity> findByCompanyIdAndStatusOrderByCreatedAtDesc(Long companyId, Integer status, Pageable pageable);
+    // Pagination variants - sort is provided via Pageable parameter
+    Page<RegisterInvoiceEntity> findByCompanyId(Long companyId, Pageable pageable);
+    Page<RegisterInvoiceEntity> findByCompanyIdAndStatus(Long companyId, Integer status, Pageable pageable);
 
-    Page<RegisterInvoiceEntity> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
-    Page<RegisterInvoiceEntity> findByUserIdAndStatusOrderByCreatedAtDesc(Long userId, Integer status, Pageable pageable);
+    Page<RegisterInvoiceEntity> findByUserId(Long userId, Pageable pageable);
+    Page<RegisterInvoiceEntity> findByUserIdAndStatus(Long userId, Integer status, Pageable pageable);
 
     // New: latest accepted by effectiveDate desc
     Page<RegisterInvoiceEntity> findByCompanyIdAndStatusOrderByEffectiveDateDesc(Long companyId, Integer status, Pageable pageable);

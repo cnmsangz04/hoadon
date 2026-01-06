@@ -45,6 +45,11 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
     }
 
     @Override
+    public Page<FormInvoiceEntity> pageBySystem(int system, Pageable pageable) {
+        return repo.findBySystem(system, pageable);
+    }
+
+    @Override
     public Page<FormInvoiceEntity> pageAll(Pageable pageable) {
         return repo.findAll(pageable);
     }

@@ -9,6 +9,7 @@ import java.util.Optional;
 public interface FormInvoiceService {
     Page<FormInvoiceEntity> pageByCompany(Long companyId, Pageable pageable);
     Page<FormInvoiceEntity> pageByCompanySystem(Long companyId, int system, Pageable pageable);
+    Page<FormInvoiceEntity> pageBySystem(int system, Pageable pageable); // For system templates (system=0) shared across all companies
     Page<FormInvoiceEntity> pageAll(Pageable pageable);
     Optional<FormInvoiceEntity> findById(Long id);
     FormInvoiceEntity create(FormInvoiceEntity e);

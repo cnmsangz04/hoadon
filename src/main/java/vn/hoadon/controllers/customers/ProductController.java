@@ -104,14 +104,10 @@ public class ProductController extends BaseController {
     // Provide VAT rates (code and label) for current user, only active ones
     @GetMapping("/vat-rates")
     public List<Map<String, Object>> getVatRates() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Integer userId = null;
-        if (auth != null && auth.getPrincipal() instanceof UserEntity) {
-            userId = Math.toIntExact(((UserEntity) auth.getPrincipal()).getId());
-        }
+        // VAT rates are shared across all users - no userId filter needed
         // Default pagination: up to 100 items, sort by prioritize asc
         Pageable pageable = PageRequest.of(0, 100, Sort.by(Sort.Direction.ASC, "prioritize"));
-        Page<VatRatesEntity> page = vatRatesService.pageByUser(userId, 1, pageable, null);
+        Page<VatRatesEntity> page = vatRatesService.pageAll(1, pageable, (String) null);
         return page.getContent().stream().map(it -> {
             Map<String, Object> m = new HashMap<>();
             m.put("code", it.getCode());

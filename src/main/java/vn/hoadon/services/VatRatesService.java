@@ -30,6 +30,9 @@ public interface VatRatesService {
     // Pagination by user
     Page<VatRatesEntity> pageByUser(Integer userId, Integer status, Pageable pageable, String keyword);
 
+    // Pagination for all users - no user_id filtering
+    Page<VatRatesEntity> pageAll(Integer status, Pageable pageable, String keyword);
+
     // Reorder by priority
     void reorder(List<Integer> orderedIds);
 }

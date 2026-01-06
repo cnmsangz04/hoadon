@@ -127,12 +127,12 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
 
     @Override
     public Page<RegisterInvoiceEntity> pageByCompany(Long companyId, Pageable pageable) {
-        return repository.findByCompanyIdOrderByCreatedAtDesc(companyId, pageable);
+        return repository.findByCompanyId(companyId, pageable);
     }
 
     @Override
     public Page<RegisterInvoiceEntity> pageByCompanyAndStatus(Long companyId, Integer status, Pageable pageable) {
-        return repository.findByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, status, pageable);
+        return repository.findByCompanyIdAndStatus(companyId, status, pageable);
     }
 
     @Override

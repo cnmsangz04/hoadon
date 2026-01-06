@@ -118,10 +118,11 @@ export default {
   },
   methods: {
     async importData() {
-      // Fetch templates filtered by name, category, type and only system=0
+      // Fetch templates filtered by name, category, type
+      // Backend /form-invoices/templates endpoint only returns system=0 templates
       this.notify = ''
       try {
-        const params = { system: 0 }
+        const params = {}
         if (this.keyword) params.q = this.keyword
         if (this.category != null) params.category = this.category
         if (this.type != null) params.type = this.type

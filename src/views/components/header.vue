@@ -24,15 +24,17 @@
 
       <!-- Bell notification per sample -->
       <li class="nav-item bell-notify pl-0 pr-1">
-        <a href="javascript:void(0)" class="info-number circle-icon-top" v-b-toggle.sidebar-right>
+        <a href="javascript:void(0)" class="info-number circle-icon-top position-relative" v-b-toggle.sidebar-right>
           <i class="far fa-bell text-danger"></i>
+          <span v-if="list.length > 0" class="badge badge-danger badge-pill notification-badge">{{ list.length > 9 ? '9+' : list.length }}</span>
         </a>
       </li>
 
-      <b-dropdown right toggle-class="user-toggle">
+      <b-dropdown right toggle-class="user-toggle" variant="outline-info">
         <template #button-content>
           <b-avatar :src="avatarSrc" v-if="avatarSrc" class="user-avatar"></b-avatar>
           <b-avatar variant="primary" v-else class="user-avatar">{{ usernameInitial }}</b-avatar>
+          <span class="ml-2 d-none d-md-inline">{{ app.auth.username || 'User' }}</span>
         </template>
         <b-dropdown-item to="/setting">
           <i class="fas fa-user"></i> Tài khoản
@@ -82,7 +84,9 @@ export default {
           name: '',
           role: null
         }
-      }
+      },
+      pollingInterval: null,
+      lastNotificationCount: 0
     };
   },
   computed: {
@@ -179,7 +183,7 @@ export default {
     } catch {}
   },
   mounted() {
-    // Ensure /auth/info is fetched so role/company is set even if JWT lacks role; don’t write localStorage companyId
+    // Ensure /auth/info is fetched so role/company is set even if JWT lacks role; don't write localStorage companyId
     try {
       axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
         .then(res => {
@@ -193,6 +197,13 @@ export default {
           }
         })
     } catch {}
+    
+    // Start polling for new notifications every 5 seconds
+    this.startPolling()
+  },
+  beforeDestroy() {
+    // Cleanup polling interval when component is destroyed
+    this.stopPolling()
   },
   methods: {
     // Return the uppercase initial from a name; fallback to '?'
@@ -226,7 +237,7 @@ export default {
     async fetchNotifications() {
       try {
         const params = { limit: 10, show_notify: 1, status: 1 }
-        const res = await axios.get('/history/notifications', { params })
+        const res = await axios.get('/history/notifications', { params, meta: { suppressGlobalErrorToast: true } })
         const payload = res && res.data
 
         const arr = Array.isArray(payload)
@@ -243,6 +254,7 @@ export default {
           ? payload.rows
           : []
 
+        const oldList = this.list
         this.list = arr.map(r => {
           const created = r.createdAt ?? r.created_at ?? r.time ?? r.timestamp
           const title = r.title ?? r.message ?? r.description ?? ''
@@ -259,10 +271,41 @@ export default {
           }
         })
 
-        // Quick visual confirmation
-        try { window.toastr && toastr.info(`Thông báo: ${this.list.length}`) } catch {}
+        // Check if there are new notifications (compare count or IDs)
+        if (oldList.length > 0 && this.list.length > oldList.length) {
+          const newCount = this.list.length - oldList.length
+          try { 
+            window.toastr && toastr.info(`Bạn có ${newCount} thông báo mới`) 
+          } catch {}
+        } else if (oldList.length > 0 && this.list.length > 0) {
+          // Check if first item is new (different ID)
+          const oldFirstId = oldList[0]?.id
+          const newFirstId = this.list[0]?.id
+          if (oldFirstId && newFirstId && oldFirstId !== newFirstId) {
+            try { 
+              window.toastr && toastr.info(`Bạn có thông báo mới: ${this.list[0].title}`) 
+            } catch {}
+          }
+        }
       } catch (e) {
+        // Silent fail for polling requests
+        console.debug('Fetch notifications failed:', e)
         this.list = []
+      }
+    },
+    startPolling() {
+      // Stop any existing interval first
+      this.stopPolling()
+      
+      // Poll every 5 seconds
+      this.pollingInterval = setInterval(() => {
+        this.fetchNotifications()
+      }, 5000)
+    },
+    stopPolling() {
+      if (this.pollingInterval) {
+        clearInterval(this.pollingInterval)
+        this.pollingInterval = null
       }
     },
     relativeTime(d) {
@@ -343,16 +386,45 @@ nav.d-flex.align-items-center {
 }
 .bell-notify .circle-icon-top:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 
+/* Notification badge */
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 2px 5px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  border-radius: 9px;
+  background: #dc3545;
+  color: white;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.4);
+  animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
 /* User dropdown trigger */
 .user-toggle {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   padding: 6px 10px;
   border-radius: 12px;
   border: 1px solid transparent;
   transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .user-toggle:hover { background: #f6f8fb; border-color: #e6e9ed; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.user-toggle span {
+  color: #2c3e50;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
 
 .user-avatar {
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);

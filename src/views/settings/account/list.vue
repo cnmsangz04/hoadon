@@ -38,6 +38,16 @@
           <b-card v-else class="profile-card">
             <h4 class="section-title">Thông tin cá nhân</h4>
 
+            <!-- USERNAME (READ-ONLY) -->
+            <div class="list-info">
+              <div class="list-item">
+                <div>
+                  <label>Tài khoản</label>
+                  <p class="font-weight-bold text-primary">{{ account.username || '—' }}</p>
+                </div>
+              </div>
+            </div>
+
             <!-- NAME -->
             <div class="list-info">
               <div class="list-item" v-if="!showName">

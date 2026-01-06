@@ -82,6 +82,25 @@ public class VatRatesServiceImpl implements VatRatesService {
     }
 
     @Override
+    public Page<VatRatesEntity> pageAll(Integer status, Pageable pageable, String keyword) {
+        Page<VatRatesEntity> page = (status == null)
+                ? vatRatesRepository.findAll(pageable)
+                : vatRatesRepository.findByStatus(status, pageable);
+
+        if (keyword == null || keyword.isBlank()) {
+            return page;
+        }
+        String kw = keyword.trim().toLowerCase();
+        List<VatRatesEntity> filtered = page.getContent().stream()
+                .filter(it -> {
+                    String label = it.getLabel() != null ? it.getLabel().toLowerCase() : "";
+                    String codeStr = it.getCode() != null ? it.getCode().toString() : "";
+                    return label.contains(kw) || codeStr.contains(kw);
+                }).collect(Collectors.toList());
+        return new PageImpl<>(filtered, pageable, page.getTotalElements());
+    }
+
+    @Override
     public void reorder(List<Integer> orderedIds) {
         for (int i = 0; i < orderedIds.size(); i++) {
             Integer id = orderedIds.get(i);

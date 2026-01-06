@@ -98,11 +98,12 @@
           <b-row>
             <b-col lg="4" md="6">
               <b-form-group label="Mã khách hàng" label-class="form-label">
-                <b-form-select 
-                  v-model="frmData.customer.code" 
-                  :options="customerOptions" 
+                <b-form-input
+                  v-model="frmData.customer.code"
+                  list="autoCustomerCode"
+                  placeholder="Nhập hoặc chọn mã khách hàng"
                   :disabled="loadingCustomers"
-                  @change="onCustomerSelected"
+                  @change="onCustomerCodeChange"
                 />
               </b-form-group>
             </b-col>
@@ -158,6 +159,12 @@
               </b-form-group>
             </b-col>
           </b-row>
+
+          <datalist v-if="!loadingCustomers" id="autoCustomerCode">
+            <option v-for="item in _customers" :key="item.code" :value="item.code">
+              {{ (item.companyName || item.buyerName || '') + ' - MST: ' + (item.taxCode || item.taxcode || 'N/A') }}
+            </option>
+          </datalist>
         </div>
 
         <!-- 4. Chi tiết hàng hóa/dịch vụ -->
@@ -621,11 +628,12 @@ export default {
         const customers = customersPage && customersPage.data ? customersPage.data : []
         // store full customers for later lookup
         this._customers = customers
+        // Format for v-select: array of objects with value and text properties
         const opts = customers.map(c => ({
           value: c.code,
           text: `${c.code} - ${(c.companyName || c.buyerName || '')}`.trim()
         }))
-        this.customerOptions = [{ value: null, text: 'Chọn mã khách hàng' }, ...opts]
+        this.customerOptions = opts
       } finally {
         this.loadingCustomers = false
       }
@@ -646,6 +654,17 @@ export default {
       this.frmData.customer.phone = c.phone || this.frmData.customer.phone
       this.frmData.customer.bank_name = c.bankName || c.bank_name || this.frmData.customer.bank_name
       this.frmData.customer.bank_no = c.bankAccountNumber || c.bank_no || this.frmData.customer.bank_no
+    },
+    // Handle customer code input change (for datalist)
+    onCustomerCodeChange () {
+      const code = String(this.frmData.customer.code || '').trim()
+      if (!code) return
+      // Try to find customer by exact code match
+      const c = (this._customers || []).find(x => String(x.code || '').trim() === code)
+      if (c) {
+        // Auto-fill customer fields
+        this.onCustomerSelected(code)
+      }
     },
     // ensure there is always an empty row at the end
     ensureTrailingEmptyRow () {

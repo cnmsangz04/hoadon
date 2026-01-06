@@ -9,11 +9,11 @@ import vn.hoadon.entity.InvoiceEntity;
 
 public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
 
-    @Query("SELECT i FROM InvoiceEntity i WHERE (:q IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.code) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.lookupCode) LIKE LOWER(CONCAT('%', :q, '%'))) AND (:status IS NULL OR i.status = :status)")
-    Page<InvoiceEntity> search(@Param("q") String q, @Param("status") Short status, Pageable pageable);
+    @Query("SELECT i FROM InvoiceEntity i WHERE (:companyId IS NULL OR i.companyId = :companyId) AND (:q IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.code) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.lookupCode) LIKE LOWER(CONCAT('%', :q, '%'))) AND (:status IS NULL OR i.status = :status)")
+    Page<InvoiceEntity> search(@Param("companyId") Long companyId, @Param("q") String q, @Param("status") Short status, Pageable pageable);
 
-    @Query("SELECT i FROM InvoiceEntity i WHERE (:q IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.code) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.lookupCode) LIKE LOWER(CONCAT('%', :q, '%'))) AND (:status IS NULL OR i.status = :status) AND (:date IS NULL OR i.dateExport = :date)")
-    Page<InvoiceEntity> search(@Param("q") String q, @Param("status") Short status, @Param("date") java.time.LocalDate date, Pageable pageable);
+    @Query("SELECT i FROM InvoiceEntity i WHERE (:companyId IS NULL OR i.companyId = :companyId) AND (:q IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.code) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.lookupCode) LIKE LOWER(CONCAT('%', :q, '%'))) AND (:status IS NULL OR i.status = :status) AND (:date IS NULL OR i.dateExport = :date)")
+    Page<InvoiceEntity> search(@Param("companyId") Long companyId, @Param("q") String q, @Param("status") Short status, @Param("date") java.time.LocalDate date, Pageable pageable);
 
     boolean existsByIdAttr(String idAttr);
     boolean existsByLookupCode(String lookupCode);

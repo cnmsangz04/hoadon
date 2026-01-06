@@ -135,24 +135,43 @@ public class FormInvoiceController extends BaseController {
 
     @GetMapping("/templates")
     public Map<String, Object> listTemplates(
+            @RequestParam(required = false) String q,
             @RequestParam(required = false) Integer category,
             @RequestParam(required = false) Integer type,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
-        UserEntity user = currentUser();
-        Long companyId = user != null ? user.getCompanyId() : null;
-        if (companyId == null) return empty(page, size);
+        // Templates (system=0) are shared across all companies, no company filter needed
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "updatedAt"));
-        Page<FormInvoiceEntity> p = service.pageByCompanySystem(companyId, 0, pageable);
+        Page<FormInvoiceEntity> p = service.pageBySystem(0, pageable);
+        
         List<FormInvoiceEntity> filtered = p.getContent();
-        if (category != null) filtered = filtered.stream().filter(it -> Objects.equals(category, it.getCategory())).toList();
-        if (type != null) filtered = filtered.stream().filter(it -> Objects.equals(type, it.getType())).toList();
+        
+        // Filter by keyword if provided
+        if (q != null && !q.isBlank()) {
+            String kw = q.toLowerCase();
+            filtered = filtered.stream().filter(it -> {
+                String name = it.getName() != null ? it.getName().toLowerCase() : "";
+                return name.contains(kw);
+            }).toList();
+        }
+        
+        // Filter by category if provided
+        if (category != null) {
+            filtered = filtered.stream().filter(it -> Objects.equals(category, it.getCategory())).toList();
+        }
+        
+        // Filter by type if provided
+        if (type != null) {
+            filtered = filtered.stream().filter(it -> Objects.equals(type, it.getType())).toList();
+        }
+        
         // Sort templates by id desc (nulls last)
         filtered = filtered.stream()
                 .sorted(Comparator.comparing(FormInvoiceEntity::getId,
                         Comparator.nullsLast(Comparator.naturalOrder())).reversed())
                 .toList();
+        
         List<Map<String, Object>> items = filtered.stream().map(it -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", it.getId());
@@ -162,12 +181,13 @@ public class FormInvoiceController extends BaseController {
             m.put("category", it.getCategory());
             return m;
         }).toList();
+        
         Map<String, Object> res = new HashMap<>();
         res.put("items", items);
-        res.put("total", p.getTotalElements());
+        res.put("total", (long) filtered.size()); // Use filtered size as total
         res.put("per_page", p.getSize());
         res.put("current_page", p.getNumber() + 1);
-        res.put("last_page", Math.max(1, p.getTotalPages()));
+        res.put("last_page", Math.max(1, (int) Math.ceil((double) filtered.size() / p.getSize())));
         return res;
     }
 
@@ -178,8 +198,13 @@ public class FormInvoiceController extends BaseController {
         Optional<FormInvoiceEntity> opt = service.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         FormInvoiceEntity e = opt.get();
-        // Restrict to same company and system templates only
-        if (!Objects.equals(e.getCompanyId(), user.getCompanyId()) || !Objects.equals(e.getSystem(), 0)) {
+        // System templates (system=0) are shared across all companies - no company check needed
+        // For company-specific forms (system=1), check company ownership
+        if (Objects.equals(e.getSystem(), 1) && !Objects.equals(e.getCompanyId(), user.getCompanyId())) {
+            return ResponseEntity.status(403).build();
+        }
+        // Only allow access to system templates (system=0), reject other system values
+        if (!Objects.equals(e.getSystem(), 0) && !Objects.equals(e.getSystem(), 1)) {
             return ResponseEntity.status(403).build();
         }
         Map<String, Object> item = new HashMap<>();
@@ -392,8 +417,9 @@ public class FormInvoiceController extends BaseController {
                 return ResponseEntity.badRequest().body(Map.of("message", "Không tìm thấy mẫu template"));
             }
             FormInvoiceEntity tpl = optTpl.get();
-            if (!Objects.equals(tpl.getCompanyId(), companyId) || !Objects.equals(tpl.getSystem(), 0)) {
-                return ResponseEntity.status(403).body(Map.of("message", "Chỉ được sao chép từ mẫu hệ thống của công ty"));
+            // Only allow copying from system templates (system=0), which are shared across all companies
+            if (!Objects.equals(tpl.getSystem(), 0)) {
+                return ResponseEntity.status(403).body(Map.of("message", "Chỉ được sao chép từ mẫu hệ thống"));
             }
             // Copy photo
             if (StringUtils.hasText(tpl.getPhoto())) {

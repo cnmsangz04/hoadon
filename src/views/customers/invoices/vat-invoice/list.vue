@@ -112,7 +112,7 @@
         </template>
 
         <template #cell(option)="{ item }">
-          <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret>
+          <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret boundary="window">
             <template #button-content>
               <i class="fas fa-ellipsis-h"></i>
             </template>
@@ -289,7 +289,7 @@
             id="mailEmail"
             v-model.trim="mail.email"
             :state="mail.errors.email === null"
-            placeholder="example@email.com"
+            placeholder="Nhập email người nhận"
             type="email"
             autocomplete="email"
           />
@@ -567,6 +567,24 @@ export default {
       window.open(`${base}/invoices/${lookupCode}/download-pdf`, '_blank')
     },
 
+    print (lookupCode) {
+      if (!lookupCode) {
+        this.$bvToast && this.$bvToast.toast('Không có mã tra cứu hóa đơn', { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 3000 })
+        return
+      }
+      try {
+        const iframe = document.getElementById('viewVatInv')
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.print()
+        } else {
+          // Fallback: open print dialog for current window
+          window.print()
+        }
+      } catch (e) {
+        this.$bvToast && this.$bvToast.toast('Không thể in hóa đơn', { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 3000 })
+      }
+    },
+
     async signInvoice (item) {
       try {
         const id = item && (item.id || item.ID || item.Id)
@@ -811,6 +829,17 @@ export default {
         const id = item.id || item.ID || item.Id
         if (!id) return
         
+        // Check if invoice has a number - prevent deletion
+        if (item.no && Number(item.no) > 0) {
+          this.$bvToast && this.$bvToast.toast('Không thể xóa hóa đơn đã có số', {
+            title: 'Thông báo',
+            variant: 'warning',
+            solid: true,
+            autoHideDelay: 3000
+          })
+          return
+        }
+        
         // Check status - only allow delete if status = 0
         if (Number(item.status) !== 0) {
           this.$bvToast && this.$bvToast.toast('Chỉ có thể xóa hóa đơn ở trạng thái "Mới khởi tạo"', {
@@ -848,13 +877,14 @@ export default {
         this.fetchList()
       } catch (e) {
         const code = e?.response?.status
-        const msg = code === 403
-          ? 'Không có quyền xóa hóa đơn'
-          : code === 404
-          ? 'Hóa đơn không tồn tại'
-          : code === 400
-          ? 'Không thể xóa hóa đơn này'
-          : 'Xóa hóa đơn thất bại'
+        const msg = e?.response?.data?.message || 
+          (code === 403
+            ? 'Không có quyền xóa hóa đơn'
+            : code === 404
+            ? 'Hóa đơn không tồn tại'
+            : code === 400
+            ? e?.response?.data?.message || 'Không thể xóa hóa đơn này'
+            : 'Xóa hóa đơn thất bại')
         this.$bvToast && this.$bvToast.toast(msg, {
           title: 'Lỗi',
           variant: 'danger',

@@ -92,7 +92,7 @@
         </template>
 
         <template #cell(option)="{ item }">
-          <b-dropdown v-if="canOperateOn(item)" size="sm" right variant="link" toggle-class="text-decoration-none" no-caret>
+          <b-dropdown v-if="canOperateOn(item)" size="sm" right variant="link" toggle-class="text-decoration-none" no-caret boundary="window">
             <template #button-content>
               <i class="fas fa-ellipsis-h"></i>
             </template>

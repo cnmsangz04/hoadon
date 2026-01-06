@@ -76,6 +76,7 @@
             variant="link"
             toggle-class="text-decoration-none"
             no-caret
+            boundary="window"
           >
             <template #button-content>
               <i class="fas fa-ellipsis-h"></i>
