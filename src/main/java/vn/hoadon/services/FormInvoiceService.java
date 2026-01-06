@@ -11,6 +11,8 @@ public interface FormInvoiceService {
     Page<FormInvoiceEntity> pageByCompanySystem(Long companyId, int system, Pageable pageable);
     Page<FormInvoiceEntity> pageBySystem(int system, Pageable pageable); // For system templates (system=0) shared across all companies
     Page<FormInvoiceEntity> pageAll(Pageable pageable);
+
+    Page<FormInvoiceEntity> pageByUser(Long userId, Pageable pageable);
     Optional<FormInvoiceEntity> findById(Long id);
     FormInvoiceEntity create(FormInvoiceEntity e);
     Optional<FormInvoiceEntity> update(Long id, FormInvoiceEntity patch);

@@ -13,6 +13,9 @@ public interface FormInvoiceRepository extends JpaRepository<FormInvoiceEntity, 
     // Find templates by system only (for system=0 templates that are shared across all companies)
     Page<FormInvoiceEntity> findBySystem(Integer system, Pageable pageable);
 
+    // Find templates created by a user
+    Page<FormInvoiceEntity> findByUserId(Long userId, Pageable pageable);
+
     boolean existsByCompanyIdAndSystemAndCategoryAndSerial(Long companyId, Integer system, Integer category, String serial);
     boolean existsByCompanyIdAndSystemAndCategoryAndSerialAndIdNot(Long companyId, Integer system, Integer category, String serial, Long id);
 

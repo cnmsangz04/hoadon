@@ -12,15 +12,11 @@
       <!-- Menu -->
       <nav class="menu">
         <ul>
-          <li
-            v-for="(item, index) in menu"
-            :key="index"
-            :class="{
-              'has-children': !!item.children,
-              open: openIndex === index,
-              active: isActive(item),
-            }"
-          >
+          <li v-for="(item, index) in menu" :key="index" :class="{
+            'has-children': !!item.children,
+            open: openIndex === index,
+            active: isActive(item),
+          }">
 
             <!-- Menu có con -->
             <template v-if="item.children">
@@ -76,6 +72,7 @@ export default {
         { title: 'Cơ quan thuế', icon: 'fas fa-landmark', to: '/administrator/tax-authority/list' },
         { title: 'Thuế suất', icon: 'fas fa-percent', to: '/administrator/vat-rate/list' },
         { title: 'Email template', icon: 'fas fa-envelope', to: '/administrator/email-template/list' },
+        { title: 'Mẫu hóa đơn', icon: 'fas fa-file-contract', to: '/administrator/form-invoice/list' },
         {
           title: 'Phân quyền',
           icon: 'fas fa-user-shield',
@@ -95,7 +92,7 @@ export default {
         if (logo && typeof logo === 'string' && logo.trim() !== '') {
           return logo
         }
-      } catch {}
+      } catch { }
       return require('@/assets/images/logo/logo-hoadon.png')
     }
   },
@@ -140,31 +137,113 @@ export default {
   top: 0;
   display: flex;
   flex-direction: column;
-  box-shadow: 2px 0 8px rgba(2,6,23,0.6);
+  box-shadow: 2px 0 8px rgba(2, 6, 23, 0.6);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
 }
 
-.sidebar-inner { padding: 18px 14px; height: 100%; display: flex; flex-direction: column; }
-.brand { text-align: center; margin-bottom: 12px; }
-.logo { max-width: 160px; margin: auto; display: block; }
-.menu { flex: 1; overflow: auto; }
-.menu ul { padding: 0; margin: 0; list-style: none; }
-.menu-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; color: #dbeefd; border-radius: 6px; text-decoration: none; }
-.menu-item:hover { background: rgba(255,255,255,0.03); color: #fff; }
-.menu-item i { width: 18px; text-align: center; }
+.sidebar-inner {
+  padding: 18px 14px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.brand {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.logo {
+  max-width: 160px;
+  margin: auto;
+  display: block;
+}
+
+.menu {
+  flex: 1;
+  overflow: auto;
+}
+
+.menu ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  color: #dbeefd;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.menu-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: #fff;
+}
+
+.menu-item i {
+  width: 18px;
+  text-align: center;
+}
+
 /* Show child icons if provided */
-.sub li a i { width: 16px; text-align: center; margin-right: 8px; }
-.menu li.active > .menu-item { background: rgba(255,255,255,0.08); color: #fff; }
+.sub li a i {
+  width: 16px;
+  text-align: center;
+  margin-right: 8px;
+}
 
-.has-children .chev { margin-left: auto; transition: 0.25s; }
-.rotated { transform: rotate(-180deg); }
+.menu li.active>.menu-item {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
 
-.sub { padding-left: 10px; margin-top: 6px; }
-.sub li a { padding: 7px 12px; display: block; border-radius: 5px; color: #cfe6ff; }
-.sub li.active > a { background: rgba(255,255,255,0.12); color: #fff; }
+.has-children .chev {
+  margin-left: auto;
+  transition: 0.25s;
+}
 
-.sidebar-footer { text-align: center; font-size: 12px; padding: 10px 0; color: #8fa7c5; }
+.rotated {
+  transform: rotate(-180deg);
+}
 
-.slide-enter-active,.slide-leave-active { transition: 200ms; }
-.slide-enter,.slide-leave-to { opacity: 0; transform: translateY(-6px); height: 0; }
+.sub {
+  padding-left: 10px;
+  margin-top: 6px;
+}
+
+.sub li a {
+  padding: 7px 12px;
+  display: block;
+  border-radius: 5px;
+  color: #cfe6ff;
+}
+
+.sub li.active>a {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.sidebar-footer {
+  text-align: center;
+  font-size: 12px;
+  padding: 10px 0;
+  color: #8fa7c5;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: 200ms;
+}
+
+.slide-enter,
+.slide-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+  height: 0;
+}
 </style>

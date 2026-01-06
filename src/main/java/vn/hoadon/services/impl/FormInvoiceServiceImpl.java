@@ -55,6 +55,11 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
     }
 
     @Override
+    public Page<FormInvoiceEntity> pageByUser(Long userId, Pageable pageable) {
+        return repo.findByUserId(userId, pageable);
+    }
+
+    @Override
     public Optional<FormInvoiceEntity> findById(Long id) { return repo.findById(id); }
 
     @Override
@@ -69,8 +74,8 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         }
         log.debug("FormInvoice create request: companyId={}, category={}, status={}, serial={}", e.getCompanyId(), e.getCategory(), e.getStatus(), e.getSerial());
 
-        // Validate duplicate serial for system=1 within same company & category
-        if (e.getCompanyId() != null && e.getSystem() != null && e.getSystem() == 1 && e.getCategory() != null && e.getSerial() != null && !e.getSerial().isBlank()) {
+        // Validate duplicate serial for system=1 within same company & category ONLY when active (status==1)
+        if (e.getCompanyId() != null && e.getSystem() != null && e.getSystem() == 1 && e.getCategory() != null && e.getSerial() != null && !e.getSerial().isBlank() && e.getStatus() != null && e.getStatus() == 1) {
             boolean exists = repo.existsByCompanyIdAndSystemAndCategoryAndSerial(e.getCompanyId(), 1, e.getCategory(), e.getSerial());
             if (exists) {
                 throw new IllegalArgumentException("Ký hiệu đã tồn tại");
@@ -164,12 +169,14 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         return repo.findById(id).map(ex -> {
             Integer previousStatus = ex.getStatus();
 
-            // Compute effective values to validate duplicate serials
-            Long companyId = ex.getCompanyId();
+            // Compute effective values to validate duplicate serials (respect patch values)
+            Long companyId = patch.getCompanyId() != null ? patch.getCompanyId() : ex.getCompanyId();
             Integer system = patch.getSystem() != null ? patch.getSystem() : ex.getSystem();
             Integer category = patch.getCategory() != null ? patch.getCategory() : ex.getCategory();
             String serial = patch.getSerial() != null ? patch.getSerial() : ex.getSerial();
-            if (companyId != null && system != null && system == 1 && category != null && serial != null && !serial.isBlank()) {
+            Integer status = patch.getStatus() != null ? patch.getStatus() : ex.getStatus();
+            // Enforce uniqueness only for active company templates
+            if (companyId != null && system != null && system == 1 && category != null && serial != null && !serial.isBlank() && status != null && status == 1) {
                 boolean exists = repo.existsByCompanyIdAndSystemAndCategoryAndSerialAndIdNot(companyId, 1, category, serial, ex.getId());
                 if (exists) {
                     throw new IllegalArgumentException("Ký hiệu đã tồn tại");
