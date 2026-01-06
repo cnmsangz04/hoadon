@@ -210,7 +210,7 @@ public final class InvoiceXmlBuilder {
           .append("</TTKhac>");
         sb.append("</DLHDon>");
         sb.append("<DLQRCode/>");
-        sb.append("<DSCKS><NBan/><NMua/><CQT/><CCKSKhac/></DSCKS>");
+        sb.append("<DSCKS><NBan/><NMua/><CCKSKhac/></DSCKS>");
         sb.append("</HDon>");
         return sb.toString();
     }

@@ -817,6 +817,77 @@ public class InvoiceController extends BaseController {
     private static final String SAMPLE_DIGEST_VALUE_1 = "BTWIVMXw2EXuSV7ThhJHGgSbbLcs2veOkk8oKwpgVzo=";
     private static final String SAMPLE_DIGEST_VALUE_2 = "2pqCy/KvD9b88B4AWHNgxIFA9YTWbKOd8cHudzk1XwE=";
 
+    /**
+     * Inject mock CQT (tax authority) signature into the XML at HDon/DSCKS/CQT
+     * This simulates the tax authority signing the invoice.
+     */
+    private String injectCqtSignature(String xml) {
+        if (xml == null || xml.isBlank()) return xml;
+        
+        // Extract DLHDon Id for reference
+        String id = extractDlhDonId(xml);
+        if (id == null || id.isBlank()) {
+            id = java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
+        }
+        
+        // Generate unique IDs for CQT signature
+        String cqtSigId = "Tct-" + java.util.UUID.randomUUID().toString().replace("-", "");
+        String signingTimeId = "SigningTime-" + java.util.UUID.randomUUID().toString().replace("-", "");
+        String sigPropId = "Id-" + java.util.UUID.randomUUID().toString().replace("-", "");
+        String now = java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+        
+        // Build the CQT signature XML (using the sample provided by user)
+        String cqtSignature = "<CQT>" +
+            "<Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\" Id=\"" + escapeXml(cqtSigId) + "\">" +
+            "<SignedInfo>" +
+            "<CanonicalizationMethod Algorithm=\"http://www.w3.org/TR/2001/REC-xml-c14n-20010315\"/>" +
+            "<SignatureMethod Algorithm=\"http://www.w3.org/2001/04/xmldsig-more#rsa-sha256\"/>" +
+            "<Reference URI=\"#" + escapeXml(id) + "\">" +
+            "<DigestMethod Algorithm=\"http://www.w3.org/2001/04/xmlenc#sha256\"/>" +
+            "<DigestValue>u4Hn4j2TmvMXMptS8K3iVaAP6TqH2gXvJHcFSLm8EcQ=</DigestValue>" +
+            "</Reference>" +
+            "<Reference URI=\"#" + escapeXml(signingTimeId) + "\">" +
+            "<DigestMethod Algorithm=\"http://www.w3.org/2001/04/xmlenc#sha256\"/>" +
+            "<DigestValue>0zGKKJY1nVCsJ76w5q2MmD9u4X0Xi33ue0AwGUE7zjk=</DigestValue>" +
+            "</Reference>" +
+            "<Reference URI=\"#" + escapeXml(sigPropId) + "\">" +
+            "<DigestMethod Algorithm=\"http://www.w3.org/2001/04/xmlenc#sha256\"/>" +
+            "<DigestValue>BNH0+RWN+KX2GY4cJixbmuUIzLtyp56hWAwpbYwoKpU=</DigestValue>" +
+            "</Reference>" +
+            "</SignedInfo>" +
+            "<SignatureValue>PixoQvH7EQvaFKVUsjxZCC0tCkngY8a29XkPyS7ujw48QnMimjMLGkqq5JzBmZQ4GCQ+X4QsKGlcUG08l7b8DMPK/EOe/MMIZFnoHI1VKDGr8KLKItIOkNYLJoQ1zwQtpkLNToH6lzZN5GfjHGnyoM+jO+vNDyLQdjfeN0m04e9D13jeoBby9sxMSp0g0aW8LFpEVHMBrQGXkIIGNHCDl0o1NE0gMpUjwWklCGO4+GFbzCSprEngmcrdSvg0LpWxg7nCM7WMiSAismpe0aYcn5SK1P9087d7j8GulSH8CTTPeyD6VKCCfbn/v+OLkjtZnvzK+R8DDNA23sEnp6ApWt3ieBwfWOX+70r+KPotd09EaM7kf/8bZuFWp7VaUuA/cK9o344D3OfmH4oRI3SqkofllI0Fv9fD2wR2yrNW+siP9V+wbzLcwfoBGIncWGm37weCjXR2FLF8KsAkmISSSNICDpvsN1KgsvsTalKPqSFd7gNCWES6Y/v7Dh7HgIM8</SignatureValue>" +
+            "<KeyInfo>" +
+            "<X509Data>" +
+            "<X509SubjectName>CN=CỤC THUẾ,O=BỘ TÀI CHÍNH,L=Hà Nội,C=VN</X509SubjectName>" +
+            "<X509Certificate>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</X509Certificate>" +
+            "</X509Data>" +
+            "</KeyInfo>" +
+            "<Object Id=\"" + escapeXml(signingTimeId) + "\">" +
+            "<SignatureProperties>" +
+            "<SignatureProperty Target=\"signatureProperties\">" +
+            "<SigningTime>" + escapeXml(now) + "</SigningTime>" +
+            "</SignatureProperty>" +
+            "</SignatureProperties>" +
+            "</Object>" +
+            "</Signature>" +
+            "</CQT>";
+        
+        // Try to replace existing <CQT/> or <CQT></CQT> with the new signature
+        String replaced = xml.replaceFirst("(?is)<CQT\\s*/>", java.util.regex.Matcher.quoteReplacement(cqtSignature));
+        if (!replaced.equals(xml)) return replaced;
+        
+        replaced = xml.replaceFirst("(?is)<CQT>\\s*</CQT>", java.util.regex.Matcher.quoteReplacement(cqtSignature));
+        if (!replaced.equals(xml)) return replaced;
+        
+        // If no CQT tag found, try to insert it in DSCKS before </DSCKS>
+        replaced = xml.replaceFirst("(?is)</DSCKS>", java.util.regex.Matcher.quoteReplacement(cqtSignature) + "</DSCKS>");
+        if (!replaced.equals(xml)) return replaced;
+        
+        // Last resort: insert before </HDon>
+        replaced = xml.replaceFirst("(?is)</HDon>", java.util.regex.Matcher.quoteReplacement("<DSCKS><NBan/><NMua/>" + cqtSignature + "<CCKSKhac/></DSCKS>") + "</HDon>");
+        return replaced;
+    }
+
     // Helpers mirrored from FileController for HTML/XSLT processing and PDF generation
     private boolean looksLikeInlineXslt(String content) {
         if (content == null) return false;
@@ -1362,12 +1433,15 @@ public class InvoiceController extends BaseController {
                     String code = generateCqtCode(34);
                     String xmlWithCode = insertMccqt(xml, code);
                     
-                    // Persist updated xml to signature_authorities_tax
+                    // Add CQT signature to the XML (simulated)
+                    String xmlWithCqtSignature = injectCqtSignature(xmlWithCode);
+                    
+                    // Persist updated xml with CQT signature to signature_authorities_tax
                     try {
                         SignatureAuthoritiesTaxDTO a = new SignatureAuthoritiesTaxDTO();
                         a.companyId = companyId != null ? companyId.intValue() : null;
                         a.invoiceId = inv.getId().intValue();
-                        a.xml = xmlWithCode;
+                        a.xml = xmlWithCqtSignature;
                         signatureAuthoritiesTaxService.create(a);
                     } catch (Exception e) { 
                         log.error("Persist CQT xml failed for invoice {}: {}", invoiceId, e.toString()); 
@@ -1390,7 +1464,7 @@ public class InvoiceController extends BaseController {
                     h202.setShowNotify(1);
                     h202.setStatus(1);
                     h202.setType(202);
-                    h202.setXmlData(xmlWithCode);
+                    h202.setXmlData(xmlWithCqtSignature);
                     
                     try { 
                         HistoryDto saved = historyService.save(h202);
@@ -1431,6 +1505,20 @@ public class InvoiceController extends BaseController {
                 // Message 203: always respond 204; LTBao determines acceptance
                 boolean ltBao2 = true; // true => accepted (LTBao==2)
                 if (ltBao2) {
+                    // Add CQT signature to the XML (simulated)
+                    String xmlWithCqtSignature = injectCqtSignature(xml);
+                    
+                    // Persist updated xml with CQT signature to signature_authorities_tax
+                    try {
+                        SignatureAuthoritiesTaxDTO a = new SignatureAuthoritiesTaxDTO();
+                        a.companyId = companyId != null ? companyId.intValue() : null;
+                        a.invoiceId = inv.getId().intValue();
+                        a.xml = xmlWithCqtSignature;
+                        signatureAuthoritiesTaxService.create(a);
+                    } catch (Exception e) { 
+                        log.error("Persist CQT xml with signature failed for invoice {}: {}", invoiceId, e.toString()); 
+                    }
+                    
                     inv.setStatus((short)3); // Tiếp nhận/Chấp nhận
                     inv.setUpdatedAt(java.time.LocalDateTime.now());
                     invoiceRepository.save(inv);
