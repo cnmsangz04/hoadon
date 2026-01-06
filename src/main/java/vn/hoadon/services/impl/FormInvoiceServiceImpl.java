@@ -3,6 +3,7 @@ package vn.hoadon.services.impl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.hoadon.entity.FormInvoiceEntity;
@@ -11,10 +12,12 @@ import vn.hoadon.repositories.FormInvoiceRepository;
 import vn.hoadon.repositories.InvoiceNumberRepository;
 import vn.hoadon.services.FormInvoiceService;
 
+import jakarta.persistence.criteria.Predicate;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,6 +45,40 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
     @Override
     public Page<FormInvoiceEntity> pageByCompanySystem(Long companyId, int system, Pageable pageable) {
         return repo.findByCompanyIdAndSystem(companyId, system, pageable);
+    }
+
+    @Override
+    public Page<FormInvoiceEntity> pageByCompanySystemWithFilters(Long companyId, Integer system, String q, Integer category, Integer type, Integer status, Pageable pageable) {
+        Specification<FormInvoiceEntity> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            if (companyId != null) {
+                predicates.add(cb.equal(root.get("companyId"), companyId));
+            }
+            if (system != null) {
+                predicates.add(cb.equal(root.get("system"), system));
+            }
+            if (category != null) {
+                predicates.add(cb.equal(root.get("category"), category));
+            }
+            if (type != null) {
+                predicates.add(cb.equal(root.get("type"), type));
+            }
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+            if (q != null && !q.isBlank()) {
+                String kw = "%" + q.toLowerCase() + "%";
+                Predicate namePred = cb.like(cb.lower(root.get("name")), kw);
+                Predicate serialPred = cb.like(cb.lower(root.get("serial")), kw);
+                Predicate formCodePred = cb.like(cb.lower(root.get("formCode")), kw);
+                predicates.add(cb.or(namePred, serialPred, formCodePred));
+            }
+            
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        
+        return repo.findAll(spec, pageable);
     }
 
     @Override
