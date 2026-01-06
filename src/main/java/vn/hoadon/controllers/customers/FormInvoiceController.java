@@ -81,36 +81,15 @@ public class FormInvoiceController extends BaseController {
             return empty(page, size);
         }
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "updatedAt"));
-        Page<FormInvoiceEntity> p = service.pageByCompanySystem(companyId, 1, pageable);
+        
+        // Use new service method that filters at database level
+        Page<FormInvoiceEntity> p = service.pageByCompanySystemWithFilters(companyId, 1, q, category, type, status, pageable);
 
-        List<FormInvoiceEntity> filtered = p.getContent();
-        if (q != null && !q.isBlank()) {
-            String kw = q.toLowerCase();
-            filtered = filtered.stream().filter(it -> {
-                String name = it.getName() != null ? it.getName().toLowerCase() : "";
-                String combinedSerial = ((it.getFormCode() != null ? it.getFormCode() : "") + (it.getSerial() != null ? it.getSerial() : "")).toLowerCase();
-                return name.contains(kw) || combinedSerial.contains(kw);
-            }).toList();
-        }
-        if (category != null) {
-            filtered = filtered.stream().filter(it -> Objects.equals(category, it.getCategory())).toList();
-        }
-        if (type != null) {
-            filtered = filtered.stream().filter(it -> Objects.equals(type, it.getType())).toList();
-        }
-        if (status != null) {
-            filtered = filtered.stream().filter(it -> Objects.equals(status, it.getStatus())).toList();
-        }
-
-        // Explicitly sort by id desc (nulls last) after filtering
-        filtered = filtered.stream()
-                .sorted(Comparator.comparing(FormInvoiceEntity::getId,
-                        Comparator.nullsLast(Comparator.naturalOrder())).reversed())
-                .toList();
+        List<FormInvoiceEntity> items = p.getContent();
 
         // Resolve usernames for displayed items
         Set<Long> uidSet = new HashSet<>();
-        for (FormInvoiceEntity it : filtered) {
+        for (FormInvoiceEntity it : items) {
             if (it.getUserId() != null) uidSet.add(it.getUserId());
         }
         Map<Long, String> usernameMap = new HashMap<>();
@@ -123,9 +102,9 @@ public class FormInvoiceController extends BaseController {
             }
         }
 
-        List<FormInvoiceListItemDto> items = mapToDto(filtered, usernameMap);
+        List<FormInvoiceListItemDto> dtoItems = mapToDto(items, usernameMap);
         Map<String, Object> res = new HashMap<>();
-        res.put("items", items);
+        res.put("items", dtoItems);
         res.put("total", p.getTotalElements());
         res.put("per_page", p.getSize());
         res.put("current_page", p.getNumber() + 1);

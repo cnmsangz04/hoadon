@@ -105,12 +105,19 @@ public class MemberController extends BaseController {
 
     @PostMapping("/saveOrUpdate")
     public UserEntity saveOrUpdate(@RequestBody MemberUpsertRequest incoming) {
-        // Always derive companyId from current user; client shouldn't send company_id
         UserEntity actor = currentUser();
-        Long companyId = actor != null ? actor.getCompanyId() : null;
-        if (companyId != null) {
-            incoming.setCompanyId(companyId);
+        Integer actorRole = actor != null ? actor.getRole() : null;
+        boolean isRoot = actorRole != null && actorRole == 0;
+        
+        // Only override companyId for non-root users
+        // Root users (role=0) can manage users from any company
+        if (!isRoot) {
+            Long companyId = actor != null ? actor.getCompanyId() : null;
+            if (companyId != null) {
+                incoming.setCompanyId(companyId);
+            }
         }
+        
         return service.saveOrUpdate(incoming);
     }
 
