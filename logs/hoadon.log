@@ -25876,3 +25876,26 @@ This generated password is for development use only. Your security configuration
 2026-01-06T12:23:50.303+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : User found: id=21, username=cp-21, status=1
 2026-01-06T12:23:50.303+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-21: [ROLE_ADMIN]
 2026-01-06T12:23:50.303+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-10] v.h.security.JwtAuthenticationFilter     : User cp-21 authenticated successfully
+2026-01-06T12:23:55.300+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/history/notifications, Method: GET, Authorization Header Present: true
+2026-01-06T12:23:55.301+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yMSIsInVzZXJJZCI6MjEsInJvbGUiOjEsImNvbXBhbnlJZCI6NSwiaWF0IjoxNzY3NjcxMjQ0LCJleHAiOjE3Njc2ODU2NDR9.8BtO-u9M65wfhy2bH-SrKZnaB1q7gSlh5YmZSgcukBU
+2026-01-06T12:23:55.301+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-21
+2026-01-06T12:23:55.303+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : User found: id=21, username=cp-21, status=1
+2026-01-06T12:23:55.303+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-21: [ROLE_ADMIN]
+2026-01-06T12:23:55.303+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-7] v.h.security.JwtAuthenticationFilter     : User cp-21 authenticated successfully
+2026-01-06T12:24:00.300+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/history/notifications, Method: GET, Authorization Header Present: true
+2026-01-06T12:24:00.300+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yMSIsInVzZXJJZCI6MjEsInJvbGUiOjEsImNvbXBhbnlJZCI6NSwiaWF0IjoxNzY3NjcxMjQ0LCJleHAiOjE3Njc2ODU2NDR9.8BtO-u9M65wfhy2bH-SrKZnaB1q7gSlh5YmZSgcukBU
+2026-01-06T12:24:00.301+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-21
+2026-01-06T12:24:00.304+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : User found: id=21, username=cp-21, status=1
+2026-01-06T12:24:00.304+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-21: [ROLE_ADMIN]
+2026-01-06T12:24:00.304+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-5] v.h.security.JwtAuthenticationFilter     : User cp-21 authenticated successfully
+2026-01-06T12:24:05.300+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Request URI: /v1/history/notifications, Method: GET, Authorization Header Present: true
+2026-01-06T12:24:05.301+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Extracted JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjcC0yMSIsInVzZXJJZCI6MjEsInJvbGUiOjEsImNvbXBhbnlJZCI6NSwiaWF0IjoxNzY3NjcxMjQ0LCJleHAiOjE3Njc2ODU2NDR9.8BtO-u9M65wfhy2bH-SrKZnaB1q7gSlh5YmZSgcukBU
+2026-01-06T12:24:05.301+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Decoded username from JWT: cp-21
+2026-01-06T12:24:05.303+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : User found: id=21, username=cp-21, status=1
+2026-01-06T12:24:05.303+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : Mapped authorities for user cp-21: [ROLE_ADMIN]
+2026-01-06T12:24:05.303+07:00 DEBUG 19821 --- [hoadon] [http-nio-8081-exec-4] v.h.security.JwtAuthenticationFilter     : User cp-21 authenticated successfully
+2026-01-06T12:24:09.273+07:00  INFO 19821 --- [hoadon] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-01-06T12:24:09.275+07:00  INFO 19821 --- [hoadon] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-01-06T12:24:09.280+07:00  INFO 19821 --- [hoadon] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-01-06T12:24:09.281+07:00  INFO 19821 --- [hoadon] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-38 - Shutdown initiated...
+2026-01-06T12:24:09.282+07:00  INFO 19821 --- [hoadon] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-38 - Shutdown completed.
