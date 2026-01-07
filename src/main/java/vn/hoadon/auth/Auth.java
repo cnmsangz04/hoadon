@@ -35,12 +35,9 @@ public class Auth {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest req) {
 
-        // Prefer email for lookup; fallback to username for backward compatibility
+        // Login with username only
         Optional<UserEntity> uOpt = Optional.empty();
-        if (req.getEmail() != null && !req.getEmail().isBlank()) {
-            uOpt = userService.findByEmail(req.getEmail().trim());
-        }
-        if (uOpt.isEmpty() && req.getUsername() != null && !req.getUsername().isBlank()) {
+        if (req.getUsername() != null && !req.getUsername().isBlank()) {
             uOpt = userService.findByUsername(req.getUsername().trim());
         }
         if (uOpt.isEmpty())
@@ -61,11 +58,9 @@ public class Auth {
     @PostMapping("/login-admin")
     public ResponseEntity<?> loginAdmin(@RequestBody AuthRequest req) {
 
+        // Login with username only
         Optional<UserEntity> uOpt = Optional.empty();
-        if (req.getEmail() != null && !req.getEmail().isBlank()) {
-            uOpt = userService.findByEmail(req.getEmail().trim());
-        }
-        if (uOpt.isEmpty() && req.getUsername() != null && !req.getUsername().isBlank()) {
+        if (req.getUsername() != null && !req.getUsername().isBlank()) {
             uOpt = userService.findByUsername(req.getUsername().trim());
         }
         if (uOpt.isEmpty())

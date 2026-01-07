@@ -19,10 +19,10 @@
           </div>
 
           <b-form @submit.prevent="onSubmit">
-            <b-form-group label="Email hoặc Tài khoản">
+            <b-form-group label="Tài khoản">
               <div class="input-with-icon">
                 <i class="bi bi-person"></i>
-                <b-form-input v-model.trim="account" type="text" required placeholder="Nhập email hoặc tài khoản"></b-form-input>
+                <b-form-input v-model.trim="username" type="text" required placeholder="Nhập tài khoản"></b-form-input>
               </div>
             </b-form-group>
 
@@ -50,7 +50,7 @@
 
             <b-button type="submit" block variant="primary"
               class="submit-btn"
-              :disabled="loading || !account || !password">
+              :disabled="loading || !username || !password">
               <span v-if="loading"><b-spinner small class="me-2"/>Đang đăng nhập...</span>
               <span v-else>Đăng nhập</span>
             </b-button>
@@ -73,7 +73,7 @@ import { parseJwt } from "@/utils/jwt";
 export default {
   data() {
     return {
-      account: "",
+      username: "",
       password: "",
       showPassword: false,
       remember: true,
@@ -83,18 +83,18 @@ export default {
   },
   methods: {
     async onSubmit() {
-      if (!this.account || !this.password) return;
+      if (!this.username || !this.password) return;
       this.loading = true; this.error = "";
 
       try {
-        // Allow login with email or username by sending both
-        const payload = { email: this.account, username: this.account, password: this.password };
+        // Login with username only
+        const payload = { username: this.username, password: this.password };
         const res = await axios.post("/auth/login", payload, { meta: { suppressGlobalErrorToast: true } });
         const token = res.data?.token || res.data?.accessToken || res.data?.data?.token;
         if (!token) throw new Error("Không tìm thấy token!");
         localStorage.setItem("token", token);
         parseJwt(token);
-        if (this.remember) localStorage.setItem("last-account", this.account);
+        if (this.remember) localStorage.setItem("last-account", this.username);
         // Fetch app info immediately after login to populate header/sidebar
         try {
           const infoRes = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
