@@ -1,23 +1,34 @@
 <template>
     <div class="container-fluid py-3 form-invoices-admin">
+        <!-- Title + actions -->
         <div class="d-flex align-items-center justify-content-between mb-3">
-            <h4 class="mb-0 font-weight-bold">Mẫu hóa đơn (Hệ thống)</h4>
+            <h4 class="mb-0 font-weight-bold">Mẫu hóa đơn</h4>
             <div>
                 <b-button size="sm" variant="outline-primary" class="mr-2" @click="reload">
                     <i class="fas fa-sync-alt"></i>
                     Làm mới
                 </b-button>
                 <b-button size="sm" variant="success" @click="goCreate">
-                    <i class="fas fa-file-alt"></i>
+                    <i class="fas fa-plus"></i>
                     Tạo mẫu
                 </b-button>
             </div>
         </div>
 
+        <!-- Filters Row -->
         <b-card class="mb-3 shadow-sm">
             <b-row>
                 <b-col md="4" class="mb-2">
-                    <b-form-input v-model.trim="filters.q" placeholder="Tìm theo tên" @keyup.enter="applyFilters" />
+                    <b-input-group>
+                        <b-input-group-prepend is-text>
+                            <i class="fas fa-search text-muted"></i>
+                        </b-input-group-prepend>
+                        <b-form-input
+                            v-model.trim="filters.q"
+                            placeholder="Tìm theo tên mẫu"
+                            @keyup.enter="applyFilters"
+                        />
+                    </b-input-group>
                 </b-col>
                 <b-col md="3" class="mb-2">
                     <b-form-select v-model="filters.category" :options="categoryOptions">
@@ -33,23 +44,12 @@
                         </template>
                     </b-form-select>
                 </b-col>
-                <b-col md="2" class="mb-2 text-right">
-                    <b-button size="sm" variant="primary" @click="applyFilters">Tìm</b-button>
+                <b-col md="2" class="text-right mb-2">
+                    <b-button size="sm" variant="primary" @click="applyFilters">Tìm kiếm</b-button>
                 </b-col>
             </b-row>
-            <b-row class="mb-2">
-                <b-col md="4">
-                    <v-select v-model="filters.companyId" :options="companyOptions" label="label" :reduce="c => c.value"
-                        placeholder="Tất cả công ty" />
-                </b-col>
-                <b-col md="4">
-                    <b-form-select v-model="filters.system" :options="systemOptions">
-                        <template #first>
-                            <b-form-select-option :value="null">Tất cả loại mẫu</b-form-select-option>
-                        </template>
-                    </b-form-select>
-                </b-col>
-                <b-col md="4">
+            <b-row>
+                <b-col md="6">
                     <b-form-select v-model="filters.status" :options="statusOptions">
                         <template #first>
                             <b-form-select-option :value="null">Tất cả trạng thái</b-form-select-option>
@@ -59,77 +59,100 @@
             </b-row>
         </b-card>
 
+        <!-- Table -->
         <b-card class="shadow-sm">
-            <b-table bordered hover responsive small :items="items" :fields="fields" :busy="isBusy"
-                empty-text="Không có dữ liệu">
+            <b-table
+                bordered
+                hover
+                responsive
+                small
+                show-empty
+                :items="items"
+                :fields="fields"
+                :busy="isBusy"
+                empty-text="Không có dữ liệu"
+                class="mb-0 table-modern table-compact"
+            >
+                <!-- STT -->
+                <template #cell(id)="{ index }">
+                    {{ (page - 1) * size + index + 1 }}
+                </template>
+
+                <template #cell(name)="{ item }">
+                    <div class="font-weight-bold">{{ item.name }}</div>
+                    <div class="text-muted small" v-if="item.serial">Ký hiệu: <code>{{ item.serial }}</code></div>
+                </template>
+
                 <template #cell(photo)="{ item }">
-                    <img v-if="item.photo" :src="item.photo" style="height:36px;" />
+                    <img v-if="item.photo" :src="item.photo" style="height:36px; border-radius: 4px;" alt="Preview" />
+                    <span v-else class="text-muted">—</span>
                 </template>
-                <template #cell(company)="{ item }">
-                    <div>{{ item.companyName || '—' }}</div>
-                </template>
-                <template #cell(serial)="{ item }">
-                    <code>{{ item.serial || '—' }}</code>
-                </template>
+
                 <template #cell(category)="{ item }">
-                    <div>{{ getCategoryText(item.category) }}</div>
+                    <b-badge :variant="item.category === 1 ? 'primary' : 'info'">
+                        {{ getCategoryText(item.category) }}
+                    </b-badge>
                 </template>
+
                 <template #cell(type)="{ item }">
                     <div>{{ getTypeText(item.type) }}</div>
                 </template>
-                <template #cell(system)="{ item }">
-                    <b-badge :variant="item.system === 0 ? 'info' : 'secondary'">{{ item.system === 0 ? 'Template' :
-                        'Thường' }}</b-badge>
-                </template>
+
                 <template #cell(status)="{ item }">
-                    <b-badge :variant="item.status === 1 ? 'success' : 'secondary'">{{ item.status === 1 ? 'Kích hoạt' :
-                        'Chưa kích hoạt' }}</b-badge>
+                    <b-badge :variant="item.status === 1 ? 'success' : 'secondary'">
+                        {{ item.status === 1 ? 'Kích hoạt' : 'Chưa kích hoạt' }}
+                    </b-badge>
                 </template>
+
                 <template #cell(option)="{ item }">
-                    <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret
-                        boundary="window">
+                    <b-dropdown
+                        size="sm"
+                        right
+                        variant="link"
+                        toggle-class="text-decoration-none"
+                        no-caret
+                        boundary="window"
+                    >
                         <template #button-content>
                             <i class="fas fa-ellipsis-h"></i>
                         </template>
-                        <b-dropdown-item class="text-center" href="#" @click.prevent="edit(item)">Cập
-                            nhật</b-dropdown-item>
-                        <b-dropdown-item class="text-center" href="#"
-                            @click.prevent="preview(item)">Xem</b-dropdown-item>
-                        <b-dropdown-item class="text-center text-success" href="#"
-                            @click.prevent="setStatus(item.id, 1)">Kích
-                            hoạt</b-dropdown-item>
-                        <b-dropdown-item class="text-center text-warning" href="#"
-                            @click.prevent="setStatus(item.id, 0)">Tạm
-                            ngưng</b-dropdown-item>
-                        <b-dropdown-item class="text-center text-danger" href="#"
-                            @click.prevent="onDelete(item)">Xóa</b-dropdown-item>
+                        <b-dropdown-item class="text-center" href="#" @click.prevent="edit(item)">
+                            Cập nhật
+                        </b-dropdown-item>
+                        <b-dropdown-item class="text-center" href="#" @click.prevent="preview(item)">
+                            Xem
+                        </b-dropdown-item>
+                        <b-dropdown-item class="text-center text-success" href="#" @click.prevent="setStatus(item.id, 1)">
+                            Kích hoạt
+                        </b-dropdown-item>
+                        <b-dropdown-item class="text-center text-warning" href="#" @click.prevent="setStatus(item.id, 0)">
+                            Tạm ngưng
+                        </b-dropdown-item>
+                        <b-dropdown-item class="text-center text-danger" href="#" @click.prevent="onDelete(item)">
+                            Xóa
+                        </b-dropdown-item>
                     </b-dropdown>
                 </template>
             </b-table>
 
-            <b-row class="mt-2">
-                <b-col cols="6">
-                    <div class="pt-1 text-muted">
-                        Tổng: <b>{{ total }}</b>
-                    </div>
-                </b-col>
-                <b-col cols="6">
-                    <b-pagination align="right" v-model.number="page" :per-page="size" :total-rows="total"
-                        @input="fetch" />
-                </b-col>
-            </b-row>
+            <b-pagination
+                v-if="total > size"
+                v-model="page"
+                :per-page="size"
+                :total-rows="total"
+                align="right"
+                class="mt-2"
+                @change="fetch"
+            />
         </b-card>
     </div>
 </template>
 
 <script>
 import axios from '@/plugins/axios'
-import vSelect from 'vue-select'
-import 'vue-select/dist/vue-select.css'
 
 export default {
     name: 'AdminFormInvoiceList',
-    components: { vSelect },
     data() {
         return {
             isBusy: false,
@@ -137,18 +160,15 @@ export default {
             page: 1,
             size: 10,
             total: 0,
-            filters: { q: '', companyId: null, category: null, type: null, system: null, status: null },
+            filters: { q: '', category: null, type: null, status: null },
             fields: [
-                { key: 'id', label: '#', thStyle: { width: '60px' } },
-                { key: 'company', label: 'Công ty' },
+                { key: 'id', label: 'STT', thStyle: { width: '60px' } },
                 { key: 'name', label: 'Tên mẫu' },
-                { key: 'serial', label: 'Ký hiệu' },
-                { key: 'category', label: 'Loại' },
-                { key: 'type', label: 'Thuế suất' },
-                { key: 'photo', label: 'Ảnh' },
-                { key: 'system', label: 'Loại mẫu' },
-                { key: 'status', label: 'Trạng thái' },
-                { key: 'option', label: 'Chức năng', thStyle: { width: '220px' } }
+                { key: 'category', label: 'Loại hóa đơn', thStyle: { width: '150px' } },
+                { key: 'type', label: 'Loại thuế suất', thStyle: { width: '160px' } },
+                { key: 'photo', label: 'Ảnh', thStyle: { width: '100px' } },
+                { key: 'status', label: 'Trạng thái', thStyle: { width: '120px' } },
+                { key: 'option', label: 'Chức năng', thStyle: { width: '100px' } }
             ],
             categoryOptions: [
                 { value: 1, text: 'Hóa đơn giá trị gia tăng' },
@@ -158,48 +178,25 @@ export default {
                 { value: 1, text: 'Một thuế suất' },
                 { value: 2, text: 'Nhiều thuế suất' }
             ],
-            companyOptions: [],
-            companyNameById: {},
-            systemOptions: [
-                { value: 0, text: 'Template' },
-                { value: 1, text: 'Thường' }
-            ],
             statusOptions: [
                 { value: 1, text: 'Kích hoạt' },
                 { value: 0, text: 'Chưa kích hoạt' }
             ]
         }
     },
-    async mounted() { await this.loadCompanies(); this.fetch() },
+    mounted() { this.fetch() },
     methods: {
-        async loadCompanies() {
-            try {
-                const res = await axios.post('/administrator/company/list', {}, { params: { page: 0, size: 5000 } })
-                const list = res.data?.content || []
-                const map = {}
-                this.companyOptions = list.map(c => {
-                    const id = Number(c.id)
-                    const name = c.name || c.companyName || c.domain || `#${id}`
-                    map[id] = name
-                    return { value: id, label: name }
-                })
-                this.companyNameById = map
-            } catch (e) {
-                this.companyOptions = []
-                this.companyNameById = {}
-            }
-        },
         reload() { this.fetch() },
         async fetch() {
             this.isBusy = true
             try {
-                const body = { q: this.filters.q || undefined, companyId: this.filters.companyId, category: this.filters.category, type: this.filters.type, status: this.filters.status, system: this.filters.system }
+                const body = { q: this.filters.q || undefined, category: this.filters.category, type: this.filters.type, status: this.filters.status }
                 const { data } = await axios.post('/administrator/form-invoices/list', body, { params: { page: Math.max(0, this.page - 1), size: this.size } })
                 this.items = (data.items || []).map(it => ({
                     id: it.id,
                     name: it.name,
                     companyId: it.companyId || it.company_id || null,
-                    companyName: it.companyName || this.companyNameById[(it.companyId || it.company_id) || 0] || '',
+                    companyName: it.companyName || '',
                     serial: (it.formCode || '') + (it.serial || ''),
                     category: it.category,
                     type: it.type,
@@ -253,7 +250,111 @@ export default {
 </script>
 
 <style scoped>
+/* Card Styling */
 .form-invoices-admin .card.shadow-sm {
     border-radius: 10px;
+}
+
+.form-invoices-admin .card {
+    border: 1px solid #e9ecef;
+}
+
+/* Table Hover */
+.form-invoices-admin .table-hover tbody tr:hover {
+    background-color: #fafbfd;
+}
+
+/* Buttons */
+.form-invoices-admin .btn-outline-primary {
+    border-color: #dfe7ff;
+}
+
+.form-invoices-admin .btn-outline-primary:hover {
+    background: #eef3ff;
+}
+
+/* Table Header */
+.form-invoices-admin .table thead th {
+    background: #f7f9fc;
+    border-bottom: 1px solid #ecf0f6;
+    color: #4a5568;
+    font-weight: 700;
+}
+
+/* Modern Table Styles */
+.table-modern thead th {
+    background-color: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.table-compact td,
+.table-compact th {
+    padding: 0.5rem 0.75rem;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.table-modern tbody tr:hover {
+    background-color: #f6f8fa;
+}
+
+.table-modern.table-striped tbody tr:nth-of-type(odd) {
+    background-color: #fcfdff;
+}
+
+.table-modern {
+    border-color: #e9ecef;
+}
+
+/* Badge Styling */
+.badge {
+    font-size: 13px;
+    padding: 0.35em 0.65em;
+}
+
+/* Text Utilities */
+.text-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Card Body */
+.card-body {
+    padding: 0.75rem 1rem;
+}
+
+/* Input Group */
+.input-group-text {
+    background-color: #f8f9fa;
+    border-right: none;
+}
+
+.input-group .form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.input-group .form-control {
+    border-left: none;
+}
+
+/* Dropdown Items */
+.dropdown-item {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+.dropdown-item i {
+    width: 20px;
+    text-align: center;
+}
+
+/* Image Styling */
+img {
+    object-fit: cover;
 }
 </style>

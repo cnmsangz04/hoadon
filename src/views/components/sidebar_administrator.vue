@@ -68,11 +68,11 @@ export default {
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
         { title: 'Công ty', icon: 'fas fa-building', to: '/administrator/company/list' },
         { title: 'Mua hóa đơn', icon: 'fas fa-file-invoice-dollar', to: '/administrator/buy-invoice/list' },
+        { title: 'Mẫu hóa đơn', icon: 'fas fa-file-contract', to: '/administrator/form-invoice/list' },
         { title: 'Ngân hàng', icon: 'fas fa-piggy-bank', to: '/administrator/bank/list' },
         { title: 'Cơ quan thuế', icon: 'fas fa-landmark', to: '/administrator/tax-authority/list' },
         { title: 'Thuế suất', icon: 'fas fa-percent', to: '/administrator/vat-rate/list' },
         { title: 'Email template', icon: 'fas fa-envelope', to: '/administrator/email-template/list' },
-        { title: 'Mẫu hóa đơn', icon: 'fas fa-file-contract', to: '/administrator/form-invoice/list' },
         {
           title: 'Phân quyền',
           icon: 'fas fa-user-shield',

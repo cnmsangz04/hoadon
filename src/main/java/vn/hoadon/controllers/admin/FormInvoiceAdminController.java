@@ -42,57 +42,37 @@ public ResponseEntity<?> list(@RequestBody Map<String, Object> body,
                               @RequestParam(defaultValue = "10") int size) {
     permission("form-invoice-manage");
 
-    // 1. Lấy dữ liệu an toàn từ Body
-    Integer companyId = getInt(body, "companyId");
-    Long userId = getLong(body, "userId");
-
-    if (userId == null) {
-        try {
-            var cu = currentUser();
-            if (cu != null) userId = cu.getId();
-        } catch (Exception ignore) {}
-    }
-
-    // 2. Gom dữ liệu (Sử dụng Set để tự động deduplicate ngay từ đầu nếu cần)
-    java.util.List<FormInvoiceEntity> combined = new java.util.ArrayList<>();
+    // CHỈ HIỂN THỊ system = 0 (mẫu hệ thống)
     Pageable limit1000 = PageRequest.of(0, 1000, Sort.by(Sort.Direction.DESC, "updatedAt"));
+    java.util.List<FormInvoiceEntity> combined = new java.util.ArrayList<>(
+        service.pageBySystem(0, limit1000).getContent()
+    );
 
-    if (companyId != null) {
-        combined.addAll(service.pageByCompanySystem(companyId.longValue(), 1, limit1000).getContent());
-    } else {
-        combined.addAll(service.pageBySystem(0, limit1000).getContent());
-    }
-    
-    if (userId != null) {
-        combined.addAll(service.pageByUser(userId, limit1000).getContent());
-    }
-
-    // 3. Deduplicate và chuyển thành danh sách có thể chỉnh sửa (ArrayList)
+    // Deduplicate
     java.util.Map<Long, FormInvoiceEntity> map = new java.util.LinkedHashMap<>();
     for (FormInvoiceEntity it : combined) {
         if (it != null && it.getId() != null) map.put(it.getId(), it);
     }
     
-    // Quan trọng: Sử dụng ArrayList để có thể Sort và Filter
     java.util.List<FormInvoiceEntity> filtered = new java.util.ArrayList<>(map.values());
 
-    // 4. Lọc dữ liệu (Sử dụng stream và thu thập vào list mới)
+    // Lọc dữ liệu theo các tham số
     String q = body.getOrDefault("q", "").toString().toLowerCase();
     Integer category = getInt(body, "category");
     Integer type = getInt(body, "type");
     Integer status = getInt(body, "status");
-    Integer system = getInt(body, "system");
 
     filtered = filtered.stream().filter(it -> {
+        // Luôn lọc chỉ system = 0
+        if (!java.util.Objects.equals(it.getSystem(), 0)) return false;
         if (StringUtils.hasText(q) && (it.getName() == null || !it.getName().toLowerCase().contains(q))) return false;
         if (category != null && !java.util.Objects.equals(it.getCategory(), category)) return false;
         if (type != null && !java.util.Objects.equals(it.getType(), type)) return false;
         if (status != null && !java.util.Objects.equals(it.getStatus(), status)) return false;
-        if (system != null && !java.util.Objects.equals(it.getSystem(), system)) return false;
         return true;
-    }).collect(java.util.stream.Collectors.toList()); // Dùng collect thay vì .toList() để an toàn
+    }).collect(java.util.stream.Collectors.toList());
 
-    // 5. Sắp xếp (Lúc này filtered là ArrayList nên sort thoải mái)
+    // Sắp xếp
     filtered.sort((a, b) -> {
         java.time.LocalDateTime aa = a.getUpdatedAt();
         java.time.LocalDateTime bb = b.getUpdatedAt();
@@ -102,7 +82,7 @@ public ResponseEntity<?> list(@RequestBody Map<String, Object> body,
         return bb.compareTo(aa);
     });
 
-    // 6. Phân trang in-memory
+    // Phân trang in-memory
     int total = filtered.size();
     int from = Math.max(0, Math.min(total, page * size));
     int to = Math.min(total, from + size);
@@ -148,14 +128,12 @@ private Long getLong(Map<String, Object> body, String key) {
             @RequestParam(value = "category", required = false) Integer category,
             @RequestParam(value = "type", required = false) Integer type,
             @RequestParam(value = "status", required = false) Integer status,
-            @RequestParam(value = "serial", required = false) String serialFull,
             @RequestParam(value = "have_code", required = false) Integer haveCode,
-            @RequestParam(value = "companyId", required = false) Long companyId,
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "photo", required = false) MultipartFile photo
     ) {
         permission("form-invoice-manage");
-        log.debug("saveOrUpdate called: id={}, name={}, category={}, type={}, status={}, haveCode={}, companyId={}, serial={}", id, name, category, type, status, haveCode, companyId, serialFull);
+        log.debug("saveOrUpdate called: id={}, name={}, category={}, type={}, status={}, haveCode={}", id, name, category, type, status, haveCode);
 
         try {
             FormInvoiceEntity e;
@@ -171,30 +149,41 @@ private Long getLong(Map<String, Object> body, String key) {
                 e = opt.get();
             }
 
-            // Apply company/system assignment: if companyId provided, this is a company template (system=1)
-            e.setCompanyId(companyId);
-            e.setSystem(companyId != null ? 1 : 0);
-
             if (!StringUtils.hasText(name)) return ResponseEntity.badRequest().body(Map.of("message", "Name required"));
             e.setName(name);
-            e.setCategory(category);
-            e.setType(type);
+            e.setCategory(category != null ? category : 1); // mặc định VAT
+            e.setType(type != null ? type : 1);           // mặc định một thuế suất
             e.setStatus(status != null ? status : 0);
-            e.setHaveCode(haveCode != null ? haveCode : 0);
+            e.setHaveCode(haveCode != null ? haveCode : 1); // mặc định: Có mã
 
-            // Parse serial into formCode and serial remainder if provided
-            if (serialFull != null && !serialFull.isBlank()) {
-                String s = serialFull.trim();
-                if (s.length() >= 2) {
-                    e.setFormCode(s.substring(0, 1));
-                    e.setSerial(s.substring(1));
-                } else {
-                    return ResponseEntity.badRequest().body(Map.of("message", "Invalid serial"));
+            // Tự detect company_id từ user hiện tại, fallback = 1
+            Long detectedCompanyId = 1L;
+            try {
+                var cu = currentUser();
+                if (cu != null) {
+                    try {
+                        java.lang.reflect.Method m = cu.getClass().getMethod("getCompanyId");
+                        Object v = m.invoke(cu);
+                        if (v instanceof Number) {
+                            detectedCompanyId = ((Number) v).longValue();
+                        }
+                    } catch (Exception ignore) {
+                        // keep default 1L
+                    }
                 }
+            } catch (Exception ignore) {
+                // keep default 1L
             }
+            
+            e.setCompanyId(detectedCompanyId);
+            e.setSystem(0); // luôn là mẫu hệ thống
+            
+            // LUÔN set mặc định form_code & serial (BẮT BUỘC để tránh NULL)
+            e.setFormCode("X");
+            e.setSerial("XXXXXX");
 
-            // Resolve upload company id (use 0 for global/system templates)
-            Long uploadCompanyId = (e.getCompanyId() != null) ? e.getCompanyId() : 0L;
+            // Resolve upload company id theo company_id đã detect
+            Long uploadCompanyId = detectedCompanyId;
 
             // Handle uploaded files: store under uploads/<companyId>/template and uploads/<companyId>/photo
             if (file != null && !file.isEmpty()) {

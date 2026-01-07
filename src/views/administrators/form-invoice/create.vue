@@ -1,155 +1,220 @@
 <template>
-    <div class="container-fluid py-3 form-invoice-form">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-            <h4 class="mb-0 font-weight-bold">{{ isEdit ? 'Cập nhật mẫu hệ thống' : 'Tạo mẫu hệ thống' }}</h4>
-            <div>
-                <b-button size="sm" variant="outline-primary" class="mr-2" @click="reload">Làm mới</b-button>
+    <div class="container-fluid form-invoice-create-classic">
+
+        <!-- Classic Card with Header -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h4 class="card-title mb-0">
+                    <i class="fa fa-file-text-o"></i> Thông tin mẫu hóa đơn
+                </h4>
             </div>
-        </div>
+            <div class="card-body">
+                <b-form @submit.prevent="onSubmit">
+                    <!-- Tên mẫu -->
+                    <div class="form-group row">
+                        <label class="col-md-3 col-form-label">
+                            Tên mẫu <span class="text-danger">*</span>
+                        </label>
+                        <div class="col-md-9">
+                            <b-form-input 
+                                v-model="form.name" 
+                                required 
+                                placeholder="Nhập tên mẫu hóa đơn"
+                            />
+                        </div>
+                    </div>
 
-        <b-card class="shadow-sm">
-            <b-form @submit.prevent="onSubmit">
-                <b-row>
-                    <b-col md="6">
-                        <b-form-group label="Tên mẫu">
-                            <b-form-input v-model.trim="form.name" required />
-                        </b-form-group>
-                    </b-col>
+                    <!-- Loại hóa đơn & Thuế suất -->
+                    <div class="form-group row">
+                        <label class="col-md-3 col-form-label">
+                            Loại hóa đơn <span class="text-danger">*</span>
+                        </label>
+                        <div class="col-md-3">
+                            <b-form-select 
+                                v-model.number="form.category" 
+                                :options="categoryOptions" 
+                                required 
+                            />
+                        </div>
+                        <label class="col-md-2 col-form-label">
+                            Thuế suất <span class="text-danger">*</span>
+                        </label>
+                        <div class="col-md-4">
+                            <b-form-select 
+                                v-model.number="form.type" 
+                                :options="typeOptions" 
+                                required 
+                            />
+                        </div>
+                    </div>
 
-                    <b-col md="3">
-                        <b-form-group label="Loại">
-                            <b-form-select v-model.number="form.category" :options="categoryOptions" required />
-                        </b-form-group>
-                    </b-col>
+                    <!-- Hình thức & Trạng thái -->
+                    <div class="form-group row">
+                        <label class="col-md-3 col-form-label">Hình thức</label>
+                        <div class="col-md-3">
+                            <b-form-select 
+                                v-model.number="form.have_code" 
+                                :options="haveCodeOptions" 
+                            />
+                        </div>
+                        <label class="col-md-2 col-form-label">Trạng thái</label>
+                        <div class="col-md-4">
+                            <b-form-select 
+                                v-model.number="form.status" 
+                                :options="statusOptions" 
+                            />
+                        </div>
+                    </div>
 
-                    <b-col md="3">
-                        <b-form-group label="Thuế suất">
-                            <b-form-select v-model.number="form.type" :options="typeOptions" required />
-                        </b-form-group>
-                    </b-col>
-                </b-row>
+                    <hr class="my-4" />
 
-                <b-row>
-                    <b-col md="6">
-                        <b-form-group label="Công ty">
-                            <v-select v-model="form.companyId" :options="companyOptions" label="label"
-                                :reduce="c => c.value" placeholder="Chọn công ty" />
-                        </b-form-group>
-                    </b-col>
-                </b-row>
-
-                <b-row>
-                    <b-col md="4">
-                        <b-form-group label="Ký hiệu (formCode + serial)">
-                            <b-form-input v-model.trim="serialFull" placeholder="VD: CCTT" />
-                        </b-form-group>
-                    </b-col>
-                    <b-col md="4">
-                        <b-form-group label="Trạng thái">
-                            <b-form-select v-model.number="form.status" :options="statusOptions" />
-                        </b-form-group>
-                    </b-col>
-                    <b-col md="4">
-                        <b-form-group label="Have code">
-                            <b-form-select v-model.number="form.have_code" :options="haveCodeOptions" />
-                        </b-form-group>
-                    </b-col>
-                </b-row>
-
-                <b-row>
-                    <b-col md="6">
-                        <b-form-group label="Tập tin mẫu (XSLT)">
-                            <input ref="fileInput" type="file" accept=".xslt,.xml,text/xml" @change="onFileChange"
-                                class="d-none" />
-                            <div class="d-flex gap-2 align-items-center">
-                                <b-button size="sm" variant="success" @click="$refs.fileInput.click()">Chọn
-                                    file</b-button>
-                                <span class="text-muted">{{ fileName || 'Chưa chọn' }}</span>
-                                <b-button v-if="fileName" size="sm" variant="link"
-                                    @click.prevent="clearFile">Xóa</b-button>
+                    <!-- Tập tin mẫu -->
+                    <div class="form-group row">
+                        <label class="col-md-3 col-form-label">Tập tin mẫu (XSLT)</label>
+                        <div class="col-md-9">
+                            <input 
+                                ref="fileInput" 
+                                type="file" 
+                                accept=".xslt,.xml,text/xml" 
+                                @change="onFileChange" 
+                                class="d-none" 
+                            />
+                            <div class="file-upload-classic">
+                                <b-button variant="outline-success" size="sm" @click="$refs.fileInput.click()">
+                                    <i class="fa fa-file-code-o"></i> Chọn file
+                                </b-button>
+                                <span class="file-name-text ml-2">{{ fileName || 'Chưa chọn file' }}</span>
+                                <b-button 
+                                    v-if="fileName" 
+                                    variant="link" 
+                                    size="sm" 
+                                    class="text-danger ml-2" 
+                                    @click.prevent="clearFile"
+                                >
+                                    <i class="fa fa-times"></i> Xóa
+                                </b-button>
                             </div>
-                            <div class="mt-2 file-preview" v-if="filePreviewUrl || fileName">
+                            <div class="file-preview-classic mt-2" v-if="filePreviewUrl || fileName">
                                 <template v-if="filePreviewIsImage">
-                                    <img :src="filePreviewUrl" alt="Preview"
-                                        style="max-height:120px; max-width:240px; border-radius:4px; cursor:pointer;"
-                                        @click.prevent="previewFile('file')" />
+                                    <img 
+                                        :src="filePreviewUrl" 
+                                        alt="Preview" 
+                                        class="preview-img" 
+                                        @click.prevent="previewFile('file')" 
+                                    />
                                 </template>
                                 <template v-else>
-                                    <div class="d-inline-flex align-items-center border rounded p-2">
-                                        <span style="font-size:24px; margin-right:8px;">📄</span>
-                                        <div>
-                                            <div style="font-weight:600">{{ fileName }}</div>
-                                            <div>
-                                                <b-button size="sm" variant="link"
-                                                    @click.prevent="previewFile('file')">Xem</b-button>
-                                            </div>
+                                    <div class="file-info-classic">
+                                        <i class="fa fa-file-text-o fa-2x text-muted"></i>
+                                        <div class="ml-3">
+                                            <div class="filename-display">{{ fileName }}</div>
+                                            <a href="#" @click.prevent="previewFile('file')" class="text-primary small">
+                                                <i class="fa fa-eye"></i> Xem nội dung
+                                            </a>
                                         </div>
                                     </div>
                                 </template>
                             </div>
-                        </b-form-group>
-                    </b-col>
-                    <b-col md="6">
-                        <b-form-group label="Ảnh mẫu">
-                            <input ref="photoInput" type="file" accept=".png,.jpg,.jpeg" @change="onPhotoChange"
-                                class="d-none" />
-                            <div class="d-flex gap-2 align-items-center">
-                                <b-button size="sm" variant="success" @click="$refs.photoInput.click()">Chọn
-                                    ảnh</b-button>
-                                <span class="text-muted">{{ photoName || 'Chưa chọn' }}</span>
-                                <b-button v-if="photoName" size="sm" variant="link"
-                                    @click.prevent="clearPhoto">Xóa</b-button>
-                            </div>
-                            <div class="mt-2" v-if="photoPreviewUrl">
-                                <img :src="photoPreviewUrl" alt="Ảnh mẫu"
-                                    style="max-height:120px; max-width:240px; border-radius:4px; cursor:pointer;"
-                                    @click.prevent="previewFile('photo')" />
-                            </div>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
+                        </div>
+                    </div>
 
-                <div class="form-actions mt-3 d-flex justify-content-between">
-                    <b-button variant="secondary" @click="$router.back()">Quay lại</b-button>
-                    <b-button type="submit" :disabled="isSaving" variant="primary">{{ isEdit ? (isSaving ? 'Đang cập
-                        nhật...' : 'Cập
-                        nhật') : (isSaving ? 'Đang tạo...' : 'Tạo') }}</b-button>
-                </div>
-            </b-form>
-        </b-card>
+                    <!-- Ảnh mẫu -->
+                    <div class="form-group row">
+                        <label class="col-md-3 col-form-label">Ảnh mẫu</label>
+                        <div class="col-md-9">
+                            <input 
+                                ref="photoInput" 
+                                type="file" 
+                                accept=".png,.jpg,.jpeg" 
+                                @change="onPhotoChange" 
+                                class="d-none" 
+                            />
+                            <div class="file-upload-classic">
+                                <b-button variant="outline-success" size="sm" @click="$refs.photoInput.click()">
+                                    <i class="fa fa-image"></i> Chọn ảnh
+                                </b-button>
+                                <span class="file-name-text ml-2">{{ photoName || 'Chưa chọn ảnh' }}</span>
+                                <b-button 
+                                    v-if="photoName" 
+                                    variant="link" 
+                                    size="sm" 
+                                    class="text-danger ml-2" 
+                                    @click.prevent="clearPhoto"
+                                >
+                                    <i class="fa fa-times"></i> Xóa
+                                </b-button>
+                            </div>
+                            <div class="file-preview-classic mt-2" v-if="photoPreviewUrl">
+                                <img 
+                                    :src="photoPreviewUrl" 
+                                    alt="Ảnh mẫu" 
+                                    class="preview-img" 
+                                    @click.prevent="previewFile('photo')" 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <!-- Action Buttons -->
+                    <div class="form-group row mb-0">
+                        <div class="col-md-12 text-right">
+                             <b-button variant="secondary" size="sm" @click="$router.back()">
+			                    <i class="fa fa-arrow-left"></i> Quay lại
+			                </b-button>
+                            <b-button 
+                                type="submit" 
+                                :disabled="isSaving" 
+                                variant="primary" 
+                                class="ml-2"
+                                size="sm"
+                            >
+                                <i class="fa fa-save"></i> 
+                                {{ isEdit ? (isSaving ? 'Đang cập nhật...' : 'Cập nhật') : (isSaving ? 'Đang tạo...' : 'Lưu') }}
+                            </b-button>
+                        </div>
+                    </div>
+                </b-form>
+            </div>
+        </div>
 
         <!-- Preview Modal -->
-        <b-modal ref="filePreviewModal" hide-footer :title="filePreviewModalTitle || 'Xem file'" ok-only>
-            <div v-if="filePreviewModalLoading" class="text-center py-3">Đang tải...</div>
+        <b-modal ref="filePreviewModal" hide-footer :title="filePreviewModalTitle || 'Xem file'" size="lg">
+            <div v-if="filePreviewModalLoading" class="text-center py-4">
+                <i class="fa fa-spinner fa-spin fa-2x"></i>
+                <p class="mt-2">Đang tải...</p>
+            </div>
             <div v-else>
-                <div v-if="!filePreviewModalIsText">
-                    <img :src="filePreviewModalImg" alt="Preview" style="max-width:100%; display:block; margin:auto;" />
+                <div v-if="!filePreviewModalIsText" class="text-center">
+                    <img :src="filePreviewModalImg" alt="Preview" style="max-width:100%;" />
                 </div>
                 <div v-else>
-                    <pre
-                        style="white-space:pre-wrap; max-height:60vh; overflow:auto; background:#f8f9fa; padding:12px; border-radius:6px;">
-                {{ filePreviewModalContent }}</pre>
+                    <pre class="preview-code">{{ filePreviewModalContent }}</pre>
                 </div>
             </div>
         </b-modal>
-
     </div>
 </template>
 
 <script>
 import axios from '@/plugins/axios'
-import vSelect from 'vue-select'
-import 'vue-select/dist/vue-select.css'
 
 export default {
     name: 'AdminFormInvoiceCreate',
-    components: { vSelect },
     data() {
         return {
             isEdit: false,
             id: null,
-            form: { name: '', companyId: null, category: null, type: null, status: 0, have_code: 0, file: null, photo: null },
-            serialFull: '',
+            form: {
+                name: '',
+                category: 1, // mặc định: Hóa đơn GTGT
+                type: 1,     // mặc định: Một thuế suất
+                status: 0,
+                have_code: 1, // mặc định: Có mã
+                file: null,
+                photo: null
+            },
             fileInputObj: null,
             fileName: '',
             filePreviewUrl: '',
@@ -165,30 +230,33 @@ export default {
             filePreviewModalTitle: '',
             filePreviewModalIsText: false,
             filePreviewModalImg: '',
-            companyOptions: [],
-            categoryOptions: [{ value: 1, text: 'Hóa đơn giá trị gia tăng' }, { value: 2, text: 'Hóa đơn bán hàng' }],
-            typeOptions: [{ value: 1, text: 'Một thuế suất' }, { value: 2, text: 'Nhiều thuế suất' }],
-            statusOptions: [{ value: 1, text: 'Kích hoạt' }, { value: 0, text: 'Chưa kích hoạt' }],
-            haveCodeOptions: [{ value: 1, text: 'C' }, { value: 0, text: 'K' }],
+            categoryOptions: [
+                { value: 1, text: 'Hóa đơn giá trị gia tăng' },
+                { value: 2, text: 'Hóa đơn bán hàng' }
+            ],
+            typeOptions: [
+                { value: 1, text: 'Một thuế suất' },
+                { value: 2, text: 'Nhiều thuế suất' }
+            ],
+            statusOptions: [
+                { value: 1, text: 'Kích hoạt' },
+                { value: 0, text: 'Chưa kích hoạt' }
+            ],
+            haveCodeOptions: [
+                { value: 1, text: 'Có mã' },
+                { value: 0, text: 'Không mã' }
+            ],
             isSaving: false
         }
     },
     created() {
         const id = this.$route.params.id
-        this.loadCompanies()
         if (id) this.load(id)
     },
     methods: {
-        async loadCompanies() {
-            try {
-                const res = await axios.post('/administrator/company/list', {}, { params: { page: 0, size: 5000 } })
-                const list = res.data?.content || []
-                this.companyOptions = list.map(c => ({ value: Number(c.id), label: c.name || c.companyName || c.domain || `#${c.id}` }))
-            } catch (e) {
-                this.companyOptions = []
-            }
+        reload() { 
+            if (this.isEdit && this.id) this.load(this.id) 
         },
-        reload() { if (this.isEdit && this.id) this.load(this.id) },
         onFileChange(e) {
             const f = e.target.files && e.target.files[0]
             if (!f) { this.fileInputObj = null; this.fileName = ''; this.filePreviewUrl = ''; this.filePreviewIsImage = false; this.filePreviewObjectUrl = false; return }
@@ -228,19 +296,23 @@ export default {
         async load(id) {
             try {
                 const { data } = await axios.get(`/administrator/form-invoices/${id}`)
-                this.isEdit = true; this.id = id
-                this.form = { ...this.form, name: data.name, companyId: data.companyId || data.company_id || null, category: data.category, type: data.type, status: data.status, have_code: data.haveCode || data.have_code }
-                this.serialFull = `${data.formCode || data.form_code || ''}${data.serial || ''}`
-                // Use only basename for display titles (don't show full path)
+                this.isEdit = true
+                this.id = id
+                this.form = {
+                    ...this.form,
+                    name: data.name,
+                    category: data.category != null ? data.category : 1,
+                    type: data.type != null ? data.type : 1,
+                    status: data.status != null ? data.status : 0,
+                    have_code: data.haveCode != null ? data.haveCode : (data.have_code != null ? data.have_code : 1)
+                }
                 this.fileName = data.file ? (data.file.split('/').pop() || data.file) : ''
                 this.photoName = data.photo ? (data.photo.split('/').pop() || data.photo) : ''
-                // set preview urls from existing stored paths
                 if (data.photo) {
                     this.photoPreviewUrl = data.photo
                     this.photoPreviewObjectUrl = false
                 }
                 if (data.file) {
-                    // if file is image (unlikely), show preview; otherwise leave icon with URL so user can open
                     const lower = (data.file || '').toLowerCase()
                     if (/\.(png|jpe?g|gif|webp)$/i.test(lower)) {
                         this.filePreviewUrl = data.file
@@ -253,7 +325,7 @@ export default {
                     }
                 }
             } catch (e) {
-                // ignore
+                console.error('Load error:', e)
             }
         },
         previewFile(source) {
@@ -347,13 +419,12 @@ export default {
             this.$refs.filePreviewModal && this.$refs.filePreviewModal.show();
         },
         async onSubmit() {
-            // Client-side validation with toast feedback
             if (!this.form.name || !this.form.name.trim()) {
-                this.$bvToast && this.$bvToast.toast('Tên mẫu là bắt buộc', { title: 'Lỗi', variant: 'danger', solid: true })
-                return
-            }
-            if (!this.serialFull || this.serialFull.trim().length < 2) {
-                this.$bvToast && this.$bvToast.toast('Ký hiệu mẫu không hợp lệ (ví dụ: CCTT)', { title: 'Lỗi', variant: 'danger', solid: true })
+                this.$bvToast && this.$bvToast.toast('Tên mẫu là bắt buộc', { 
+                    title: 'Lỗi', 
+                    variant: 'danger', 
+                    solid: true 
+                })
                 return
             }
 
@@ -367,18 +438,27 @@ export default {
             if (this.form.type != null) fd.append('type', this.form.type)
             fd.append('status', this.form.status)
             fd.append('have_code', this.form.have_code)
-            fd.append('serial', this.serialFull)
-            if (this.form.companyId != null) fd.append('companyId', this.form.companyId)
+            // không gửi companyId, serial; backend tự thiết lập
             if (this.fileInputObj) fd.append('file', this.fileInputObj)
             if (this.photoInputObj) fd.append('photo', this.photoInputObj)
 
             try {
-                const { data } = await axios.post('/administrator/form-invoices/saveOrUpdate', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-                this.$bvToast && this.$bvToast.toast('Lưu thành công', { title: 'Thành công', variant: 'success', solid: true })
+                await axios.post('/administrator/form-invoices/saveOrUpdate', fd, { 
+                    headers: { 'Content-Type': 'multipart/form-data' } 
+                })
+                this.$bvToast && this.$bvToast.toast('Lưu thành công', { 
+                    title: 'Thành công', 
+                    variant: 'success', 
+                    solid: true 
+                })
                 this.$router.push({ name: 'admin-form-invoice-list' })
             } catch (e) {
                 const msg = e?.response?.data?.message || 'Lỗi lưu mẫu'
-                this.$bvToast && this.$bvToast.toast(msg, { title: 'Lỗi', variant: 'danger', solid: true })
+                this.$bvToast && this.$bvToast.toast(msg, { 
+                    title: 'Lỗi', 
+                    variant: 'danger', 
+                    solid: true 
+                })
             } finally {
                 this.isSaving = false
             }
@@ -388,17 +468,207 @@ export default {
 </script>
 
 <style scoped>
-.form-invoice-form .card.shadow-sm {
-    border-radius: 10px;
+/* ====== Classic Page Title Box ====== */
+.form-invoice-create-classic {
+    padding: 20px 15px;
 }
 
-.file-preview img {
-    max-height: 120px;
-    max-width: 240px;
-    display: block;
+.page-title-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e9ecef;
 }
 
-.file-preview .d-inline-flex {
+.page-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+}
+
+.page-title-right {
+    display: flex;
+    gap: 8px;
+}
+
+/* ====== Classic Card ====== */
+.card {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 12px 20px;
+}
+
+.card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.card-body {
+    padding: 25px 20px;
+}
+
+/* ====== Classic Form Layout ====== */
+.form-group.row {
+    margin-bottom: 20px;
+}
+
+.col-form-label {
+    font-weight: 500;
+    color: #495057;
+    padding-top: 8px;
+    text-align: right;
+}
+
+.form-control,
+.custom-select {
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+    padding: 6px 12px;
+    font-size: 14px;
+}
+
+.form-control:focus,
+.custom-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* ====== File Upload Classic ====== */
+.file-upload-classic {
+    display: flex;
+    align-items: center;
+}
+
+.file-name-text {
+    color: #6c757d;
+    font-size: 14px;
+    max-width: 400px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ====== File Preview Classic ====== */
+.file-preview-classic {
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    padding: 10px;
+    background-color: #f8f9fa;
+}
+
+.preview-img {
+    max-width: 200px;
+    max-height: 150px;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.preview-img:hover {
+    transform: scale(1.05);
+}
+
+.file-info-classic {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+}
+
+.filename-display {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 4px;
+}
+
+/* ====== Preview Modal Code ====== */
+.preview-code {
+    white-space: pre-wrap;
+    max-height: 500px;
+    overflow: auto;
+    background-color: #f4f4f4;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 3px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    color: #333;
+}
+
+/* ====== Buttons ====== */
+.btn {
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #004085;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn-info {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+}
+
+.btn-outline-success {
+    color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-outline-success:hover {
+    background-color: #28a745;
+    color: white;
+}
+
+/* ====== Utilities ====== */
+.text-danger {
+    color: #dc3545 !important;
+}
+
+hr {
+    border-top: 1px solid #dee2e6;
+}
+
+/* ====== Responsive ====== */
+@media (max-width: 768px) {
+    .col-form-label {
+        text-align: left;
+        padding-top: 0;
+        margin-bottom: 8px;
+    }
+    
+    .page-title-box {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .page-title-right {
+        margin-top: 10px;
+        width: 100%;
+    }
+}
+</style>
     min-height: 48px;
 }
 </style>
