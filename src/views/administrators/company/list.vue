@@ -72,7 +72,7 @@
         </template>
 
         <template #cell(company)="data">
-          <div class="font-weight-bold">{{ data.item.name || data.item.companyName }}</div>
+          <div class="font-weight-bold">{{ data.item.name || data.item.companyName }} - {{ data.item.taxcode }}</div>
           <div class="text-muted small">{{ data.item.address || data.item.companyAddress }}</div>
         </template>
 

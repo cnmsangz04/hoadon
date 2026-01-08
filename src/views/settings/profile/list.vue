@@ -1156,11 +1156,24 @@ export default {
         .post("/setting/profile/update-info", frmData, {
           headers: { "Content-Type": "multipart/form-data" }
         })
-        .then(() => {
+        .then(async () => {
           this.buttonInfo = false;
           this.formInfo = false;
           this.frmInfo = {};
           this.importData();
+          
+          // Refresh user info from server to get updated company data
+          try {
+            const infoRes = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } });
+            if (infoRes.data) {
+              // Update global app state with fresh data
+              this.$app.info = infoRes.data;
+            }
+          } catch (error) {
+            console.warn('Failed to refresh auth info:', error);
+            // Fallback to loadAppInfo if /auth/info fails
+            this.$app.loadAppInfo();
+          }
         })
         .catch((errors) => {
           this.errors = (errors.response && errors.response.data && errors.response.data.errors) || {};

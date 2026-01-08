@@ -300,7 +300,7 @@ public class ProfileController {
             errors.put("contactMail", Collections.singletonList("Vui lòng nhập email"));
         } else {
             // very simple email pattern
-            String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Zaz0-9.-]+$";
+            String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
             if (!contactMail.matches(emailRegex)) {
                 errors.put("contactMail", Collections.singletonList("Email không hợp lệ"));
             }

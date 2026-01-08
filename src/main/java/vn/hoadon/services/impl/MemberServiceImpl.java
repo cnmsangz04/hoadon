@@ -117,10 +117,15 @@ public class MemberServiceImpl implements MemberService {
             if (companyId == null) {
                 throw new IllegalArgumentException("Thiếu companyId khi tạo thành viên. Vui lòng chọn công ty hoặc đăng nhập đúng ngữ cảnh công ty.");
             }
-            Optional<UserEntity> existed = userRepository.findByUsername(incoming.getUsername());
-            if (existed.isPresent()) {
-                throw new IllegalArgumentException("Username đã tồn tại");
+            
+            // Only check for existing username if one is provided
+            if (incoming.getUsername() != null && !incoming.getUsername().isBlank()) {
+                Optional<UserEntity> existed = userRepository.findByUsername(incoming.getUsername());
+                if (existed.isPresent()) {
+                    throw new IllegalArgumentException("Username đã tồn tại");
+                }
             }
+            
             user = new UserEntity();
             user.setCreatedAt(now);
             
@@ -139,7 +144,13 @@ public class MemberServiceImpl implements MemberService {
             }
             // Required fields on create
             user.setCompanyId(companyId);
-            user.setUsername(incoming.getUsername());
+            // Set username - if provided use it, otherwise generate temporary one
+            if (incoming.getUsername() != null && !incoming.getUsername().isBlank()) {
+                user.setUsername(incoming.getUsername());
+            } else {
+                // Generate temporary username, will be updated after save
+                user.setUsername("temp_" + System.currentTimeMillis());
+            }
             user.setRole(role != null ? role : 2);
             user.setStatus(incoming.getStatus() != null ? incoming.getStatus() : (byte) 1);
         } else {
@@ -203,6 +214,13 @@ public class MemberServiceImpl implements MemberService {
 
         // Persist user first
         user = userRepository.save(user);
+
+        // Generate system username if it was temporary (for new users without provided username)
+        if (isCreate && user.getUsername() != null && user.getUsername().startsWith("temp_")) {
+            String systemUsername = "cp-" + user.getId();
+            user.setUsername(systemUsername);
+            user = userRepository.save(user);
+        }
 
         // Save per-user overrides if any
         if (incoming.getUserPermissions() != null) {

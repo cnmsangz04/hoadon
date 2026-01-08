@@ -43,12 +43,12 @@ Vue.use(IconsPlugin)
 Vue.config.productionTip = false
 
 // Global app store (lightweight) accessible via this.$app
-Vue.prototype.$app = {
+Vue.prototype.$app = Vue.observable({
   info: {
     user: null,
     company: null
   }
-}
+})
 
 // Fetch info on app load so all components can use it
 import axios from './plugins/axios'

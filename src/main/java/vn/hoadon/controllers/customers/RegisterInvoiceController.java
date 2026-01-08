@@ -546,7 +546,20 @@ public class RegisterInvoiceController extends BaseController {
         try {
             if (v instanceof List<?> list) {
                 List<String> out = new ArrayList<>();
-                for (Object o : list) out.add(o == null ? null : String.valueOf(o));
+                for (Object o : list) {
+                    if (o == null) {
+                        out.add(null);
+                    } else if (o instanceof String) {
+                        out.add((String) o);
+                    } else {
+                        // Convert object to JSON string instead of toString()
+                        try {
+                            out.add(mapper.writeValueAsString(o));
+                        } catch (Exception e) {
+                            out.add(String.valueOf(o));
+                        }
+                    }
+                }
                 return out;
             }
             if (v instanceof String s) {
@@ -577,11 +590,24 @@ public class RegisterInvoiceController extends BaseController {
             if (node != null && node.isArray()) {
                 ArrayNode arr = (ArrayNode) node;
                 List<String> out = new ArrayList<>();
-                for (JsonNode i : arr) out.add(i.isNull() ? null : i.asText());
+                for (JsonNode i : arr) {
+                    if (i.isNull()) {
+                        out.add(null);
+                    } else if (i.isTextual()) {
+                        out.add(i.asText());
+                    } else {
+                        // Convert JsonNode back to JSON string
+                        out.add(mapper.writeValueAsString(i));
+                    }
+                }
                 return out;
             }
-            // Single value
-            return List.of(String.valueOf(v));
+            // Single value - serialize to JSON if it's an object
+            try {
+                return List.of(mapper.writeValueAsString(v));
+            } catch (Exception e) {
+                return List.of(String.valueOf(v));
+            }
         } catch (Exception e) {
             // Best-effort fallback
             return List.of(String.valueOf(v));

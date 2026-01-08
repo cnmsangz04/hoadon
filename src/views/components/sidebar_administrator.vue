@@ -96,6 +96,15 @@ export default {
       return require('@/assets/images/logo/logo-hoadon.png')
     }
   },
+  watch: {
+    // Watch for changes in company info to update logo
+    '$app.info.company.logo': {
+      handler() {
+        this.$forceUpdate()
+      },
+      deep: true
+    }
+  },
 
   mounted() {
     // Mở nhóm menu cha nếu đang ở route con

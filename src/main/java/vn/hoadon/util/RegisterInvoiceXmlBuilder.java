@@ -230,9 +230,102 @@ public final class RegisterInvoiceXmlBuilder {
     }
 
     private static List<CertificateRow> parseCertificates(List<String> list) {
-        // With new List<String> storage, we don't have structured certificate details.
-        // Return empty to avoid emitting invalid data.
-        return List.of();
+        List<CertificateRow> result = new ArrayList<>();
+        if (list == null || list.isEmpty()) {
+            return result;
+        }
+        
+        for (String item : list) {
+            if (item == null || item.trim().isEmpty()) {
+                continue;
+            }
+            
+            try {
+                CertificateRow cert = new CertificateRow();
+                
+                // Try to parse as JSON first
+                try {
+                    JsonNode node = MAPPER.readTree(item);
+                    cert.orgName = getJsonString(node, "orgName", "org_name", "organizationName");
+                    cert.serialNo = getJsonString(node, "serialNo", "serial_no", "serial");
+                    cert.signFromDate = getJsonString(node, "signFromDate", "sign_from_date", "from");
+                    cert.signToDate = getJsonString(node, "signToDate", "sign_to_date", "to");
+                    cert.sigRegMethod = getJsonString(node, "sigRegMethod", "sig_reg_method", "method");
+                } catch (JsonProcessingException e) {
+                    // Handle malformed data like "{orgName=VNPT, serialNo=123, ...}"
+                    cert = parseKeyValueFormat(item);
+                }
+                
+                // Validate that we have minimum required data
+                if (cert.orgName != null && !cert.orgName.trim().isEmpty() && 
+                    cert.serialNo != null && !cert.serialNo.trim().isEmpty()) {
+                    result.add(cert);
+                }
+                
+            } catch (Exception e) {
+                System.err.println("Failed to parse certificate: " + item + ", error: " + e.getMessage());
+            }
+        }
+        
+        return result;
+    }
+    
+    private static String getJsonString(JsonNode node, String... fieldNames) {
+        for (String fieldName : fieldNames) {
+            JsonNode field = node.get(fieldName);
+            if (field != null && !field.isNull()) {
+                return field.asText();
+            }
+        }
+        return null;
+    }
+    
+    private static CertificateRow parseKeyValueFormat(String input) {
+        CertificateRow cert = new CertificateRow();
+        
+        // Remove outer braces if present
+        String cleanInput = input.trim().replaceAll("^\\{|\\}$", "");
+        
+        // Split by comma but handle nested structures
+        String[] pairs = cleanInput.split(",\\s*(?![^{}]*})");
+        
+        for (String pair : pairs) {
+            String[] keyValue = pair.split("=", 2);
+            if (keyValue.length == 2) {
+                String key = keyValue[0].trim();
+                String value = keyValue[1].trim();
+                
+                switch (key) {
+                    case "orgName":
+                    case "org_name":
+                    case "organizationName":
+                        cert.orgName = value;
+                        break;
+                    case "serialNo":
+                    case "serial_no":
+                    case "serial":
+                        cert.serialNo = value;
+                        break;
+                    case "signFromDate":
+                    case "sign_from_date":
+                    case "from":
+                        cert.signFromDate = value;
+                        break;
+                    case "signToDate":
+                    case "sign_to_date":
+                    case "to":
+                        cert.signToDate = value;
+                        break;
+                    case "sigRegMethod":
+                    case "sig_reg_method":
+                    case "method":
+                        cert.sigRegMethod = value;
+                        break;
+                }
+            }
+        }
+        
+        return cert;
     }
 
     // Legacy helpers retained in case other callers use them

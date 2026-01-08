@@ -183,17 +183,21 @@ export default {
     } catch {}
   },
   mounted() {
-    // Ensure /auth/info is fetched so role/company is set even if JWT lacks role; don't write localStorage companyId
+    // Ensure /auth/info is fetched so role/company is set even if JWT lacks role; properly update global $app
     try {
       axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
         .then(res => {
           const info = res.data || {}
+          
+          // Update local auth data
           if (info?.user && typeof info.user.role === 'number') {
             this.app.auth.role = info.user.role
           }
-          if (info?.company?.id != null) {
-            const cur = this.$app?.info?.company || {}
-            this.$app.info.company = { ...cur, id: Number(info.company.id) }
+          
+          // Update global $app object (this will trigger sidebar logo updates)
+          if (this.$app) {
+            this.$app.info.user = info.user || null
+            this.$app.info.company = info.company || null
           }
         })
     } catch {}

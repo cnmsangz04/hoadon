@@ -156,9 +156,7 @@
     <!-- Create/Edit member modal -->
     <b-modal ref="memberModal" :title="form.id ? 'Cập nhật thành viên' : 'Thêm thành viên'" hide-footer>
       <b-form @submit.prevent="saveMember">
-        <b-form-group label="Tài khoản">
-          <b-form-input v-model.trim="form.username" required :disabled="!!form.id" placeholder="Tên đăng nhập" />
-        </b-form-group>
+        <!-- Show info for new members -->
         <b-form-group label="Họ và tên">
           <b-form-input v-model.trim="form.fullName" required />
         </b-form-group>
@@ -421,8 +419,7 @@ export default {
       const passOk = passOkCreate && passOkUpdate
       const adminPwdProvided = (this.form.adminPassword?.length || 0) > 0 || (this.form.adminPasswordConfirm?.length || 0) > 0
       const adminPwdOk = !this.form.isAdmin ? true : (!adminPwdProvided ? true : (this.adminPasswordState === true))
-      // Username is required
-      const hasUsername = !!this.form.username && this.form.username.trim().length > 0
+      const hasUsername = !this.form.id || (!!this.form.username && this.form.username.trim().length > 0)
       return hasUsername && !!this.form.fullName && passOk && adminPwdOk
     },
     isEditingRootTarget() {
@@ -643,12 +640,20 @@ export default {
       return v === 1 ? 1 : (v === 0 ? 0 : null)
     },
     getPermEffectiveChecked(permissionId) { return this.getPermOverrideState(permissionId) === 1 },
-    onPermCheckboxChange(permissionId, checked) { this.permOverrides[Number(permissionId)] = checked ? 1 : 0 },
+    onPermCheckboxChange(permissionId, checked) { 
+      this.$set(this.permOverrides, Number(permissionId), checked ? 1 : 0)
+    },
     togglePermGroup(group) {
       const allSelected = group.items.length > 0 && group.items.every(p => this.getPermEffectiveChecked(Number(p.id)))
-      for (const p of group.items) this.permOverrides[Number(p.id)] = allSelected ? 0 : 1
+      for (const p of group.items) {
+        this.$set(this.permOverrides, Number(p.id), allSelected ? 0 : 1)
+      }
     },
-    permSelectAll(flag) { for (const p of this.permVisiblePermissions) this.permOverrides[Number(p.id)] = flag ? 1 : 0 },
+    permSelectAll(flag) { 
+      for (const p of this.permVisiblePermissions) {
+        this.$set(this.permOverrides, Number(p.id), flag ? 1 : 0)
+      }
+    },
     async savePermissions() {
       if (!this.canSavePermissions) return
       if (!this.permForm.username) {

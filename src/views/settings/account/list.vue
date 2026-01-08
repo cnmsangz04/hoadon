@@ -334,8 +334,21 @@ export default {
         const formData = new FormData()
         formData.append('avatar', blob, 'avatar.png')
         axios.post('/setting/account/avatar', formData, { meta: { suppressGlobalErrorToast: true } })
-          .then(() => {
+          .then(async () => {
             this.loadInfo()
+            
+            // Also refresh global $app user info so header avatar updates immediately
+            try {
+              const infoRes = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
+              const info = infoRes?.data || {}
+              if (this.$app) {
+                this.$app.info.user = info.user || null
+                this.$app.info.company = info.company || null
+              }
+            } catch (error) {
+              console.warn('Failed to refresh global user info after avatar update:', error)
+            }
+            
             this.closelModel()
             this.$toastr && this.$toastr.success('Đã cập nhật ảnh đại diện')
           })

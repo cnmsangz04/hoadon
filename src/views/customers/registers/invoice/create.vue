@@ -597,24 +597,116 @@ export default {
       return Array.from(new Set(this.normalizeArray(raw, dict)))
     },
     normalizeDigitalCertificates(raw) {
+      console.log('normalizeDigitalCertificates input:', raw)
       let arr = []
-      if (Array.isArray(raw)) arr = raw
-      else if (typeof raw === 'string' && raw.trim()) {
+      
+      if (Array.isArray(raw)) {
+        // Handle array that may contain strings or objects
+        for (const item of raw) {
+          if (typeof item === 'string' && item.trim()) {
+            // Parse malformed string like "{orgName=VNPT, serialNo=123, ...}"
+            try {
+              // Try JSON parse first
+              const parsed = JSON.parse(item)
+              arr.push(parsed)
+            } catch {
+              // Handle malformed format {key=value}
+              arr.push(this.parseKeyValueString(item))
+            }
+          } else if (item && typeof item === 'object') {
+            arr.push(item)
+          }
+        }
+      } else if (typeof raw === 'string' && raw.trim()) {
         try {
           let p = JSON.parse(raw)
           if (typeof p === 'string' && p.trim()) {
             try { p = JSON.parse(p) } catch {}
           }
-          arr = Array.isArray(p) ? p : []
-        } catch { arr = [] }
-      } else if (raw && typeof raw === 'object') arr = [raw]
-      return arr.map(x => ({
-        orgName: x.orgName || x.org_name || x.organizationName || '',
-        serialNo: x.serialNo || x.serial_no || x.serial || '',
-        signFromDate: x.signFromDate || x.sign_from_date || x.from || null,
-        signToDate: x.signToDate || x.sign_to_date || x.to || null,
-        sigRegMethod: (typeof x.sigRegMethod === 'number' || /^\d+$/.test(String(x.sigRegMethod))) ? Number(x.sigRegMethod) : (typeof x.sig_reg_method === 'number' || /^\d+$/.test(String(x.sig_reg_method)) ? Number(x.sig_reg_method) : (String(x.method||'').toUpperCase()==='EXTEND'?2:String(x.method||'').toUpperCase()==='STOP'?3:1))
-      }))
+          if (Array.isArray(p)) {
+            arr = p
+          } else {
+            arr = [p]
+          }
+        } catch {
+          // Handle malformed data like "[{orgName=VNPT, serialNo=123, ...}]"
+          arr = [this.parseKeyValueString(raw)]
+        }
+      } else if (raw && typeof raw === 'object') {
+        arr = [raw]
+      }
+      
+      const result = arr.map(x => {
+        if (!x || typeof x !== 'object') return null
+        
+        // Handle both camelCase and snake_case, plus malformed keys
+        const orgName = x.orgName || x.org_name || x.organizationName || x.organization_name || ''
+        const serialNo = x.serialNo || x.serial_no || x.serial || x.serialNumber || ''
+        const signFromDate = x.signFromDate || x.sign_from_date || x.from || x.fromDate || null
+        const signToDate = x.signToDate || x.sign_to_date || x.to || x.toDate || null
+        
+        // Handle sigRegMethod with various formats
+        let sigRegMethod = x.sigRegMethod || x.sig_reg_method || x.method || x.regMethod || 1
+        if (typeof sigRegMethod === 'string') {
+          const methodStr = sigRegMethod.toUpperCase()
+          if (methodStr === 'EXTEND' || methodStr === 'GIA_HAN') sigRegMethod = 2
+          else if (methodStr === 'STOP' || methodStr === 'NGUNG_SU_DUNG') sigRegMethod = 3
+          else sigRegMethod = parseInt(sigRegMethod) || 1
+        } else if (typeof sigRegMethod !== 'number') {
+          sigRegMethod = 1
+        }
+        
+        return {
+          orgName,
+          serialNo,
+          signFromDate,
+          signToDate,
+          sigRegMethod
+        }
+      }).filter(x => x !== null)
+      
+      console.log('normalizeDigitalCertificates result:', result)
+      return result
+    },
+    parseKeyValueString(str) {
+      console.log('parseKeyValueString input:', str)
+      const obj = {}
+      try {
+        // Remove outer braces if present
+        let cleanStr = str.trim().replace(/^{|}$/g, '')
+        
+        // Split by comma but be careful of commas in values
+        const pairs = []
+        let current = ''
+        let depth = 0
+        
+        for (let i = 0; i < cleanStr.length; i++) {
+          const char = cleanStr[i]
+          if (char === '{') depth++
+          else if (char === '}') depth--
+          else if (char === ',' && depth === 0) {
+            pairs.push(current.trim())
+            current = ''
+            continue
+          }
+          current += char
+        }
+        if (current.trim()) pairs.push(current.trim())
+        
+        pairs.forEach(pair => {
+          const equalIndex = pair.indexOf('=')
+          if (equalIndex > 0) {
+            const key = pair.substring(0, equalIndex).trim()
+            const value = pair.substring(equalIndex + 1).trim()
+            obj[key] = value
+          }
+        })
+      } catch (e) {
+        console.error('Error parsing key-value string:', e)
+      }
+      
+      console.log('parseKeyValueString result:', obj)
+      return obj
     },
     applyDetail(data) {
       const val = (obj, keys, def) => {

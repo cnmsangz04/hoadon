@@ -85,17 +85,6 @@ public class UserEntity {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<UserPermissionEntity> userPermissionOverrides;
 
-    // Auto-generate username after ID is assigned
-    @PostPersist
-    public void ensureUsername() {
-        if (this.id != null) {
-            String expected = "cp-" + this.id;
-            if (this.username == null || !this.username.equals(expected)) {
-                this.username = expected;
-            }
-        }
-    }
-
     protected UserEntity getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
