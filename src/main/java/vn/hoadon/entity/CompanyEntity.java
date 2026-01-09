@@ -43,7 +43,7 @@ public class CompanyEntity {
     @Column(nullable = false)
     private Integer status = 1;
 
-    @Column(columnDefinition = "NVARCHAR(255)")
+    @Column(unique = true, columnDefinition = "NVARCHAR(255)")
     private String taxcode;
 
     @Column(columnDefinition = "NVARCHAR(255)")

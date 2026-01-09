@@ -2,8 +2,11 @@ package vn.hoadon.repositories;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import java.util.Optional;
 import vn.hoadon.entity.CompanyEntity;
 
 public interface CompanyRepository extends JpaRepository<CompanyEntity, Long>, JpaSpecificationExecutor<CompanyEntity> {
 	boolean existsByPrefix(String prefix);
+	boolean existsByTaxcode(String taxcode);
+	Optional<CompanyEntity> findByTaxcode(String taxcode);
 }
