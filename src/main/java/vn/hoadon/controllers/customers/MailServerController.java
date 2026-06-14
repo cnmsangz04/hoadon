@@ -133,7 +133,11 @@ public class MailServerController extends BaseController {
         sender.setHost(cfg.getHost());
         sender.setPort(cfg.getPort());
         sender.setUsername(cfg.getUsername());
-        sender.setPassword(aesEncryptor.decrypt(cfg.getPassword()));
+        String password = aesEncryptor.decrypt(cfg.getPassword());
+        if (password == null || password.isBlank()) {
+            throw new IllegalStateException("SMTP password trống hoặc không hợp lệ");
+        }
+        sender.setPassword(password);
         sender.setDefaultEncoding("UTF-8");
 
         java.util.Properties props = sender.getJavaMailProperties();

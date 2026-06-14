@@ -7,14 +7,14 @@
     </div>
 
     <nav class="d-flex align-items-center">
-      <b-button variant="light" class="circle-btn mr-2" @click="reloadData">
+      <b-button v-if="!isCompanyPending" variant="light" class="circle-btn mr-2" @click="reloadData">
         <i :class="reloading ? 'fa fa-sync fa-spin' : 'fa fa-sync'"></i>
       </b-button>
 
-      <b-button variant="light" class="circle-btn mr-2" id="popover-hotline">
+      <b-button v-if="!isCompanyPending" variant="light" class="circle-btn mr-2" id="popover-hotline">
         <i class="fa fa-phone"></i>
       </b-button>
-      <b-popover target="popover-hotline" placement="bottom" triggers="hover focus">
+      <b-popover v-if="!isCompanyPending" target="popover-hotline" placement="bottom" triggers="hover focus">
         <template #title>Support</template>
         <ul class="list-unstyled mb-0">
           <li><i class="fa fa-tools"></i> Hỗ trợ kỹ thuật 24/7</li>
@@ -23,7 +23,7 @@
       </b-popover>
 
       <!-- Chuông thông báo theo mẫu -->
-      <li class="nav-item bell-notify pl-0 pr-1">
+      <li v-if="!isCompanyPending" class="nav-item bell-notify pl-0 pr-1">
         <a href="javascript:void(0)" class="info-number circle-icon-top position-relative" v-b-toggle.sidebar-right>
           <i class="far fa-bell text-danger"></i>
           <span v-if="list.length > 0" class="badge badge-danger badge-pill notification-badge">{{ list.length > 9 ? '9+' : list.length }}</span>
@@ -36,13 +36,13 @@
           <b-avatar variant="primary" v-else class="user-avatar">{{ usernameInitial }}</b-avatar>
           <span class="ml-2 d-none d-md-inline">{{ app.auth.username || 'User' }}</span>
         </template>
-        <b-dropdown-item to="/setting">
+        <b-dropdown-item v-if="!isCompanyPending" to="/setting">
           <i class="fas fa-user"></i> Tài khoản
         </b-dropdown-item>
-        <b-dropdown-item to="/help-support">
+        <b-dropdown-item v-if="!isCompanyPending" to="/help-support">
           <i class="fas fa-life-ring"></i> Hỗ trợ
         </b-dropdown-item>
-        <b-dropdown-item v-if="showAdminLink" to="/auth/login-admin">
+        <b-dropdown-item v-if="!isCompanyPending && showAdminLink" to="/auth/login-admin">
           <i class="fas fa-shield-alt"></i> Quản trị
         </b-dropdown-item>
         <b-dropdown-item href="#" @click.prevent="logout">
@@ -51,7 +51,7 @@
       </b-dropdown>
     </nav>
 
-    <b-sidebar id="sidebar-right" title="Thông báo" right shadow>
+    <b-sidebar v-if="!isCompanyPending" id="sidebar-right" title="Thông báo" right shadow>
       <ul class="list-unstyled p-2">
         <b-media tag="li" v-for="item in list" :key="item.id" class="mb-2">
           <template #aside>
@@ -108,6 +108,10 @@ export default {
       } catch {}
       // Dự phòng dùng app.auth.avatar local
       return this.app.auth.avatar || ''
+    },
+    isCompanyPending() {
+      const status = this.$app?.info?.company?.status ?? localStorage.getItem('company-status')
+      return String(status) === '2'
     }
   },
   created() {
@@ -165,7 +169,7 @@ export default {
     } catch {}
 
     // Lấy thông báo gần đây (tối đa 10) từ lịch sử theo điều kiện yêu cầu
-    this.fetchNotifications()
+    if (!this.isCompanyPending) this.fetchNotifications()
 
     // Mẫu realtime Echo: khi có tin nhắn thì hiện toast và tải lại thông báo
     try {
@@ -177,7 +181,7 @@ export default {
             vm.app._isRefresh = true
             const msg = data?.message?.message || ''
             if (msg) { window.toastr && toastr.success(msg) }
-            vm.fetchNotifications()
+            if (!vm.isCompanyPending) vm.fetchNotifications()
           })
       }
     } catch {}
@@ -199,11 +203,18 @@ export default {
             this.$app.info.user = info.user || null
             this.$app.info.company = info.company || null
           }
+          if (info.company && info.company.status != null) {
+            localStorage.setItem('company-status', String(info.company.status))
+          }
+          if (this.isCompanyPending) {
+            this.list = []
+            this.stopPolling()
+          } else {
+            this.fetchNotifications()
+            this.startPolling()
+          }
         })
     } catch {}
-    
-    // Bắt đầu kiểm tra thông báo mới mỗi 5 giây
-    this.startPolling()
   },
   beforeDestroy() {
     // Dọn interval polling khi component bị hủy
@@ -218,7 +229,7 @@ export default {
     reloadData() {
       this.reloading = true;
       setTimeout(() => { this.reloading = false }, 2000);
-      this.fetchNotifications()
+      if (!this.isCompanyPending) this.fetchNotifications()
     },
     menuToggle() {
       document.body.classList.toggle('nav-sm');
@@ -235,10 +246,15 @@ export default {
       } else {
         localStorage.removeItem('token');
         localStorage.removeItem('last-account');
+        localStorage.removeItem('company-status');
         window.location.href = '/auth/login';
       }
     },
     async fetchNotifications() {
+      if (this.isCompanyPending) {
+        this.list = []
+        return
+      }
       try {
         const params = { limit: 10, show_notify: 1, status: 1 }
         const res = await axios.get('/history/notifications', { params, meta: { suppressGlobalErrorToast: true } })
@@ -302,11 +318,16 @@ export default {
       }
     },
     startPolling() {
+      if (this.isCompanyPending) return
       // Dừng interval hiện có trước
       this.stopPolling()
       
       // Poll mỗi 5 giây
       this.pollingInterval = setInterval(() => {
+        if (this.isCompanyPending) {
+          this.stopPolling()
+          return
+        }
         this.fetchNotifications()
       }, 5000)
     },
@@ -562,3 +583,4 @@ nav.d-flex.align-items-center {
   .b-sidebar#sidebar-right .list-unstyled { max-height: calc(100vh - 56px) !important; }
 }
 </style>
+

@@ -22,8 +22,9 @@ public class SecurityConfig {
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter(
             JwtUtil jwtUtil,
-            vn.hoadon.services.UserService userService) {
-        return new JwtAuthenticationFilter(jwtUtil, userService);
+            vn.hoadon.services.UserService userService,
+            vn.hoadon.repositories.CompanyRepository companyRepository) {
+        return new JwtAuthenticationFilter(jwtUtil, userService, companyRepository);
     }
 
     @Bean

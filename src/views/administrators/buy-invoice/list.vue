@@ -313,7 +313,7 @@ export default {
         const map = {};
         this.companyOptions = list.map(c => {
           const id = Number(c.id);
-          const name = c.name || c.companyName || c.domain || `#${id}`;
+          const name = c.name || c.companyName || `#${id}`;
           map[id] = name;
           return { value: id, label: name };
         });

@@ -48,6 +48,11 @@
               <b-link :to="{ name: 'auth-forgot-password' }" @click.prevent="$router.push({ name: 'auth-forgot-password' })">Quên mật khẩu?</b-link>
             </div>
 
+            <div class="text-center mb-3">
+              <span class="text-muted">Chưa có tài khoản?</span>
+              <b-link class="ml-1" :to="{ name: 'auth-register' }" @click.prevent="$router.push({ name: 'auth-register' })">Đăng ký</b-link>
+            </div>
+
             <b-button type="submit" block variant="primary"
               class="submit-btn"
               :disabled="loading || !username || !password">
@@ -103,6 +108,11 @@ export default {
           if (this.$app) {
             this.$app.info.user = data.user || null
             this.$app.info.company = data.company || null
+          }
+          if (data.company && data.company.status != null) {
+            localStorage.setItem('company-status', String(data.company.status))
+          } else {
+            localStorage.removeItem('company-status')
           }
         } catch {}
         this.$router.push({ name: "/" });

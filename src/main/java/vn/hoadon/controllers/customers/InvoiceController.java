@@ -58,10 +58,12 @@ import com.openhtmltopdf.extend.FSUriResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import vn.hoadon.repositories.HistoryRepository;
-import vn.hoadon.entity.MailJobEntity;
+import jakarta.mail.internet.MimeMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import vn.hoadon.messaging.MailJobMessage;
-import vn.hoadon.repositories.MailJobRepository;
 import vn.hoadon.services.MailQueueService;
+import vn.hoadon.worker.MailWorker;
 
 @RestController
 @RequestMapping("/v1/invoices")
@@ -81,8 +83,9 @@ public class InvoiceController extends BaseController {
     @Autowired private HistoryService historyService;
     @Autowired private SignatureAuthoritiesTaxService signatureAuthoritiesTaxService;
     @Autowired private HistoryRepository historyRepository;
-    @Autowired private MailJobRepository mailJobRepository;
+    @Autowired(required = false) private JavaMailSender mailSender;
     @Autowired(required = false) private MailQueueService mailQueueService;
+    @Autowired(required = false) private MailWorker mailWorker;
 
     @Autowired @org.springframework.context.annotation.Lazy private InvoiceController self;
 
@@ -173,12 +176,7 @@ public class InvoiceController extends BaseController {
         Long companyId = user.getCompanyId();
         Long userId = user.getId();
         InvoiceService.InvoicePayload p = toPayload(req);
-        vn.hoadon.entity.InvoiceEntity saved;
-        try {
-            saved = invoiceService.create(p, companyId, userId);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new ErrorDTO(e.getMessage()));
-        }
+        vn.hoadon.entity.InvoiceEntity saved = invoiceService.create(p, companyId, userId);
         if (saved == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Không thể lưu hóa đơn"));
         }
@@ -195,12 +193,7 @@ public class InvoiceController extends BaseController {
         Long companyId = user.getCompanyId();
         Long userId = user.getId();
         InvoiceService.InvoicePayload p = toPayload(req);
-        vn.hoadon.entity.InvoiceEntity saved;
-        try {
-            saved = invoiceService.update(id, p, companyId, userId);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new ErrorDTO(e.getMessage()));
-        }
+        vn.hoadon.entity.InvoiceEntity saved = invoiceService.update(id, p, companyId, userId);
         if (saved == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Không tìm thấy hóa đơn để cập nhật"));
         }
@@ -284,18 +277,6 @@ public class InvoiceController extends BaseController {
         }
         Long companyId = user.getCompanyId();
         Long userId = user.getId();
-        InvoiceEntity source = invoiceRepository.findById(id).orElse(null);
-        if (source == null) {
-            return ResponseEntity.badRequest().body(new ErrorDTO("Không tìm thấy hóa đơn để sao chép"));
-        }
-        if (source.getCompanyId() == null || !companyId.equals(source.getCompanyId().longValue())) {
-            return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền sao chép hóa đơn của công ty khác"));
-        }
-        Long sourceFormId = source.getFormId() != null ? source.getFormId().longValue() : null;
-        String formError = validateActiveVatForm(companyId, sourceFormId);
-        if (formError != null) {
-            return ResponseEntity.badRequest().body(new ErrorDTO(formError));
-        }
         InvoiceEntity saved = invoiceService.clone(id, companyId, userId);
         if (saved == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Không tìm thấy hóa đơn để sao chép"));
@@ -393,33 +374,6 @@ public class InvoiceController extends BaseController {
         java.util.List<String> out = new java.util.ArrayList<>();
         for (String p : parts) { if (p != null) out.add(p.trim().replaceAll("^\"|\"$", "")); }
         return out;
-    }
-
-    private String validateActiveVatForm(Long companyId, Long formId) {
-        if (companyId == null) {
-            return "Không xác định được công ty";
-        }
-        if (formId == null) {
-            return "Thiếu mẫu hóa đơn GTGT";
-        }
-
-        FormInvoiceEntity form = formInvoiceRepository.findById(formId).orElse(null);
-        if (form == null) {
-            return "Không tìm thấy mẫu hóa đơn";
-        }
-        if (form.getCompanyId() == null || !companyId.equals(form.getCompanyId())) {
-            return "Không được dùng mẫu hóa đơn của công ty khác";
-        }
-        if (form.getSystem() == null || form.getSystem() != 1) {
-            return "Mẫu hóa đơn chưa được sao chép/kích hoạt cho công ty";
-        }
-        if (form.getCategory() == null || form.getCategory() != 1) {
-            return "Mẫu hóa đơn không phải hóa đơn GTGT";
-        }
-        if (form.getStatus() == null || form.getStatus() != 1) {
-            return "Chưa có mẫu hóa đơn GTGT được kích hoạt";
-        }
-        return null;
     }
 
     public static class PageDTO<T> {
@@ -669,130 +623,6 @@ public class InvoiceController extends BaseController {
         }
     }
 
-    private void addInvoiceZipAttachmentVars(java.util.Map<String, String> vars, InvoiceEntity inv) throws Exception {
-        if (vars == null || inv == null) return;
-        byte[] zipBytes = buildInvoiceIssueZip(inv);
-        vars.put("ATTACHMENT_ZIP_NAME", buildInvoiceAttachmentZipName(inv));
-        vars.put("ATTACHMENT_ZIP_BASE64", java.util.Base64.getEncoder().encodeToString(zipBytes));
-    }
-
-    private byte[] buildInvoiceIssueZip(InvoiceEntity inv) throws Exception {
-        String baseName = buildInvoiceAttachmentBaseName(inv);
-        String xml = buildInvoiceXmlContent(inv);
-        byte[] pdfBytes = buildInvoicePdfBytes(inv);
-
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try (java.util.zip.ZipOutputStream zip = new java.util.zip.ZipOutputStream(out)) {
-            zip.putNextEntry(new java.util.zip.ZipEntry(baseName + ".pdf"));
-            zip.write(pdfBytes);
-            zip.closeEntry();
-
-            zip.putNextEntry(new java.util.zip.ZipEntry(baseName + ".xml"));
-            zip.write(xml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            zip.closeEntry();
-        }
-        return out.toByteArray();
-    }
-
-    private String buildInvoiceXmlContent(InvoiceEntity inv) {
-        FormInvoiceEntity form = resolveInvoiceForm(inv);
-        CompanyEntity company = null;
-        CompanyBankEntity bank = null;
-        if (form != null && form.getCompanyId() != null) {
-            company = companyRepository.findById(form.getCompanyId()).orElse(null);
-            if (company != null) {
-                java.util.List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
-                if (banks != null && !banks.isEmpty()) bank = banks.get(0);
-            }
-        }
-        return getInvoiceXmlByStatus(inv, form, company, bank);
-    }
-
-    private byte[] buildInvoicePdfBytes(InvoiceEntity inv) throws Exception {
-        FormInvoiceEntity form = resolveInvoiceForm(inv);
-        String xsltValue = form != null ? form.getFile() : null;
-        if (!org.springframework.util.StringUtils.hasText(xsltValue)) {
-            throw new IllegalStateException("Không tìm thấy tệp XSLT của mẫu hóa đơn");
-        }
-
-        boolean looksLikeXslt = looksLikeInlineXslt(xsltValue);
-        Path xsltFsPath = looksLikeXslt ? null : toFilesystemPath(xsltValue);
-        if (!looksLikeXslt && (xsltFsPath == null || !Files.exists(xsltFsPath))) {
-            throw new IllegalStateException("Không tồn tại tệp XSLT trên hệ thống");
-        }
-
-        String xml = buildInvoiceXmlContent(inv);
-        TransformerFactory factory = TransformerFactory.newInstance();
-        try { factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true); } catch (Exception ignored) {}
-        try { factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "file"); } catch (Exception ignored) {}
-        StreamSource xsltSource = looksLikeXslt
-                ? new StreamSource(new StringReader(xsltValue))
-                : new StreamSource(xsltFsPath.toFile());
-        Transformer transformer = factory.newTransformer(xsltSource);
-        StreamSource xmlSource = new StreamSource(new StringReader(xml));
-        StringWriter outWriter = new StringWriter();
-        transformer.transform(xmlSource, new StreamResult(outWriter));
-
-        String html = outWriter.toString();
-        html = resolveNamedHtmlEntities(html);
-        html = ensureUtf8Meta(html);
-        html = forceReplaceFontFamilies(html);
-        html = normalizeToXhtml(html);
-        html = injectQrPlaceholder(html);
-        html = sanitizeImgSrcAttributes(html);
-        html = ensurePdfLayoutFallbackCss(html);
-        html = ensurePdfCss(html);
-        html = ensurePdfFontCss(html);
-        html = ensurePdfTypoCss(html);
-
-        ByteArrayOutputStream pdfOut = new ByteArrayOutputStream();
-        PdfRendererBuilder builder = new PdfRendererBuilder();
-        String baseUri = null;
-        if (!looksLikeXslt && xsltFsPath != null && xsltFsPath.getParent() != null) {
-            baseUri = xsltFsPath.getParent().toUri().toString();
-        }
-        builder.useFastMode();
-        try {
-            java.lang.reflect.Method m = PdfRendererBuilder.class.getMethod("useMediaType", String.class);
-            m.invoke(builder, "screen");
-        } catch (Exception ignore) {
-            try {
-                java.lang.reflect.Method m2 = PdfRendererBuilder.class.getMethod("useScreenMediaType", boolean.class);
-                m2.invoke(builder, true);
-            } catch (Exception ignore2) {}
-        }
-        builder.useUriResolver(new ClasspathFirstUriResolver());
-        registerAvailableUnicodeFonts(builder);
-        if (baseUri != null) builder.withHtmlContent(html, baseUri); else builder.withHtmlContent(html, null);
-        builder.toStream(pdfOut);
-        builder.run();
-        return pdfOut.toByteArray();
-    }
-
-    private FormInvoiceEntity resolveInvoiceForm(InvoiceEntity inv) {
-        if (inv == null || inv.getFormId() == null) return null;
-        Long formIdLong = null;
-        Object fid = inv.getFormId();
-        if (fid instanceof Number) {
-            formIdLong = ((Number) fid).longValue();
-        } else {
-            try { formIdLong = Long.valueOf(String.valueOf(fid)); } catch (Exception ignore) {}
-        }
-        return formIdLong != null ? formInvoiceRepository.findById(formIdLong).orElse(null) : null;
-    }
-
-    private String buildInvoiceAttachmentZipName(InvoiceEntity inv) {
-        return buildInvoiceAttachmentBaseName(inv) + ".zip";
-    }
-
-    private String buildInvoiceAttachmentBaseName(InvoiceEntity inv) {
-        String no = safeStr(inv != null ? inv.getNo() : null);
-        String lookup = inv != null && inv.getLookupCode() != null ? inv.getLookupCode() : safeStr(inv != null ? inv.getId() : null);
-        String raw = "hoa-don-" + (!no.isBlank() ? no : lookup);
-        String clean = raw.replaceAll("[^A-Za-z0-9._-]+", "-").replaceAll("^-+|-+$", "");
-        return clean.isBlank() ? "hoa-don" : clean;
-    }
-
     @PostMapping("/{id}/sign")
     @Transactional
     public ResponseEntity<?> sign(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
@@ -822,11 +652,6 @@ public class InvoiceController extends BaseController {
             return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu mẫu hóa đơn (form_id)"));
         }
         
-        String formError = validateActiveVatForm(companyId, formId);
-        if (formError != null) {
-            return ResponseEntity.badRequest().body(new ErrorDTO(formError));
-        }
-
         // Check buy_invoices: must have active record with available invoices
         Optional<BuyInvoiceEntity> optBuyInvoice = buyInvoiceRepository.findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, 1);
         if (!optBuyInvoice.isPresent()) {
@@ -1764,7 +1589,7 @@ public class InvoiceController extends BaseController {
     // Auto-send invoice issuance mail via queue
     private void tryEnqueueInvoiceIssueMail(InvoiceEntity inv, Long companyId) {
         try {
-            if (mailQueueService == null) return;
+            if (mailQueueService == null && mailWorker == null) return;
             if (inv.getCustomer() == null || inv.getCustomer().isBlank()) return;
 
             java.util.Map<String, Object> customerMap = JSON.readValue(inv.getCustomer(),
@@ -1773,8 +1598,9 @@ public class InvoiceController extends BaseController {
             String toEmail = (String) customerMap.get("email");
             if (toEmail == null || toEmail.isBlank()) return;
 
-            String buyerName = getCustomerDisplayName(customerMap);
-            String taxCode = getCustomerTaxCode(customerMap);
+            String buyerName = inv.getName() != null ? inv.getName()
+                    : (String) customerMap.getOrDefault("name", "Quý khách");
+            String taxCode = (String) customerMap.getOrDefault("tax_code", "");
 
             // Fetch company details for template variables
             String companyName = "", hotline = "", comEmail = "", website = "";
@@ -1792,10 +1618,6 @@ public class InvoiceController extends BaseController {
             // Lookup link uses lookupCode if available
             String lookupCode = inv.getLookupCode() != null ? inv.getLookupCode() : String.valueOf(inv.getId());
             String lookupLink = "/v1/invoices/" + lookupCode + "/lookup";
-            String formSerial = getInvoiceFormSerial(inv);
-            String pdfLink = "/v1/invoices/" + lookupCode + "/download-pdf";
-            String xmlLink = "/v1/invoices/" + lookupCode + "/download-xml";
-            String html = buildEmailHtml(inv, formSerial, pdfLink, xmlLink, buyerName);
 
             java.util.Map<String, String> vars = new java.util.HashMap<>();
             vars.put("SO_HOA_DON",   inv.getNo() != null ? String.valueOf(inv.getNo()) : "");
@@ -1803,26 +1625,31 @@ public class InvoiceController extends BaseController {
             vars.put("CUS_TAXCODE",  taxCode);
             vars.put("LOOKUP_LINK",  lookupLink);
             vars.put("LOOKUP_CODE",  lookupCode);
-            vars.put("PDF_LINK",     pdfLink);
-            vars.put("XML_LINK",     xmlLink);
             vars.put("COM_NAME",     companyName);
             vars.put("COM_HOTLINE",  hotline);
             vars.put("COM_EMAIL",    comEmail);
             vars.put("COM_WEBSITE",  website);
-            vars.put("SUBJECT",      buildInvoiceIssueMailSubject(inv));
-            vars.put("HTML_BODY",    html);
-            addInvoiceZipAttachmentVars(vars, inv);
 
             MailJobMessage msg = new MailJobMessage();
             msg.setTemplateKey("ISSUE_INVOICE_MAIL");
             msg.setCompanyId(companyId);
-            msg.setInvoiceId(inv.getId() != null ? inv.getId().longValue() : null);
             msg.setToEmail(toEmail);
             msg.setToName(buyerName);
             msg.setVariables(vars);
 
-            mailQueueService.enqueue(msg);
-            log.info("Enqueued ISSUE_INVOICE_MAIL for invoice {} to {}", inv.getId(), toEmail);
+            if (mailQueueService != null) {
+                try {
+                    mailQueueService.enqueue(msg);
+                    log.info("Enqueued ISSUE_INVOICE_MAIL for invoice {} to {}", inv.getId(), toEmail);
+                    return;
+                } catch (Exception queueEx) {
+                    log.warn("Queue unavailable ({}), falling back to direct send", queueEx.getMessage());
+                }
+            }
+            if (mailWorker != null) {
+                mailWorker.handle(msg);
+                log.info("Direct-sent ISSUE_INVOICE_MAIL for invoice {} to {}", inv.getId(), toEmail);
+            }
         } catch (Exception e) {
             log.error("Failed to enqueue ISSUE_INVOICE_MAIL for invoice {}: {}", inv.getId(), e.getMessage(), e);
         }
@@ -1926,42 +1753,6 @@ public class InvoiceController extends BaseController {
         return ResponseEntity.ok(rows);
     }
 
-    @GetMapping("/{id}/mail-history")
-    public ResponseEntity<?> mailHistory(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
-        if (id == null) return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu ID hóa đơn"));
-        if (user == null || user.getCompanyId() == null) {
-            return ResponseEntity.status(403).build();
-        }
-        InvoiceEntity inv = invoiceRepository.findById(id).orElse(null);
-        if (inv == null) return ResponseEntity.status(404).body(new ErrorDTO("Không tìm thấy hóa đơn"));
-        Long invoiceCompanyId = inv.getCompanyId() != null ? inv.getCompanyId().longValue() : null;
-        if (invoiceCompanyId != null && !user.getCompanyId().equals(invoiceCompanyId)) {
-            return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền xem lịch sử mail của hóa đơn này"));
-        }
-
-        java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
-        for (MailJobEntity job : mailJobRepository.findByInvoiceIdOrderByCreatedAtDesc(id)) {
-            java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
-            row.put("id", job.getId());
-            row.put("invoiceId", job.getInvoiceId());
-            row.put("companyId", job.getCompanyId());
-            row.put("templateKey", job.getTemplateKey());
-            row.put("toEmail", job.getToEmail());
-            row.put("toName", job.getToName());
-            row.put("subject", job.getSubject());
-            row.put("status", job.getStatus());
-            row.put("attempts", job.getAttempts());
-            row.put("error", job.getError());
-            row.put("createdAt", job.getCreatedAt());
-            row.put("updatedAt", job.getUpdatedAt());
-            row.put("lastAttemptAt", job.getLastAttemptAt());
-            row.put("sentAt", job.getSentAt());
-            row.put("failedAt", job.getFailedAt());
-            rows.add(row);
-        }
-        return ResponseEntity.ok(rows);
-    }
-
     @PostMapping("/{id}/send-email")
     public ResponseEntity<?> sendEmailNotice(@PathVariable("id") Long id,
                                              @AuthenticationPrincipal UserEntity user,
@@ -2002,7 +1793,7 @@ public class InvoiceController extends BaseController {
                     if (form != null) formSerial = (safeStr(form.getFormCode()) + safeStr(form.getSerial()));
                 }
             } catch (Exception ignore) {}
-            String subject = buildInvoiceIssueMailSubject(inv);
+            String subject = "Thông báo phát hành hóa đơn số " + safeStr(inv.getNo()) + (formSerial != null && !formSerial.isEmpty() ? " (" + formSerial + ")" : "");
             String lookup = safeStr(inv.getLookupCode());
             String pdfLink = "/v1/invoices/" + lookup + "/download-pdf";
             String xmlLink = "/v1/invoices/" + lookup + "/download-xml";
@@ -2026,7 +1817,8 @@ public class InvoiceController extends BaseController {
                 if (custJson != null && !custJson.isBlank()) {
                     java.util.Map<String, Object> cm = JSON.readValue(custJson,
                             new TypeReference<java.util.Map<String, Object>>() {});
-                    taxCode = getCustomerTaxCode(cm);
+                    Object tc = cm.get("tax_code");
+                    if (tc != null) taxCode = tc.toString();
                 }
             } catch (Exception ignore) {}
             String lookupCode = inv.getLookupCode() != null ? inv.getLookupCode() : String.valueOf(inv.getId());
@@ -2034,13 +1826,13 @@ public class InvoiceController extends BaseController {
             MailJobMessage msg = new MailJobMessage();
             msg.setTemplateKey("ISSUE_INVOICE_MAIL");
             msg.setCompanyId(uCompany);
-            msg.setInvoiceId(inv.getId() != null ? inv.getId().longValue() : null);
             msg.setToEmail(email.trim());
             msg.setToName(name.trim());
             java.util.Map<String, String> vars = new java.util.HashMap<>();
             vars.put("SO_HOA_DON",  inv.getNo() != null ? String.valueOf(inv.getNo()) : "");
             vars.put("CUS_NAME",    name.trim());
             vars.put("CUS_TAXCODE", taxCode);
+            vars.put("LOOKUP_LINK", "/v1/invoices/" + lookupCode + "/lookup");
             vars.put("LOOKUP_CODE", lookupCode);
             vars.put("COM_NAME",    companyName);
             vars.put("COM_HOTLINE", hotline);
@@ -2049,13 +1841,25 @@ public class InvoiceController extends BaseController {
             // Fallback if no DB template found
             vars.put("SUBJECT",  subject);
             vars.put("HTML_BODY", html);
-            addInvoiceZipAttachmentVars(vars, inv);
             msg.setVariables(vars);
 
-            if (mailQueueService == null) {
+            boolean sent = false;
+            if (mailQueueService != null) {
+                try {
+                    mailQueueService.enqueue(msg);
+                    sent = true;
+                } catch (Exception queueEx) {
+                    log.warn("[send-email] Queue unavailable ({}), falling back to direct send", queueEx.getMessage());
+                }
+            }
+            if (!sent && mailWorker != null) {
+                mailWorker.handle(msg);
+                sent = true;
+            }
+            if (!sent) {
+                log.warn("[send-email] No mail sender available for invoice {}", id);
                 return ResponseEntity.status(500).body(new ErrorDTO("Chưa cấu hình mail server"));
             }
-            mailQueueService.enqueue(msg);
 
             java.util.Map<String,Object> resp = new java.util.LinkedHashMap<>();
             resp.put("message", "Đã gửi email thông báo phát hành hóa đơn");
@@ -2104,51 +1908,7 @@ public class InvoiceController extends BaseController {
             return e.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
         } catch (Exception ignore) { return false; }
     }
-
-    private String buildInvoiceIssueMailSubject(InvoiceEntity inv) {
-        String formSerial = getInvoiceFormSerial(inv);
-        return "Thông báo phát hành hóa đơn số " + safeStr(inv != null ? inv.getNo() : null)
-                + (formSerial != null && !formSerial.isEmpty() ? " (" + formSerial + ")" : "");
-    }
-
-    private String getInvoiceFormSerial(InvoiceEntity inv) {
-        if (inv == null) return "";
-        String formSerial = safeStr(inv.getFormId());
-        try {
-            Long formId = inv.getFormId() != null ? inv.getFormId().longValue() : null;
-            if (formId != null) {
-                FormInvoiceEntity form = formInvoiceRepository.findById(formId).orElse(null);
-                if (form != null) {
-                    formSerial = safeStr(form.getFormCode()) + safeStr(form.getSerial());
-                }
-            }
-        } catch (Exception ignore) {}
-        return formSerial;
-    }
-
-    private String getCustomerDisplayName(java.util.Map<String, Object> customerMap) {
-        if (customerMap != null) {
-            for (String key : new String[] {"name", "companyName", "company_name", "buyer", "buyerName", "buyer_name"}) {
-                Object value = customerMap.get(key);
-                if (value != null && !String.valueOf(value).isBlank()) {
-                    return String.valueOf(value).trim();
-                }
-            }
-        }
-        return "Quý khách";
-    }
-
     private String getString(Object o) { return o == null ? null : String.valueOf(o); }
-    private String getCustomerTaxCode(java.util.Map<String, Object> customerMap) {
-        if (customerMap == null || customerMap.isEmpty()) return "";
-        for (String key : new String[] {"tax_code", "taxcode", "taxCode"}) {
-            Object value = customerMap.get(key);
-            if (value != null && !String.valueOf(value).isBlank()) {
-                return String.valueOf(value);
-            }
-        }
-        return "";
-    }
 
     /**
      * Pick invoice XML source by status:

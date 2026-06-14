@@ -37,13 +37,14 @@
       </b-row>
     </b-card>
 
-    <b-card class="shadow-sm">
+    <b-card class="shadow-sm mail-history-table-card">
       <b-table
         bordered
         hover
         responsive
         small
         show-empty
+        class="mb-0 table-modern table-compact mail-history-table"
         :busy="isBusy"
         :items="list.data"
         :fields="fields"
@@ -53,22 +54,23 @@
           {{ index + 1 + (list.current_page - 1) * list.per_page }}
         </template>
 
-        <template #cell(templateKey)="{ item }">
-          <div class="font-weight-bold">{{ item.templateName || mailTypeText(item.templateKey) }}</div>
-          <small class="text-muted">{{ item.subject || item.templateName || '—' }}</small>
+        <template #cell(companyName)="{ item }">
+          <div class="font-weight-bold">{{ item.companyName || '-' }}</div>
+          <small class="text-muted" v-if="item.companyId">ID: {{ item.companyId }}</small>
         </template>
 
-        <template #cell(sender)="">
-          <span>Hệ thống</span>
+        <template #cell(templateKey)="{ item }">
+          <div class="font-weight-bold">{{ item.templateName || mailTypeText(item.templateKey) }}</div>
+          <small class="text-muted">{{ item.subject || item.templateName || '-' }}</small>
         </template>
 
         <template #cell(toName)="{ item }">
-          {{ item.toName || '—' }}
+          {{ item.toName || '-' }}
         </template>
 
         <template #cell(toEmail)="{ item }">
           <b-badge variant="success" class="mr-1">To</b-badge>
-          <span>{{ item.toEmail || '—' }}</span>
+          <span class="email-text">{{ item.toEmail || '-' }}</span>
         </template>
 
         <template #cell(attempts)="{ item }">
@@ -92,11 +94,6 @@
             </template>
             <b-dropdown-item href="#" @click.prevent="showDetail(item)">
               Chi tiết
-            </b-dropdown-item>
-            <b-dropdown-divider></b-dropdown-divider>
-            <b-dropdown-item href="#" :disabled="retryingId === item.id" @click.prevent="retryMail(item)">
-              <i class="fas fa-paper-plane mr-1"></i>
-              Gửi lại
             </b-dropdown-item>
           </b-dropdown>
         </template>
@@ -142,15 +139,17 @@
     <b-modal ref="detailModal" title="Chi tiết gửi mail" ok-only ok-title="Đóng" size="lg">
       <b-table-simple small bordered responsive>
         <b-tbody>
-          <b-tr><b-th style="width: 180px">Người nhận</b-th><b-td>{{ selected.toName || '—' }}</b-td></b-tr>
-          <b-tr><b-th>Email nhận</b-th><b-td>{{ selected.toEmail || '—' }}</b-td></b-tr>
-          <b-tr><b-th>Tiêu đề</b-th><b-td>{{ selected.subject || '—' }}</b-td></b-tr>
+          <b-tr><b-th style="width: 180px">Company ID</b-th><b-td>{{ selected.companyId || '-' }}</b-td></b-tr>
+          <b-tr><b-th style="width: 180px">Người nhận</b-th><b-td>{{ selected.toName || '-' }}</b-td></b-tr>
+          <b-tr><b-th>Email nhận</b-th><b-td>{{ selected.toEmail || '-' }}</b-td></b-tr>
+          <b-tr><b-th>Tiêu đề</b-th><b-td>{{ selected.subject || '-' }}</b-td></b-tr>
           <b-tr><b-th>Trạng thái</b-th><b-td>{{ statusText(selected.status) }}</b-td></b-tr>
+          <b-tr><b-th>Hiển thị phía khách</b-th><b-td>{{ selected.showHistory ? 'Có' : 'Không' }}</b-td></b-tr>
           <b-tr><b-th>Số lần gửi</b-th><b-td>{{ selected.attempts || 0 }}</b-td></b-tr>
-          <b-tr><b-th>Hóa đơn</b-th><b-td>{{ selected.invoiceId || '—' }}</b-td></b-tr>
+          <b-tr><b-th>Hóa đơn</b-th><b-td>{{ selected.invoiceId || '-' }}</b-td></b-tr>
           <b-tr><b-th>Ngày tạo</b-th><b-td>{{ formatDateTime(selected.createdAt) }}</b-td></b-tr>
           <b-tr><b-th>Ngày gửi</b-th><b-td>{{ formatDateTime(selected.sentAt) }}</b-td></b-tr>
-          <b-tr><b-th>Lỗi</b-th><b-td class="text-danger">{{ selected.error || '—' }}</b-td></b-tr>
+          <b-tr><b-th>Lỗi</b-th><b-td class="text-danger">{{ selected.error || '-' }}</b-td></b-tr>
         </b-tbody>
       </b-table-simple>
     </b-modal>
@@ -161,11 +160,10 @@
 import axios from '@/plugins/axios'
 
 export default {
-  name: 'EmailMailHistory',
+  name: 'AdminEmailMailHistory',
   data() {
     return {
       isBusy: false,
-      retryingId: null,
       selected: {},
       filters: {
         keyword: '',
@@ -190,15 +188,15 @@ export default {
         to: 0,
       },
       fields: [
-        { key: 'index', label: '#', thStyle: { width: '70px' }, tdClass: 'text-center' },
-        { key: 'templateKey', label: 'Loại email', thStyle: { minWidth: '220px' } },
-        { key: 'sender', label: 'Người gửi', thStyle: { width: '130px' } },
-        { key: 'toName', label: 'Người nhận', thStyle: { minWidth: '200px' } },
-        { key: 'toEmail', label: 'Email nhận', thStyle: { minWidth: '260px' } },
-        { key: 'attempts', label: 'Số lần gửi', thStyle: { width: '110px' }, tdClass: 'text-center' },
-        { key: 'status', label: 'Trạng thái', thStyle: { width: '130px' }, tdClass: 'text-center' },
-        { key: 'updatedAt', label: 'Ngày cập nhật', thStyle: { width: '170px' } },
-        { key: 'option', label: '', thStyle: { width: '70px' }, tdClass: 'text-center' },
+        { key: 'index', label: '#', thStyle: { width: '44px' }, tdClass: 'text-center text-nowrap' },
+        { key: 'companyName', label: 'Company', thStyle: { width: '130px' } },
+        { key: 'templateKey', label: 'Loại email', thStyle: { width: '130px' } },
+        { key: 'toName', label: 'Người nhận', thStyle: { width: '125px' } },
+        { key: 'toEmail', label: 'Email nhận', thStyle: { width: '235px' } },
+        { key: 'attempts', label: 'Số lần gửi', thStyle: { width: '76px' }, tdClass: 'text-center' },
+        { key: 'status', label: 'Trạng thái', thStyle: { width: '92px' }, tdClass: 'text-center' },
+        { key: 'updatedAt', label: 'Ngày cập nhật', thStyle: { width: '130px' } },
+        { key: 'option', label: '', thStyle: { width: '48px' }, tdClass: 'text-center text-nowrap' },
       ],
     }
   },
@@ -209,7 +207,7 @@ export default {
     async fetchList() {
       this.isBusy = true
       try {
-        const { data } = await axios.get('/mail-jobs', {
+        const { data } = await axios.get('/administrator/mail-jobs', {
           params: {
             page: this.list.current_page,
             size: this.list.per_page,
@@ -251,44 +249,11 @@ export default {
       this.selected = item || {}
       this.$refs.detailModal.show()
     },
-    async retryMail(item) {
-      if (!item || !item.id) return
-      const ok = await this.$bvModal.msgBoxConfirm(
-        `Đưa email gửi đến ${item.toEmail || 'người nhận này'} vào hàng đợi gửi lại?`,
-        {
-          title: 'Gửi lại email',
-          okTitle: 'Gửi lại',
-          cancelTitle: 'Hủy',
-          okVariant: 'primary',
-          centered: true,
-        }
-      )
-      if (!ok) return
-
-      this.retryingId = item.id
-      try {
-        const { data } = await axios.post(`/mail-jobs/${item.id}/retry`)
-        this.$bvToast.toast(data?.message || 'Đã đưa email vào hàng đợi gửi lại', {
-          title: 'Thành công',
-          variant: 'success',
-          solid: true,
-        })
-        this.fetchList()
-      } catch (err) {
-        const message = err?.response?.data?.message || 'Không thể gửi lại email'
-        this.$bvToast.toast(message, {
-          title: 'Lỗi',
-          variant: 'danger',
-          solid: true,
-        })
-      } finally {
-        this.retryingId = null
-      }
-    },
     mailTypeText(key) {
       if (key === 'ISSUE_INVOICE_MAIL') return 'Thông báo phát hành hóa đơn'
       if (key === 'ACCOUNT_INFO_MAIL') return 'Gửi thông tin tài khoản'
       if (key === 'LOGIN_INFO_MAIL') return 'Gửi thông tin đăng nhập'
+      if (key === 'RESET_PASSWORD_MAIL') return 'Đặt lại mật khẩu'
       return key || 'Email hệ thống'
     },
     statusText(status) {
@@ -312,7 +277,7 @@ export default {
       }
     },
     formatDateTime(value) {
-      if (!value) return '—'
+      if (!value) return '-'
       try {
         const d = new Date(value)
         if (Number.isNaN(d.getTime())) return String(value).replace('T', ' ')
@@ -331,12 +296,56 @@ export default {
 </script>
 
 <style scoped>
+.mail-history {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.mail-history-table-card {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.mail-history-table-card ::v-deep .card-body {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.mail-history-table-card ::v-deep .table-responsive {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.mail-history-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
 .mail-history .table th {
   background: #eef4fa;
   vertical-align: middle;
+  white-space: normal;
 }
 
 .mail-history .table td {
   vertical-align: middle;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.mail-history .table td .badge {
+  white-space: nowrap;
+}
+
+.mail-history .email-text {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1199.98px) {
+  .mail-history {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
 }
 </style>

@@ -63,6 +63,11 @@ import axios from './plugins/axios'
     const data = res?.data || {}
     Vue.prototype.$app.info.user = data.user || null
     Vue.prototype.$app.info.company = data.company || null
+    if (data.company && data.company.status != null) {
+      localStorage.setItem('company-status', String(data.company.status))
+    } else {
+      localStorage.removeItem('company-status')
+    }
   }).catch(() => {})
 })()
 

@@ -9,7 +9,11 @@
       </div>
 
       <!-- Tìm kiếm -->
-      <div class="search">
+      <div v-if="isCompanyPending" class="pending-company">
+        Tài khoản công ty đang chờ kích hoạt.
+      </div>
+
+      <div v-else class="search">
         <input v-model="search" type="search" placeholder="Tìm kiếm..." aria-label="Tìm kiếm menu" />
         <i class="fas fa-search"></i>
       </div>
@@ -105,6 +109,7 @@ export default {
   },
   computed: {
     filteredItems() {
+      if (this.isCompanyPending) return [];
       const q = (this.search || '').trim().toLowerCase();
       if (!q) return this.menuItems;
       // Lọc mục cha và mục con theo từ khóa tìm kiếm
@@ -125,6 +130,10 @@ export default {
         if (logo && typeof logo === 'string' && logo.trim() !== '') return logo
       } catch {}
       return require('@/assets/images/logo/logo-hoadon.png')
+    },
+    isCompanyPending() {
+      const status = this.$app?.info?.company?.status ?? localStorage.getItem('company-status')
+      return String(status) === '2'
     }
   },
   watch: {
@@ -195,6 +204,7 @@ export default {
 .search input { width: 100%; padding: 8px 34px 8px 12px; border-radius: 6px; border: none; background: rgba(255,255,255,0.03); color: #cfe6ff; }
 .search input::placeholder { color: #7896b3; }
 .search .fa-search { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #7896b3; }
+.pending-company { padding: 10px 12px; margin-bottom: 12px; border-radius: 6px; background: rgba(255,193,7,0.12); color: #ffd778; font-size: 13px; line-height: 1.4; }
 .menu { overflow: auto; flex: 1 1 auto; }
 .menu ul { list-style: none; padding: 0; margin: 0; }
 .menu li { margin-bottom: 4px; }
@@ -222,3 +232,4 @@ export default {
   .sidebar { width: 100%; height: auto; position: relative; }
 }
 </style>
+

@@ -28,6 +28,7 @@ public interface MailJobRepository extends JpaRepository<MailJobEntity, Long> {
 
     @Query("SELECT j FROM MailJobEntity j " +
            "WHERE (:companyId IS NULL OR j.companyId = :companyId) " +
+           "  AND j.showHistory = true " +
            "  AND (:status IS NULL OR j.status = :status) " +
            "  AND (:q IS NULL OR LOWER(COALESCE(j.toEmail, '')) LIKE LOWER(CONCAT('%', :q, '%')) " +
            "       OR LOWER(COALESCE(j.toName, '')) LIKE LOWER(CONCAT('%', :q, '%')) " +
@@ -37,4 +38,14 @@ public interface MailJobRepository extends JpaRepository<MailJobEntity, Long> {
                                       @Param("status") String status,
                                       @Param("q") String q,
                                       Pageable pageable);
+
+    @Query("SELECT j FROM MailJobEntity j " +
+           "WHERE (:status IS NULL OR j.status = :status) " +
+           "  AND (:q IS NULL OR LOWER(COALESCE(j.toEmail, '')) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "       OR LOWER(COALESCE(j.toName, '')) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "       OR LOWER(COALESCE(j.subject, '')) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "       OR LOWER(COALESCE(j.templateKey, '')) LIKE LOWER(CONCAT('%', :q, '%'))) ")
+    Page<MailJobEntity> searchAllHistory(@Param("status") String status,
+                                         @Param("q") String q,
+                                         Pageable pageable);
 }

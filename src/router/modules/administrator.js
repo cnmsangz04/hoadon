@@ -1,4 +1,4 @@
-export default {
+﻿export default {
   path: "/administrator",
   component: () => import("../../views/administrators/page.vue"), // layout admin
   meta: { requiresAdmin: true, title: "Khu vực admin" },
@@ -14,6 +14,12 @@ export default {
       name: "admin-company-list",
       component: () => import("../../views/administrators/company/list.vue"),
       meta: { requiresAdmin: true, title: "Danh sách công ty" },
+    },
+    {
+      path: "company-registration/list",
+      name: "admin-company-registration-list",
+      component: () => import("../../views/administrators/company-registration/list.vue"),
+      meta: { requiresAdmin: true, title: "Duyệt đăng ký" },
     },
     {
       path: "buy-invoice/list",
@@ -54,6 +60,13 @@ export default {
       component: () =>
         import("../../views/administrators/email-template/create.vue"),
       meta: { requiresAdmin: true, title: "Add Template" },
+    },
+    {
+      path: "email/mail-history",
+      name: "admin-email-mail-history",
+      component: () =>
+        import("../../views/administrators/email/mail-history.vue"),
+      meta: { requiresAdmin: true, title: "Lịch sử gửi mail" },
     },
     {
       path: "form-invoice/list",

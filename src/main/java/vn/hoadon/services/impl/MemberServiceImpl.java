@@ -4,23 +4,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.hoadon.dto.member.MemberUpsertRequest;
+import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.PermissionEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.entity.UserPermissionEntity;
+import vn.hoadon.messaging.MailJobMessage;
+import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.PermissionRepository;
 import vn.hoadon.repositories.UserRepository;
 import vn.hoadon.repositories.UserPermissionRepository;
+import vn.hoadon.services.MailQueueService;
 import vn.hoadon.services.MemberService;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -38,8 +42,11 @@ public class MemberServiceImpl implements MemberService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @Autowired(required = false)
-    private JavaMailSender mailSender;
+    @Autowired
+    private CompanyRepository companyRepository;
+
+    @Autowired
+    private MailQueueService mailQueueService;
 
     @Override
     public Page<UserEntity> list(String keyword, Long roleId, Byte status, Long companyId, Integer role, Pageable pageable) {
@@ -311,8 +318,12 @@ public class MemberServiceImpl implements MemberService {
     public String sendCredentials(Long id) {
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        if (user.getEmail() == null || user.getEmail().isBlank()) {
-            throw new IllegalArgumentException("Thành viên không có email");
+        CompanyEntity company = null;
+        if (user.getCompanyId() != null) {
+            company = companyRepository.findById(user.getCompanyId()).orElse(null);
+        }
+        if (company == null || company.getEmail() == null || company.getEmail().isBlank()) {
+            throw new IllegalArgumentException("Công ty chưa có email nhận thông tin đăng nhập");
         }
 
         // Luôn reset lại mật khẩu mới mỗi lần gửi thông tin
@@ -321,13 +332,40 @@ public class MemberServiceImpl implements MemberService {
         user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        // Giả lập gửi email: chỉ log ra console/nội dung gửi đi, không dùng JavaMailSender
-        System.out.println("[MOCK EMAIL] Gửi thông tin tài khoản tới: " + user.getEmail());
-        System.out.println("[MOCK EMAIL] Tên tài khoản: " + user.getUsername());
-        System.out.println("[MOCK EMAIL] Mật khẩu mới: " + newPassword);
+        enqueueAccountInfoMail(user, company, newPassword);
 
         userRepository.save(user);
         
         return newPassword;
+    }
+
+    private void enqueueAccountInfoMail(UserEntity user, CompanyEntity company, String rawPassword) {
+        if (user == null || company == null || company.getEmail() == null || company.getEmail().isBlank()) return;
+
+        Map<String, String> vars = new HashMap<>();
+        vars.put("SUBJECT", "Gửi thông tin tài khoản");
+        vars.put("NAME", company.getName() != null && !company.getName().isBlank() ? company.getName() : user.getUsername());
+        vars.put("CUS_NAME", vars.get("NAME"));
+        vars.put("COMPANY", company != null && company.getName() != null ? company.getName() : "");
+        vars.put("CUS_COM_NAME", vars.get("COMPANY"));
+        vars.put("COM_NAME", resolveLoginMailSenderCompanyName());
+        vars.put("LINK", "http://localhost:8080/login");
+        vars.put("USERNAME", user.getUsername() != null ? user.getUsername() : "");
+        vars.put("PASSWORD", rawPassword != null ? rawPassword : "");
+
+        MailJobMessage msg = new MailJobMessage();
+        msg.setTemplateKey("LOGIN_INFO_MAIL");
+        msg.setCompanyId(user.getCompanyId());
+        msg.setToEmail(company.getEmail().trim());
+        msg.setToName(vars.get("NAME"));
+        msg.setVariables(vars);
+        mailQueueService.enqueue(msg);
+    }
+
+    private String resolveLoginMailSenderCompanyName() {
+        return companyRepository.findById(1L)
+                .map(CompanyEntity::getName)
+                .filter(name -> name != null && !name.isBlank())
+                .orElse("");
     }
 }

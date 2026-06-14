@@ -54,9 +54,10 @@ public class MailWorker {
     public void processSync(MailJobMessage job) {
         log.info("[MailWorker] Processing job: template={}, to={}", job.getTemplateKey(), job.getToEmail());
         try {
-            ResolvedSender rs = resolveSender(job.getCompanyId());
+            Long senderCompanyId = resolveSenderCompanyId(job);
+            ResolvedSender rs = resolveSender(senderCompanyId);
             if (rs == null) {
-                log.warn("[MailWorker] No mail sender available for companyId={}. Skipping.", job.getCompanyId());
+                log.warn("[MailWorker] No mail sender available for companyId={}. Skipping.", senderCompanyId);
                 return;
             }
 
@@ -70,7 +71,7 @@ public class MailWorker {
         } catch (Exception e) {
             log.error("[MailWorker] Failed: template={}, to={}, error={}",
                     job.getTemplateKey(), job.getToEmail(), e.getMessage(), e);
-            throw new RuntimeException("MailWorker send failed", e);
+            throw new RuntimeException(rootMessage(e), e);
         }
     }
 
@@ -99,6 +100,13 @@ public class MailWorker {
 
     // â”€â”€ Template resolution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+    private Long resolveSenderCompanyId(MailJobMessage job) {
+        if (job != null && ("LOGIN_INFO_MAIL".equals(job.getTemplateKey())
+                || "RESET_PASSWORD_MAIL".equals(job.getTemplateKey()))) {
+            return 1L;
+        }
+        return job != null ? job.getCompanyId() : null;
+    }
     private ResolvedTemplate resolveTemplate(MailJobMessage job) {
         String key     = job.getTemplateKey();
         Long companyId = job.getCompanyId();
@@ -113,6 +121,10 @@ public class MailWorker {
         MailTemplateEntity sysTpl = mailTemplateRepository.findSystemByKey(key);
         if (sysTpl != null && sysTpl.getStatus() != null && sysTpl.getStatus() == 1) {
             return new ResolvedTemplate(sysTpl.getTitle(), sysTpl.getContent());
+        }
+
+        if ("LOGIN_INFO_MAIL".equals(key) || "RESET_PASSWORD_MAIL".equals(key)) {
+            throw new IllegalStateException("Chưa cấu hình template email LOGIN_INFO_MAIL đang hoạt động trong mail_templates");
         }
 
         if (job.getVariables() != null) {
@@ -134,7 +146,7 @@ public class MailWorker {
             fb.append("</ul>");
         }
         fb.append("</div>");
-        return new ResolvedTemplate("ThÃ´ng bÃ¡o tá»« há»‡ thá»‘ng hÃ³a Ä‘Æ¡n", fb.toString());
+        return new ResolvedTemplate("Thông báo từ hệ thống hóa đơn", fb.toString());
     }
 
     // â”€â”€ Variable substitution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -193,6 +205,18 @@ public class MailWorker {
     private String esc(String s) {
         if (s == null) return "";
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    private String rootMessage(Throwable e) {
+        Throwable root = e;
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+        String message = root.getMessage();
+        if (message == null || message.isBlank()) {
+            message = e.getMessage();
+        }
+        return message != null && !message.isBlank() ? message : "Gửi mail thất bại";
     }
 
     private record ResolvedTemplate(String subject, String body) {}

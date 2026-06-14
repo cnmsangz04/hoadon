@@ -82,14 +82,15 @@ public class DbMailQueueWorker {
                     job.getId(), msg.getTemplateKey(), msg.getToEmail());
 
         } catch (Exception e) {
+            String errorMessage = rootMessage(e);
             log.error("[MailQueue] Job {} failed (attempt {}/{}): {}",
-                    job.getId(), job.getAttempts(), maxAttempts, e.getMessage());
+                    job.getId(), job.getAttempts(), maxAttempts, errorMessage);
 
             if (job.getAttempts() >= maxAttempts) {
                 // Thất bại vĩnh viễn — mark failed, không retry nữa
                 job.setFailed(true);
                 job.setStatus("failed");
-                job.setError(truncate(e.getMessage(), 2000));
+                job.setError(truncate(errorMessage, 2000));
                 job.setReservedAt(null);
                 job.setFailedAt(System.currentTimeMillis());
                 job.setUpdatedAt(System.currentTimeMillis());
@@ -110,5 +111,17 @@ public class DbMailQueueWorker {
     private String truncate(String s, int max) {
         if (s == null) return null;
         return s.length() > max ? s.substring(0, max) : s;
+    }
+
+    private String rootMessage(Throwable e) {
+        Throwable root = e;
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+        String message = root.getMessage();
+        if (message == null || message.isBlank()) {
+            message = e.getMessage();
+        }
+        return message != null && !message.isBlank() ? message : "Gửi mail thất bại";
     }
 }

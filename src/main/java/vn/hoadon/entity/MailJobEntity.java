@@ -35,6 +35,9 @@ public class MailJobEntity {
     @Column(name = "subject", columnDefinition = "NVARCHAR(500)")
     private String subject;
 
+    @Column(name = "show_history", nullable = false)
+    private boolean showHistory = true;
+
     @Column(name = "status", length = 30)
     private String status = "queued";
 
@@ -101,6 +104,9 @@ public class MailJobEntity {
 
     public String getSubject()            { return subject; }
     public void setSubject(String s)      { this.subject = s; }
+
+    public boolean isShowHistory()        { return showHistory; }
+    public void setShowHistory(boolean s) { this.showHistory = s; }
 
     public String getStatus()             { return status; }
     public void setStatus(String s)       { this.status = s; }

@@ -53,6 +53,7 @@ public class Info {
             c.put("name", company.getName());
             c.put("logo", company.getLogo());
             c.put("favicon", company.getFavicon());
+            c.put("status", company.getStatus());
             resp.put("company", c);
         } else {
             resp.put("company", null);

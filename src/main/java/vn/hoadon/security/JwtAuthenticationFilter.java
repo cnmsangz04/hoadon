@@ -16,6 +16,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import vn.hoadon.entity.UserEntity;
+import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.services.UserService;
 
 import io.jsonwebtoken.ExpiredJwtException;
@@ -32,10 +33,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserService userService;
+    private final CompanyRepository companyRepository;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, UserService userService) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, UserService userService, CompanyRepository companyRepository) {
         this.jwtUtil = jwtUtil;
         this.userService = userService;
+        this.companyRepository = companyRepository;
     }
 
     @Override
@@ -84,6 +87,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (user.getStatus() == null || user.getStatus() != 1) {
                 log.warn("User is disabled or inactive: {}", username);
                 unauthorized(response, "USER_DISABLED", "User is inactive or disabled");
+                return;
+            }
+
+            if (isBusinessApi(uri) && isPendingCompany(user)) {
+                log.warn("Company is pending activation, blocked API access: user={}, uri={}", username, uri);
+                forbidden(response, "COMPANY_PENDING_ACTIVATION", "C\u00f4ng ty ch\u01b0a \u0111\u01b0\u1ee3c k\u00edch ho\u1ea1t");
                 return;
             }
 
@@ -156,6 +165,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
               "message": "%s"
             }
             """.formatted(error, message));
+    }
+
+    private void forbidden(HttpServletResponse response,
+                           String error,
+                           String message) throws IOException {
+
+        log.debug("Responding forbidden: error={}, message={}", error, message);
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write("""
+            {
+              "error": "%s",
+              "message": "%s"
+            }
+            """.formatted(error, message));
+    }
+
+    private boolean isBusinessApi(String uri) {
+        return uri != null && uri.startsWith("/v1/") && !uri.startsWith("/v1/auth/");
+    }
+
+    private boolean isPendingCompany(UserEntity user) {
+        Long companyId = user.getCompanyId();
+        if (companyId == null) {
+            return false;
+        }
+        return companyRepository.findById(companyId)
+                .map(company -> Integer.valueOf(2).equals(company.getStatus()))
+                .orElse(false);
     }
 
     private String mapRole(Integer role) {

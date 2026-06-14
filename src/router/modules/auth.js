@@ -21,6 +21,12 @@ export default {
       meta: { guestUser: true }
     },
     {
+      path: 'register',
+      name: 'auth-register',
+      component: () => import('../../views/auth/register.vue'),
+      meta: { guestUser: true }
+    },
+    {
       path: 'reset-password/:token',
       name: 'auth-reset-password',
       component: () => import('../../views/auth/reset_password.vue'),

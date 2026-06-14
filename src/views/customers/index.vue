@@ -1,5 +1,12 @@
 <template>
-  <div class="dashboard">
+  <div v-if="isCompanyPending" class="pending-page">
+    <div class="pending-card">
+      <h2>Tài khoản đang chờ kích hoạt</h2>
+      <p>Công ty của bạn đã đăng ký thành công và đang chờ quản trị viên kích hoạt. Các chức năng sẽ được mở sau khi công ty được kích hoạt.</p>
+    </div>
+  </div>
+
+  <div v-else class="dashboard">
     <h2>Thống kê hóa đơn</h2>
 
     <div v-if="loading" class="text-center py-4">
@@ -32,7 +39,7 @@
 </template>
 
 <script>
-import axios from '@/plugins/axios';
+import axios from '@/plugins/axios'
 
 export default {
   name: 'CustomerIndex',
@@ -44,42 +51,73 @@ export default {
         usedInvoices: 0,
         remainingInvoices: 0,
         issuedThisYear: 0,
-        valueThisYear: 0
-      }
-    };
+        valueThisYear: 0,
+      },
+    }
+  },
+  computed: {
+    isCompanyPending() {
+      const status = this.$app?.info?.company?.status ?? localStorage.getItem('company-status')
+      return String(status) === '2'
+    },
   },
   methods: {
     async loadStats() {
-      this.loading = true;
+      if (this.isCompanyPending) {
+        this.loading = false
+        return
+      }
+      this.loading = true
       try {
-        const response = await axios.get('/dashboard/stats');
-        this.invoiceStats = response.data;
+        const response = await axios.get('/dashboard/stats')
+        this.invoiceStats = response.data
       } catch (error) {
-        console.error('Error loading dashboard stats:', error);
-        this.$toastr && this.$toastr.error('Không thể tải dữ liệu thống kê');
+        console.error('Error loading dashboard stats:', error)
+        this.$toastr && this.$toastr.error('Không thể tải dữ liệu thống kê')
       } finally {
-        this.loading = false;
+        this.loading = false
       }
     },
     formatCurrency(value) {
-      if (!value) return '0 ₫';
-      return new Intl.NumberFormat('vi-VN', { 
-        style: 'currency', 
-        currency: 'VND' 
-      }).format(value);
-    }
+      if (!value) return '0 ₫'
+      return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+      }).format(value)
+    },
   },
   mounted() {
-    this.loadStats();
-  }
+    this.loadStats()
+  },
 }
 </script>
 
 <style scoped>
-.dashboard {
+.dashboard,
+.pending-page {
   background: #fff;
   padding: 20px;
   border-radius: 6px;
+}
+
+.pending-card {
+  padding: 28px 32px;
+  border-radius: 8px;
+  background: #fff8e1;
+  border: 1px solid #ffe08a;
+  color: #6b5200;
+}
+
+.pending-card h2 {
+  margin: 0 0 12px;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.pending-card p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 .stats-container {

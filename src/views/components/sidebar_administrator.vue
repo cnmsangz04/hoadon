@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="sidebar">
     <div class="sidebar-inner">
 
@@ -68,11 +68,13 @@ export default {
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
         { title: 'Công ty', icon: 'fas fa-building', to: '/administrator/company/list' },
         { title: 'Mua hóa đơn', icon: 'fas fa-file-invoice-dollar', to: '/administrator/buy-invoice/list' },
+        { title: 'Duyệt đăng ký', icon: 'fas fa-user-check', to: '/administrator/company-registration/list' },
         { title: 'Mẫu hóa đơn', icon: 'fas fa-file-contract', to: '/administrator/form-invoice/list' },
         { title: 'Ngân hàng', icon: 'fas fa-piggy-bank', to: '/administrator/bank/list' },
         { title: 'Cơ quan thuế', icon: 'fas fa-landmark', to: '/administrator/tax-authority/list' },
         { title: 'Thuế suất', icon: 'fas fa-percent', to: '/administrator/vat-rate/list' },
         { title: 'Email template', icon: 'fas fa-envelope', to: '/administrator/email-template/list' },
+        { title: 'Lịch sử gửi mail', icon: 'fas fa-history', to: '/administrator/email/mail-history' },
         {
           title: 'Phân quyền',
           icon: 'fas fa-user-shield',

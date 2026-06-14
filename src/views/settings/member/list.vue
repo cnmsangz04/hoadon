@@ -214,7 +214,7 @@
         <b-alert v-if="isEditingRootTarget" variant="info" class="mt-3">
           Bạn đang chỉnh cập nhật tài khoản <strong>Root</strong>. Vai trò và quyền hạn của tài khoản này không thể thay đổi.
         </b-alert>
-        <div class="text-right">
+        <div class="text-right member-modal-actions">
           <b-button type="submit" variant="primary" :disabled="!canSubmitForm">Lưu</b-button>
           <b-button variant="secondary" @click="$refs.memberModal.hide()">Hủy</b-button>
         </div>
@@ -900,6 +900,13 @@ export default {
   background-color: #f9fafb;
   color: #9ca3af;
   border-color: #e5e7eb;
+}
+
+.member-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 /* Mobile */

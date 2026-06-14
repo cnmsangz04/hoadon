@@ -14,12 +14,6 @@ public class CompanyEntity {
     private Long id;
 
     @Column(nullable = false, unique = true, columnDefinition = "NVARCHAR(255)")
-    private String domain;
-
-    @Column(name = "domain_lookup", columnDefinition = "NVARCHAR(255)")
-    private String domainLookup;
-
-    @Column(nullable = false, unique = true, columnDefinition = "NVARCHAR(255)")
     private String prefix;
 
     @Column(name = "created_at")
@@ -123,12 +117,6 @@ public class CompanyEntity {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-
-    public String getDomain() { return domain; }
-    public void setDomain(String domain) { this.domain = domain; }
-
-    public String getDomainLookup() { return domainLookup; }
-    public void setDomainLookup(String domainLookup) { this.domainLookup = domainLookup; }
 
     public String getPrefix() { return prefix; }
     public void setPrefix(String prefix) { this.prefix = prefix; }
