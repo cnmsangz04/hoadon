@@ -22,6 +22,7 @@ import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.CompanyBankRepository;
 import vn.hoadon.repositories.LegalRepresentativeRepository;
 import vn.hoadon.repositories.InvoiceRepository;
+import vn.hoadon.repositories.RegisterInvoiceRepository;
 import vn.hoadon.services.FormInvoiceService;
 import vn.hoadon.services.InvoiceNumberService;
 
@@ -59,6 +60,7 @@ public class FormInvoiceController extends BaseController {
     @Autowired private CompanyBankRepository companyBankRepository;
     @Autowired private LegalRepresentativeRepository legalRepresentativeRepository;
     @Autowired private InvoiceRepository invoiceRepository;
+    @Autowired private RegisterInvoiceRepository registerInvoiceRepository;
 
     @Autowired
     public FormInvoiceController(FormInvoiceService service, InvoiceNumberService invoiceNumberService) {
@@ -382,6 +384,10 @@ public class FormInvoiceController extends BaseController {
         Long templateId = Optional.ofNullable(body.get("templateId")).map(v -> Long.valueOf(v.toString())).orElse(null);
         Integer haveCode = Optional.ofNullable(body.get("have_code")).map(v -> Integer.valueOf(v.toString())).orElse(0);
 
+        if (Objects.equals(status, 1) && !hasAcceptedRegisterInvoice(companyId)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Chưa có tờ khai hóa đơn được chấp nhận nên không thể thêm/kích hoạt mẫu hóa đơn"));
+        }
+
         // Validate name
         if (name == null || name.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Tên mẫu không được để trống"));
@@ -542,6 +548,10 @@ public class FormInvoiceController extends BaseController {
         patch.setPhoto(Optional.ofNullable(body.get("photo")).map(Object::toString).orElse(null));
         patch.setHaveCode(Optional.ofNullable(body.get("have_code")).map(v -> Integer.valueOf(v.toString())).orElse(null));
 
+        if (Objects.equals(patch.getStatus(), 1) && !hasAcceptedRegisterInvoice(user.getCompanyId())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Chưa có tờ khai hóa đơn được chấp nhận nên không thể kích hoạt mẫu hóa đơn"));
+        }
+
         Optional<FormInvoiceEntity> updated;
         try {
             updated = service.update(id, patch);
@@ -575,6 +585,12 @@ public class FormInvoiceController extends BaseController {
                 service.update(it.getId(), patch);
             }
         }
+    }
+
+    private boolean hasAcceptedRegisterInvoice(Long companyId) {
+        if (companyId == null) return false;
+        List<?> accepted = registerInvoiceRepository.findLatestAccepted(companyId, PageRequest.of(0, 1));
+        return accepted != null && !accepted.isEmpty();
     }
 
     @DeleteMapping("/{id}")

@@ -93,6 +93,11 @@
             <b-dropdown-item href="#" @click.prevent="showDetail(item)">
               Chi tiết
             </b-dropdown-item>
+            <b-dropdown-divider></b-dropdown-divider>
+            <b-dropdown-item href="#" :disabled="retryingId === item.id" @click.prevent="retryMail(item)">
+              <i class="fas fa-paper-plane mr-1"></i>
+              Gửi lại
+            </b-dropdown-item>
           </b-dropdown>
         </template>
       </b-table>
@@ -160,6 +165,7 @@ export default {
   data() {
     return {
       isBusy: false,
+      retryingId: null,
       selected: {},
       filters: {
         keyword: '',
@@ -244,6 +250,40 @@ export default {
     showDetail(item) {
       this.selected = item || {}
       this.$refs.detailModal.show()
+    },
+    async retryMail(item) {
+      if (!item || !item.id) return
+      const ok = await this.$bvModal.msgBoxConfirm(
+        `Đưa email gửi đến ${item.toEmail || 'người nhận này'} vào hàng đợi gửi lại?`,
+        {
+          title: 'Gửi lại email',
+          okTitle: 'Gửi lại',
+          cancelTitle: 'Hủy',
+          okVariant: 'primary',
+          centered: true,
+        }
+      )
+      if (!ok) return
+
+      this.retryingId = item.id
+      try {
+        const { data } = await axios.post(`/mail-jobs/${item.id}/retry`)
+        this.$bvToast.toast(data?.message || 'Đã đưa email vào hàng đợi gửi lại', {
+          title: 'Thành công',
+          variant: 'success',
+          solid: true,
+        })
+        this.fetchList()
+      } catch (err) {
+        const message = err?.response?.data?.message || 'Không thể gửi lại email'
+        this.$bvToast.toast(message, {
+          title: 'Lỗi',
+          variant: 'danger',
+          solid: true,
+        })
+      } finally {
+        this.retryingId = null
+      }
     },
     mailTypeText(key) {
       if (key === 'ISSUE_INVOICE_MAIL') return 'Thông báo phát hành hóa đơn'

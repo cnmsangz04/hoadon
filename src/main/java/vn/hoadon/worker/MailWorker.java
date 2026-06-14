@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Component;
 import vn.hoadon.controllers.customers.MailServerController;
 import vn.hoadon.entity.MailServerEntity;
@@ -17,6 +18,7 @@ import vn.hoadon.repositories.MailTemplateRepository;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Base64;
 
 /**
  * Processes {@link MailJobMessage} jobs loaded from the SQL Server mail_jobs queue.
@@ -62,7 +64,8 @@ public class MailWorker {
             String subject = interpolate(tpl.subject, job.getVariables());
             String body    = interpolate(tpl.body,    job.getVariables());
 
-            sendHtmlMail(rs, job.getToEmail(), job.getToName(), subject, body);
+            MailAttachment attachment = resolveAttachment(job);
+            sendHtmlMail(rs, job.getToEmail(), job.getToName(), subject, body, attachment);
             log.info("[MailWorker] Mail sent: to={}, subject={}", job.getToEmail(), subject);
         } catch (Exception e) {
             log.error("[MailWorker] Failed: template={}, to={}, error={}",
@@ -150,8 +153,22 @@ public class MailWorker {
 
     // â”€â”€ Mail sending â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+    private MailAttachment resolveAttachment(MailJobMessage job) {
+        if (job == null || job.getVariables() == null) return null;
+        String name = job.getVariables().get("ATTACHMENT_ZIP_NAME");
+        String base64 = job.getVariables().get("ATTACHMENT_ZIP_BASE64");
+        if (name == null || name.isBlank() || base64 == null || base64.isBlank()) return null;
+        try {
+            byte[] bytes = Base64.getDecoder().decode(base64);
+            if (bytes.length == 0) return null;
+            return new MailAttachment(name, bytes, "application/zip");
+        } catch (Exception e) {
+            throw new IllegalArgumentException("File ZIP đính kèm không hợp lệ", e);
+        }
+    }
+
     private void sendHtmlMail(ResolvedSender rs, String to, String toName,
-                               String subject, String htmlBody) throws Exception {
+                               String subject, String htmlBody, MailAttachment attachment) throws Exception {
         MimeMessage message = rs.sender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
@@ -165,6 +182,9 @@ public class MailWorker {
         }
         helper.setSubject(subject);
         helper.setText(htmlBody, true);
+        if (attachment != null) {
+            helper.addAttachment(attachment.name(), new ByteArrayResource(attachment.bytes()), attachment.contentType());
+        }
         rs.sender.send(message);
     }
 
@@ -177,4 +197,5 @@ public class MailWorker {
 
     private record ResolvedTemplate(String subject, String body) {}
     private record ResolvedSender(JavaMailSender sender, String fromEmail, String fromName) {}
+    private record MailAttachment(String name, byte[] bytes, String contentType) {}
 }

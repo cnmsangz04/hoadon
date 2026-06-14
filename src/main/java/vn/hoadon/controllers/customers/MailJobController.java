@@ -1,5 +1,6 @@
 package vn.hoadon.controllers.customers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -8,13 +9,17 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.entity.MailJobEntity;
 import vn.hoadon.entity.UserEntity;
+import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.repositories.MailJobRepository;
+import vn.hoadon.services.MailQueueService;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -29,6 +34,8 @@ import java.util.Map;
 public class MailJobController extends BaseController {
 
     @Autowired private MailJobRepository mailJobRepository;
+    @Autowired private MailQueueService mailQueueService;
+    @Autowired private ObjectMapper objectMapper;
 
     @GetMapping
     public ResponseEntity<?> list(@AuthenticationPrincipal UserEntity user,
@@ -59,6 +66,29 @@ public class MailJobController extends BaseController {
         resp.put("total", result.getTotalElements());
         resp.put("last_page", result.getTotalPages());
         return ResponseEntity.ok(resp);
+    }
+
+    @PostMapping("/{id}/retry")
+    public ResponseEntity<?> retry(@AuthenticationPrincipal UserEntity user,
+                                   @PathVariable Long id) {
+        if (user == null || user.getCompanyId() == null) {
+            return ResponseEntity.status(403).build();
+        }
+
+        MailJobEntity oldJob = mailJobRepository.findById(id).orElse(null);
+        if (oldJob == null || oldJob.getCompanyId() == null || !oldJob.getCompanyId().equals(user.getCompanyId())) {
+            return ResponseEntity.status(404).body(Map.of("message", "Không tìm thấy lịch sử gửi mail"));
+        }
+
+        try {
+            MailJobMessage message = objectMapper.readValue(oldJob.getPayload(), MailJobMessage.class);
+            message.setCompanyId(user.getCompanyId());
+            message.setInvoiceId(oldJob.getInvoiceId());
+            mailQueueService.enqueue(message);
+            return ResponseEntity.ok(Map.of("message", "Đã đưa email vào hàng đợi gửi lại"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Không thể gửi lại email từ lịch sử này"));
+        }
     }
 
     private Map<String, Object> toRow(MailJobEntity job) {

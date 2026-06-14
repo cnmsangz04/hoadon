@@ -26,7 +26,7 @@
             </b-input-group-prepend>
             <b-form-input
               v-model.trim="filter.keyword"
-              placeholder="Tìm theo Domain / MST / Tên"
+              placeholder="Tìm theo MST / Tên / Địa chỉ"
               @keyup.enter="onFilter"
             />
           </b-input-group>
@@ -64,11 +64,6 @@
         <!-- STT -->
         <template #cell(id)="data">
           {{ safeRowNumber(data.index) }}
-        </template>
-
-        <template #cell(domain)="data">
-          <div class="text-mono">{{ data.item.domain }}</div>
-          <div class="text-muted small" v-if="data.item.domainLookup">Tra cứu: {{ data.item.domainLookup }}</div>
         </template>
 
         <template #cell(company)="data">
@@ -202,52 +197,6 @@
           </b-row>
         </div>
 
-        <!-- Thông tin domain -->
-        <div class="form-section">
-          <div class="section-header">
-            <i class="fas fa-globe text-success"></i>
-            <h6 class="mb-0">Thông tin Domain</h6>
-          </div>
-          <b-row>
-            <b-col cols="12" md="6">
-              <b-form-group label="Domain" label-for="domain" class="required-field">
-                <b-input-group>
-                  <b-input-group-prepend is-text>
-                    <i class="fas fa-link"></i>
-                  </b-input-group-prepend>
-                  <b-form-input 
-                    id="domain" 
-                    v-model.trim="companyForm.domain"
-                    placeholder="example.com"
-                    required 
-                  />
-                </b-input-group>
-                <small class="form-text text-muted">
-                  <i class="fas fa-info-circle"></i> Domain chính của công ty
-                </small>
-              </b-form-group>
-            </b-col>
-            
-            <b-col cols="12" md="6">
-              <b-form-group label="Domain tra cứu" label-for="domainLookup">
-                <b-input-group>
-                  <b-input-group-prepend is-text>
-                    <i class="fas fa-search"></i>
-                  </b-input-group-prepend>
-                  <b-form-input 
-                    id="domainLookup" 
-                    v-model.trim="companyForm.domainLookup"
-                    placeholder="lookup.example.com"
-                  />
-                </b-input-group>
-                <small class="form-text text-muted">
-                  <i class="fas fa-info-circle"></i> Domain dùng để tra cứu hóa đơn
-                </small>
-              </b-form-group>
-            </b-col>
-          </b-row>
-        </div>
-
         <!-- Thông tin liên hệ -->
         <div class="form-section">
           <div class="section-header">
@@ -338,9 +287,6 @@ export default {
         address: "",
         companyName: "",
         companyAddress: "",
-        // các trường theo yêu cầu
-        domain: "",
-        domainLookup: "",
         email: "",
         hotline: "",
         taxcode: "",
@@ -360,7 +306,6 @@ export default {
 
       fields: [
         { key: "id", label: "#", thStyle: { width: "50px" }, class: "text-center" },
-        { key: "domain", label: "Domain" },
         { key: "company", label: "Tên công ty / Địa chỉ" },
         { key: "email", label: "Email" },
         { key: "status", label: "Trạng thái", class: "text-center" },
@@ -419,8 +364,6 @@ export default {
         address: "",
         companyName: "",
         companyAddress: "",
-        domain: "",
-        domainLookup: "",
         email: "",
         hotline: "",
         taxcode: "",
@@ -461,8 +404,6 @@ export default {
       // Trim các trường văn bản chính
       payload.name = (payload.name || '').trim();
       payload.address = (payload.address || '').trim();
-      payload.domain = (payload.domain || '').trim();
-      payload.domainLookup = (payload.domainLookup || '').trim();
       payload.email = (payload.email || '').trim();
       payload.taxcode = (payload.taxcode || '').trim();
       // Chuẩn hóa hotline: trim và set undefined nếu rỗng

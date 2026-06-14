@@ -161,7 +161,7 @@
           </b-row>
 
           <datalist v-if="!loadingCustomers" id="autoCustomerCode">
-            <option v-for="item in _customers" :key="item.code" :value="item.code">
+            <option v-for="item in customersRaw" :key="item.code" :value="item.code">
               {{ (item.companyName || item.buyerName || '') + ' - MST: ' + (item.taxCode || item.taxcode || 'N/A') }}
             </option>
           </datalist>
@@ -404,14 +404,14 @@ export default {
       isBusyDetail: false,
       error: null,
       // Track shown error keys to avoid duplicate toasts
-      _shownErrorKeys: new Set(),
+      shownErrorKeys: new Set(),
       prepare: { formId: null, formCode: null, serial: null, haveCode: null, registerId: null, registerEffectiveDate: null },
       formInvoices: { name: null, form_code: null, serial: null, have_code: null },
       companies: { name: null, taxcode: null, address: null },
       loadingCustomers: false,
       customerOptions: [],
       // keep raw customers for lookup by code
-      _customers: [],
+      customersRaw: [],
       loadingProduct: false,
       feature: [
         { value: 1, text: 'HH, DV' },
@@ -489,7 +489,7 @@ export default {
       return Number(this.invoiceStatus) === 0
     }
   },
-  created () { 
+  async created () { 
     // set default 'Ngày lập' to today's local date
     this.frmData.date_export = this.formatLocalDateYYYYMMDD(new Date())
     // detect edit mode from route: /invoice/:id/edit or params.id
@@ -498,15 +498,16 @@ export default {
     if (Number.isFinite(id) && id > 0) {
       this.editId = id
     }
-    this.checkPrerequisites()
+    const ready = await this.checkPrerequisites()
+    if (!ready) return
     if (this.editId) this.loadInvoice()
   },
   methods: {
     // Unified error toast with deduplication by key
     toastError (message, key = null) {
       const k = key || message
-      if (this._shownErrorKeys.has(k)) return
-      this._shownErrorKeys.add(k)
+      if (this.shownErrorKeys.has(k)) return
+      this.shownErrorKeys.add(k)
       if (this.$toastr && typeof this.$toastr.error === 'function') {
         this.$toastr.error(message, 'Lỗi')
       }
@@ -579,16 +580,13 @@ export default {
 
         const { data: formList } = await axios.get('/form-invoices', { params: { category: 1, status: 1, size: 1, page: 1 } })
         const item = (formList && formList.items && formList.items[0]) || null
-        if (item) {
-          this.formInvoices.name = item.name || null
-          this.formInvoices.form_code = this.prepare.formCode || item.formCode || null
-          this.formInvoices.serial = this.prepare.serial || item.serial || null
-          this.formInvoices.have_code = this.prepare.haveCode != null ? this.prepare.haveCode : item.haveCode
-        } else {
-          this.formInvoices.form_code = this.prepare.formCode || null
-          this.formInvoices.serial = this.prepare.serial || null
-          this.formInvoices.have_code = this.prepare.haveCode || null
+        if (!item) {
+          throw new Error('Chưa có mẫu hóa đơn GTGT được kích hoạt')
         }
+        this.formInvoices.name = item.name || null
+        this.formInvoices.form_code = this.prepare.formCode || item.formCode || null
+        this.formInvoices.serial = this.prepare.serial || item.serial || null
+        this.formInvoices.have_code = this.prepare.haveCode != null ? this.prepare.haveCode : item.haveCode
 
         // customers by company_id
         await this.refreshCustomers()
@@ -609,9 +607,11 @@ export default {
         this.error = msg
         this.toastError(msg, 'checkPrerequisites')
         this.$router.replace({ name: 'CustomerVatInvoiceList' })
+        return false
       } finally {
         this.isBusy = false
       }
+      return true
     },
     detectCompanyId (profile, prep) {
       // auto detect company_id based on user context
@@ -627,7 +627,7 @@ export default {
         const { data: customersPage } = await axios.post('/categories/customer/list', payload, { params: { page: 0, size: 100 } })
         const customers = customersPage && customersPage.data ? customersPage.data : []
         // store full customers for later lookup
-        this._customers = customers
+        this.customersRaw = customers
         // Format for v-select: array of objects with value and text properties
         const opts = customers.map(c => ({
           value: c.code,
@@ -642,7 +642,7 @@ export default {
     onCustomerSelected (code) {
       const s = String(code || '').trim()
       if (!s) return
-      const c = (this._customers || []).find(x => String(x.code || '').trim() === s)
+      const c = (this.customersRaw || []).find(x => String(x.code || '').trim() === s)
       if (!c) return
       // prefer companyName/buyerName, then fallback
       this.frmData.customer.code = c.code || this.frmData.customer.code
@@ -660,7 +660,7 @@ export default {
       const code = String(this.frmData.customer.code || '').trim()
       if (!code) return
       // Try to find customer by exact code match
-      const c = (this._customers || []).find(x => String(x.code || '').trim() === code)
+      const c = (this.customersRaw || []).find(x => String(x.code || '').trim() === code)
       if (c) {
         // Auto-fill customer fields
         this.onCustomerSelected(code)
