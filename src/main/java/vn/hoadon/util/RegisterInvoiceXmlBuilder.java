@@ -243,7 +243,7 @@ public final class RegisterInvoiceXmlBuilder {
             try {
                 CertificateRow cert = new CertificateRow();
                 
-                // Try to parse as JSON first
+                // Thử parse dạng JSON trước
                 try {
                     JsonNode node = MAPPER.readTree(item);
                     cert.orgName = getJsonString(node, "orgName", "org_name", "organizationName");
@@ -256,7 +256,7 @@ public final class RegisterInvoiceXmlBuilder {
                     cert = parseKeyValueFormat(item);
                 }
                 
-                // Validate that we have minimum required data
+                // Kiểm tra đã có đủ dữ liệu tối thiểu
                 if (cert.orgName != null && !cert.orgName.trim().isEmpty() && 
                     cert.serialNo != null && !cert.serialNo.trim().isEmpty()) {
                     result.add(cert);
@@ -283,10 +283,10 @@ public final class RegisterInvoiceXmlBuilder {
     private static CertificateRow parseKeyValueFormat(String input) {
         CertificateRow cert = new CertificateRow();
         
-        // Remove outer braces if present
+        // Bỏ cặp ngoặc nhọn ngoài cùng nếu có
         String cleanInput = input.trim().replaceAll("^\\{|\\}$", "");
         
-        // Split by comma but handle nested structures
+        // Tách theo dấu phẩy nhưng vẫn xử lý cấu trúc lồng nhau
         String[] pairs = cleanInput.split(",\\s*(?![^{}]*})");
         
         for (String pair : pairs) {

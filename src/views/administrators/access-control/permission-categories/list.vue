@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <!-- FILTER -->
+    <!-- B? l?c -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col cols="8">
@@ -37,7 +37,7 @@
       </b-row>
     </b-card>
 
-    <!-- DRAGGABLE LIST -->
+    <!-- Danh s�ch k�o th? -->
     <b-card class="mb-2 shadow-sm">
       <div class="d-flex align-items-center mb-2">
         <h6 class="mb-0 mr-2">Thứ tự hiển thị</h6>
@@ -93,7 +93,7 @@
       </b-alert>
     </b-card>
 
-    <!-- TABLE (detailed) -->
+    <!-- B?ng (chi ti?t) -->
     <b-card class="shadow-sm">
       <b-table
         bordered
@@ -143,7 +143,7 @@
       />
     </b-card>
 
-    <!-- MODAL -->
+    <!-- Modal -->
     <b-modal ref="categoryModal" :title="form.id ? 'Cập nhật nhóm quyền' : 'Thêm nhóm quyền'" hide-footer>
       <b-form @submit.prevent="saveCategory">
         <b-form-group label="Tên nhóm">
@@ -237,7 +237,7 @@ export default {
       this.loadData();
     },
     onDragEnd() {
-      // mark as dirty so user can save
+      // Đánh dấu đã thay đổi để user có thể lưu
       // also update visible orderIndex for visual consistency
       this.orderedItems.forEach((it, i) => (it.orderIndex = i));
       this.dirtyOrder = true;
@@ -276,7 +276,7 @@ export default {
       this.loadData();
     },
     async toggleStatus(item) {
-      // inline quick toggle
+      // Bật/tắt nhanh inline
       const payload = { id: item.id, name: item.name, orderIndex: item.orderIndex, status: item.status };
       await axios.post("/administrator/permission-categories/saveOrUpdate", payload);
       this.$toastr && this.$toastr.success(item.status === 1 ? 'Đã bật hiển thị' : 'Đã ẩn nhóm');

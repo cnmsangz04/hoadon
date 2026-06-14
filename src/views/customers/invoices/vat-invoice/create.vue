@@ -8,7 +8,7 @@
 
       <!-- Removed inline alert; use toastr for error notifications -->
       
-      <!-- Loading skeleton -->
+      <!-- Skeleton tải -->
       <div v-if="isBusy" class="loading-skeleton">
         <b-skeleton width="100%" height="20px" animated class="mb-2" />
         <b-skeleton width="96%" height="20px" animated class="mb-2" />
@@ -1204,14 +1204,14 @@ export default {
 .action-buttons .btn-success { box-shadow: 0 3px 10px rgba(22, 163, 74, 0.18); }
 .action-buttons .btn-outline-secondary:hover { background: #f1f5f9; }
 
-/* Loading skeleton container spacing */
+/* Khoảng cách container skeleton tải */
 .loading-skeleton .mb-2 { margin-bottom: 8px !important; }
 
 /* Utilities */
 .small { font-size: 11.5px; }
 .mt-2 { margin-top: 6px; }
 
-/* Responsive tweaks */
+/* Tinh ch?nh responsive */
 @media (max-width: 992px) {
   .form-section { padding: 10px 12px; }
   .invoice-header { margin-bottom: 12px; }

@@ -44,7 +44,7 @@ public class MemberController extends BaseController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        // Derive companyId from authenticated user for non-root users
+        // Suy ra companyId từ user đã xác thực cho user không phải root
         UserEntity user = currentUser();
         Long actorCompanyId = user != null ? user.getCompanyId() : null;
         Integer actorRole = user != null ? user.getRole() : null;
@@ -67,7 +67,7 @@ public class MemberController extends BaseController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        // Derive companyId from authenticated user for non-root users
+        // Suy ra companyId từ user đã xác thực cho user không phải root
         UserEntity user = currentUser();
         Long actorCompanyId = user != null ? user.getCompanyId() : null;
         Integer actorRole = user != null ? user.getRole() : null;
@@ -84,7 +84,7 @@ public class MemberController extends BaseController {
         Map<String, Object> res = new HashMap<>();
         long total = p.getTotalElements();
         int size = p.getSize();
-        int currentPage = p.getNumber() + 1; // 1-based
+        int currentPage = p.getNumber() + 1; // bắt đầu từ 1
         int lastPage = Math.max(1, p.getTotalPages());
         int numberOfElements = p.getNumberOfElements();
         long from = total == 0 ? 0 : ((long) (currentPage - 1) * size) + 1;
@@ -97,7 +97,7 @@ public class MemberController extends BaseController {
         res.put("last_page", lastPage);
         res.put("from", from);
         res.put("to", to);
-        // URLs are optional; keep null for now
+        // URL là tùy chọn; tạm giữ null
         res.put("prev_page_url", currentPage > 1 ? currentPage - 1 : null);
         res.put("next_page_url", currentPage < lastPage ? currentPage + 1 : null);
         return res;
@@ -109,8 +109,8 @@ public class MemberController extends BaseController {
         Integer actorRole = actor != null ? actor.getRole() : null;
         boolean isRoot = actorRole != null && actorRole == 0;
         
-        // Only override companyId for non-root users
-        // Root users (role=0) can manage users from any company
+        // Chỉ ghi đè companyId cho user không phải root
+        // User root (role=0) có thể quản lý user từ mọi công ty
         if (!isRoot) {
             Long companyId = actor != null ? actor.getCompanyId() : null;
             if (companyId != null) {
@@ -149,7 +149,7 @@ public class MemberController extends BaseController {
     public Map<String, Object> resetPassword(@PathVariable Long id) {
         String tempPassword = service.resetPassword(id);
         
-        // Log the password reset with user details
+        // Ghi log reset mật khẩu kèm chi tiết user
         UserEntity user = userRepository.findById(id).orElse(null);
         if (user != null) {
             log.info("Password reset for userId={}, username={}, email={}, newPassword={}", 
@@ -166,27 +166,27 @@ public class MemberController extends BaseController {
 
     @DeleteMapping("/{id}")
     public void removeFromCompany(@PathVariable Long id) {
-        // Perform soft-delete for member
+        // Thực hiện soft-delete cho thành viên
         service.delete(id);
     }
 
     @PostMapping("/{id}/send-credentials")
     public Map<String, Object> sendCredentials(@PathVariable Long id) {
-        // Allow only non-guest users; detailed role checks can be added if needed
+        // Chỉ cho phép user không phải guest; có thể thêm kiểm tra role chi tiết nếu cần
         UserEntity actor = currentUser();
         if (actor == null) {
             throw new RuntimeException("Unauthenticated");
         }
         
-        // Get user info before sending
+        // Lấy thông tin user trước khi gửi
         UserEntity user = userRepository.findById(id).orElse(null);
         String username = user != null ? user.getUsername() : "unknown";
         String email = user != null ? user.getEmail() : "unknown";
         
-        // Send credentials (this will reset password internally and return it)
+        // Gửi thông tin đăng nhập (sẽ reset mật khẩu nội bộ và trả về mật khẩu)
         String newPassword = service.sendCredentials(id);
         
-        // Log the account and password being sent
+        // Ghi log tài khoản và mật khẩu được gửi
         log.info("Sending credentials to userId={}, username={}, email={}, newPassword={} (by actorId={}, actorUsername={})", 
                  id, username, email, newPassword, actor.getId(), actor.getUsername());
         

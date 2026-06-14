@@ -1,6 +1,6 @@
 <template>
   <div class="container-fluid py-3 customer-report-invoices">
-    <!-- Header and actions -->
+    <!-- Header và thao tác -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="d-flex align-items-center">
         <h4 class="mb-0 font-weight-bold">BÃ¡o cÃ¡o hÃ³a Ä‘Æ¡n</h4>
@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <!-- Filters -->
+    <!-- B? l?c -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="3" class="mb-2">
@@ -103,7 +103,7 @@
       </b-row>
     </b-card>
 
-    <!-- Invoice report table -->
+    <!-- B?ng báo cáo hóa don -->
     <b-card class="shadow-sm">
       <b-table
         bordered
@@ -155,7 +155,7 @@
         </template>
       </b-table>
 
-      <!-- Loading skeleton when changing page -->
+      <!-- Skeleton t?i khi chuy?n trang -->
       <div v-if="isBusy" class="mt-2">
         <b-skeleton width="100%" height="20px" animated class="mb-2" />
         <b-skeleton width="96%" height="20px" animated class="mb-2" />

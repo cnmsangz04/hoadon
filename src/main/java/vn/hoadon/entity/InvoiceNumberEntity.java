@@ -32,7 +32,7 @@ public class InvoiceNumberEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Getters and setters
+    // Getter và setter
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

@@ -331,12 +331,12 @@ export default {
           "/administrator/permissions/saveOrUpdate",
           this.form
         );
-        // Success toast
+        // Toast th�nh c�ng
         this.$toastr.success(this.form.id ? 'Cập nhật quyền thành công' : 'Thêm quyền thành công');
         this.$refs.permissionModal.hide();
         this.loadData();
       } catch (e) {
-        // Axios interceptor already shows error toast
+        // Interceptor Axios d� hi?n th? toast l?i
         console.error(e);
       }
     },

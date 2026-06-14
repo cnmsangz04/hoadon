@@ -33,7 +33,7 @@ public class HistoryController extends BaseController {
         if (user == null || user.getCompanyId() == null) {
             return List.of();
         }
-        // Pull recent by company, then filter by visibility flags per requirements and cap the limit
+        // Lấy dữ liệu gần đây theo công ty, rồi lọc theo cờ hiển thị và giới hạn số lượng
         List<HistoryDto> rows = historyService.listRecentByCompany(user.getCompanyId(), Math.max(1, limit));
         return rows.stream()
                 .filter(h -> (h.getShowNotify() != null ? h.getShowNotify() : 0) == showNotify)

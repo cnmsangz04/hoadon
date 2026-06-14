@@ -517,7 +517,7 @@ public class RegisterInvoiceController extends BaseController {
         Map<String, Object> res = new HashMap<>();
         long total = p.getTotalElements();
         int size = p.getSize();
-        int currentPage = p.getNumber() + 1; // 1-based for frontend
+        int currentPage = p.getNumber() + 1; // bắt đầu từ 1 for frontend
         int lastPage = Math.max(1, p.getTotalPages());
         int numberOfElements = p.getNumberOfElements();
         long from = total == 0 ? 0 : ((long) (currentPage - 1) * size) + 1;
@@ -552,7 +552,7 @@ public class RegisterInvoiceController extends BaseController {
                     } else if (o instanceof String) {
                         out.add((String) o);
                     } else {
-                        // Convert object to JSON string instead of toString()
+                        // Chuyển object thành chuỗi JSON thay vì dùng toString()
                         try {
                             out.add(mapper.writeValueAsString(o));
                         } catch (Exception e) {
@@ -565,14 +565,14 @@ public class RegisterInvoiceController extends BaseController {
             if (v instanceof String s) {
                 String trimmed = s.trim();
                 if (trimmed.isEmpty()) return List.of();
-                // Try JSON array first
+                // Thử mảng JSON trước
                 if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
                     ArrayNode arr = (ArrayNode) mapper.readTree(trimmed);
                     List<String> out = new ArrayList<>();
                     for (JsonNode node : arr) out.add(node.isNull() ? null : node.asText());
                     return out;
                 }
-                // Fallback: CSV
+                // Dự phòng: CSV
                 String[] parts = trimmed.split(",");
                 List<String> out = new ArrayList<>();
                 for (String p : parts) {
@@ -585,7 +585,7 @@ public class RegisterInvoiceController extends BaseController {
                 }
                 return out;
             }
-            // Generic: serialize to JSON then parse if array
+            // Tổng quát: serialize sang JSON rồi parse nếu là mảng
             JsonNode node = mapper.valueToTree(v);
             if (node != null && node.isArray()) {
                 ArrayNode arr = (ArrayNode) node;
@@ -596,20 +596,20 @@ public class RegisterInvoiceController extends BaseController {
                     } else if (i.isTextual()) {
                         out.add(i.asText());
                     } else {
-                        // Convert JsonNode back to JSON string
+                        // Chuyển JsonNode về lại chuỗi JSON
                         out.add(mapper.writeValueAsString(i));
                     }
                 }
                 return out;
             }
-            // Single value - serialize to JSON if it's an object
+            // Giá trị đơn - serialize sang JSON nếu là object
             try {
                 return List.of(mapper.writeValueAsString(v));
             } catch (Exception e) {
                 return List.of(String.valueOf(v));
             }
         } catch (Exception e) {
-            // Best-effort fallback
+            // Dự phòng best-effort
             return List.of(String.valueOf(v));
         }
     }
@@ -785,7 +785,7 @@ public class RegisterInvoiceController extends BaseController {
         Map<String, Object> res = new HashMap<>();
         long total = p.getTotalElements();
         int size = p.getSize();
-        int currentPage = p.getNumber() + 1; // 1-based for frontend
+        int currentPage = p.getNumber() + 1; // bắt đầu từ 1 for frontend
         int lastPage = Math.max(1, p.getTotalPages());
         int numberOfElements = p.getNumberOfElements();
         long from = total == 0 ? 0 : ((long) (currentPage - 1) * size) + 1;

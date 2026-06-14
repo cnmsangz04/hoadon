@@ -3,7 +3,7 @@
     <div class="page-content">
       <div class="page-account">
         <div>
-          <!-- HEADER -->
+          <!-- Header -->
           <div class="profile-avatar text-center">
             <div class="img-avatar">
               <b-avatar
@@ -24,7 +24,7 @@
             <p>{{ $t('account.description') }}</p>
           </div>
 
-          <!-- LOADING -->
+          <!-- Ðang t?i -->
           <b-skeleton-wrapper v-if="loading">
             <b-card>
               <div class="p-3" v-for="n in 3" :key="n">
@@ -34,11 +34,11 @@
             </b-card>
           </b-skeleton-wrapper>
 
-          <!-- INFO -->
+          <!-- Thông tin -->
           <b-card v-else class="profile-card">
             <h4 class="section-title">ThÃ´ng tin cÃ¡ nhÃ¢n</h4>
 
-            <!-- USERNAME (READ-ONLY) -->
+            <!-- Username (ch? d?c) -->
             <div class="list-info">
               <div class="list-item">
                 <div>
@@ -48,7 +48,7 @@
               </div>
             </div>
 
-            <!-- NAME -->
+            <!-- Tên -->
             <div class="list-info">
               <div class="list-item" v-if="!showName">
                 <div>
@@ -76,7 +76,7 @@
               </b-form>
             </div>
 
-            <!-- EMAIL -->
+            <!-- Email -->
             <div class="list-info">
               <div class="list-item" v-if="!showEmail">
                 <div>
@@ -104,7 +104,7 @@
               </b-form>
             </div>
 
-            <!-- PHONE -->
+            <!-- Ði?n tho?i -->
             <div class="list-info">
               <div class="list-item" v-if="!showPhone">
                 <div>
@@ -132,7 +132,7 @@
               </b-form>
             </div>
 
-            <!-- PASSWORD CHANGE -->
+            <!-- Ð?i m?t kh?u -->
             <div class="list-info">
               <div class="list-item" v-if="!showPassword">
                 <div>
@@ -170,7 +170,7 @@
       </div>
     </div>
 
-    <!-- AVATAR MODAL -->
+    <!-- Modal avatar -->
     <b-modal
       ref="profile-photo"
       centered
@@ -392,7 +392,7 @@ export default {
 
 
 <style scoped>
-/* Layout */
+/* B? c?c */
 .right_col {
   background: #f4f6f9;
   min-height: 100vh;
@@ -437,7 +437,7 @@ export default {
   box-shadow: 0 6px 20px rgba(37,99,235,.35);
 }
 
-/* Card */
+/* Th? */
 .profile-card {
   border-radius: 16px;
   border: none;
@@ -448,7 +448,7 @@ export default {
   margin-bottom: 16px;
 }
 
-/* Info rows */
+/* Dòng thông tin */
 .list-info {
   padding: 16px 0;
   border-top: 1px solid #eee;
@@ -467,14 +467,14 @@ export default {
   font-weight: 500;
 }
 
-/* Form */
+/* Bi?u m?u */
 .form-profile {
   background: #f9fafb;
   padding: 12px;
   border-radius: 10px;
 }
 
-/* Buttons */
+/* Nút */
 .btn-primary {
   background: #2563eb;
   border: none;
@@ -498,14 +498,14 @@ export default {
   inset: 0;
 }
 
-/* Cropper */
+/* B? c?t ?nh */
 .cropper {
   height: 420px;
   border-radius: 12px;
   overflow: hidden;
 }
 
-/* Password Change section */
+/* Khu v?c d?i m?t kh?u */
 .list-info h5 {
   font-weight: 700;
   color: #111827;
@@ -542,17 +542,17 @@ export default {
   padding-right: 6px;
 }
 
-/* Spacing harmonization */
+/* Ð?ng b? kho?ng cách */
 .profile-card .list-info + .list-info { border-top: 1px dashed #eef2f7; }
 .profile-card .list-info { padding-top: 14px; padding-bottom: 14px; }
 
-/* Button color unify */
+/* Ð?ng b? màu nút */
 :deep(.btn-primary) {
   background: linear-gradient(180deg, #4f77ff, #3b66f0);
 }
 :deep(.btn-primary:hover) { filter: brightness(1.03); }
 
-/* Responsive tweaks */
+/* Tinh ch?nh responsive */
 @media (max-width: 576px) {
   .form-profile .btn-primary { width: 100%; }
 }

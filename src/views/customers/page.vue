@@ -7,7 +7,7 @@
       <!-- Sidebar -->
       <Sidebar />
 
-      <!-- Main Content -->
+      <!-- N?i dung chính -->
       <div class="content">
         <router-view />
       </div>

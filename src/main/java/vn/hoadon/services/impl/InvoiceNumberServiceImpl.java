@@ -27,7 +27,7 @@ public class InvoiceNumberServiceImpl implements InvoiceNumberService {
 
     @Override
     public InvoiceNumberEntity create(InvoiceNumberEntity entity) {
-        // Derive category from the associated form if not provided
+        // Suy ra category từ form liên kết nếu chưa truyền vào
         if (entity.getCategory() == null) {
             Long formId = entity.getFormId();
             if (formId != null) {

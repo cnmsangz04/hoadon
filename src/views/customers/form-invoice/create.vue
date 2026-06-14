@@ -1,6 +1,6 @@
 <template>
   <div class="container py-3">
-    <!-- Header -->
+    <!-- Phần đầu trang -->
     <div class="page-header d-flex align-items-center justify-content-between mb-3">
       <div>
         <h3 class="page-title mb-0">{{ pageTitle }}</h3>
@@ -8,9 +8,9 @@
       </div>
     </div>
 
-    <!-- Main content: left preview + right form -->
+    <!-- Nội dung chính: preview bên trái + form bên phải -->
     <div class="layout-grid layout-left-preview">
-      <!-- Left preview panel -->
+      <!-- Panel preview bên trái -->
       <aside class="layout-aside" v-if="form.photo">
         <b-card class="shadow-sm preview-card card-soft">
           <template #header>
@@ -24,7 +24,7 @@
         </b-card>
       </aside>
 
-      <!-- Right form content -->
+      <!-- Nội dung form bên phải -->
       <div class="layout-main">
         <b-card class="shadow-sm card-soft">
           <b-card-body>
@@ -122,7 +122,7 @@
                 </b-form-group>
               </div>
 
-              <!-- Actions -->
+              <!-- Hành động -->
               <div class="form-actions sticky-actions d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center mt-3 gap-2">
                 <b-button class="btn-back" variant="secondary" @click="$router.back()">
                   <i class="fas fa-arrow-left"></i>
@@ -160,10 +160,10 @@ export default {
         category: null,
         status: 1,
         system: 1,
-        form_code: '', // first character stored separately on backend
+        form_code: '', // ký tự đầu được lưu riêng ở backend
         have_code: 0, // C -> 1, K -> 0
       },
-      // Serial builder state
+      // State tạo serial
       serialCK: 'C',
       serialCKOptions: [
         { value: 'C', text: 'C' },
@@ -193,7 +193,7 @@ export default {
     },
     suffixValidState() {
       const suf = (this.serialSuffix || '').trim()
-      if (!this.suffixValidated && !suf) return null // neutral before validation attempt
+      if (!this.suffixValidated && !suf) return null // trung lập trước khi thử validate
       return /^[A-Z]{2}$/.test(suf)
     },
     nameValidState() {
@@ -203,7 +203,7 @@ export default {
     },
   },
   watch: {
-    // Re-compose serial when parts change
+    // Ghép lại serial khi các phần thay đổi
     categoryChar() { this.composeSerial() },
     serialCK() { this.form.have_code = this.serialCK === 'C' ? 1 : 0; this.composeSerial() },
     serialYear() { this.composeSerial() },
@@ -214,7 +214,7 @@ export default {
     if (tid) this.prefillFromTemplate(tid)
     const id = this.$route.params.id
     if (id) this.loadDetail(id)
-    // Initial compose with defaults
+    // Ghép ban đầu với giá trị mặc định
     this.form.have_code = this.serialCK === 'C' ? 1 : 0
     this.composeSerial()
   },
@@ -231,14 +231,14 @@ export default {
       this.form.serial = serial
     },
     onSuffixInput() {
-      // Allow only letters A-Z, force uppercase, and max length 2
+      // Chỉ cho phép chữ A-Z, ép viết hoa và tối đa 2 ký tự
       const raw = (this.serialSuffix || '')
       const lettersOnly = raw.replace(/[^a-zA-Z]/g, '')
       this.serialSuffix = lettersOnly.toUpperCase().slice(0, 2)
-      // Clear error and validation flag while typing; will re-validate on submit
+      // Xóa lỗi và cờ validate khi đang nhập; sẽ validate lại lúc submit
       this.suffixError = ''
       this.suffixValidated = false
-      // Also reset name validation neutrality when typing elsewhere
+      // Đồng thời reset trạng thái trung lập validate tên khi nhập nơi khác
       this.nameError = ''
       this.nameValidated = false
       this.composeSerial()
@@ -255,7 +255,7 @@ export default {
           this.form.photo = it.photo || this.form.photo
           this.form.type = it.type != null ? Number(it.type) : this.form.type
           this.form.category = it.category != null ? Number(it.category) : this.form.category
-          // Reconstruct full serial if backend returns split fields
+          // Dựng lại serial đầy đủ nếu backend trả về các trường tách riêng
           const sFull = `${(it.formCode || it.form_code || '')}${(it.serial || '')}`
           const serialStr = (typeof it.serial === 'string' && it.serial.length >= 7) ? it.serial : (sFull.length >= 7 ? sFull : '')
           if (serialStr) {
@@ -264,14 +264,14 @@ export default {
             this.serialYear = s.substring(2,4)
             this.serialSuffix = s.substring(5,7).toUpperCase()
           }
-          // Map have_code from item if present; otherwise derive from CK
+          // Map have_code từ item nếu có; nếu không thì suy ra từ CK
           this.form.have_code = it.have_code != null ? Number(it.have_code) : (this.serialCK === 'C' ? 1 : 0)
           this.composeSerial()
-          // Ensure creating new, not system template
+          // Đảm bảo đang tạo mới, không phải mẫu hệ thống
           this.form.system = 1
         }
       } catch (e) {
-        // Removed notify usage
+        // Đã bỏ dùng notify
       }
     },
     async loadDetail(id) {
@@ -284,7 +284,7 @@ export default {
           this.form.photo = it.photo || ''
           this.form.type = it.type != null ? Number(it.type) : null
           this.form.category = it.category != null ? Number(it.category) : null
-          // Reconstruct full serial from formCode + serial when present
+          // Dựng lại serial đầy đủ từ formCode + serial khi có
           const sFull = `${(it.formCode || it.form_code || '')}${(it.serial || '')}`
           const serialStr = sFull.length >= 7 ? sFull : (typeof it.serial === 'string' ? it.serial : '')
           if (serialStr && serialStr.length >= 7) {
@@ -302,7 +302,7 @@ export default {
           this.form.have_code = it.have_code != null ? Number(it.have_code) : (this.serialCK === 'C' ? 1 : 0)
         }
       } catch (e) {
-        // Removed notify assignment
+        // Đã bỏ gán notify
       }
     },
     async onSubmit() {
@@ -310,10 +310,10 @@ export default {
       this.suffixValidated = true
       this.nameError = ''
       this.nameValidated = true
-      // Client-side validation: require name and serial
+      // Validate phía client: bắt buộc có tên và serial
       const name = (this.form.name || '').trim()
       const suf = (this.serialSuffix || '').trim()
-      // Validate name
+      // Validate tên
       if (!name) {
         this.nameError = 'Vui lòng nhập Tên mẫu (bắt buộc)'
         this.$nextTick(() => {
@@ -323,7 +323,7 @@ export default {
         })
         return
       }
-      // Validate serial suffix: must be exactly 2 uppercase letters
+      // Validate hậu tố serial: phải đúng 2 chữ in hoa
       if (!/^[A-Z]{2}$/.test(suf)) {
         this.suffixError = 'Khoảng ký tự không hợp lệ'
         this.$nextTick(() => {
@@ -333,7 +333,7 @@ export default {
         })
         return
       }
-      // Compose and validate serial
+      // Ghép và validate serial
       this.composeSerial()
       const serial = (this.form.serial || '').trim()
       if (!serial) {
@@ -359,7 +359,7 @@ export default {
         }
         this.$router.push({ name: 'CustomerFormInvoiceList' })
       } catch (e) {
-        // Removed notify assignment on error
+        // Đã bỏ gán notify khi lỗi
       } finally {
         this.submitting = false
       }
@@ -369,35 +369,35 @@ export default {
 </script>
 
 <style scoped>
-/* Container & card */
+/* Container và thẻ */
 .container { max-width: 1180px; }
 .card-soft { border-radius: 14px; box-shadow: 0 6px 20px rgba(17, 24, 39, 0.06); }
 .card.shadow-sm { border: 1px solid #e9eef5; }
 
-/* Layout grid: image left, form right */
+/* Lưới bố cục: ảnh trái, form phải */
 .layout-grid.layout-left-preview { display: grid; grid-template-columns: 360px 1fr; gap: 18px; align-items: start; }
 .layout-aside { position: sticky; top: 12px; }
 
-/* Page header */
+/* Phần đầu trang */
 .page-header { padding: 4px 4px 0; }
 .page-title { font-weight: 700; color: #0f172a; letter-spacing: -0.2px; }
 .page-subtitle { font-size: 0.95rem; }
 
-/* Section header */
+/* Header khu vực */
 .section-header { font-weight: 700; color: #1f2937; margin: 8px 0 14px; position: relative; }
 .section-header::after { content: ""; display: block; height: 2px; background: linear-gradient(90deg, #eef2f7, #e0e7ff); margin-top: 8px; border-radius: 2px; }
 
-/* Single-row items */
+/* Item một dòng */
 .form-row-item { margin-bottom: 12px; }
 
-/* Form labels and inputs */
+/* Label và input của form */
 ::v-deep .form-group label { font-weight: 600; color: #334155; }
 ::v-deep .form-group .form-text { font-size: 0.85rem; }
 ::v-deep .form-control { border-color: #e5e7eb; border-radius: 10px; transition: box-shadow .12s ease, border-color .12s ease; }
 ::v-deep .form-control:focus { box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); border-color: #818cf8; }
 ::v-deep .custom-select { border-color: #e5e7eb; border-radius: 10px; }
 
-/* Serial builder */
+/* Bộ tạo serial */
 .serial-builder { border: 1px dashed #e5e7eb; border-radius: 12px; padding: 12px; background: #fafafa; }
 .serial-full-label { font-weight: 600; color: #6b7280; display: block; margin-bottom: 6px; }
 .serial-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
@@ -407,18 +407,18 @@ export default {
 .step-badge { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; font-size: 12px; border-radius: 9999px; background: #eef2ff; color: #4f46e5; font-weight: 700; border: 1px solid #e0e7ff; }
 .serial-suffix { grid-column: span 4; }
 
-/* Preview */
+/* Xem trước */
 .preview-card { border-color: #e9eef5; }
 .preview-wrapper { border: 1px solid #eef2f7; border-radius: 12px; overflow: hidden; background: #fff; }
 .img-fluid { max-width: 100%; height: auto; display: block; }
 ::v-deep .card-header { background: #f9fafb; font-weight: 600; }
 
-/* Actions */
+/* Hành động */
 .form-actions { padding-top: 8px; }
 .form-actions .btn { min-width: 150px; }
 .sticky-actions { position: sticky; bottom: 0; background: linear-gradient(180deg, rgba(255,255,255,0.65), #fff); padding: 10px 0; z-index: 2; border-top: 1px solid #eef2f7; }
 
-/* Polished buttons */
+/* Nút đã tinh chỉnh */
 .btn-back, .btn-save { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; border-radius: 10px; padding: 10px 16px; transition: transform .08s ease, box-shadow .12s ease, background-color .12s ease; }
 .btn-back i, .btn-save i { font-size: 0.95rem; }
 .btn-back { background-color: #f3f4f6; color: #374151; border-color: #e5e7eb; }
@@ -431,7 +431,7 @@ export default {
 .btn-save:active { transform: translateY(1px); }
 .btn-save[disabled] { opacity: 0.8; cursor: not-allowed; }
 
-/* Responsive tweaks */
+/* Tinh chỉnh responsive */
 @media (max-width: 992px) {
   .layout-grid.layout-left-preview { grid-template-columns: 1fr; }
   .layout-aside { position: static; }

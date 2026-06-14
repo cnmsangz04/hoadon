@@ -1,4 +1,4 @@
-/* Sidebar styles - src/assets/css/sidebar_administrator.css */
+/* Kiểu hiển thị thanh bên - src/assets/css/sidebar_administrator.css */
 
 :root{
   --sidebar-bg: #2f3e46;
@@ -9,7 +9,7 @@
   --accent: #16a085;
 }
 
-/* Layout */
+/* Bố cục */
 .main_container{ display:flex; min-height:100vh; }
 .left_col{
   background: var(--sidebar-bg);
@@ -21,35 +21,35 @@
   transition: width 0.18s ease;
 }
 
-/* collapsed / small sidebar */
+/* sidebar thu gọn / kích thước nhỏ */
 body.nav-sm .left_col{ width: 60px; }
 
-/* Scroll area */
+/* vùng cuộn */
 .left_col .scroll-view{
   height: 100vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Custom scrollbar (WebKit) */
+/* thanh cuộn tùy chỉnh (WebKit) */
 .left_col .scroll-view::-webkit-scrollbar{ width:8px; }
 .left_col .scroll-view::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.08); border-radius:4px; }
 .left_col .scroll-view::-webkit-scrollbar-track{ background: transparent; }
 
-/* Logo */
+/* Biểu trưng */
 .site_title{ display:block; padding:6px 0; }
 .site_title .logo{ width: 140px; max-width:100%; height:auto; display:block; margin:8px auto; }
 body.nav-sm .site_title .logo{ max-width:46px; }
 
-/* Menu container */
+/* container trình đơn */
 .main_menu_side{ padding: 10px 0; }
 .menu_section{ padding-top:6px; }
 
-/* Menu list */
+/* danh sách menu */
 .nav.side-menu{ list-style:none; margin:0; padding:0 6px; }
 .nav.side-menu > li{ position:relative; display:block; }
 
-/* link styles */
+/* kiểu hiển thị link */
 .nav.side-menu a.nav-link,
 .nav.side-menu > li > a{
   display:flex;
@@ -67,11 +67,11 @@ body.nav-sm .site_title .logo{ max-width:46px; }
 .nav.side-menu a.nav-link span,
 .nav.side-menu > li > a span{ flex:1; }
 
-/* hover */
+/* trạng thái rê chuột */
 .nav.side-menu a.nav-link:hover,
 .nav.side-menu > li > a:hover{ background: var(--sidebar-hover); color: var(--text-light); }
 
-/* active / open states */
+/* trạng thái active / mở */
 .nav.side-menu > li.open > a,
 .nav.side-menu > li.active > a,
 .nav.side-menu > li > a.router-link-active{
@@ -79,42 +79,42 @@ body.nav-sm .site_title .logo{ max-width:46px; }
   color: var(--text-light);
 }
 
-/* show collapsed single-icon view */
+/* hiển thị dạng thu gọn chỉ còn icon */
 body.nav-sm .nav.side-menu a.nav-link span,
 body.nav-sm .nav.side-menu > li > a span{ display:none; }
 
-/* Child menu */
+/* trình đơn con */
 .nav.child_menu{ list-style:none; padding-left:6px; margin:6px 0 0 0; overflow:hidden; }
 .nav.child_menu li{ margin:0; }
 .nav.child_menu li a{ display:block; color:var(--muted); padding:8px 12px; font-size:13px; border-radius:6px; }
 .nav.child_menu li a:hover{ background: var(--sidebar-hover); color:var(--text-light); }
 
-/* Animated height transition for submenus */
+/* hiệu ứng chuyển chiều cao cho submenu */
 .nav.child_menu{
   max-height:0;
   transition: max-height 220ms ease;
 }
 
-/* when open (we control open class on parent li) */
+/* khi mở (class open được điều khiển trên li cha) */
 .nav.side-menu > li.open > .child_menu{ max-height: 1000px; }
 
-/* Small helper for caret icon alignment */
+/* helper nhỏ để căn icon caret */
 .nav.side-menu .fa-chevron-down{ margin-left:auto; opacity:0.9; }
 
-/* Footer / misc */
+/* Footer / phần khác */
 .left_col .clearfix{ clear:both; }
 
-/* Ensure content area grows */
+/* đảm bảo vùng nội dung giãn ra */
 .main_container > *:not(.left_col){ flex:1 1 auto; }
 
-/* Responsive: full collapse under 480px */
+/* Responsive: thu gọn hoàn toàn dưới 480px */
 @media (max-width:480px){
   .left_col{ position:fixed; z-index:1000; left:0; top:0; bottom:0; transform: translateX(-100%); transition: transform 180ms ease; }
   body.show-sidebar .left_col{ transform: translateX(0); }
 }
 
-/* Accessibility: focus states */
+/* Khả năng truy cập: trạng thái focus */
 .nav.side-menu a.nav-link:focus, .nav.child_menu li a:focus{ outline:2px solid rgba(255,255,255,0.12); outline-offset:2px; }
 
-/* Minor utilities */
+/* tiện ích nhỏ */
 .text-muted-sidebar{ color: rgba(255,255,255,0.7); font-size:12px; }

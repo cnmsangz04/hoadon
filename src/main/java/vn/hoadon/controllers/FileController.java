@@ -61,7 +61,7 @@ public class FileController {
         return renderHtml(id);
     }
 
-    // Expose the same preview under /v1/file/{id}/view for clients preferring the v1 prefix.
+    // Mở cùng preview dưới /v1/file/{id}/view cho client ưu tiên prefix v1.
     @GetMapping(value = "/file/{id}/view", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<?> viewHtmlV1(@PathVariable Long id) {
         return renderHtml(id);
@@ -78,14 +78,14 @@ public class FileController {
             return ResponseEntity.status(404).contentType(MediaType.TEXT_HTML).body("<html><body>Không tìm thấy tệp XSLT của mẫu</body></html>");
         }
 
-        // Determine if 'file' contains an inline XSLT content or a public file path
+        // Xác định 'file' chứa nội dung XSLT inline hay đường dẫn file public
         boolean looksLikeXslt = looksLikeInlineXslt(xsltValue);
         Path xsltFsPath = looksLikeXslt ? null : toFilesystemPath(xsltValue);
         if (!looksLikeXslt && (xsltFsPath == null || !Files.exists(xsltFsPath))) {
             return ResponseEntity.status(404).contentType(MediaType.TEXT_HTML).body("<html><body>Không tồn tại tệp XSLT trên hệ thống</body></html>");
         }
 
-        // Build sample XML using data from form/company/bank/legal representative
+        // Tạo XML mẫu bằng dữ liệu từ form/công ty/ngân hàng/người đại diện pháp luật
         CompanyEntity company = null;
         CompanyBankEntity bank = null;
         LegalRepresentativeEntity rep = null;
@@ -107,7 +107,7 @@ public class FileController {
             try { factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true); } catch (Exception ignored) {}
             try { factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "file"); } catch (Exception ignored) {}
 
-            // Compile XSLT from either inline content or a file path
+            // Compile XSLT từ nội dung inline hoặc đường dẫn file
             StreamSource xsltSource = looksLikeXslt
                     ? new StreamSource(new StringReader(xsltValue))
                     : new StreamSource(xsltFsPath.toFile());
@@ -119,18 +119,18 @@ public class FileController {
             transformer.transform(xmlSource, result);
             String html = outWriter.toString();
 
-            // Decode any HTML named entities (e.g., &oacute;, &nbsp;) to Unicode to keep XHTML well-formed for downstream parsers
+            // Giải mã HTML named entity (ví dụ &oacute;, &nbsp;) sang Unicode để XHTML hợp lệ cho parser phía sau
             html = resolveNamedHtmlEntities(html);
 
-            // Ensure UTF-8 meta for browsers and downstream processors
+            // Đảm bảo meta UTF-8 cho trình duyệt và bộ xử lý phía sau
             html = ensureUtf8Meta(html);
-            // Force replace font families that commonly miss Vietnamese glyphs
+            // Ép thay font-family thường thiếu glyph tiếng Việt
             html = forceReplaceFontFamilies(html);
 
-            // Normalize to XHTML-ish by self-closing void tags to satisfy XML parsers
+            // Chuẩn hóa gần XHTML bằng cách tự đóng void tag để phù hợp XML parser
             html = normalizeToXhtml(html);
 
-            // Inject a simulated QR code into <div class="qr-code"></div>
+            // Chèn mã QR mô phỏng vào <div class="qr-code"></div>
             html = injectQrPlaceholder(html);
 
             // Sanitize any <img src> values that may contain raw '<' (e.g., data:image/svg+xml,<svg...>)
@@ -139,7 +139,7 @@ public class FileController {
             if (!StringUtils.hasText(html)) html = "<html><body>Không thể hiển thị nội dung mẫu</body></html>";
             return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(html);
         } catch (TransformerConfigurationException tce) {
-            // Try to inject missing xsl:param then retry once
+            // Thử chèn xsl:param bị thiếu rồi retry một lần
             String missing = extractUndefinedParam(tce.getMessage());
             if (StringUtils.hasText(missing)) {
                 try {
@@ -232,15 +232,15 @@ public class FileController {
             transformer.transform(xmlSource, result);
             String html = outWriter.toString();
 
-            // Decode any HTML named entities to ensure XHTML compatibility for PDF renderer
+            // Giải mã HTML named entity để đảm bảo tương thích XHTML cho PDF renderer
             html = resolveNamedHtmlEntities(html);
-            // Inject UTF-8 meta and robust font fallbacks to avoid missing glyphs
+            // Chèn meta UTF-8 và font fallback chắc chắn để tránh thiếu glyph
             html = ensureUtf8Meta(html);
             html = forceReplaceFontFamilies(html);
             // Normalize to XHTML-ish by self-closing void tags like <meta>, <link>, <img>, etc.
             html = normalizeToXhtml(html);
             html = injectQrPlaceholder(html);
-            // Sanitize any <img src> values that may contain raw '<' before sending to renderer
+            // Sanitize các giá trị <img src> có thể chứa '<' thô trước khi gửi sang renderer
             html = sanitizeImgSrcAttributes(html);
 
             // Inject layout fallbacks for CSS Grid and Flex (OpenHTMLToPDF limits)
@@ -253,7 +253,7 @@ public class FileController {
             // Soften bold and improve text rendering
             html = ensurePdfTypoCss(html);
 
-            // Convert HTML to PDF using OpenHTMLToPDF
+            // Chuyển HTML sang PDF bằng OpenHTMLToPDF
             ByteArrayOutputStream pdfOut = new ByteArrayOutputStream();
             PdfRendererBuilder builder = new PdfRendererBuilder();
             String baseUri = null;
@@ -275,7 +275,7 @@ public class FileController {
             // Use an URI resolver that can read from classpath:/static, absolute "/" and filesystem
             builder.useUriResolver(new ClasspathFirstUriResolver());
 
-            // Register fonts that contain Vietnamese glyphs (Windows common fonts)
+            // Đăng ký font có glyph tiếng Việt (font phổ biến trên Windows)
             registerAvailableUnicodeFonts(builder);
 
             if (baseUri != null) builder.withHtmlContent(html, baseUri); else builder.withHtmlContent(html, null);

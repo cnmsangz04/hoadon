@@ -113,12 +113,12 @@ public class MemberServiceImpl implements MemberService {
         boolean isCreate = incoming.getId() == null;
 
         if (isCreate) {
-            // companyId MUST be present on create (users.company_id NOT NULL)
+            // companyId bắt buộc có khi tạo mới (users.company_id NOT NULL)
             if (companyId == null) {
                 throw new IllegalArgumentException("Thiếu companyId khi tạo thành viên. Vui lòng chọn công ty hoặc đăng nhập đúng ngữ cảnh công ty.");
             }
             
-            // Only check for existing username if one is provided
+            // Chỉ kiểm tra username đã tồn tại nếu có truyền username
             if (incoming.getUsername() != null && !incoming.getUsername().isBlank()) {
                 Optional<UserEntity> existed = userRepository.findByUsername(incoming.getUsername());
                 if (existed.isPresent()) {
@@ -142,13 +142,13 @@ public class MemberServiceImpl implements MemberService {
                     user.setAdminPassword(passwordEncoder.encode(ap));
                 }
             }
-            // Required fields on create
+            // Các trường bắt buộc khi tạo mới
             user.setCompanyId(companyId);
-            // Set username - if provided use it, otherwise generate temporary one
+            // Set username - nếu có truyền thì dùng, nếu không thì tạo tạm
             if (incoming.getUsername() != null && !incoming.getUsername().isBlank()) {
                 user.setUsername(incoming.getUsername());
             } else {
-                // Generate temporary username, will be updated after save
+                // Tạo username tạm, sẽ cập nhật sau khi lưu
                 user.setUsername("temp_" + System.currentTimeMillis());
             }
             user.setRole(role != null ? role : 2);
@@ -212,10 +212,10 @@ public class MemberServiceImpl implements MemberService {
 
         user.setUpdatedAt(now);
 
-        // Persist user first
+        // Lưu user trước
         user = userRepository.save(user);
 
-        // Generate system username if it was temporary (for new users without provided username)
+        // Tạo username hệ thống nếu trước đó là tạm (cho user mới không truyền username)
         if (isCreate && user.getUsername() != null && user.getUsername().startsWith("temp_")) {
             String systemUsername = "cp-" + user.getId();
             user.setUsername(systemUsername);

@@ -15,7 +15,7 @@ import java.time.LocalDate;
 public final class SampleInvoiceXmlBuilder {
     private SampleInvoiceXmlBuilder() {}
 
-    // Global version variable
+    // Biến phiên bản toàn cục
     private static final String PBAN = "2.1.0";
 
     /**

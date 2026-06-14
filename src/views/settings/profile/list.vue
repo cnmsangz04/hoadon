@@ -15,7 +15,7 @@
             </div>
           </div>
 
-          <!-- View mode -->
+          <!-- Chế độ xem -->
           <div class="contact-info-view" v-if="!formInfo">
             <b-row class="pt-2 pb-2">
               <b-col cols="12" lg="6">
@@ -51,7 +51,7 @@
             </b-row>
           </div>
 
-          <!-- Edit mode -->
+          <!-- Chế độ sửa -->
           <b-form @submit="onSubmitInfo" v-else>
             <b-row>
               <b-col cols="12" md="6">
@@ -211,7 +211,7 @@
             </div>
           </div>
 
-          <!-- View mode -->
+          <!-- Chế độ xem -->
           <div class="contact-info-view" v-if="!formRepresent">
             <b-row class="pt-2 pb-2">
               <b-col cols="2" class="font-weight-bold">Họ và tên:</b-col>
@@ -247,7 +247,7 @@
             </b-row>
           </div>
 
-          <!-- Edit mode -->
+          <!-- Chế độ sửa -->
           <b-form @submit="onsubmitRepresent" v-else>
             <b-row>
               <b-col cols="12" md="6">
@@ -425,7 +425,7 @@
             </div>
           </div>
 
-          <!-- View mode -->
+          <!-- Chế độ xem -->
           <div class="contact-info-view" v-if="!formInvoice">
             <b-row class="pt-2 pb-2">
               <b-col cols="12" lg="6">
@@ -457,7 +457,7 @@
             </b-row>
           </div>
 
-          <!-- Edit mode -->
+          <!-- Chế độ sửa -->
           <b-form @submit="onSubmitInfoInvoice" v-else>
             <b-row>
               <b-col cols="12" md="6">
@@ -558,7 +558,7 @@
             </div>
           </div>
 
-          <!-- View mode -->
+          <!-- Chế độ xem -->
           <div class="contact-info-view" v-if="!formContact">
             <b-row class="pt-2 pb-2">
               <b-col cols="12" lg="6">
@@ -591,7 +591,7 @@
             </b-row>
           </div>
 
-          <!-- Edit mode -->
+          <!-- Chế độ sửa -->
           <b-form @submit="onSubmitContact" v-else>
             <b-row>
               <b-col cols="12" md="6">
@@ -692,7 +692,7 @@
             </div>
           </div>
 
-          <!-- View mode -->
+          <!-- Chế độ xem -->
           <div class="contact-info-view" v-if="!formBank">
             <b-row class="pt-2 pb-2">
               <b-col cols="12" lg="12">
@@ -719,7 +719,7 @@
             </b-row>
           </div>
 
-          <!-- Edit mode -->
+          <!-- Chế độ sửa -->
           <b-form @submit="onSubmitBank" v-else>
             <b-row>
               <b-col cols="12" md="6">
@@ -802,7 +802,7 @@
             </div>
           </div>
 
-          <!-- View mode -->
+          <!-- Chế độ xem -->
           <div class="contact-info-view" v-if="!formTaxAuthority">
             <b-row class="pt-2 pb-2">
               <b-col cols="12" lg="6">
@@ -820,7 +820,7 @@
             </b-row>
           </div>
 
-          <!-- Edit mode -->
+          <!-- Chế độ sửa -->
           <b-form @submit="onSubmitTaxAuthority" v-else>
             <b-row>
               <b-col cols="12" md="6">
@@ -895,7 +895,7 @@ export default {
   components: { vSelect },
   data() {
     return {
-      // Toggle forms
+      // Bật/tắt form
       formInfo: false,
       formRepresent: false,
       formInvoice: false,
@@ -903,7 +903,7 @@ export default {
       formBank: false,
       formTaxAuthority: false,
 
-      // Loading flags
+      // Cờ trạng thái tải
       buttonInfo: false,
       buttonRepresent: false,
       buttonInfoInvoice: false,
@@ -911,7 +911,7 @@ export default {
       buttonBank: false,
       buttonTaxAuthority: false,
 
-      // Main data + form models
+      // Dữ liệu chính và model form
       frmData: {},
       frmInfo: {},
       frmRepresent: {},
@@ -930,7 +930,7 @@ export default {
         taxAuthorityName: null
       },
 
-      // Options data
+      // Dữ liệu tùy chọn
       options: {
         banks: [],
         taxAuthorities: [],
@@ -941,7 +941,7 @@ export default {
         ]
       },
 
-      // Validation + helpers
+      // Validate và helper
       errors: {},
       logoName: null,
       faviconName: null,
@@ -967,7 +967,7 @@ export default {
   },
 
   methods: {
-    // File uploads
+    // Upload file
     onUploadLogo(e) {
       const files = e.target.files || e.dataTransfer.files;
       if (!files.length) return;
@@ -982,7 +982,7 @@ export default {
       this.faviconName = files[0].name;
     },
 
-    // Toggle edits and preload form data
+    // Bật/tắt chỉnh sửa và nạp sẵn dữ liệu form
     editInfo() {
       this.frmInfo.companyName = this.frmData.companyName || "";
       this.frmInfo.companyAddress = this.frmData.companyAddress || "";
@@ -1018,7 +1018,7 @@ export default {
     },
 
     editInfoContact() {
-      // clear previous errors for contact fields before opening the form
+      // Xóa lỗi cũ của các trường liên hệ trước khi mở form
       const newErrors = { ...this.errors }
       delete newErrors.contactName
       delete newErrors.contactMail
@@ -1050,7 +1050,7 @@ export default {
       this.formTaxAuthority = true;
     },
 
-    // Load tax authority names by city code
+    // Tải tên cơ quan thuế theo mã tỉnh/thành
     getTaxAuthority(code) {
       const vm = this;
       vm.options.taxAuthorityNames = [];
@@ -1076,7 +1076,7 @@ export default {
       return false;
     },
 
-    // Close forms
+    // Đóng form
     closeForm(value) {
       switch (value) {
         case "formInfo":
@@ -1094,7 +1094,7 @@ export default {
         case "formContact":
           this.formContact = false
           this.frmDataContact = {}
-          // clear errors of contact form when closing
+          // Xóa lỗi của form liên hệ khi đóng
           const newErrors2 = { ...this.errors }
           delete newErrors2.contactName
           delete newErrors2.contactMail
@@ -1125,7 +1125,7 @@ export default {
       return false;
     },
 
-    // Import main data
+    // Import dữ liệu chính
     importData() {
       axios
         .post("/setting/profile/get")
@@ -1140,7 +1140,7 @@ export default {
         });
     },
 
-    // Submit handlers
+    // Hàm xử lý submit
     onSubmitInfo(e) {
       e.preventDefault();
       this.buttonInfo = true;
@@ -1162,16 +1162,16 @@ export default {
           this.frmInfo = {};
           this.importData();
           
-          // Refresh user info from server to get updated company data
+          // Tải lại thông tin user từ server để lấy dữ liệu công ty mới nhất
           try {
             const infoRes = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } });
             if (infoRes.data) {
-              // Update global app state with fresh data
+              // Cập nhật state app toàn cục bằng dữ liệu mới
               this.$app.info = infoRes.data;
             }
           } catch (error) {
             console.warn('Failed to refresh auth info:', error);
-            // Fallback to loadAppInfo if /auth/info fails
+            // Dự phòng gọi loadAppInfo nếu /auth/info lỗi
             this.$app.loadAppInfo();
           }
         })
@@ -1269,13 +1269,13 @@ export default {
         });
     },
 
-    // Validation helpers
+    // Helper validate
     state(field) {
       const errors = this.errors || {};
       if (!Object.prototype.hasOwnProperty.call(errors, field)) {
-        return null; // neutral
+        return null; // trung lập
       }
-      return false; // invalid
+      return false; // không hợp lệ
     },
 
     invalidFeedback(field) {
@@ -1286,7 +1286,7 @@ export default {
       return (errors[field] || []).join("");
     },
 
-    // v-select popper positioning
+    // Định vị popper của v-select
     withPopper(dropdownList, component, { width }) {
       dropdownList.style.width = width;
       const popper = Popperjs(component.$refs.toggle, dropdownList, {
@@ -1311,12 +1311,12 @@ export default {
       return () => popper.destroy();
     },
 
-    // Date handling for manual input + datepicker sync
+    // Xử lý ngày nhập tay và đồng bộ datepicker
     parseManualDate() {
       const regex =
         /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/(19\d{2}|20\d{2})$/;
 
-      // reset field errors first
+      // Reset lỗi trường trước
       const newErrors = { ...this.errors };
       delete newErrors.manualDate;
       this.errors = newErrors;
@@ -1356,7 +1356,7 @@ export default {
         const year = parsed.getFullYear();
         this.manualDate = `${day}/${month}/${year}`;
 
-        // clear errors for manualDate
+        // Xóa lỗi cho manualDate
         const newErrors = { ...this.errors };
         delete newErrors.manualDate;
         this.errors = newErrors;

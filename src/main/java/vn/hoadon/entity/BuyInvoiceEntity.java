@@ -14,7 +14,7 @@ public class BuyInvoiceEntity {
     private Long companyId;
     private Integer amount;
     private Integer amountUsed;
-    private Integer status; // 1 = active, 0 = inactive
+    private Integer status; // 1 = hoạt động, 0 = không hoạt động
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

@@ -465,15 +465,15 @@ public class InvoiceController extends BaseController {
             String html = outWriter.toString();
             // Resolve named HTML entities to avoid XML parser errors in the renderer
             html = resolveNamedHtmlEntities(html);
-            // Ensure UTF-8 meta for browsers and downstream processors
+            // Đảm bảo meta UTF-8 cho trình duyệt và bộ xử lý phía sau
             html = ensureUtf8Meta(html);
-            // Force replace font families that commonly miss Vietnamese glyphs
+            // Ép thay font-family thường thiếu glyph tiếng Việt
             html = forceReplaceFontFamilies(html);
             // Normalize to XHTML-ish by self-closing void tags like <meta>, <link>, <img>, etc.
             html = normalizeToXhtml(html);
             // Inject a simulated QR code into placeholders if present
             html = injectQrPlaceholder(html);
-            // Sanitize any <img src> values that may contain raw '<' before sending to renderer
+            // Sanitize các giá trị <img src> có thể chứa '<' thô trước khi gửi sang renderer
             html = sanitizeImgSrcAttributes(html);
             return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(html);
         } catch (Exception ex) {
@@ -570,7 +570,7 @@ public class InvoiceController extends BaseController {
             transformer.transform(xmlSource, result);
             String html = outWriter.toString();
             html = resolveNamedHtmlEntities(html);
-            // Inject UTF-8 meta and robust font fallbacks to avoid missing glyphs
+            // Chèn meta UTF-8 và font fallback chắc chắn để tránh thiếu glyph
             html = ensureUtf8Meta(html);
             html = forceReplaceFontFamilies(html);
             html = normalizeToXhtml(html);

@@ -1,7 +1,7 @@
 package vn.hoadon.dto.auth;
 
 public class AuthRequest {
-    private String username; // Login with username only
+    private String username; // Đăng nhập chỉ bằng username
     private String password; // User password
 
     public String getUsername() { return username; }

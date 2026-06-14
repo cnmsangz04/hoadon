@@ -97,7 +97,7 @@ export default {
     }
   },
   watch: {
-    // Watch for changes in company info to update logo
+    // Theo dõi thay đổi thông tin công ty để cập nhật logo
     '$app.info.company.logo': {
       handler() {
         this.$forceUpdate()
@@ -199,7 +199,7 @@ export default {
   text-align: center;
 }
 
-/* Show child icons if provided */
+/* Hiển thị icon của mục con nếu có */
 .sub li a i {
   width: 16px;
   text-align: center;

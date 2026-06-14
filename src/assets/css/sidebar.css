@@ -1,4 +1,4 @@
-/* Layout */
+/* B? c?c */
 .left_col {
   background: #2f3e46;
   color: #fff;
@@ -14,7 +14,7 @@
   display: block;
 }
 
-/* ==== MENU ==== */
+/* ==== Tr�nh don ==== */
 
 /* Đảm bảo menu theo cột */
 .nav.side-menu {
@@ -51,7 +51,7 @@
   border-radius: 4px;
 }
 
-/* ==== SUBMENU ==== */
+/* ==== Tr�nh don con ==== */
 .nav.child_menu {
   list-style: none;
   padding-left: 20px;

@@ -601,12 +601,12 @@ export default {
       let arr = []
       
       if (Array.isArray(raw)) {
-        // Handle array that may contain strings or objects
+        // Xử lý mảng có thể chứa chuỗi hoặc object
         for (const item of raw) {
           if (typeof item === 'string' && item.trim()) {
             // Parse malformed string like "{orgName=VNPT, serialNo=123, ...}"
             try {
-              // Try JSON parse first
+              // Thử parse JSON trước
               const parsed = JSON.parse(item)
               arr.push(parsed)
             } catch {
@@ -639,13 +639,13 @@ export default {
       const result = arr.map(x => {
         if (!x || typeof x !== 'object') return null
         
-        // Handle both camelCase and snake_case, plus malformed keys
+        // Xử lý cả camelCase và snake_case, kèm các key sai định dạng
         const orgName = x.orgName || x.org_name || x.organizationName || x.organization_name || ''
         const serialNo = x.serialNo || x.serial_no || x.serial || x.serialNumber || ''
         const signFromDate = x.signFromDate || x.sign_from_date || x.from || x.fromDate || null
         const signToDate = x.signToDate || x.sign_to_date || x.to || x.toDate || null
         
-        // Handle sigRegMethod with various formats
+        // Xử lý sigRegMethod với nhiều định dạng
         let sigRegMethod = x.sigRegMethod || x.sig_reg_method || x.method || x.regMethod || 1
         if (typeof sigRegMethod === 'string') {
           const methodStr = sigRegMethod.toUpperCase()
@@ -672,10 +672,10 @@ export default {
       console.log('parseKeyValueString input:', str)
       const obj = {}
       try {
-        // Remove outer braces if present
+        // Bỏ cặp ngoặc nhọn ngoài cùng nếu có
         let cleanStr = str.trim().replace(/^{|}$/g, '')
         
-        // Split by comma but be careful of commas in values
+        // Tách theo dấu phẩy nhưng cẩn thận với dấu phẩy trong giá trị
         const pairs = []
         let current = ''
         let depth = 0

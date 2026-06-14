@@ -82,12 +82,12 @@ public class FormInvoiceController extends BaseController {
         }
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "updatedAt"));
         
-        // Use new service method that filters at database level
+        // Dùng method service mới để lọc ở tầng database
         Page<FormInvoiceEntity> p = service.pageByCompanySystemWithFilters(companyId, 1, q, category, type, status, pageable);
 
         List<FormInvoiceEntity> items = p.getContent();
 
-        // Resolve usernames for displayed items
+        // Lấy username cho các item hiển thị
         Set<Long> uidSet = new HashSet<>();
         for (FormInvoiceEntity it : items) {
             if (it.getUserId() != null) uidSet.add(it.getUserId());

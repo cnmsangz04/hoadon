@@ -40,7 +40,7 @@ export default {
   opacity: 0.95;
 }
 
-/* Stats grid */
+/* Lu?i th?ng kê */
 .admin-stats {
   margin-top: 18px;
 }
@@ -67,7 +67,7 @@ export default {
   font-size: 0.95rem;
 }
 
-/* Responsive */
+/* Tuong thích màn hình */
 @media (max-width: 992px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);

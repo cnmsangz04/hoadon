@@ -22,7 +22,7 @@
         </ul>
       </b-popover>
 
-      <!-- Bell notification per sample -->
+      <!-- Chuông thông báo theo mẫu -->
       <li class="nav-item bell-notify pl-0 pr-1">
         <a href="javascript:void(0)" class="info-number circle-icon-top position-relative" v-b-toggle.sidebar-right>
           <i class="far fa-bell text-danger"></i>
@@ -99,19 +99,19 @@ export default {
       return role === 0 || role === 1
     },
     avatarSrc() {
-      // Priority: $app.info.user.avatar (from database) > JWT payload > local data
+      // Ưu tiên: $app.info.user.avatar (từ database) > payload JWT > dữ liệu local
       try {
         const dbAvatar = this.$app?.info?.user?.avatar
         if (dbAvatar && typeof dbAvatar === 'string' && dbAvatar.trim() !== '') {
           return dbAvatar
         }
       } catch {}
-      // Fallback to local app.auth.avatar
+      // Dự phòng dùng app.auth.avatar local
       return this.app.auth.avatar || ''
     }
   },
   created() {
-    // Populate auth from JWT if available without using localStorage companyId
+    // Nạp thông tin auth từ JWT nếu có, không dùng companyId trong localStorage
     try {
       const p = window.location?.pathname || ''
       const isAdmin = /administrator|admin/.test(p)
@@ -133,7 +133,7 @@ export default {
           this.app.auth.role = s.includes('SUPER') ? 0 : (s.includes('ADMIN') ? 1 : null)
         }
 
-        // Extract company id only from JWT payload, no localStorage fallback/persist
+        // Chỉ lấy company id từ payload JWT, không dự phòng/lưu bằng localStorage
         const cid = (
           payload.companyId ?? payload.company_id ??
           (typeof payload.company === 'object' ? payload.company?.id : payload.company) ??
@@ -147,7 +147,7 @@ export default {
       }
     } catch {}
 
-    // Use globally fetched info if available; do not persist companyId to localStorage
+    // Dùng thông tin đã tải toàn cục nếu có, không lưu companyId vào localStorage
     try {
       const info = this.$app?.info || {}
       if (info.user) {
@@ -164,10 +164,10 @@ export default {
       }
     } catch {}
 
-    // Fetch recent notifications (limit 10) from history with required conditions
+    // Lấy thông báo gần đây (tối đa 10) từ lịch sử theo điều kiện yêu cầu
     this.fetchNotifications()
 
-    // Echo realtime sample: on message, show toast and refresh notifications
+    // Mẫu realtime Echo: khi có tin nhắn thì hiện toast và tải lại thông báo
     try {
       if (typeof io !== 'undefined') {
         const vm = this
@@ -183,18 +183,18 @@ export default {
     } catch {}
   },
   mounted() {
-    // Ensure /auth/info is fetched so role/company is set even if JWT lacks role; properly update global $app
+    // Đảm bảo đã gọi /auth/info để có role/company dù JWT thiếu role; cập nhật đúng $app toàn cục
     try {
       axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
         .then(res => {
           const info = res.data || {}
           
-          // Update local auth data
+          // Cập nhật dữ liệu auth local
           if (info?.user && typeof info.user.role === 'number') {
             this.app.auth.role = info.user.role
           }
           
-          // Update global $app object (this will trigger sidebar logo updates)
+          // Cập nhật đối tượng $app toàn cục (kích hoạt cập nhật logo sidebar)
           if (this.$app) {
             this.$app.info.user = info.user || null
             this.$app.info.company = info.company || null
@@ -202,15 +202,15 @@ export default {
         })
     } catch {}
     
-    // Start polling for new notifications every 5 seconds
+    // Bắt đầu kiểm tra thông báo mới mỗi 5 giây
     this.startPolling()
   },
   beforeDestroy() {
-    // Cleanup polling interval when component is destroyed
+    // Dọn interval polling khi component bị hủy
     this.stopPolling()
   },
   methods: {
-    // Return the uppercase initial from a name; fallback to '?'
+    // Trả về chữ cái đầu viết hoa từ tên; mặc định là '?'
     nameInitial(name) {
       const n = (name || '').trim()
       return n ? n.charAt(0).toUpperCase() : '?'
@@ -242,6 +242,10 @@ export default {
       try {
         const params = { limit: 10, show_notify: 1, status: 1 }
         const res = await axios.get('/history/notifications', { params, meta: { suppressGlobalErrorToast: true } })
+          .catch(err => {
+            if (err?.response?.status === 401) this.stopPolling()
+            throw err
+          })
         const payload = res && res.data
 
         const arr = Array.isArray(payload)
@@ -275,14 +279,14 @@ export default {
           }
         })
 
-        // Check if there are new notifications (compare count or IDs)
+        // Kiểm tra có thông báo mới không (so sánh số lượng hoặc ID)
         if (oldList.length > 0 && this.list.length > oldList.length) {
           const newCount = this.list.length - oldList.length
           try { 
             window.toastr && toastr.info(`Bạn có ${newCount} thông báo mới`) 
           } catch {}
         } else if (oldList.length > 0 && this.list.length > 0) {
-          // Check if first item is new (different ID)
+          // Kiểm tra item đầu tiên có mới không (khác ID)
           const oldFirstId = oldList[0]?.id
           const newFirstId = this.list[0]?.id
           if (oldFirstId && newFirstId && oldFirstId !== newFirstId) {
@@ -292,16 +296,16 @@ export default {
           }
         }
       } catch (e) {
-        // Silent fail for polling requests
+        // Bỏ qua lỗi âm thầm với request polling
         console.debug('Fetch notifications failed:', e)
         this.list = []
       }
     },
     startPolling() {
-      // Stop any existing interval first
+      // Dừng interval hiện có trước
       this.stopPolling()
       
-      // Poll every 5 seconds
+      // Poll mỗi 5 giây
       this.pollingInterval = setInterval(() => {
         this.fetchNotifications()
       }, 5000)
@@ -336,7 +340,7 @@ export default {
 </script>
 
 <style scoped>
-/* Polished top nav styling */
+/* Style thanh điều hướng trên đã tinh chỉnh */
 .top-nav {
   height: 64px;
   background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
@@ -375,7 +379,7 @@ nav.d-flex.align-items-center {
 .circle-btn:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 .circle-btn:active { transform: scale(0.98); }
 
-/* Bell notify sample styles */
+/* Style mẫu chuông thông báo */
 .bell-notify { list-style: none; }
 .bell-notify .circle-icon-top {
   display: inline-flex;
@@ -390,7 +394,7 @@ nav.d-flex.align-items-center {
 }
 .bell-notify .circle-icon-top:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 
-/* Notification badge */
+/* Huy hiệu thông báo */
 .notification-badge {
   position: absolute;
   top: -4px;
@@ -413,7 +417,7 @@ nav.d-flex.align-items-center {
   50% { transform: scale(1.1); }
 }
 
-/* User dropdown trigger */
+/* Nút mở dropdown người dùng */
 .user-toggle {
   display: inline-flex;
   align-items: center;
@@ -437,12 +441,12 @@ nav.d-flex.align-items-center {
 
 .caret { color: #7b8a8b; }
 
-/* Sidebar tweaks */
+/* Tinh chỉnh sidebar */
 #sidebar-right ::v-deep .b-sidebar {
   border-left: 1px solid #e9ecef;
   background: #ffffff;
   height: 100vh;
-  max-height: 100vh !important; /* override default max-height: 100% */
+  max-height: 100vh !important; /* ghi đè max-height mặc định: 100% */
 }
 #sidebar-right ::v-deep .b-sidebar-body {
   padding: 0;
@@ -451,16 +455,16 @@ nav.d-flex.align-items-center {
   flex-direction: column;
 }
 
-/* Notification list wrapper: occupy remaining space and scroll */
+/* Khung danh sách thông báo: chiếm phần còn lại và cuộn */
 #sidebar-right .list-unstyled {
   margin: 0;
-  /* Approximate title height (including padding) ~56px; adjust if needed */
+  /* Ước lượng chiều cao tiêu đề (gồm padding) ~56px; chỉnh nếu cần */
   max-height: calc(100vh - 56px) !important;
   overflow-y: auto;
   padding: 6px 8px;
 }
 
-/* Notification item layout */
+/* Bố cục item thông báo */
 #sidebar-right .b-media {
   position: relative;
   padding: 12px 12px;
@@ -477,13 +481,13 @@ nav.d-flex.align-items-center {
   box-shadow: 0 1px 2px rgba(16,24,40,0.05);
 }
 
-/* Avatar stylings */
+/* Kiểu hiển thị avatar */
 #sidebar-right .b-avatar {
   box-shadow: 0 1px 3px rgba(16,24,40,0.08);
   border: 2px solid #ffffff;
 }
 
-/* Title and meta */
+/* Tiêu đề và thông tin phụ */
 #sidebar-right h6 {
   font-size: 0.95rem;
   font-weight: 600;
@@ -496,14 +500,14 @@ nav.d-flex.align-items-center {
   margin-bottom: 6px;
 }
 
-/* Content text */
+/* Nội dung text */
 #sidebar-right p {
   font-size: 0.92rem;
   color: #374151;
   margin: 0;
 }
 
-/* Divider between items */
+/* Đường phân cách giữa các item */
 #sidebar-right .b-media + .b-media::before {
   content: "";
   position: absolute;
@@ -514,7 +518,7 @@ nav.d-flex.align-items-center {
   background: #f0f2f5;
 }
 
-/* Empty state */
+/* Trạng thái rỗng */
 #sidebar-right .text-center.text-muted {
   color: #94a3b8 !important;
   background: #f8fafc;
@@ -522,22 +526,22 @@ nav.d-flex.align-items-center {
   border-radius: 12px;
 }
 
-/* Popover title style */
+/* Style tiêu đề popover */
 ::v-deep .popover-header { background: #f9fafb; font-weight: 600; }
 
-/* Responsive adjustments */
+/* Tinh chỉnh responsive */
 @media (max-width: 768px) {
   .top-nav { height: 56px; }
   .circle-btn, .bell-notify .circle-icon-top { width: 36px; height: 36px; }
   .menu-toggle a { padding: 6px 8px; }
-  /* Keep sidebar full height on mobile */
+  /* Giữ sidebar cao toàn màn hình trên mobile */
   #sidebar-right ::v-deep .b-sidebar { max-height: 100vh !important; }
   #sidebar-right .list-unstyled { max-height: calc(100vh - 56px) !important; }
 }
 </style>
 
 <style>
-/* Global overrides for BootstrapVue sidebar rendered in body */
+/* Ghi đè toàn cục cho sidebar BootstrapVue render trong body */
 .b-sidebar#sidebar-right {
   height: 100vh;
   max-height: 100vh !important;
@@ -550,7 +554,7 @@ nav.d-flex.align-items-center {
 }
 .b-sidebar#sidebar-right .list-unstyled {
   margin: 0;
-  max-height: calc(100vh - 56px) !important; /* leave room for title/header */
+  max-height: calc(100vh - 56px) !important; /* chừa chỗ cho tiêu đề/header */
   overflow-y: auto;
 }
 @media (max-width: 768px) {

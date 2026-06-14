@@ -6,5 +6,5 @@ import org.springframework.data.web.config.EnableSpringDataWebSupport;
 @Configuration
 @EnableSpringDataWebSupport(pageSerializationMode = EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO)
 public class SpringDataWebConfig {
-    // Configures stable JSON serialization for Page responses.
+    // Cấu hình serialize JSON ổn định cho response Page.
 }

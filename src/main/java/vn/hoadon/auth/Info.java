@@ -25,7 +25,7 @@ public class Info {
     public ResponseEntity<Map<String, Object>> getInfo() {
         Map<String, Object> resp = new HashMap<>();
 
-        // Resolve current user if authenticated
+        // Lấy user hiện tại nếu đã xác thực
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserEntity user = null;
         if (auth != null && auth.getPrincipal() instanceof UserEntity) {
@@ -41,7 +41,7 @@ public class Info {
             resp.put("user", null);
         }
 
-        // Resolve company strictly by user's companyId; do NOT fallback to 1
+        // Lấy công ty đúng theo companyId của user; không fallback về 1
         CompanyEntity company = null;
         Long companyId = (user != null) ? user.getCompanyId() : null;
         if (companyId != null) {

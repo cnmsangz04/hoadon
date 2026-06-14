@@ -1,26 +1,26 @@
 <template>
   <aside class="sidebar" aria-label="Main sidebar">
     <div class="sidebar-inner">
-      <!-- Brand / Logo -->
+      <!-- Thương hiệu / Logo -->
       <div class="brand">
         <router-link class="brand-link" to="/">
           <img class="logo" :src="logoSrc" alt="logo" />
         </router-link>
       </div>
 
-      <!-- Search -->
+      <!-- Tìm kiếm -->
       <div class="search">
         <input v-model="search" type="search" placeholder="Tìm kiếm..." aria-label="Tìm kiếm menu" />
         <i class="fas fa-search"></i>
       </div>
 
-      <!-- Menu -->
+      <!-- Trình đơn -->
       <nav class="menu" role="navigation">
         <ul>
           <li v-for="(item, index) in filteredItems" :key="index"
               :class="{ 'has-children': !!item.children, open: isOpen === index, active: isActive(item) }">
 
-            <!-- Items with children -->
+            <!-- Mục có menu con -->
             <template v-if="item.children">
               <a href="#" class="menu-item" @click.prevent="toggle(index)" :aria-expanded="isOpen === index">
                 <i :class="item.icon"></i>
@@ -40,7 +40,7 @@
               </transition>
             </template>
 
-            <!-- Simple link -->
+            <!-- Link đơn -->
             <template v-else>
               <router-link class="menu-item" :to="item.to">
                 <i :class="item.icon"></i>
@@ -64,7 +64,7 @@ export default {
     return {
       isOpen: null,
       search: '',
-      // Menu defined as data to make it easier to extend and render
+      // Khai báo menu dạng data để dễ mở rộng và render
       menuItems: [
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
         {
@@ -99,7 +99,7 @@ export default {
     filteredItems() {
       const q = (this.search || '').trim().toLowerCase();
       if (!q) return this.menuItems;
-      // Filter top-level and children by search term
+      // Lọc mục cha và mục con theo từ khóa tìm kiếm
       return this.menuItems
         .map((item) => {
           if (!item.children) {
@@ -120,7 +120,7 @@ export default {
     }
   },
   watch: {
-    // Watch for changes in company info to update logo
+    // Theo dõi thay đổi thông tin công ty để cập nhật logo
     '$app.info.company.logo': {
       handler() {
         this.$forceUpdate()
@@ -147,7 +147,7 @@ export default {
     }
   },
   mounted() {
-    // open the parent menu if a child route is active
+    // Mở menu cha nếu route con đang active
 	this.menuItems.forEach((item, idx) => {
 	   if (item.children && this.isActive(item)) {
 	      this.isOpen = idx;
@@ -158,7 +158,7 @@ export default {
 </script>
 
 <style scoped>
-/* Sidebar base */
+/* Nền tảng sidebar */
 .sidebar {
   width: 260px;
   background: linear-gradient(180deg, #0f1724 0%, #0b2238 100%);
@@ -206,10 +206,10 @@ export default {
 .sub li.active > a, .sub li > a.router-link-active { background: rgba(255,255,255,0.03); color: #fff; }
 .sub li.active > a i, .sub li > a.router-link-active i { color: #a9d0ff; }
 .sidebar-footer { text-align: center; padding: 8px 0; color: #7f9ebf; font-size: 12px; }
-/* Minor animation for submenu */
+/* Hiệu ứng nhẹ cho submenu */
 .slide-enter-active, .slide-leave-active { transition: all 240ms ease; }
 .slide-enter, .slide-leave-to { opacity: 0; transform: translateY(-6px); height: 0; }
-/* Responsive: collapse width on small screens */
+/* Responsive: thu gọn chiều rộng trên màn hình nhỏ */
 @media (max-width: 768px) {
   .sidebar { width: 100%; height: auto; position: relative; }
 }

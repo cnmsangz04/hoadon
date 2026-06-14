@@ -8,22 +8,22 @@ public class RegisterInvoicePrefillDto {
     // Hình thức tờ khai: effective_date (from Vue when creating)
     private LocalDate effectiveDate;
 
-    // Company fields
+    // Trường thông tin công ty
     private String companyName;
     private String taxCode;
-    private String taxAuthorityName; // companies.tax_authority_city_id -> tax_authorities.name
-    private String contactAddress;   // companies.address
-    private String contactEmail;     // companies.email
+    private String taxAuthorityName; // tên cơ quan thuế từ companies.tax_authority_city_id -> tax_authorities.name
+    private String contactAddress;   // địa chỉ từ companies.address
+    private String contactEmail;     // email từ companies.email
 
-    // Legal representative
-    private String legalFullname;    // legal_representatives.fullname
-    private String legalPhone;       // legal_representatives.phone
-    private String legalCitizenId;   // legal_representatives.citizen_id
-    private String legalPassportNo;  // legal_representatives.passport_no
-    private LocalDate legalDateOfBirth; // legal_representatives.date_of_birth
-    private Integer legalGender;        // legal_representatives.gender
+    // Người đại diện pháp luật
+    private String legalFullname;    // họ tên từ legal_representatives.fullname
+    private String legalPhone;       // số điện thoại từ legal_representatives.phone
+    private String legalCitizenId;   // CCCD/CMND từ legal_representatives.citizen_id
+    private String legalPassportNo;  // số hộ chiếu từ legal_representatives.passport_no
+    private LocalDate legalDateOfBirth; // ngày sinh từ legal_representatives.date_of_birth
+    private Integer legalGender;        // giới tính từ legal_representatives.gender
 
-    // getters/setters
+    // hàm getter/setter
     public Integer getDeclarationType() { return declarationType; }
     public void setDeclarationType(Integer declarationType) { this.declarationType = declarationType; }
     public LocalDate getEffectiveDate() { return effectiveDate; }

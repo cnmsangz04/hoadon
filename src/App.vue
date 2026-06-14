@@ -11,6 +11,6 @@ export default {
 </script>
 
 <style>
-/* Import shared admin styles */
+/* Import style admin dùng chung */
 @import '@/assets/css/admin.css';
 </style>

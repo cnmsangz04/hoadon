@@ -22,7 +22,7 @@ public class CompanyBankEntity {
     @Column(name = "bank_brand", columnDefinition = "NVARCHAR(255)")
     private String bankBrand;
 
-    // Many banks belong to one company
+    // Nhiều ngân hàng thuộc về một công ty
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private CompanyEntity company;

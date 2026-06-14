@@ -1,6 +1,6 @@
 <template>
     <div class="container-fluid py-3 form-invoices-admin">
-        <!-- Title + actions -->
+        <!-- Tiêu d? và thao tác -->
         <div class="d-flex align-items-center justify-content-between mb-3">
             <h4 class="mb-0 font-weight-bold">Máº«u hÃ³a Ä‘Æ¡n</h4>
             <div>
@@ -15,7 +15,7 @@
             </div>
         </div>
 
-        <!-- Filters Row -->
+        <!-- Hàng b? l?c -->
         <b-card class="mb-3 shadow-sm">
             <b-row>
                 <b-col md="4" class="mb-2">
@@ -59,7 +59,7 @@
             </b-row>
         </b-card>
 
-        <!-- Table -->
+        <!-- B?ng -->
         <b-card class="shadow-sm">
             <b-table
                 bordered
@@ -207,7 +207,7 @@ export default {
                 }))
                 this.total = data.total || 0
             } catch (e) {
-                // ignore
+                // b? qua
             } finally { this.isBusy = false }
         },
         getCategoryText(val) {
@@ -250,7 +250,7 @@ export default {
 </script>
 
 <style scoped>
-/* Card Styling */
+/* Style th? */
 .form-invoices-admin .card.shadow-sm {
     border-radius: 10px;
 }
@@ -259,12 +259,12 @@ export default {
     border: 1px solid #e9ecef;
 }
 
-/* Table Hover */
+/* Hover c?a b?ng */
 .form-invoices-admin .table-hover tbody tr:hover {
     background-color: #fafbfd;
 }
 
-/* Buttons */
+/* Nút */
 .form-invoices-admin .btn-outline-primary {
     border-color: #dfe7ff;
 }
@@ -273,7 +273,7 @@ export default {
     background: #eef3ff;
 }
 
-/* Table Header */
+/* Header b?ng */
 .form-invoices-admin .table thead th {
     background: #f7f9fc;
     border-bottom: 1px solid #ecf0f6;
@@ -281,7 +281,7 @@ export default {
     font-weight: 700;
 }
 
-/* Modern Table Styles */
+/* Style b?ng hi?n d?i */
 .table-modern thead th {
     background-color: #f9fafb;
     border-bottom: 2px solid #e5e7eb;
@@ -311,23 +311,23 @@ export default {
     border-color: #e9ecef;
 }
 
-/* Badge Styling */
+/* Style badge */
 .badge {
     font-size: 13px;
     padding: 0.35em 0.65em;
 }
 
-/* Text Utilities */
+/* Ti?n ích text */
 .text-mono {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-/* Card Body */
+/* N?i dung th? */
 .card-body {
     padding: 0.75rem 1rem;
 }
 
-/* Input Group */
+/* Nhóm input */
 .input-group-text {
     background-color: #f8f9fa;
     border-right: none;
@@ -342,7 +342,7 @@ export default {
     border-left: none;
 }
 
-/* Dropdown Items */
+/* Item dropdown */
 .dropdown-item {
     font-size: 0.9rem;
     padding: 0.5rem 1rem;
@@ -353,7 +353,7 @@ export default {
     text-align: center;
 }
 
-/* Image Styling */
+/* Style hình ?nh */
 img {
     object-fit: cover;
 }

@@ -1,7 +1,7 @@
 <template>
   <div class="container-fluid py-3 permissions">
 
-    <!-- Title + actions -->
+    <!-- Ti�u d? v� thao t�c -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 font-weight-bold">Danh sách công ty</h4>
       <div>
@@ -16,7 +16,7 @@
       </div>
     </div>
 
-    <!-- Filters Row -->
+    <!-- H�ng b? l?c -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="4" class="mb-2">
@@ -44,7 +44,7 @@
       </b-row>
     </b-card>
 
-    <!-- Table -->
+    <!-- B?ng -->
     <b-card class="shadow-sm">
       <b-table
         ref="tblCompany"
@@ -288,7 +288,7 @@
           </b-row>
         </div>
 
-        <!-- Form Actions -->
+        <!-- H�nh d?ng form -->
         <div class="form-actions">
           <b-button
             type="button"
@@ -546,7 +546,7 @@ export default {
 
 .permissions .table thead th { background: #f7f9fc; border-bottom: 1px solid #ecf0f6; color: #4a5568; font-weight: 700; }
 
-/* Keep existing table modern tweaks */
+/* Giữ tinh chỉnh bảng hiện đại hiện có */
 .table-modern thead th { background-color: #f9fafb; border-bottom: 2px solid #e5e7eb; position: sticky; top: 0; z-index: 1; }
 .table-compact td, .table-compact th { padding: 0.5rem 0.75rem; }
 .table td { vertical-align: middle; }
@@ -558,7 +558,7 @@ export default {
 .card { border: 1px solid #e9ecef; }
 .card-body { padding: 0.75rem 1rem; }
 
-/* Company Modal Styles */
+/* Style modal c�ng ty */
 .company-modal .modal-dialog {
   max-width: 800px;
 }
@@ -590,7 +590,7 @@ export default {
   background: #f8f9fa;
 }
 
-/* Form Sections */
+/* Khu v?c form */
 .company-form .form-section {
   background: white;
   border-radius: 12px;
@@ -622,7 +622,7 @@ export default {
   color: #2d3748;
 }
 
-/* Form Groups */
+/* Nh�m form */
 .company-form .form-group {
   margin-bottom: 1rem;
 }
@@ -643,7 +643,7 @@ export default {
   color: #e53e3e;
 }
 
-/* Input Groups */
+/* Nh�m input */
 .company-form .input-group-text {
   background: #f7fafc;
   border-right: none;
@@ -695,7 +695,7 @@ export default {
   font-size: 0.75rem;
 }
 
-/* Form Actions */
+/* H�nh d?ng form */
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -759,7 +759,7 @@ export default {
   }
 }
 
-/* Animation */
+/* Hi?u ?ng */
 @keyframes slideDown {
   from {
     opacity: 0;

@@ -98,7 +98,7 @@ export default {
           throw new Error('Tài khoản không có quyền Admin')
         }
         if (this.remember) localStorage.setItem('last-admin-account', this.username)
-        // Fetch app info immediately for admin context
+        // Lấy thông tin app ngay cho ngữ cảnh admin
         try {
           const infoRes = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
           const data = infoRes?.data || {}
@@ -120,14 +120,14 @@ export default {
 </script>
 
 <style scoped>
-/* Layout */
+/* Bố cục */
 .auth-page {
   height: 100vh;
-  overflow: hidden; /* no page scrollbar */
+  overflow: hidden; /* không hiện thanh cuộn trang */
   display: flex;
   align-items: center;
   justify-content: center;
-  /* soft gradient background */
+  /* nền gradient nhẹ */
   background: linear-gradient(135deg, #eef2f7 0%, #f8f9fb 50%, #f1f4f9 100%);
 }
 
@@ -137,10 +137,10 @@ export default {
   display: grid;
   grid-template-columns: 1.15fr 1fr;
   gap: 24px;
-  padding: 16px; /* compact padding to avoid overflow */
+  padding: 16px; /* padding gọn để tránh tràn */
 }
 
-/* Branding */
+/* Thương hiệu */
 .brand-side {
   background: rgba(255,255,255,0.85);
   backdrop-filter: saturate(1.2) blur(8px);
@@ -153,7 +153,7 @@ export default {
 .brand-inner h2 { margin: 0 0 6px; font-weight: 600; }
 .brand-inner p { margin: 0; color: #6c757d; }
 
-/* Card */
+/* Thẻ */
 .auth-card {
   width: 100%;
   max-width: 440px;
@@ -167,11 +167,11 @@ export default {
 }
 .auth-card .text-muted { color: #6c757d !important; }
 
-/* Form */
+/* Biểu mẫu */
 .input-with-icon { display: flex; align-items: center; gap: .6rem; }
 .input-with-icon i { color: #8a94a6; font-size: 1.05rem; }
 
-/* refine input aesthetics */
+/* tinh chỉnh giao diện input */
 :deep(.form-control), :deep(input.form-control) {
   border-radius: 10px;
   border: 1px solid #e5e7eb;
@@ -188,7 +188,7 @@ export default {
   border-radius: 10px;
 }
 
-/* Button */
+/* Nút */
 .submit-btn {
   border-radius: 12px;
   padding: 10px 14px;
@@ -201,18 +201,18 @@ export default {
   filter: brightness(1.03);
 }
 
-/* Alert */
+/* Cảnh báo */
 :deep(.alert-danger) {
   border-radius: 10px;
 }
 
-/* Responsive */
+/* Tương thích màn hình */
 @media (max-width: 768px) {
   .auth-container { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
   .brand-side { display: none; }
   .auth-card { width: 100%; max-height: none; }
 }
 
-/* Animation */
+/* Hiệu ứng */
 @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1;} }
 </style>

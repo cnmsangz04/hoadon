@@ -1,7 +1,7 @@
 <template>
   <div class="container-fluid py-3 email-templates">
 
-    <!-- Title + actions -->
+    <!-- Ti�u d? v� thao t�c -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 font-weight-bold">Danh sách mẫu email</h4>
       <div>
@@ -20,7 +20,7 @@
       </div>
     </div>
 
-    <!-- Filters Row -->
+    <!-- H�ng b? l?c -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="4" class="mb-2">
@@ -54,7 +54,7 @@
       </b-row>
     </b-card>
 
-    <!-- Table -->
+    <!-- B?ng -->
     <b-card class="shadow-sm">
       <b-table
         bordered
@@ -72,12 +72,12 @@
           {{ row.index + 1 }}
         </template>
 
-        <!-- Company -->
+        <!-- C�ng ty -->
         <template #cell(companyName)="row">
           {{ row.item.companyName || '-' }}
         </template>
 
-        <!-- Key -->
+        <!-- Kh�a -->
         <template #cell(key)="row">
           <div>
             <div class="text-mono font-weight-bold">{{ row.item.key }}</div>
@@ -87,24 +87,24 @@
           </div>
         </template>
 
-        <!-- Title -->
+        <!-- Ti�u d? -->
         <template #cell(title)="row">
           <div class="font-weight-bold">{{ row.item.title }}</div>
         </template>
 
-        <!-- Status -->
+        <!-- Tr?ng th�i -->
         <template #cell(status)="row">
           <b-badge :variant="row.item.status === 1 ? 'success' : 'secondary'">
             {{ row.item.status === 1 ? 'Kích hoạt' : 'Ngưng hoạt động' }}
           </b-badge>
         </template>
 
-        <!-- Updated At -->
+        <!-- C?p nh?t l�c -->
         <template #cell(updatedAt)="row">
           {{ formatDate(row.item.updatedAt) }}
         </template>
 
-        <!-- Action -->
+        <!-- H�nh d?ng -->
         <template #cell(actions)="row">
           <b-dropdown
             size="sm"
@@ -269,7 +269,7 @@ export default {
   font-weight: 700; 
 }
 
-/* Keep existing table modern tweaks */
+/* Giữ tinh chỉnh bảng hiện đại hiện có */
 .table-modern thead th { 
   background-color: #f9fafb; 
   border-bottom: 2px solid #e5e7eb; 

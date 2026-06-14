@@ -35,7 +35,7 @@ public class Auth {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest req) {
 
-        // Login with username only
+        // Đăng nhập chỉ bằng username
         Optional<UserEntity> uOpt = Optional.empty();
         if (req.getUsername() != null && !req.getUsername().isBlank()) {
             uOpt = userService.findByUsername(req.getUsername().trim());
@@ -58,7 +58,7 @@ public class Auth {
     @PostMapping("/login-admin")
     public ResponseEntity<?> loginAdmin(@RequestBody AuthRequest req) {
 
-        // Login with username only
+        // Đăng nhập chỉ bằng username
         Optional<UserEntity> uOpt = Optional.empty();
         if (req.getUsername() != null && !req.getUsername().isBlank()) {
             uOpt = userService.findByUsername(req.getUsername().trim());
@@ -74,11 +74,11 @@ public class Auth {
         boolean isRoot = role != null && role == 0;
         boolean isSystemAdmin = role != null && role == 1;
 
-        // Must be admin account
+        // Bắt buộc là tài khoản admin
         if (!(isRoot || isSystemAdmin))
             return ResponseEntity.status(403).body("Not an admin account");
 
-        // Always require and validate admin password for admin login
+        // Luôn yêu cầu và kiểm tra mật khẩu admin khi đăng nhập admin
         if (user.getAdminPassword() == null || user.getAdminPassword().isEmpty())
             return ResponseEntity.status(403).body("No admin password set");
 
@@ -90,7 +90,7 @@ public class Auth {
         return ResponseEntity.ok(new AuthResponse(token, "Bearer", user.getId(), user.getRole()));
     }
 
-    // Forgot password: verify username and company email, issue token valid for 5 minutes, send email
+    // Quên mật khẩu: xác minh username và email công ty, cấp token hiệu lực 5 phút rồi gửi email
     @PostMapping("/forgot")
     public ResponseEntity<?> forgot(@RequestBody ForgotRequest req, HttpServletRequest httpReq) {
         if (req == null || req.getUsername() == null || req.getEmail() == null) {
@@ -107,12 +107,12 @@ public class Auth {
         if (userEmail == null || !userEmail.equalsIgnoreCase(email)) {
             return ResponseEntity.status(400).body("Email không khớp với email của tài khoản");
         }
-        // generate token (32 chars) and expiry 5 minutes
+        // Tạo token (32 ký tự) và thời hạn 5 phút
         String token = UUID.randomUUID().toString().replaceAll("-", "");
         user.setForgetToken(token);
         user.setTimeReset(LocalDateTime.now().plusMinutes(5));
         userRepository.save(user);
-        // dynamic base url
+        // base url động
         String baseUrl = ServletUriComponentsBuilder.fromRequestUri(httpReq)
                 .replacePath(null).build().toUriString();
         if (baseUrl == null || baseUrl.isBlank()) {
@@ -133,14 +133,14 @@ public class Auth {
         return ResponseEntity.ok(new ForgotResponse(token, mailOk));
     }
 
-    // Resend email: by requestId/token or by username+email
+    // Gửi lại email: theo requestId/token hoặc username+email
     @PostMapping("/forgot/resend")
     public ResponseEntity<?> resend(@RequestBody ResendRequest req, HttpServletRequest httpReq) {
         final String initialToken = (req != null ? req.getRequestId() : null);
         String token = initialToken;
         UserEntity user = null;
         if (initialToken != null && !initialToken.isBlank()) {
-            // find by existing token using effectively-final variable
+            // Tìm theo token hiện có bằng biến effectively-final
             user = userRepository.findAll().stream()
                     .filter(u -> initialToken.equals(u.getForgetToken()))
                     .findFirst().orElse(null);
@@ -156,7 +156,7 @@ public class Auth {
             if (userEmail == null || !userEmail.equalsIgnoreCase(req.getEmail().trim())) {
                 return ResponseEntity.status(400).body("Email không khớp với email của tài khoản");
             }
-            // reuse or regenerate token
+            // Tái dùng hoặc tạo lại token
             if (user.getForgetToken() == null || user.getTimeReset() == null || user.getTimeReset().isBefore(LocalDateTime.now())) {
                 String newToken = UUID.randomUUID().toString().replaceAll("-", "");
                 user.setForgetToken(newToken);
@@ -188,7 +188,7 @@ public class Auth {
         return ResponseEntity.ok(new ForgotResponse(effectiveToken, mailOk));
     }
 
-    // Reset password using token
+    // Reset mật khẩu bằng token
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest req) {
         if (req == null || req.getToken() == null || req.getPassword() == null) {
@@ -205,14 +205,14 @@ public class Auth {
             return ResponseEntity.status(400).body("Token đã hết hạn");
         }
         user.setPassword(passwordEncoder.encode(req.getPassword()));
-        // clear token after reset
+        // Xóa token sau khi reset
         user.setForgetToken(null);
         user.setTimeReset(null);
         userRepository.save(user);
         return ResponseEntity.ok("Cập nhật mật khẩu thành công");
     }
 
-    // DTOs for requests/responses
+    // DTO cho request/response
     public static class ForgotRequest {
         private String username;
         private String email;
@@ -223,7 +223,7 @@ public class Auth {
     }
 
     public static class ResendRequest {
-        private String requestId; // reuse token
+        private String requestId; // tái dùng token
         private String username;
         private String email;
         public String getRequestId() { return requestId; }

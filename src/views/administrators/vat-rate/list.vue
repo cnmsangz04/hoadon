@@ -1,6 +1,6 @@
 <template>
   <div class="container-fluid py-3 vat-rates">
-    <!-- Title + actions -->
+    <!-- Ti�u d? v� thao t�c -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 font-weight-bold">Danh sách thuế suất</h4>
       <div>
@@ -15,7 +15,7 @@
       </div>
     </div>
 
-    <!-- FILTER -->
+    <!-- B? l?c -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="6" class="mb-2">
@@ -40,7 +40,7 @@
       </b-row>
     </b-card>
 
-    <!-- DRAGGABLE LIST -->
+    <!-- Danh s�ch k�o th? -->
     <b-card class="mb-2 shadow-sm">
       <div class="d-flex align-items-center mb-2">
         <h6 class="mb-0 mr-2">Thứ tự hiển thị</h6>
@@ -96,7 +96,7 @@
       </b-alert>
     </b-card>
 
-    <!-- TABLE -->
+    <!-- B?ng -->
     <b-card class="shadow-sm">
       <b-table
         bordered
@@ -146,11 +146,11 @@
         </template>
       </b-table>
 
-      <!-- PAGINATION -->
+      <!-- Ph�n trang -->
       <b-pagination v-if="list.total > list.per_page" v-model="list.current_page" :per-page="list.per_page" :total-rows="list.total" align="right" class="mt-2" @input="onPageChange" />
     </b-card>
 
-    <!-- MODAL -->
+    <!-- Modal -->
     <b-modal ref="vatRateModal" title="Thêm / Cập nhật thuế suất" hide-footer>
       <b-form @submit.prevent="saveVatRate">
 
@@ -256,7 +256,7 @@ export default {
     async loadData() {
       this.isBusy = true;
       try {
-        const page = this.list.current_page; // send 1-based page index
+        const page = this.list.current_page; // gửi index trang bắt đầu từ 1
         const tableReq = axios.post(
           "/administrator/vat-rate/list",
           this.filter,
@@ -271,7 +271,7 @@ export default {
         const [tableRes, orderRes] = await Promise.all([tableReq, orderReq]);
         
         const data = tableRes.data;
-        // Adapt to { items, total, per_page, current_page, last_page }
+        // Chuyển theo cấu trúc { items, total, per_page, current_page, last_page }
         const rawItems = Array.isArray(data.items) ? data.items : [];
         this.items = rawItems.map(i => ({
           id: i.id,
@@ -284,7 +284,7 @@ export default {
         this.list.per_page = Number(data.per_page) || this.list.per_page;
         this.list.current_page = Number(data.current_page) || this.list.current_page;
         
-        // Load all items for drag-and-drop ordering
+        // Tải toàn bộ item để sắp xếp kéo thả
         const allData = orderRes.data;
         const allItems = Array.isArray(allData.items) ? allData.items : [];
         this.orderedItems = allItems.map(i => ({
@@ -361,8 +361,8 @@ export default {
     },
 
     onDragEnd() {
-      // mark as dirty so user can save
-      // also update visible prioritize for visual consistency
+      // Đánh dấu đã thay đổi để user có thể lưu
+      // Đồng thời cập nhật prioritize hiển thị để nhất quán giao diện
       this.orderedItems.forEach((it, i) => (it.prioritize = i));
       this.dirtyOrder = true;
     },
@@ -382,7 +382,7 @@ export default {
     },
 
     async toggleStatus(item) {
-      // inline quick toggle
+      // Bật/tắt nhanh inline
       const payload = { 
         id: item.id, 
         label: item.label, 

@@ -1,6 +1,6 @@
 <template>
   <div class="container-fluid py-3 vat-invoices">
-    <!-- Header and actions -->
+    <!-- Header v� thao t�c -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="d-flex align-items-center">
         <h4 class="mb-0 font-weight-bold">Danh sách hóa đơn giá trị gia tăng</h4>
@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <!-- Filters -->
+    <!-- B? l?c -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="4" class="mb-2">
@@ -130,7 +130,7 @@
         </template>
       </b-table>
 
-      <!-- Loading skeleton when changing page -->
+      <!-- Skeleton t?i khi chuy?n trang -->
       <div v-if="isBusy" class="mt-2">
         <b-skeleton width="100%" height="20px" animated class="mb-2" />
         <b-skeleton width="96%" height="20px" animated class="mb-2" />
@@ -698,7 +698,7 @@ export default {
           this.mail.name = (recvName || '').toString()
           this.mail.email = (recvEmail || '').toString()
         } catch (e) {
-          // ignore, keep defaults
+          // b? qua, keep defaults
         }
         this.$root.$emit('bv::show::modal', 'modalSendEmail')
       } catch (e) {
@@ -873,7 +873,7 @@ export default {
           solid: true,
           autoHideDelay: 3000
         })
-        // Refresh list after delete
+        // Tải lại danh sách sau khi xóa
         this.fetchList()
       } catch (e) {
         const code = e?.response?.status

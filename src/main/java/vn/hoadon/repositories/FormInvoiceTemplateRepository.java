@@ -26,7 +26,7 @@ public class FormInvoiceTemplateRepository {
     public Page<FormInvoiceEntity> searchTemplates(String q, Integer category, Integer type, Integer system, Pageable pageable) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
 
-        // Build main query
+        // Tạo query chính
         CriteriaQuery<FormInvoiceEntity> cq = cb.createQuery(FormInvoiceEntity.class);
         Root<FormInvoiceEntity> root = cq.from(FormInvoiceEntity.class);
         List<Predicate> predicates = new ArrayList<>();
@@ -55,7 +55,7 @@ public class FormInvoiceTemplateRepository {
         query.setMaxResults(pageable.getPageSize());
         List<FormInvoiceEntity> content = query.getResultList();
 
-        // Build count query
+        // Tạo query đếm
         CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
         Root<FormInvoiceEntity> countRoot = countQuery.from(FormInvoiceEntity.class);
         List<Predicate> countPredicates = new ArrayList<>();

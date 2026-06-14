@@ -1,13 +1,13 @@
 <template>
   <div>
-    <!-- Header -->
+    <!-- Phần đầu trang -->
     <ComponentHeader />
 
     <div class="main-container">
-      <!-- Sidebar -->
+      <!-- Thanh bên -->
       <ComponentSidebarAdmin />
 
-      <!-- Main Content -->
+      <!-- Nội dung chính -->
       <div class="content">
         <div class="page-inner">
           <router-view />
@@ -15,7 +15,7 @@
       </div>
     </div>
 
-    <!-- Footer -->
+    <!-- Phần cuối trang -->
     <ComponentFooter />
   </div>
 </template>

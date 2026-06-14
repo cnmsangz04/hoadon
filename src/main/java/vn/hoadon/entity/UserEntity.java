@@ -51,7 +51,7 @@ public class UserEntity {
     @Column(name = "phone", length = 32)
     private String phone;
 
-    // 1 = active, 0 = inactive
+    // 1 = hoạt động, 0 = không hoạt động
     @Column(nullable = false)
     private Byte status;
 

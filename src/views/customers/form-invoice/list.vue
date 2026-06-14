@@ -1,6 +1,6 @@
 <template>
   <div class="container-fluid py-3 form-invoices">
-    <!-- Header and actions -->
+    <!-- Header v� thao t�c -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="d-flex align-items-center">
         <h4 class="mb-0 font-weight-bold">Danh sách mẫu hóa đơn</h4>
@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <!-- Filters -->
+    <!-- B? l?c -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="4" class="mb-2">
@@ -57,7 +57,7 @@
       </b-row>
     </b-card>
 
-    <!-- Form invoices table -->
+    <!-- B?ng m?u h�a don -->
     <b-card class="shadow-sm">
       <b-table
         bordered
@@ -110,7 +110,7 @@
         </template>
       </b-table>
 
-      <!-- Loading skeleton when changing page -->
+      <!-- Skeleton t?i khi chuy?n trang -->
       <div v-if="isBusy" class="mt-2">
         <b-skeleton width="100%" height="20px" animated class="mb-2" />
         <b-skeleton width="96%" height="20px" animated class="mb-2" />
@@ -154,7 +154,7 @@
       </b-row>
     </b-card>
 
-    <!-- Invoice view modal with iframe -->
+    <!-- Modal xem h�a don b?ng iframe -->
     <b-modal
       id="modalFormInvoice"
       size="lg"
@@ -209,7 +209,7 @@ export default {
     return {
       isBusy: false,
       usersMap: {},
-      // iframe state for invoice viewing
+      // State iframe để xem hóa đơn
       iframe: {
         src: null,
         form_id: null,
@@ -273,7 +273,7 @@ export default {
       const formId = item.form_id != null ? item.form_id : (item.id != null ? item.id : null)
       if (!formId) return false
       this.iframe.form_id = formId
-      // Use unauthenticated endpoint (no token required)
+      // Dùng endpoint không cần xác thực (không cần token)
       this.iframe.src = `/v1/file/${formId}/view`
       this.$root.$emit('bv::show::modal', 'modalFormInvoice')
       return false
@@ -314,7 +314,7 @@ export default {
         this.list.from = from
         this.list.to = to
       } catch (e) {
-        // Handle silently
+        // Xử lý âm thầm
       } finally {
         this.isBusy = false
       }
@@ -342,7 +342,7 @@ export default {
         if (!ok) return
         await axios.delete(`/form-invoices/${id}`)
         this.$bvToast && this.$bvToast.toast('Đã xóa mẫu hóa đơn', { title: 'Thành công', variant: 'success', solid: true, autoHideDelay: 3000 })
-        // Refresh list after delete
+        // Tải lại danh sách sau khi xóa
         this.applyFilters()
       } catch (e) {
         let msg = 'Xóa mẫu hóa đơn thất bại'
@@ -379,10 +379,10 @@ export default {
 <style scoped>
 .font-weight-bold { font-weight: 700; }
 
-/* Remove custom grid styles to align with registers/invoice layout */
+/* Bỏ style grid tùy chỉnh để khớp layout registers/invoice */
 .filters-grid, .filter-item, .span-4, .span-3, .span-2, .filter-actions { display: unset; grid-column: unset; }
 
-/* Keep compact control polish similar to registers page */
+/* Giữ style control gọn tương tự trang registers */
 .shadow-sm { border-radius: 10px; }
 
 #viewInv { min-height: 300px; }

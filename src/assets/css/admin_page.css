@@ -1,4 +1,4 @@
-/* Admin page layout styles - src/assets/css/admin_page.css */
+/* Style bố cục trang admin - src/assets/css/admin_page.css */
 
 :root{
   --admin-bg: #f5f6fa;
@@ -8,14 +8,14 @@
   --muted-text: #6c7a7a;
 }
 
-/* main container that holds sidebar + content */
+/* container chính chứa sidebar và nội dung */
 .main-container{
   display: flex;
   align-items: stretch;
-  min-height: calc(100vh - 60px - 40px); /* reserve header (60) + footer (40) approximate */
+  min-height: calc(100vh - 60px - 40px); /* chừa khoảng cho header (60) và footer (40) ước lượng */
 }
 
-/* content area */
+/* vùng nội dung */
 .content{
   flex: 1 1 auto;
   background: var(--admin-bg);
@@ -23,7 +23,7 @@
   box-sizing: border-box;
 }
 
-/* inner content wrapper to add card-like feel */
+/* khung nội dung bên trong để tạo cảm giác dạng thẻ */
 .content > .page-inner{
   background: var(--content-bg);
   border-radius: var(--content-radius);
@@ -32,25 +32,25 @@
   min-height: 400px;
 }
 
-/* spacing helpers */
+/* helper căn khoảng cách */
 .admin-hero, .admin-stats, .admin-widgets{ margin-bottom: 16px; }
 
-/* responsive adjustments */
+/* tinh chỉnh responsive */
 @media (max-width: 992px){
   .main-container{ flex-direction: column; }
   .left_col{ width: 100%; }
   .content{ padding: 12px; }
 }
 
-/* when the sidebar is collapsed (body.nav-sm), make content padding a bit smaller */
+/* khi sidebar thu gọn (body.nav-sm), giảm padding nội dung một chút */
 body.nav-sm .content{ padding-left: 12px; }
 
-/* small screens: top fixed header reduces available height, ensure content scrolls */
+/* màn hình nhỏ: header cố định phía trên làm giảm chiều cao khả dụng, đảm bảo nội dung cuộn được */
 @media (max-width: 480px){
   .content > .page-inner{ padding: 12px; }
 }
 
-/* utility: center empty pages */
+/* tiện ích: căn giữa trang rỗng */
 .page-empty{
   display:flex; align-items:center; justify-content:center; min-height: 240px; color:var(--muted-text);
 }

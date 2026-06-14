@@ -21,7 +21,7 @@ import $ from 'jquery'
 import 'jquery-confirm/dist/jquery-confirm.min.css'
 import 'jquery-confirm/dist/jquery-confirm.min.js'
 
-// Register vue-select globally
+// Đăng ký vue-select dùng toàn cục
 import 'vue-select/dist/vue-select.css'
 import VSelect from 'vue-select'
 Vue.component('v-select', VSelect)
@@ -42,7 +42,7 @@ Vue.use(IconsPlugin)
 
 Vue.config.productionTip = false
 
-// Global app store (lightweight) accessible via this.$app
+// Store toàn cục gọn nhẹ, truy cập qua this.$app
 Vue.prototype.$app = Vue.observable({
   info: {
     user: null,
@@ -50,13 +50,21 @@ Vue.prototype.$app = Vue.observable({
   }
 })
 
-// Fetch info on app load so all components can use it
+// Tải thông tin khi mở app để các component cùng dùng (chỉ khi token hợp lệ và chưa hết hạn)
 import axios from './plugins/axios'
-axios.get('/auth/info').then(res => {
-  const data = res?.data || {}
-  Vue.prototype.$app.info.user = data.user || null
-  Vue.prototype.$app.info.company = data.company || null
-}).catch(() => {})
+;(function () {
+  const token = localStorage.getItem('token') || localStorage.getItem('token-admin')
+  if (!token) return
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    if (!payload || (payload.exp && payload.exp < Math.floor(Date.now() / 1000))) return
+  } catch { return }
+  axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } }).then(res => {
+    const data = res?.data || {}
+    Vue.prototype.$app.info.user = data.user || null
+    Vue.prototype.$app.info.company = data.company || null
+  }).catch(() => {})
+})()
 
 new Vue({
   router,

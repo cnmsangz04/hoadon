@@ -135,7 +135,7 @@ router.beforeEach((to, from, next) => {
 	if (needUser && !tokenUser) return next('/auth/login')
 	if (tokenUser && guestUser) return next('/')
 
-	// Helper: validate admin token (role 0 Root or role 1 Admin)
+	// Helper: validate token admin (role 0 Root hoặc role 1 Admin)
 	function validateAdminToken(rawToken) {
 		if (!rawToken) return { valid: false, reason: 'missing' }
 		let payload
@@ -148,7 +148,7 @@ router.beforeEach((to, from, next) => {
 		return { valid: isRoot || isAdmin, isRoot, isAdmin }
 	}
 
-	// Admin access: require valid admin token with role 0 (Root) OR role 1 (Admin)
+	// Quyền admin: yêu cầu token admin hợp lệ với role 0 (Root) hoặc role 1 (Admin)
 	if (needAdmin) {
 		const check = validateAdminToken(tokenAdmin)
 		if (!check.valid) {
@@ -157,7 +157,7 @@ router.beforeEach((to, from, next) => {
 		}
 	}
 
-	// Enforce optional rolePolicy for user routes (e.g., member management requires role < 2)
+	// Áp dụng rolePolicy tùy chọn cho route user (ví dụ quản lý thành viên cần role < 2)
 	if (rolePolicy) {
 		const token = tokenUser || tokenAdmin
 		const payload = parseJwt(token)
@@ -169,11 +169,11 @@ router.beforeEach((to, from, next) => {
 		}
 	}
 
-	// Redirect logged-in admins away from admin login only when token is valid
+	// Chuyển admin đã đăng nhập khỏi trang login admin chỉ khi token hợp lệ
 	if (guestAdmin) {
 		const check = validateAdminToken(tokenAdmin)
 		if (check.valid) return next('/administrator')
-		// If invalid token present, purge and stay on login-admin
+		// Nếu có token không hợp lệ thì xóa và ở lại login-admin
 		if (tokenAdmin && !check.valid) { try { localStorage.removeItem('token-admin') } catch (e) { } }
 	}
 

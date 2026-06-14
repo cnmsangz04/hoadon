@@ -78,7 +78,7 @@ export default {
           meta: { suppressGlobalErrorToast: true },
           successMessage: 'Đã gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra email.'
         })
-        // If backend returns a request id, store for resend; otherwise enable generic resend
+        // Nếu backend trả về request id thì lưu để gửi lại; nếu không thì bật gửi lại mặc định
         this.lastRequestId = res?.data?.requestId || null
         this.canResend = true
       } catch (e) {
@@ -113,7 +113,7 @@ export default {
 </script>
 
 <style scoped>
-/* Layout copied from login.vue for consistency */
+/* Bố cục sao chép từ login.vue để giữ nhất quán */
 .auth-page {
   height: 100vh;
   overflow: hidden;

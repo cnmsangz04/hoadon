@@ -11,7 +11,7 @@ public class JacksonConfig {
     @Bean
     public Module hibernateModule() {
         Hibernate6Module module = new Hibernate6Module();
-        // Prevent forcing lazy loading; serialize identifier for not-loaded proxies
+        // Tránh ép lazy loading; serialize định danh cho proxy chưa được tải
         module.enable(Hibernate6Module.Feature.SERIALIZE_IDENTIFIER_FOR_LAZY_NOT_LOADED_OBJECTS);
         module.disable(Hibernate6Module.Feature.FORCE_LAZY_LOADING);
         return module;

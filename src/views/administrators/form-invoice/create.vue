@@ -1,7 +1,7 @@
 <template>
     <div class="container-fluid form-invoice-create-classic">
 
-        <!-- Classic Card with Header -->
+        <!-- Th? c? di?n có header -->
         <div class="card">
             <div class="card-header bg-light">
                 <h4 class="card-title mb-0">
@@ -157,7 +157,7 @@
 
                     <hr class="my-4" />
 
-                    <!-- Action Buttons -->
+                    <!-- Nút hành d?ng -->
                     <div class="form-group row mb-0">
                         <div class="col-md-12 text-right">
                              <b-button variant="secondary" size="sm" @click="$router.back()">
@@ -179,7 +179,7 @@
             </div>
         </div>
 
-        <!-- Preview Modal -->
+        <!-- Modal xem tru?c -->
         <b-modal ref="filePreviewModal" hide-footer :title="filePreviewModalTitle || 'Xem file'" size="lg">
             <div v-if="filePreviewModalLoading" class="text-center py-4">
                 <i class="fa fa-spinner fa-spin fa-2x"></i>

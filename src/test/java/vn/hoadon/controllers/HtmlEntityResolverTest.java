@@ -47,7 +47,7 @@ public class HtmlEntityResolverTest {
         assertTrue(out.contains("<br/>"), "br should be self-closed");
         assertTrue(out.contains("<hr/>"), "hr should be self-closed");
         assertTrue(out.contains("<input type=\"text\"/>"), "input should be self-closed");
-        // Existing self-closed should remain valid
+        // Thẻ tự đóng hiện có vẫn phải hợp lệ
         String already = "<meta charset=\"UTF-8\"/>";
         String out2 = (String) m.invoke(c, already);
         assertEquals(already, out2, "Already self-closed tags should remain unchanged");

@@ -66,7 +66,7 @@ export default {
   data() {
     return {
       openIndex: null,
-      // Base menu without Member; we'll push Member conditionally in created()
+      // Menu cơ bản chưa có Thành viên; sẽ thêm Thành viên có điều kiện trong created()
       menu: [
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
         { title: 'Tài khoản', icon: 'fas fa-user-cog', to: '/setting/account/list' },
@@ -93,7 +93,7 @@ export default {
     }
   },
   watch: {
-    // Watch for changes in company info to update logo
+    // Theo dõi thay đổi thông tin công ty để cập nhật logo
     '$app.info.company.logo': {
       handler() {
         this.$forceUpdate()
@@ -103,7 +103,7 @@ export default {
   },
 
   created() {
-    // Inject Member menu if allowed
+    // Thêm menu Thành viên nếu được phép
     if (this.canSeeMember) {
       this.menu.push({ title: 'Thành viên', icon: 'fas fa-users', to: '/setting/member/list' })
     }

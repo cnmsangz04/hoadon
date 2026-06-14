@@ -1,6 +1,6 @@
 <template>
   <div class="container-fluid py-3 register-invoices">
-    <!-- Header and actions -->
+    <!-- Header v� thao t�c -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="d-flex align-items-center">
         <h4 class="mb-0 font-weight-bold">Danh sách tờ khai hóa đơn điện tử</h4>
@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <!-- Filters -->
+    <!-- B? l?c -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="4" class="mb-2">
@@ -77,7 +77,7 @@
       </b-row>
     </b-card>
 
-    <!-- Register invoices table -->
+    <!-- B?ng t? khai h�a don -->
     <b-card class="shadow-sm">
       <b-table
         bordered
@@ -132,7 +132,7 @@
         </template>
       </b-table>
 
-      <!-- Loading skeleton when changing page -->
+      <!-- Skeleton t?i khi chuy?n trang -->
       <div v-if="isBusy" class="mt-2">
         <b-skeleton width="100%" height="20px" animated class="mb-2" />
         <b-skeleton width="96%" height="20px" animated class="mb-2" />
@@ -176,7 +176,7 @@
       </b-row>
     </b-card>
 
-    <!-- History modal -->
+    <!-- Modal l?ch s? -->
     <b-modal ref="historyModal" size="lg" title="Lịch sử truyền nhận" hide-header-close>
       <div>
         <b-table-simple bordered small responsive show-empty :busy="historyBusy" empty-text="Không có dữ liệu">
@@ -511,7 +511,7 @@ export default {
       try {
         await axios.put(`/register-invoices/${id}/get`, { status })
       } catch (e) {
-        // ignore; global error handler will show toast
+        // b? qua; global error handler will show toast
       }
     },
     async deleteItem(item) {
@@ -535,7 +535,7 @@ export default {
         // Backend allows delete; we show delete only when status === 0
         await axios.delete(`/register-invoices/${id}`)
         this.$bvToast && this.$bvToast.toast('Đã xóa tờ khai', { title: 'Thành công', variant: 'success', solid: true, autoHideDelay: 3000 })
-        // Refresh list after delete
+        // Tải lại danh sách sau khi xóa
         this.applyFilters()
       } catch (e) {
         const code = e?.response?.status
@@ -592,7 +592,7 @@ export default {
         // Persist status change to 1
         await this.updateStatus(id, 1)
       } catch (e) {
-        // ignore
+        // b? qua
       }
     },
     async sendToTaxAuthority(item) {
@@ -644,7 +644,7 @@ export default {
         const idx = this.list.data.findIndex(x => (x.id||x.ID||x.Id) === id)
         if (idx >= 0) this.$set(this.list.data, idx, { ...this.list.data[idx], ...mapped })
       } catch (e) {
-        // ignore refresh errors
+        // b? qua refresh errors
       }
     },
     pollTaxStatusForRow(id) {

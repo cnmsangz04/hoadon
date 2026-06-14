@@ -48,7 +48,7 @@ public class ProfileController {
         this.companyBankRepository = companyBankRepository;
     }
 
-    // Provide options data: banks and tax authority (cities)
+    // Cung cấp dữ liệu tùy chọn: ngân hàng và cơ quan thuế (tỉnh/thành)
     @PostMapping("/ini")
     public ResponseEntity<Map<String, Object>> init() {
         Map<String, Object> map = new HashMap<>();
@@ -57,10 +57,10 @@ public class ProfileController {
         return ResponseEntity.ok(map);
     }
 
-    // Return profile data for current company using authenticated user's companyId
+    // Trả dữ liệu hồ sơ cho công ty hiện tại theo companyId của user đã xác thực
     @PostMapping("/get")
     public ResponseEntity<ProfileDTO> profile() {
-        // Resolve authenticated user
+        // Lấy user đã xác thực
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Long companyId = null;
         if (auth != null && auth.getPrincipal() instanceof UserEntity) {
@@ -68,7 +68,7 @@ public class ProfileController {
         }
 
         if (companyId == null) {
-            // No user or no company bound; return empty DTO
+            // Không có user hoặc chưa gắn công ty; trả DTO rỗng
             return ResponseEntity.ok(new ProfileDTO());
         }
 
@@ -88,13 +88,13 @@ public class ProfileController {
             dto.invoiceFax = company.getInvoiceFax();
             dto.invoiceWebsite = company.getInvoiceWebsite();
 
-            // contact fields for tax dossiers
+            // Các trường liên hệ cho hồ sơ thuế
             dto.contactName = company.getContactName();
             dto.contactMail = company.getContactMail();
             dto.contactPhone = company.getContactPhone();
             dto.contactAddress = company.getContactAddress();
 
-            // tax authority mapping (store codes and display names)
+            // Mapping cơ quan thuế (lưu mã và tên hiển thị)
             if (company.getTaxAuthorityCity() != null) {
                 TaxAuthorityEntity city = company.getTaxAuthorityCity();
                 dto.taxAuthorityCity = city.getCode();
@@ -106,14 +106,14 @@ public class ProfileController {
                 dto.bladeTaxAuthorityName = name.getName();
             }
 
-            // bank info (use first bank if multiple)
+            // Thông tin ngân hàng (dùng ngân hàng đầu tiên nếu có nhiều)
             List<CompanyBankEntity> companyBanks = company.getCompanyBanks();
             if (companyBanks != null && !companyBanks.isEmpty()) {
                 CompanyBankEntity cb = companyBanks.get(0);
                 dto.bankNo = cb.getAccountNumber();
                 dto.bankAddress = cb.getBankAddress();
                 dto.bankBrand = cb.getBankBrand();
-                // Try to map bank name to abbreviation code for the select
+                // Thử map tên ngân hàng sang mã viết tắt cho select
                 if (cb.getBankName() != null) {
                     bankService.findByName(cb.getBankName()).ifPresentOrElse(
                         b -> {
@@ -126,7 +126,7 @@ public class ProfileController {
             }
         });
 
-        // Load legal representative by companyId
+        // Tải người đại diện pháp luật theo companyId
         legalRepresentativeRepository.findByCompanyId(companyId).ifPresent(rep -> {
             dto.representName = rep.getFullname();
             dto.representGender = rep.getGender();
@@ -140,7 +140,7 @@ public class ProfileController {
         return ResponseEntity.ok(dto);
     }
 
-    // Load tax authority by city code
+    // Tải cơ quan thuế theo mã tỉnh/thành
     @PostMapping("/get-tax-authority")
     public ResponseEntity<?> getTaxAuthority(@RequestBody Map<String, Integer> body) {
         Integer parentCode = body.get("parentCode");
@@ -153,7 +153,7 @@ public class ProfileController {
         return ResponseEntity.ok(names);
     }
 
-    // Update company info + uploads
+    // Cập nhật thông tin công ty và file upload
     @PostMapping(value = "/update-info")
     public ResponseEntity<?> updateInfo(
             @RequestParam(value = "companyName", required = false) String companyName,
@@ -179,7 +179,7 @@ public class ProfileController {
         if (companyAddress != null) company.setAddress(companyAddress);
         if (companyBusiness != null) company.setBusiness(companyBusiness);
         
-        // Save logo
+        // Lưu logo
         if (logo != null && !logo.isEmpty()) {
             try {
                 Path dir = UploadPath.resolveCompanyTypeDir(companyId, "logo");
@@ -195,7 +195,7 @@ public class ProfileController {
                 return ResponseEntity.status(500).body("Lỗi lưu logo: " + e.getMessage());
             }
         }
-        // Save favicon
+        // Lưu favicon
         if (favicon != null && !favicon.isEmpty()) {
             try {
                 Path dir = UploadPath.resolveCompanyTypeDir(companyId, "favicon");
@@ -283,7 +283,7 @@ public class ProfileController {
             return ResponseEntity.notFound().build();
         }
 
-        // Extract and trim inputs
+        // Lấy và trim input
         String contactName = Optional.ofNullable(body.get("contactName")).map(String::trim).orElse(null);
         String contactMail = Optional.ofNullable(body.get("contactMail")).map(String::trim).orElse(null);
         String contactPhone = Optional.ofNullable(body.get("contactPhone")).map(String::trim).orElse(null);
@@ -291,7 +291,7 @@ public class ProfileController {
 
         Map<String, List<String>> errors = new HashMap<>();
 
-        // Basic validations according to field expectations
+        // Validate cơ bảns according to field expectations
         if (contactName == null || contactName.isEmpty()) {
             errors.put("contactName", Collections.singletonList("Vui lòng nhập họ và tên"));
         }
@@ -299,7 +299,7 @@ public class ProfileController {
         if (contactMail == null || contactMail.isEmpty()) {
             errors.put("contactMail", Collections.singletonList("Vui lòng nhập email"));
         } else {
-            // very simple email pattern
+            // mẫu email rất đơn giản
             String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
             if (!contactMail.matches(emailRegex)) {
                 errors.put("contactMail", Collections.singletonList("Email không hợp lệ"));
@@ -309,7 +309,7 @@ public class ProfileController {
         if (contactPhone == null || contactPhone.isEmpty()) {
             errors.put("contactPhone", Collections.singletonList("Vui lòng nhập số điện thoại"));
         } else {
-            String phoneRegex = "^[0-9+()\\-\\s]{6,20}$"; // digits, space, +, -, (), length 6-20
+            String phoneRegex = "^[0-9+()\\-\\s]{6,20}$"; // chữ số, khoảng trắng, +, -, (), độ dài 6-20
             if (!contactPhone.matches(phoneRegex)) {
                 errors.put("contactPhone", Collections.singletonList("Số điện thoại không hợp lệ"));
             }
@@ -350,12 +350,12 @@ public class ProfileController {
         }
         vn.hoadon.entity.CompanyEntity company = companyOpt.get();
 
-        String bankAbbreviation = body.get("bankName"); // reduced value from v-select
+        String bankAbbreviation = body.get("bankName"); // giá trị rút gọn từ v-select
         String bankNo = body.get("bankNo");
         String bankAddress = body.get("bankAddress");
         String bankBrand = body.get("bankBrand");
 
-        // find existing first company bank or create new
+        // Tìm ngân hàng công ty đầu tiên hiện có hoặc tạo mới
         List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
         CompanyBankEntity cb = banks.isEmpty() ? new CompanyBankEntity() : banks.get(0);
         cb.setCompany(company);
@@ -364,7 +364,7 @@ public class ProfileController {
             Optional<BankEntity> bankOpt = bankService.findByAbbreviation(bankAbbreviation);
             bankOpt.ifPresent(bank -> cb.setBankName(bank.getName()));
             if (!bankOpt.isPresent()) {
-                // fallback: store as provided
+                // Dự phòng: lưu đúng giá trị được truyền
                 cb.setBankName(bankAbbreviation);
             }
         }

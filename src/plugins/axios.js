@@ -14,20 +14,29 @@ function isAdminContext() {
   }
 }
 
+// Các endpoint không bao giờ gửi kèm token (route xác thực công khai)
+const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password']
+
 axios.interceptors.request.use(config => {
   try {
-    const admin = isAdminContext()
-    const primaryKey = admin ? 'token-admin' : 'token'
-    let token = localStorage.getItem(primaryKey)
+    // Bỏ tiền tố baseURL ở đầu để so sánh theo đường dẫn tương đối
+    const relUrl = (config.url || '').replace(/^\/v1/, '')
+    const isPublic = PUBLIC_PATHS.some(p => relUrl.startsWith(p))
 
-    // Fallback: if primary token missing, try the alternate token key
-    if (!token) {
-      const altKey = admin ? 'token' : 'token-admin'
-      token = localStorage.getItem(altKey)
-    }
+    if (!isPublic) {
+      const admin = isAdminContext()
+      const primaryKey = admin ? 'token-admin' : 'token'
+      let token = localStorage.getItem(primaryKey)
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      // Dự phòng: nếu thiếu token chính thì thử khóa token còn lại
+      if (!token) {
+        const altKey = admin ? 'token' : 'token-admin'
+        token = localStorage.getItem(altKey)
+      }
+
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
     }
 
     if (config.data instanceof FormData) {
@@ -38,15 +47,15 @@ axios.interceptors.request.use(config => {
   return config
 }, err => Promise.reject(err))
 
-// Success handler with optional success toast via request config
+// Xử lý phản hồi thành công, có thể hiện toast theo cấu hình request
 axios.interceptors.response.use(
   res => {
     try {
       const cfg = res?.config || {}
       const method = (cfg.method || '').toUpperCase()
-      // Read optional success message keys from config
+      // Đọc các khóa thông báo thành công tùy chọn từ config
       const msg = cfg.successMessage || cfg.successText || cfg?.meta?.successMessage
-      // Default: only show for mutating methods when message provided
+      // Mặc định: chỉ hiện với các method thay đổi dữ liệu khi có thông báo
       if (msg && ['POST','PUT','PATCH','DELETE'].includes(method)) {
         toastSuccess(msg)
       }
@@ -68,9 +77,9 @@ axios.interceptors.response.use(
       'Lỗi hệ thống'
 
     if (status === 401) {
+      localStorage.removeItem(key)
       if (!suppressGlobal) toastWarning(message || 'Phiên đăng nhập đã hết hạn', 'HTTP_401')
       setTimeout(() => {
-        localStorage.removeItem(key)
         window.location.href = admin ? '/auth/login-admin' : '/auth/login'
       }, 1200)
       return Promise.reject(err)

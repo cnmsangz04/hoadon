@@ -1,6 +1,6 @@
 <template>
   <div class="container-fluid py-3 members">
-    <!-- Header and actions -->
+    <!-- Header v� thao t�c -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="d-flex align-items-center">
         <h4 class="mb-0 font-weight-bold">Danh sách thành viên</h4>
@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <!-- Filters -->
+    <!-- B? l?c -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="4" class="mb-2">
@@ -48,7 +48,7 @@
       </b-row>
     </b-card>
 
-    <!-- Members table -->
+    <!-- B?ng th�nh vi�n -->
     <b-card class="shadow-sm">
       <b-table
         bordered
@@ -109,7 +109,7 @@
         </template>
       </b-table>
 
-      <!-- Loading skeleton when changing page -->
+      <!-- Skeleton t?i khi chuy?n trang -->
       <div v-if="isBusy" class="mt-2">
         <b-skeleton width="100%" height="20px" animated class="mb-2" />
         <b-skeleton width="96%" height="20px" animated class="mb-2" />
@@ -153,10 +153,10 @@
       </b-row>
     </b-card>
 
-    <!-- Create/Edit member modal -->
+    <!-- Modal t?o/c?p nh?t th�nh vi�n -->
     <b-modal ref="memberModal" :title="form.id ? 'Cập nhật thành viên' : 'Thêm thành viên'" hide-footer>
       <b-form @submit.prevent="saveMember">
-        <!-- Show info for new members -->
+        <!-- Hi?n th? th�ng tin cho th�nh vi�n m?i -->
         <b-form-group label="Họ và tên">
           <b-form-input v-model.trim="form.fullName" required />
         </b-form-group>
@@ -185,7 +185,7 @@
           </b-col>
         </b-form-row>
 
-        <!-- Root-only: Set Admin -->
+        <!-- Ch? root: d?t quy?n Admin -->
         <b-form-group v-if="isRoot && !isEditingRootTarget" label="Đặt user này là Admin">
           <b-form-checkbox v-model="form.isAdmin">Đặt làm Admin</b-form-checkbox>
         </b-form-group>
@@ -210,7 +210,7 @@
           </b-col>
         </b-form-row>
 
-        <!-- Note for editing root account -->
+        <!-- Ghi chú khi sửa tài khoản root -->
         <b-alert v-if="isEditingRootTarget" variant="info" class="mt-3">
           Bạn đang chỉnh cập nhật tài khoản <strong>Root</strong>. Vai trò và quyền hạn của tài khoản này không thể thay đổi.
         </b-alert>
@@ -221,7 +221,7 @@
       </b-form>
     </b-modal>
 
-    <!-- Permissions modal -->
+    <!-- Modal phân quyền -->
     <b-modal
       ref="permissionModal"
       title="Phân quyền thành viên"
@@ -303,7 +303,7 @@ export default {
   data() {
     return {
       isBusy: false,
-      // New pagination object following requested shape
+      // Object phân trang mới theo cấu trúc yêu cầu
       list: {
         current_page: 1,
         data: [],
@@ -401,7 +401,7 @@ export default {
       return null
     },
     adminPasswordState() {
-      // Validate only when isAdmin is checked and any of the fields filled
+      // Chỉ validate khi isAdmin được chọn và có trường được nhập
       if (!this.form.isAdmin) return null
       const ap = this.form.adminPassword || ''
       const apc = this.form.adminPasswordConfirm || ''
@@ -442,7 +442,7 @@ export default {
       return map
     },
     permVisiblePermissions() {
-      // Base: only active or unspecified status
+      // Cơ bản: chỉ lấy trạng thái active hoặc không chỉ định
       let perms = (this.allPermissions || []).filter(p => Number(p.status) === 1 || p.status == null)
       // Business rule: when editing a member with role === 2 (Nhân viên), only show permissions with level === 0
       const targetRole = Number(this.permForm?.role)
@@ -456,7 +456,7 @@ export default {
       for (const p of this.permVisiblePermissions) {
         const catName = this.getPermissionCategoryName(p)
         if (!groups[catName]) {
-          // Get category orderIndex for sorting
+          // Lấy orderIndex của danh mục để sắp xếp
           const catObj = p?.permissionCategory || p?.category
           const catId = (catObj && catObj.id != null) ? catObj.id : (p?.categoryId ?? p?.category_id ?? p?.permissionCategoryId ?? p?.permission_category_id ?? p?.category)
           const category = catId != null ? this.categoryById[catId] : null
@@ -472,7 +472,7 @@ export default {
         groups[catName].items.push(p)
       }
       const res = Object.values(groups)
-      // Sort groups by category orderIndex (sothutu)
+      // Sắp xếp nhóm theo category orderIndex (sothutu)
       res.sort((a, b) => {
         const aOrder = Number(a.orderIndex ?? 999)
         const bOrder = Number(b.orderIndex ?? 999)
@@ -488,7 +488,7 @@ export default {
     }
   },
   mounted: async function() {
-    // Sync from query string on mount
+    // Đồng bộ từ query string khi mount
     const q = this.$route?.query || {}
     const qp = Number(q.page)
     const qs = Number(q.size)
@@ -525,7 +525,7 @@ export default {
     async loadCategories() {
       try {
         const res = await axios.post('/administrator/permission-categories/list', null, { params: { page: 0, size: 200 } })
-        // Backend already sorts by orderIndex (sothutu), but we add extra safeguard
+        // Backend đã sắp xếp theo orderIndex (sothutu), nhưng vẫn thêm lớp bảo vệ
         const cats = res.data?.content || []
         this.categories = cats.sort((a, b) => {
           const aOrder = Number(a.orderIndex ?? a.sothutu ?? 999)
@@ -542,13 +542,13 @@ export default {
           keyword: this.filters.keyword || undefined,
           role: this.filters.userRole ?? undefined,
           status: this.filters.status,
-          // Drop companyId; backend auto-detects from authenticated user
+          // Bỏ companyId; backend tự detect từ user đã xác thực
           page: pageZero,
           size: this.list.per_page
         }
         const res = await axios.post('/setting/members/list', null, { params })
         const d = res?.data || {}
-        // Normalize data keys just in case
+        // Chuẩn hóa key dữ liệu để phòng trường hợp lệch
         this.list.data = Array.isArray(d.data) ? d.data : (Array.isArray(d.content) ? d.content : [])
         this.list.total = Number(d.total ?? d.totalElements ?? 0)
         this.list.per_page = Number(d.per_page ?? this.list.per_page)
@@ -558,7 +558,7 @@ export default {
         const numberOfElements = Array.isArray(this.list.data) ? this.list.data.length : 0
         this.list.to = Number(d.to ?? ((this.list.total === 0) ? 0 : (this.list.from + numberOfElements - 1)))
 
-        // Update query string
+        // Cập nhật query string
         if (this.$route) {
           this.$router.replace({ query: { ...this.$route.query, page: String(this.list.current_page), size: String(this.list.per_page) } }).catch(() => {})
         }
@@ -583,7 +583,7 @@ export default {
         return meRole === 0 && meId != null && targetId != null && Number(meId) === Number(targetId)
       }
       if (meRole === 1 && targetRole === 1) {
-        // Admin can operate only on itself, not other admins
+        // Admin chỉ thao tác trên chính mình, không thao tác admin khác
         return meId != null && targetId != null && Number(meId) === Number(targetId)
       }
       return true
@@ -741,7 +741,7 @@ export default {
       if (targetRole === 0) return false
       if (meRole === 0) return true
       if (meRole === 1) {
-        // Admin cannot edit permissions for self, and not for other admins
+        // Admin không thể sửa quyền của chính mình và admin khác
         if (meId != null && targetId != null && Number(meId) === Number(targetId)) return false
         return targetRole !== 1
       }
@@ -751,7 +751,7 @@ export default {
       const meRole = Number(this.currentRole)
       const meId = this.currentUserId
       const targetId = Number(item?.id ?? item?.user?.id)
-      // Admin cannot lock/unlock themselves
+      // Admin không thể tự khóa/mở khóa chính mình
       if (meRole === 1 && meId != null && targetId != null && Number(meId) === Number(targetId)) return false
       return true
     },
@@ -760,7 +760,7 @@ export default {
       const meId = this.currentUserId
       const targetId = Number(item?.id ?? item?.user?.id)
       const targetRole = Number(item?.role ?? item?.user?.role)
-      // Admin can reset password for themselves and employees (non-admin targets)
+      // Admin có thể reset mật khẩu cho chính mình và nhân viên (đối tượng không phải admin)
       if (meRole === 1) {
         const isSelf = meId != null && targetId != null && Number(meId) === Number(targetId)
         const isTargetAdmin = targetRole === 1
@@ -820,7 +820,7 @@ export default {
 .perm-group { border-top: 1px dashed #eee; padding-top: 8px; margin-top: 8px; }
 .perm-group-header { display: flex; align-items: center; margin-bottom: 6px; }
 .perm-group-items { display: flex; flex-direction: column; gap: 10px; }
-/* Reuse role modal polish for permissions modal */
+/* Tái dùng style modal role cho modal phân quyền */
 .members .role-modal-content { border-radius: 14px; overflow: hidden; border: 1px solid #eef0f6; box-shadow: 0 10px 30px rgba(18, 38, 63, 0.08); }
 .members .role-modal-header { background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%); border-bottom: 1px solid #ecf0f6; }
 .members .role-modal-body { background: #ffffff; max-height: 72vh; overflow: auto; padding-bottom: 8px; }
@@ -862,7 +862,7 @@ export default {
   border-radius: 8px;
 }
 
-/* Pagination */
+/* Phân trang */
 .pagination-bar .pagination {
   margin: 0;
   gap: 6px;

@@ -1,6 +1,6 @@
 import toastr from 'toastr'
 
-// Global set to track shown error keys across app lifetime
+// Set toàn cục để theo dõi các khóa lỗi đã hiển thị trong vòng đời app
 const shown = new Set()
 
 export function toastError(message, key) {

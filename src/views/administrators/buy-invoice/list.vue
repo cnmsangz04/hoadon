@@ -1,6 +1,6 @@
 <template>
   <div class="container-fluid py-3 buy-invoices">
-    <!-- Title + actions -->
+    <!-- Ti�u d? v� thao t�c -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 font-weight-bold">Danh sách hóa đơn mua</h4>
       <div>
@@ -15,7 +15,7 @@
       </div>
     </div>
 
-    <!-- FILTER -->
+    <!-- B? l?c -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="6" class="mb-2">
@@ -40,7 +40,7 @@
       </b-row>
     </b-card>
 
-    <!-- TABLE -->
+    <!-- B?ng -->
     <b-card class="shadow-sm">
       <b-table
         bordered
@@ -94,11 +94,11 @@
         </template>
       </b-table>
 
-      <!-- PAGINATION -->
+      <!-- Ph�n trang -->
       <b-pagination v-if="list.total > list.per_page" v-model="list.current_page" :per-page="list.per_page" :total-rows="list.total" align="right" class="mt-2" @change="onPageChange" />
     </b-card>
 
-    <!-- MODAL -->
+    <!-- Modal -->
     <b-modal ref="buyInvoiceModal" :title="invoiceForm.id ? 'Cập nhật hóa đơn' : 'Thêm hóa đơn'" hide-footer>
       <b-form @submit.prevent="saveInvoice">
         <b-form-group label="Công ty" label-class="font-weight-bold">
@@ -185,12 +185,12 @@ export default {
 
   computed: {
     canSubmit() {
-      // Basic validation
+      // Validate cơ bản
       if (!this.invoiceForm.companyId || !this.invoiceForm.amount || this.invoiceForm.amount <= 0) {
         return false;
       }
       
-      // When editing, amount must be >= amountUsed
+      // Khi chỉnh sửa, amount phải >= amountUsed
       if (this.invoiceForm.id && this.invoiceForm.amountUsed > 0) {
         return this.invoiceForm.amount >= this.invoiceForm.amountUsed;
       }
@@ -212,7 +212,7 @@ export default {
         const data = res.data;
         this.list.total = data.totalElements;
         const rawItems = Array.isArray(data.content) ? data.content : [];
-        // Normalize items trusting backend-provided companyName
+        // Chuẩn hóa item và tin vào companyName backend trả về
         this.items = rawItems.map(item => ({
           ...item,
           companyId: Number.isFinite(Number(item.companyId)) ? Number(item.companyId) : undefined,
@@ -250,7 +250,7 @@ export default {
       if (!this.companyOptions || this.companyOptions.length === 0) {
         await this.loadCompanies();
       }
-      // Copy fields needed for the form, including amountUsed for validation
+      // Copy các trường cần cho form, gồm amountUsed để validate
       this.invoiceForm = {
         id: item.id,
         companyId: item.companyId,
@@ -274,7 +274,7 @@ export default {
     },
 
     async deleteInvoice(item) {
-      // Check if can delete
+      // Kiểm tra có thể xóa không
       if (!this.canDelete(item)) {
         this.$toastr && this.$toastr.warning(this.getDeleteTooltip(item));
         return;
@@ -292,7 +292,7 @@ export default {
     },
 
     canDelete(item) {
-      // Cannot delete if status = 1 (active) or amountUsed > 0
+      // Không thể xóa nếu status = 1 (active) hoặc amountUsed > 0
       return item.status !== 1 && item.amountUsed === 0;
     },
 
@@ -324,7 +324,7 @@ export default {
       }
     },
 
-    // Map status code to label text
+    // Map mã trạng thái sang text hiển thị
     statusText(s) {
       const n = Number(s)
       if (Number.isNaN(n)) return '—'
@@ -334,7 +334,7 @@ export default {
       }
       return map[n] ?? '—'
     },
-    // Map status code to badge variant
+    // Map mã trạng thái sang biến thể badge
     statusVariant(s) {
       const n = Number(s)
       if (Number.isNaN(n)) return 'light'
@@ -343,7 +343,7 @@ export default {
   },
 
   mounted: async function() {
-    // Load companies first so names map is ready, then invoices
+    // Tải công ty trước để map tên sẵn sàng, sau đó tải hóa đơn
     await this.loadCompanies();
     await this.loadData();
   }
@@ -358,7 +358,7 @@ export default {
 
 .buy-invoices .table thead th { background: #f7f9fc; border-bottom: 1px solid #ecf0f6; color: #4a5568; font-weight: 700; }
 
-/* Modern table tweaks to match company list */
+/* Tinh ch?nh b?ng hi?n d?i d? kh?p danh s�ch c�ng ty */
 .table-modern thead th { background-color: #f9fafb; border-bottom: 2px solid #e5e7eb; position: sticky; top: 0; z-index: 1; }
 .table-compact td, .table-compact th { padding: 0.5rem 0.75rem; }
 .table td { vertical-align: middle; }

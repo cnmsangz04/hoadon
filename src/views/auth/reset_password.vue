@@ -90,7 +90,7 @@ export default {
 </script>
 
 <style scoped>
-/* Layout copied from login.vue for consistency */
+/* Bố cục sao chép từ login.vue để giữ nhất quán */
 .auth-page {
   height: 100vh;
   overflow: hidden;
