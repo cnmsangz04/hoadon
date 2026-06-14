@@ -14,7 +14,7 @@ public class LegalRepresentativeEntity {
     @Column(name = "company_id", nullable = false)
     private Long companyId;
 
-    @Column(name = "fullname")
+    @Column(name = "fullname", columnDefinition = "NVARCHAR(255)")
     private String fullname;
 
     @Column(name = "gender")

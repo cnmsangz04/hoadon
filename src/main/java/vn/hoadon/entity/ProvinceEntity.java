@@ -13,7 +13,7 @@ public class ProvinceEntity {
     @Column(name = "parent_id", nullable = false)
     private Integer parentId;
 
-    @Column(name = "name", nullable = false, length = 255)
+    @Column(name = "name", nullable = false, columnDefinition = "NVARCHAR(255)")
     private String name;
 
     @Column(name = "status", nullable = false)

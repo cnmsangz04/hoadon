@@ -34,7 +34,7 @@ public class RegisterInvoiceEntity {
     private LocalDate declarationDate;
 
     // Địa danh, hiệu lực
-    @Column(name = "create_place", length = 255, nullable = false)
+    @Column(name = "create_place", columnDefinition = "NVARCHAR(255)", nullable = false)
     private String createPlace;
 
     @Column(name = "effective_date", nullable = true)

@@ -91,6 +91,14 @@ export default {
             { title: 'Khách hàng', icon: 'fas fa-users', to: '/categories/customer/list' },
           ],
         },
+        {
+          title: 'Email gửi hóa đơn',
+          icon: 'fas fa-envelope',
+          children: [
+            { title: 'Máy chủ gửi mail', icon: 'fas fa-server', to: '/email/mail-server' },
+            { title: 'Lịch sử gửi mail', icon: 'fas fa-history', to: '/email/mail-history' },
+          ],
+        },
         { title: 'Cài đặt', icon: 'fas fa-cog', to: '/setting' },
       ],
     };

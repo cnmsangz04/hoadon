@@ -16,7 +16,7 @@ public class MailTemplateEntity {
     @Column(name = "[key]", length = 32, nullable = false)
     private String key;
 
-    @Column(name = "title", length = 255, nullable = false)
+    @Column(name = "title", columnDefinition = "NVARCHAR(255)", nullable = false)
     private String title;
 
     @Column(name = "content", columnDefinition = "nvarchar(max)", nullable = false)

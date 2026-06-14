@@ -16,14 +16,14 @@ public class FormInvoiceEntity {
     @Column(name = "user_id")
     private Long userId;
 
-    @Column(name = "name")
+    @Column(name = "name", columnDefinition = "NVARCHAR(255)")
     private String name;
 
-    @Column(name = "serial")
+    @Column(name = "serial", columnDefinition = "NVARCHAR(50)")
     private String serial;
 
-    @Column(name = "form_code")
-    private String formCode; // NVARCHAR(50) NOT NULL DEFAULT ''
+    @Column(name = "form_code", columnDefinition = "NVARCHAR(50)")
+    private String formCode;
 
     @Column(name = "`file`")
     private String file;

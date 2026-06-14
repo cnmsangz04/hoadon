@@ -10,10 +10,10 @@ public class BankEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "abbreviation")
+    @Column(name = "abbreviation", columnDefinition = "NVARCHAR(255)")
     private String abbreviation;
 
-    @Column(name = "name")
+    @Column(name = "name", columnDefinition = "NVARCHAR(255)")
     private String name;
 
     @Column(name = "status")

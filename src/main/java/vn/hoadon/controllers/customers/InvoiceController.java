@@ -58,9 +58,10 @@ import com.openhtmltopdf.extend.FSUriResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import vn.hoadon.repositories.HistoryRepository;
-import jakarta.mail.internet.MimeMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import vn.hoadon.entity.MailJobEntity;
+import vn.hoadon.messaging.MailJobMessage;
+import vn.hoadon.repositories.MailJobRepository;
+import vn.hoadon.services.MailQueueService;
 
 @RestController
 @RequestMapping("/v1/invoices")
@@ -80,8 +81,9 @@ public class InvoiceController extends BaseController {
     @Autowired private HistoryService historyService;
     @Autowired private SignatureAuthoritiesTaxService signatureAuthoritiesTaxService;
     @Autowired private HistoryRepository historyRepository;
-    @Autowired(required = false) private JavaMailSender mailSender;
-    
+    @Autowired private MailJobRepository mailJobRepository;
+    @Autowired(required = false) private MailQueueService mailQueueService;
+
     @Autowired @org.springframework.context.annotation.Lazy private InvoiceController self;
 
     private static final Logger log = LoggerFactory.getLogger(InvoiceController.class);
@@ -1452,7 +1454,10 @@ public class InvoiceController extends BaseController {
                     inv.setStatus((short)3);
                     inv.setUpdatedAt(java.time.LocalDateTime.now());
                     invoiceRepository.save(inv);
-                    
+
+                    // Auto-send mail khi phát hành
+                    tryEnqueueInvoiceIssueMail(inv, companyId);
+
                     // History type=202, user_id=0
                     HistoryDto h202 = new HistoryDto();
                     h202.setCompanyId(companyId);
@@ -1522,7 +1527,10 @@ public class InvoiceController extends BaseController {
                     inv.setStatus((short)3); // Tiếp nhận/Chấp nhận
                     inv.setUpdatedAt(java.time.LocalDateTime.now());
                     invoiceRepository.save(inv);
-                    
+
+                    // Auto-send mail khi phát hành
+                    tryEnqueueInvoiceIssueMail(inv, companyId);
+
                     HistoryDto h204acc = new HistoryDto();
                     h204acc.setCompanyId(companyId);
                     h204acc.setUserId(0L);
@@ -1572,6 +1580,65 @@ public class InvoiceController extends BaseController {
             }
         } catch (Exception e) {
             log.error("processCqtResponse failed for invoice {}: {}", invoiceId, e.toString(), e);
+        }
+    }
+
+    // Auto-send invoice issuance mail via queue
+    private void tryEnqueueInvoiceIssueMail(InvoiceEntity inv, Long companyId) {
+        try {
+            if (mailQueueService == null) return;
+            if (inv.getCustomer() == null || inv.getCustomer().isBlank()) return;
+
+            java.util.Map<String, Object> customerMap = JSON.readValue(inv.getCustomer(),
+                    new TypeReference<java.util.Map<String, Object>>() {});
+
+            String toEmail = (String) customerMap.get("email");
+            if (toEmail == null || toEmail.isBlank()) return;
+
+            String buyerName = inv.getName() != null ? inv.getName()
+                    : (String) customerMap.getOrDefault("name", "Quý khách");
+            String taxCode = getCustomerTaxCode(customerMap);
+
+            // Fetch company details for template variables
+            String companyName = "", hotline = "", comEmail = "", website = "";
+            if (companyId != null) {
+                CompanyEntity company = companyRepository.findById(companyId).orElse(null);
+                if (company != null) {
+                    if (company.getName() != null)          companyName = company.getName();
+                    if (company.getHotline() != null)       hotline     = company.getHotline();
+                    if (company.getInvoiceEmail() != null)  comEmail    = company.getInvoiceEmail();
+                    else if (company.getEmail() != null)    comEmail    = company.getEmail();
+                    if (company.getInvoiceWebsite() != null) website    = company.getInvoiceWebsite();
+                }
+            }
+
+            // Lookup link uses lookupCode if available
+            String lookupCode = inv.getLookupCode() != null ? inv.getLookupCode() : String.valueOf(inv.getId());
+            String lookupLink = "/v1/invoices/" + lookupCode + "/lookup";
+
+            java.util.Map<String, String> vars = new java.util.HashMap<>();
+            vars.put("SO_HOA_DON",   inv.getNo() != null ? String.valueOf(inv.getNo()) : "");
+            vars.put("CUS_NAME",     buyerName);
+            vars.put("CUS_TAXCODE",  taxCode);
+            vars.put("LOOKUP_LINK",  lookupLink);
+            vars.put("LOOKUP_CODE",  lookupCode);
+            vars.put("COM_NAME",     companyName);
+            vars.put("COM_HOTLINE",  hotline);
+            vars.put("COM_EMAIL",    comEmail);
+            vars.put("COM_WEBSITE",  website);
+
+            MailJobMessage msg = new MailJobMessage();
+            msg.setTemplateKey("ISSUE_INVOICE_MAIL");
+            msg.setCompanyId(companyId);
+            msg.setInvoiceId(inv.getId() != null ? inv.getId().longValue() : null);
+            msg.setToEmail(toEmail);
+            msg.setToName(buyerName);
+            msg.setVariables(vars);
+
+            mailQueueService.enqueue(msg);
+            log.info("Enqueued ISSUE_INVOICE_MAIL for invoice {} to {}", inv.getId(), toEmail);
+        } catch (Exception e) {
+            log.error("Failed to enqueue ISSUE_INVOICE_MAIL for invoice {}: {}", inv.getId(), e.getMessage(), e);
         }
     }
 
@@ -1673,6 +1740,42 @@ public class InvoiceController extends BaseController {
         return ResponseEntity.ok(rows);
     }
 
+    @GetMapping("/{id}/mail-history")
+    public ResponseEntity<?> mailHistory(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
+        if (id == null) return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu ID hóa đơn"));
+        if (user == null || user.getCompanyId() == null) {
+            return ResponseEntity.status(403).build();
+        }
+        InvoiceEntity inv = invoiceRepository.findById(id).orElse(null);
+        if (inv == null) return ResponseEntity.status(404).body(new ErrorDTO("Không tìm thấy hóa đơn"));
+        Long invoiceCompanyId = inv.getCompanyId() != null ? inv.getCompanyId().longValue() : null;
+        if (invoiceCompanyId != null && !user.getCompanyId().equals(invoiceCompanyId)) {
+            return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền xem lịch sử mail của hóa đơn này"));
+        }
+
+        java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
+        for (MailJobEntity job : mailJobRepository.findByInvoiceIdOrderByCreatedAtDesc(id)) {
+            java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("id", job.getId());
+            row.put("invoiceId", job.getInvoiceId());
+            row.put("companyId", job.getCompanyId());
+            row.put("templateKey", job.getTemplateKey());
+            row.put("toEmail", job.getToEmail());
+            row.put("toName", job.getToName());
+            row.put("subject", job.getSubject());
+            row.put("status", job.getStatus());
+            row.put("attempts", job.getAttempts());
+            row.put("error", job.getError());
+            row.put("createdAt", job.getCreatedAt());
+            row.put("updatedAt", job.getUpdatedAt());
+            row.put("lastAttemptAt", job.getLastAttemptAt());
+            row.put("sentAt", job.getSentAt());
+            row.put("failedAt", job.getFailedAt());
+            rows.add(row);
+        }
+        return ResponseEntity.ok(rows);
+    }
+
     @PostMapping("/{id}/send-email")
     public ResponseEntity<?> sendEmailNotice(@PathVariable("id") Long id,
                                              @AuthenticationPrincipal UserEntity user,
@@ -1719,17 +1822,54 @@ public class InvoiceController extends BaseController {
             String xmlLink = "/v1/invoices/" + lookup + "/download-xml";
             String html = buildEmailHtml(inv, formSerial, pdfLink, xmlLink, name);
 
-            if (mailSender != null) {
-                MimeMessage message = mailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-                helper.setTo(email);
-                // If system email configured, sender will be set by JavaMail; otherwise rely on defaults
-                helper.setSubject(subject);
-                helper.setText(html, true);
-                mailSender.send(message);
-            } else {
-                log.info("[DEV] Mail sender not configured. Would send to {} with subject '{}'", email, subject);
+            // Fetch company info for template variables
+            String companyName = "", hotline = "", comEmail = "", website = "";
+            try {
+                vn.hoadon.entity.CompanyEntity company = companyRepository.findById(uCompany).orElse(null);
+                if (company != null) {
+                    if (company.getName() != null)           companyName = company.getName();
+                    if (company.getHotline() != null)        hotline     = company.getHotline();
+                    if (company.getInvoiceEmail() != null)   comEmail    = company.getInvoiceEmail();
+                    else if (company.getEmail() != null)     comEmail    = company.getEmail();
+                    if (company.getInvoiceWebsite() != null) website     = company.getInvoiceWebsite();
+                }
+            } catch (Exception ignore) {}
+            String taxCode = "";
+            try {
+                String custJson = inv.getCustomer();
+                if (custJson != null && !custJson.isBlank()) {
+                    java.util.Map<String, Object> cm = JSON.readValue(custJson,
+                            new TypeReference<java.util.Map<String, Object>>() {});
+                    taxCode = getCustomerTaxCode(cm);
+                }
+            } catch (Exception ignore) {}
+            String lookupCode = inv.getLookupCode() != null ? inv.getLookupCode() : String.valueOf(inv.getId());
+
+            MailJobMessage msg = new MailJobMessage();
+            msg.setTemplateKey("ISSUE_INVOICE_MAIL");
+            msg.setCompanyId(uCompany);
+            msg.setInvoiceId(inv.getId() != null ? inv.getId().longValue() : null);
+            msg.setToEmail(email.trim());
+            msg.setToName(name.trim());
+            java.util.Map<String, String> vars = new java.util.HashMap<>();
+            vars.put("SO_HOA_DON",  inv.getNo() != null ? String.valueOf(inv.getNo()) : "");
+            vars.put("CUS_NAME",    name.trim());
+            vars.put("CUS_TAXCODE", taxCode);
+            vars.put("LOOKUP_CODE", lookupCode);
+            vars.put("COM_NAME",    companyName);
+            vars.put("COM_HOTLINE", hotline);
+            vars.put("COM_EMAIL",   comEmail);
+            vars.put("COM_WEBSITE", website);
+            // Fallback if no DB template found
+            vars.put("SUBJECT",  subject);
+            vars.put("HTML_BODY", html);
+            msg.setVariables(vars);
+
+            if (mailQueueService == null) {
+                return ResponseEntity.status(500).body(new ErrorDTO("Chưa cấu hình mail server"));
             }
+            mailQueueService.enqueue(msg);
+
             java.util.Map<String,Object> resp = new java.util.LinkedHashMap<>();
             resp.put("message", "Đã gửi email thông báo phát hành hóa đơn");
             resp.put("email", email);
@@ -1778,6 +1918,16 @@ public class InvoiceController extends BaseController {
         } catch (Exception ignore) { return false; }
     }
     private String getString(Object o) { return o == null ? null : String.valueOf(o); }
+    private String getCustomerTaxCode(java.util.Map<String, Object> customerMap) {
+        if (customerMap == null || customerMap.isEmpty()) return "";
+        for (String key : new String[] {"tax_code", "taxcode", "taxCode"}) {
+            Object value = customerMap.get(key);
+            if (value != null && !String.valueOf(value).isBlank()) {
+                return String.valueOf(value);
+            }
+        }
+        return "";
+    }
 
     /**
      * Pick invoice XML source by status:

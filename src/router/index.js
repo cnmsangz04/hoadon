@@ -112,6 +112,18 @@ const router = new VueRouter({
 					name: 'CustomerReportInvoiceList',
 					component: () => import('@/views/customers/reports/invoice/list.vue'),
 					meta: { requiresUser: true, title: 'Báo cáo hóa đơn' }
+				},
+				{
+					path: '/email/mail-server',
+					name: 'EmailMailServer',
+					component: () => import('@/views/customers/email/mail-server.vue'),
+					meta: { requiresUser: true, title: 'Máy chủ gửi mail' }
+				},
+				{
+					path: '/email/mail-history',
+					name: 'EmailMailHistory',
+					component: () => import('@/views/customers/email/mail-history.vue'),
+					meta: { requiresUser: true, title: 'Lịch sử gửi mail' }
 				}
 			]
 		},

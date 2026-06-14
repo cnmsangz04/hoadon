@@ -38,7 +38,7 @@ public class InvoiceEntity {
     @Column(name = "code_cqt")
     private String codeCqt;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "name", nullable = false, columnDefinition = "NVARCHAR(255)")
     private String name;
 
     @Column(name = "no")
@@ -47,13 +47,13 @@ public class InvoiceEntity {
     @Column(name = "date_export")
     private LocalDate dateExport;
 
-    @Column(name = "note")
+    @Column(name = "note", columnDefinition = "NVARCHAR(MAX)")
     private String note;
 
     @Column(name = "date_convert")
     private LocalDateTime dateConvert;
 
-    @Column(name = "name_convert")
+    @Column(name = "name_convert", columnDefinition = "NVARCHAR(255)")
     private String nameConvert;
 
     @Column(name = "status_convert", nullable = false)
@@ -62,7 +62,7 @@ public class InvoiceEntity {
     @Column(name = "date_cancel")
     private LocalDate dateCancel;
 
-    @Column(name = "reason_cancel")
+    @Column(name = "reason_cancel", columnDefinition = "NVARCHAR(MAX)")
     private String reasonCancel;
 
     @Column(name = "bill", columnDefinition = "NVARCHAR(MAX)")
@@ -113,7 +113,7 @@ public class InvoiceEntity {
     @Column(name = "discount_amount", nullable = false)
     private Double discountAmount;
 
-    @Column(name = "amount_in_words")
+    @Column(name = "amount_in_words", columnDefinition = "NVARCHAR(255)")
     private String amountInWords;
 
     @Column(name = "payment", nullable = false)

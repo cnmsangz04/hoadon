@@ -28,7 +28,7 @@ public class UserEntity {
     private String username;
 
     // Add display name for the user
-    @Column(name = "name", length = 255)
+    @Column(name = "name", columnDefinition = "NVARCHAR(255)")
     private String name;
 
     // Email no longer unique

@@ -14,7 +14,7 @@ public class PermissionEntity {
     @Column(nullable = false, unique = true, length = 255)
     private String name;
 
-    @Column(name = "display_name", length = 255)
+    @Column(name = "display_name", columnDefinition = "NVARCHAR(255)")
     private String displayName;
 
     @Column(name = "level")
@@ -24,7 +24,7 @@ public class PermissionEntity {
     @JoinColumn(name = "category", nullable = false)
     private PermissionCategoryEntity category;
 
-    @Column(name = "description", length = 255)
+    @Column(name = "description", columnDefinition = "NVARCHAR(255)")
     private String description;
 
     // 0: hidden, 1: visible
