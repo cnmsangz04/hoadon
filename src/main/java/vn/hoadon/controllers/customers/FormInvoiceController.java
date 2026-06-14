@@ -75,6 +75,7 @@ public class FormInvoiceController extends BaseController {
             @RequestParam(required = false) Integer type,
             @RequestParam(required = false) Integer status
     ) {
+        permission("form-invoice-list");
         UserEntity user = currentUser();
         Long companyId = user != null ? user.getCompanyId() : null;
         if (companyId == null) {
@@ -172,6 +173,7 @@ public class FormInvoiceController extends BaseController {
 
     @GetMapping("/templates/{id}")
     public ResponseEntity<?> getTemplate(@PathVariable Long id) {
+        permission("form-invoice-list");
         UserEntity user = currentUser();
         if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
         Optional<FormInvoiceEntity> opt = service.findById(id);
@@ -199,6 +201,7 @@ public class FormInvoiceController extends BaseController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> detail(@PathVariable Long id) {
+        permission("form-invoice-list");
         UserEntity user = currentUser();
         if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
         Optional<FormInvoiceEntity> opt = service.findById(id);
@@ -211,6 +214,7 @@ public class FormInvoiceController extends BaseController {
     // --- Render HTML preview by applying XSLT template to sample XML ---
     @GetMapping(value = "/{id}/view", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<?> viewHtml(@PathVariable Long id) {
+        permission("form-invoice-list");
         UserEntity user = currentUser();
         if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
 
@@ -359,6 +363,7 @@ public class FormInvoiceController extends BaseController {
     
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Map<String, Object> body) {
+        permission("form-invoice-save");
         UserEntity user = currentUser();
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.status(403).body(Map.of("message", "Không xác định được công ty"));
@@ -509,6 +514,7 @@ public class FormInvoiceController extends BaseController {
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        permission("form-invoice-save");
         UserEntity user = currentUser();
         if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
         Optional<FormInvoiceEntity> opt = service.findById(id);
@@ -573,6 +579,7 @@ public class FormInvoiceController extends BaseController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
+        permission("form-invoice-save");
         UserEntity user = currentUser();
         if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
         Optional<FormInvoiceEntity> opt = service.findById(id);

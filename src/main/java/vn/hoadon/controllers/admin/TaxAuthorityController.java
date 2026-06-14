@@ -8,6 +8,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.dto.taxauthority.TaxAuthorityResponse;
 import vn.hoadon.dto.taxauthority.TaxAuthorityRequest;
 import vn.hoadon.services.TaxAuthorityService;
@@ -15,7 +16,7 @@ import vn.hoadon.services.TaxAuthorityService;
 @RestController
 @RequestMapping("/v1/tax-authorities")
 @CrossOrigin(origins = "*", allowedHeaders = "*") // Bật nếu test local khác port
-public class TaxAuthorityController {
+public class TaxAuthorityController extends BaseController {
 
     @Autowired
     private TaxAuthorityService taxService;
@@ -24,13 +25,14 @@ public class TaxAuthorityController {
     @GetMapping
     public ResponseEntity<?> getList(
             @RequestParam(defaultValue = "") String keyword,
-            @RequestParam(required = false) Long parentId, // Thêm dòng này (có thể null)
-            @RequestParam(required = false) Integer status, // Thêm dòng này (có thể null)
+            @RequestParam(required = false) Long parentId,
+            @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "desc") String sortDir,
             @RequestParam(defaultValue = "id") String sortField
     ) {
+        permission("tax-authority-list");
         Sort sort = sortDir.equalsIgnoreCase("asc") 
                 ? Sort.by(sortField).ascending() 
                 : Sort.by(sortField).descending();
@@ -46,12 +48,14 @@ public class TaxAuthorityController {
     // GET /v1/tax-authorities/{id}
     @GetMapping("/{id}")
     public ResponseEntity<?> getDetail(@PathVariable Long id) {
+        permission("tax-authority-list");
         return ResponseEntity.ok(taxService.findById(id));
     }
 
     // POST /v1/tax-authorities
     @PostMapping
     public ResponseEntity<?> create(@RequestBody TaxAuthorityRequest request) {
+        permission("tax-authority-save");
         // Có thể thêm @Valid vào trước @RequestBody nếu dùng Validation
         return ResponseEntity.ok(taxService.create(request));
     }
@@ -59,12 +63,14 @@ public class TaxAuthorityController {
     // PUT /v1/tax-authorities/{id}
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @RequestBody TaxAuthorityRequest request) {
+        permission("tax-authority-save");
         return ResponseEntity.ok(taxService.update(id, request));
     }
 
     // DELETE /v1/tax-authorities/{id}
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
+        permission("tax-authority-delete");
         taxService.delete(id);
         return ResponseEntity.ok("Đã xóa thành công");
     }

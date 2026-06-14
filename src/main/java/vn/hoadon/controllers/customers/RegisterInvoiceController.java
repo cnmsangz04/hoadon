@@ -54,6 +54,7 @@ public class RegisterInvoiceController extends BaseController {
 
     @GetMapping("/{id}")
     public ResponseEntity<RegisterInvoiceEntity> getById(@PathVariable Long id) {
+        permission("register-invoice-list");
         return service.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -63,6 +64,7 @@ public class RegisterInvoiceController extends BaseController {
     public ResponseEntity<List<RegisterInvoiceEntity>> list(
             @RequestParam(required = false) Long companyId,
             @RequestParam(required = false) Long userId) {
+        permission("register-invoice-list");
         if (companyId != null) {
             return ResponseEntity.ok(service.findByCompany(companyId));
         }
@@ -129,6 +131,7 @@ public class RegisterInvoiceController extends BaseController {
 
     @PostMapping
     public ResponseEntity<RegisterInvoiceEntity> create(@RequestBody RegisterInvoiceUpsertRequest req) {
+        permission("register-invoice-save");
         UserEntity user = currentUser();
         if (user == null || user.getId() == null || user.getCompanyId() == null) {
             return ResponseEntity.badRequest().build();
@@ -158,6 +161,7 @@ public class RegisterInvoiceController extends BaseController {
 
     @PutMapping("/{id}/get")
     public ResponseEntity<RegisterInvoiceEntity> update(@PathVariable Long id, @RequestBody RegisterInvoiceUpsertRequest req) {
+        permission("register-invoice-save");
         UserEntity user = currentUser();
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.badRequest().build();
@@ -198,6 +202,7 @@ public class RegisterInvoiceController extends BaseController {
 
     @PostMapping("/{id}/send")
     public ResponseEntity<Void> sendToCQT(@PathVariable Long id) {
+        permission("register-invoice-send");
         UserEntity user = currentUser();
         if (user == null) return ResponseEntity.status(403).build();
         Optional<RegisterInvoiceEntity> opt = service.findById(id);
@@ -357,6 +362,7 @@ public class RegisterInvoiceController extends BaseController {
             @RequestParam(required = false) String dateTo,
             @RequestParam(required = false) Integer declarationType
     ) {
+        permission("register-invoice-list");
         UserEntity user = currentUser();
         Long actorCompanyId = user != null ? user.getCompanyId() : null;
         Integer actorRole = user != null ? user.getRole() : null;
@@ -905,6 +911,7 @@ public class RegisterInvoiceController extends BaseController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
+        permission("register-invoice-save");
         UserEntity user = currentUser();
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.status(403).build();
@@ -924,6 +931,7 @@ public class RegisterInvoiceController extends BaseController {
 
     @PostMapping("/{id}/sign")
     public ResponseEntity<RegisterInvoiceEntity> simulateSign(@PathVariable Long id) {
+        permission("register-invoice-send");
         UserEntity user = currentUser();
         if (user == null) return ResponseEntity.status(403).build();
         Optional<RegisterInvoiceEntity> opt = service.findById(id);

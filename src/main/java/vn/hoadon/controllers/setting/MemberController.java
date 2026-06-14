@@ -44,6 +44,7 @@ public class MemberController extends BaseController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+        permission("setting-member-list");
         // Suy ra companyId từ user đã xác thực cho user không phải root
         UserEntity user = currentUser();
         Long actorCompanyId = user != null ? user.getCompanyId() : null;
@@ -67,6 +68,7 @@ public class MemberController extends BaseController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+        permission("setting-member-list");
         // Suy ra companyId từ user đã xác thực cho user không phải root
         UserEntity user = currentUser();
         Long actorCompanyId = user != null ? user.getCompanyId() : null;
@@ -105,6 +107,7 @@ public class MemberController extends BaseController {
 
     @PostMapping("/saveOrUpdate")
     public UserEntity saveOrUpdate(@RequestBody MemberUpsertRequest incoming) {
+        permission("setting-member-save");
         UserEntity actor = currentUser();
         Integer actorRole = actor != null ? actor.getRole() : null;
         boolean isRoot = actorRole != null && actorRole == 0;
@@ -123,6 +126,7 @@ public class MemberController extends BaseController {
 
     @GetMapping("/{id}/permissions")
     public List<MemberPermissionDto> getUserPermissions(@PathVariable Long id) {
+        permission("setting-member-list");
         return userPermissionRepository.findByUserId(id).stream().map(upe -> {
             MemberPermissionDto dto = new MemberPermissionDto();
             dto.setPermissionId(upe.getPermission().getId());
@@ -142,11 +146,13 @@ public class MemberController extends BaseController {
 
     @PostMapping("/{id}/lock")
     public void lock(@PathVariable Long id, @RequestParam("lock") int lock) {
+        permission("setting-member-manage");
         service.setLock(id, lock == 1);
     }
 
     @PostMapping("/{id}/reset-password")
     public Map<String, Object> resetPassword(@PathVariable Long id) {
+        permission("setting-member-manage");
         String tempPassword = service.resetPassword(id);
         
         // Ghi log reset mật khẩu kèm chi tiết user
@@ -166,12 +172,14 @@ public class MemberController extends BaseController {
 
     @DeleteMapping("/{id}")
     public void removeFromCompany(@PathVariable Long id) {
+        permission("setting-member-manage");
         // Thực hiện soft-delete cho thành viên
         service.delete(id);
     }
 
     @PostMapping("/{id}/send-credentials")
     public Map<String, Object> sendCredentials(@PathVariable Long id) {
+        permission("setting-member-manage");
         // Chỉ cho phép user không phải guest; có thể thêm kiểm tra role chi tiết nếu cần
         UserEntity actor = currentUser();
         if (actor == null) {

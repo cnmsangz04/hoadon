@@ -42,7 +42,7 @@ public class ProductController extends BaseController {
 	@PostMapping("/list")
 	public Map<String, Object> list(@RequestBody ProductFilterDTO filterDTO, @RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
-		
+		permission("category-product-list");
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof UserEntity) {
             UserEntity user = (UserEntity) auth.getPrincipal();
@@ -86,6 +86,7 @@ public class ProductController extends BaseController {
 	@PostMapping("/save")
 	public ResponseEntity<?> save(@RequestBody ProductsEntity product) {
 		try {
+			permission("category-product-save");
 			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 	        if (auth != null && auth.getPrincipal() instanceof UserEntity) {
 	            UserEntity user = (UserEntity) auth.getPrincipal();

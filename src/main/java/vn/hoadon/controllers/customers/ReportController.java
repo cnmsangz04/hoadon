@@ -22,6 +22,7 @@ import vn.hoadon.entity.FormInvoiceEntity;
 import vn.hoadon.entity.InvoiceEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.repositories.CompanyRepository;
+import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.repositories.FormInvoiceRepository;
 import vn.hoadon.repositories.InvoiceRepository;
 import vn.hoadon.services.InvoiceService;
@@ -37,7 +38,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/v1/reports")
-public class ReportController {
+public class ReportController extends BaseController {
 
     @Autowired
     private InvoiceRepository invoiceRepository;
@@ -65,6 +66,7 @@ public class ReportController {
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "size", defaultValue = "10") int size
     ) {
+        permission("report-invoice");
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.badRequest().body(error("Không xác định được công ty/người dùng"));
         }
@@ -135,6 +137,7 @@ public class ReportController {
             @RequestParam(name = "fromDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(name = "toDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate
     ) {
+        permission("report-invoice-export");
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.badRequest().body(error("Không xác định được công ty/người dùng"));
         }

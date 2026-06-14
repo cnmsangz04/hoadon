@@ -29,7 +29,7 @@ public class CompanyController extends BaseController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-    	permission("buy-invoice-list");
+    	permission("company-list");
     	
         try {
             Pageable pageable =
@@ -48,6 +48,7 @@ public class CompanyController extends BaseController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> get(@PathVariable Long id) {
+        permission("company-list");
         try {
             Optional<CompanyEntity> company = service.findById(id);
 
@@ -69,6 +70,7 @@ public class CompanyController extends BaseController {
     @PostMapping("/saveOrUpdate")
     public ResponseEntity<?> saveOrUpdate(
             @RequestBody CompanyEntity company) {
+        permission("company-save");
         try {
             CompanyEntity saved = service.saveOrUpdate(company);
 
@@ -88,6 +90,7 @@ public class CompanyController extends BaseController {
 
     @PostMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody StatusDTO req) {
+        permission("company-manage");
         try {
             service.updateStatus(id, req.getStatus());
             return ResponseEntity.ok().build();
@@ -104,6 +107,7 @@ public class CompanyController extends BaseController {
 
     @PostMapping("/{id}/send-credentials")
     public ResponseEntity<?> sendAdminCredentials(@PathVariable("id") Long companyId) {
+        permission("company-manage");
         try {
             service.sendAdminCredentials(companyId);
             return ResponseEntity.ok(java.util.Map.of("message", "Đã gửi thông tin tài khoản quản trị tới email"));

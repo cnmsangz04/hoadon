@@ -22,11 +22,12 @@ import java.nio.file.*;
 import java.util.UUID;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.entity.UserEntity;
 
 @RestController
 @RequestMapping("/v1/setting/profile")
-public class ProfileController {
+public class ProfileController extends BaseController {
 
     private final CompanyRepository companyRepository;
     private final LegalRepresentativeRepository legalRepresentativeRepository;
@@ -51,6 +52,7 @@ public class ProfileController {
     // Cung cấp dữ liệu tùy chọn: ngân hàng và cơ quan thuế (tỉnh/thành)
     @PostMapping("/ini")
     public ResponseEntity<Map<String, Object>> init() {
+        permission("setting-profile");
         Map<String, Object> map = new HashMap<>();
         map.put("banks", bankService.list(1));
         map.put("taxAuthorities", taxAuthorityService.listCities());
@@ -60,6 +62,7 @@ public class ProfileController {
     // Trả dữ liệu hồ sơ cho công ty hiện tại theo companyId của user đã xác thực
     @PostMapping("/get")
     public ResponseEntity<ProfileDTO> profile() {
+        permission("setting-profile");
         // Lấy user đã xác thực
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Long companyId = null;
@@ -143,6 +146,7 @@ public class ProfileController {
     // Tải cơ quan thuế theo mã tỉnh/thành
     @PostMapping("/get-tax-authority")
     public ResponseEntity<?> getTaxAuthority(@RequestBody Map<String, Integer> body) {
+        permission("setting-profile");
         Integer parentCode = body.get("parentCode");
         if (parentCode == null) return ResponseEntity.ok(Collections.emptyList());
         Optional<TaxAuthorityEntity> city = taxAuthorityService.findByCode(parentCode);
@@ -162,6 +166,7 @@ public class ProfileController {
             @RequestParam(value = "logo", required = false) MultipartFile logo,
             @RequestParam(value = "favicon", required = false) MultipartFile favicon
     ) {
+        permission("setting-profile");
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         Long companyId = null;
         if (auth != null && auth.getPrincipal() instanceof vn.hoadon.entity.UserEntity) {
@@ -218,6 +223,7 @@ public class ProfileController {
 
     @PostMapping("/update-represent")
     public ResponseEntity<?> updateRepresent(@RequestBody Map<String, Object> body) {
+        permission("setting-profile");
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         Long companyId = null;
         if (auth != null && auth.getPrincipal() instanceof vn.hoadon.entity.UserEntity) {
@@ -226,8 +232,8 @@ public class ProfileController {
         if (companyId == null) {
             return ResponseEntity.status(403).body("Không xác định được công ty từ người dùng hiện tại");
         }
-        vn.hoadon.entity.LegalRepresentativeEntity rep = legalRepresentativeRepository.findByCompanyId(companyId).
-                orElseGet(vn.hoadon.entity.LegalRepresentativeEntity::new);
+        vn.hoadon.entity.LegalRepresentativeEntity rep = legalRepresentativeRepository.findByCompanyId(companyId)
+                .orElseGet(vn.hoadon.entity.LegalRepresentativeEntity::new);
         rep.setCompanyId(companyId);
         rep.setFullname((String) body.getOrDefault("representName", null));
         rep.setGender((Integer) body.getOrDefault("representGender", null));
@@ -247,6 +253,7 @@ public class ProfileController {
 
     @PostMapping("/update-info-invoice")
     public ResponseEntity<?> updateInvoice(@RequestBody Map<String, String> body) {
+        permission("setting-profile");
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         Long companyId = null;
         if (auth != null && auth.getPrincipal() instanceof vn.hoadon.entity.UserEntity) {
@@ -270,6 +277,7 @@ public class ProfileController {
 
     @PostMapping("/update-contact")
     public ResponseEntity<?> updateContact(@RequestBody Map<String, String> body) {
+        permission("setting-profile");
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         Long companyId = null;
         if (auth != null && auth.getPrincipal() instanceof vn.hoadon.entity.UserEntity) {
@@ -336,6 +344,7 @@ public class ProfileController {
 
     @PostMapping("/update-bank")
     public ResponseEntity<?> updateBank(@RequestBody Map<String, String> body) {
+        permission("setting-profile");
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         Long companyId = null;
         if (auth != null && auth.getPrincipal() instanceof vn.hoadon.entity.UserEntity) {
@@ -378,6 +387,7 @@ public class ProfileController {
 
     @PostMapping("/update-tax-authority")
     public ResponseEntity<?> updateTaxAuthority(@RequestBody Map<String, Integer> body) {
+        permission("setting-profile");
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         Long companyId = null;
         if (auth != null && auth.getPrincipal() instanceof vn.hoadon.entity.UserEntity) {

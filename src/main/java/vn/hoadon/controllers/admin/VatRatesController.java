@@ -7,6 +7,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.dto.vatrate.VatRatesDto;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.entity.VatRatesEntity;
@@ -25,7 +26,7 @@ import org.springframework.data.domain.Sort;
 
 @RestController
 @RequestMapping("v1/administrator/vat-rate")
-public class VatRatesController {
+public class VatRatesController extends BaseController {
 
     @Autowired
     private VatRatesService vatRatesService;
@@ -42,6 +43,7 @@ public class VatRatesController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+        permission("vat-rate-list");
         Integer userId = Math.toIntExact(getCurrentUserId());
         Integer status = null;
         String keyword = null;
@@ -79,6 +81,7 @@ public class VatRatesController {
     // 1️⃣ Create (nhận DTO)
     @PostMapping
     public VatRatesEntity create(@RequestBody VatRatesDto dto) {
+        permission("vat-rate-save");
         VatRatesEntity entity = new VatRatesEntity();
         entity.setCode(dto.getCode());
         entity.setLabel(dto.getLabel());
@@ -94,6 +97,7 @@ public class VatRatesController {
     // 2️⃣ Read - get all
     @GetMapping
     public List<VatRatesEntity> findAll() {
+        permission("vat-rate-list");
         return vatRatesService.findAllOrderedByPrioritize();
     }
 
@@ -103,6 +107,7 @@ public class VatRatesController {
             @PathVariable Integer id,
             @RequestBody VatRatesDto dto
     ) {
+        permission("vat-rate-save");
         VatRatesEntity entity = new VatRatesEntity();
         entity.setLabel(dto.getLabel());
         entity.setCode(dto.getCode());
@@ -118,11 +123,13 @@ public class VatRatesController {
     // 4️⃣ Delete
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Integer id) {
+        permission("vat-rate-delete");
         vatRatesService.delete(id);
     }
 
     @PutMapping("/{id}/toggle-status")
     public VatRatesEntity toggleStatus(@PathVariable Integer id) {
+        permission("vat-rate-save");
         VatRatesEntity existing = vatRatesService.findById(id);
         if (existing == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "TaxRate not found");
@@ -139,6 +146,7 @@ public class VatRatesController {
     // Reorder VAT rates by priority
     @PostMapping("/reorder")
     public void reorder(@RequestBody List<Integer> orderedIds) {
+        permission("vat-rate-save");
         vatRatesService.reorder(orderedIds);
     }
 

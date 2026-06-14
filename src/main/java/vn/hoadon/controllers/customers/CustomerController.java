@@ -33,6 +33,7 @@ public class CustomerController extends BaseController {
 	@PostMapping("/list")
 	public Map<String, Object> list(@RequestBody CustomerFilterDTO filterDTO,
 			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+		permission("category-customer-list");
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		if (auth != null && auth.getPrincipal() instanceof UserEntity) {
 			UserEntity user = (UserEntity) auth.getPrincipal();
@@ -71,6 +72,7 @@ public class CustomerController extends BaseController {
 	@PostMapping("/save")
 	public ResponseEntity<?> save(@RequestBody CustomersEntity customer) {
 		try {
+			permission("category-customer-save");
 			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 			if (auth != null && auth.getPrincipal() instanceof UserEntity) {
 				UserEntity user = (UserEntity) auth.getPrincipal();
@@ -90,6 +92,7 @@ public class CustomerController extends BaseController {
 
 	@PostMapping("/get")
 	public ResponseEntity<?> get(@RequestBody Map<String, Object> payload) {
+		permission("category-customer-list");
 		String code = null;
 		if (payload != null && payload.get("code") != null) {
 			code = String.valueOf(payload.get("code")).trim();

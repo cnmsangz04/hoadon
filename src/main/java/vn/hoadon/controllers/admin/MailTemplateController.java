@@ -1,5 +1,6 @@
 package vn.hoadon.controllers.admin;
 
+import vn.hoadon.controllers.base.BaseController;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("v1/administrator/mail-template")
-public class MailTemplateController {
+public class MailTemplateController extends BaseController {
 
     private final MailTemplateService mailTemplateService;
 
@@ -28,6 +29,7 @@ public class MailTemplateController {
     public ResponseEntity<List<MailTemplateDto>> getByCompany(
             @RequestParam(defaultValue = "1") Integer companyId
     ) {
+        permission("mail-template-list");
         return ResponseEntity.ok(
                 mailTemplateService.getByCompanyId(companyId)
         );
@@ -37,6 +39,7 @@ public class MailTemplateController {
     public ResponseEntity<MailTemplateDto> getById(
             @PathVariable Integer id
     ) {
+        permission("mail-template-list");
         return ResponseEntity.ok(
                 mailTemplateService.getById(id)
         );
@@ -50,6 +53,7 @@ public class MailTemplateController {
     public ResponseEntity<MailTemplateDto> create(
             @RequestBody @Valid MailTemplateDto dto
     ) {
+        permission("mail-template-save");
         return ResponseEntity.ok(
                 mailTemplateService.create(dto)
         );
@@ -64,6 +68,7 @@ public class MailTemplateController {
             @PathVariable Integer id,
             @RequestBody @Valid MailTemplateDto dto
     ) {
+        permission("mail-template-save");
         return ResponseEntity.ok(
                 mailTemplateService.update(id, dto)
         );
@@ -77,6 +82,7 @@ public class MailTemplateController {
     public ResponseEntity<Void> delete(
             @PathVariable Integer id
     ) {
+        permission("mail-template-delete");
         mailTemplateService.delete(id);
         return ResponseEntity.noContent().build();
     }

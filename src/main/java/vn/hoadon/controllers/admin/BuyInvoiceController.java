@@ -51,12 +51,14 @@ public class BuyInvoiceController extends BaseController {
 
     @PostMapping("/get")
     public ResponseEntity<BuyInvoiceEntity> get(@RequestBody @Valid IdRequestDTO request) {
+        permission("buy-invoice-list");
         return ResponseEntity.of(service.findById(request.getId()));
     }
 
     // Sử dụng DTO để nhận dữ liệu
     @PostMapping("/create")
     public ResponseEntity<?> create(@RequestBody BuyInvoiceCreateDTO dto) {
+        permission("buy-invoice-save");
         UserEntity user = currentUser();
         
         // For admin page: use companyId from DTO (selected from form)
@@ -110,6 +112,7 @@ public class BuyInvoiceController extends BaseController {
 
     @PostMapping("/delete")
     public ResponseEntity<?> delete(@RequestBody @Valid IdRequestDTO request) {
+        permission("buy-invoice-delete");
         // Check if buy_invoice exists
         BuyInvoiceEntity entity = service.findById(request.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bản ghi buy_invoice với id: " + request.getId()));
