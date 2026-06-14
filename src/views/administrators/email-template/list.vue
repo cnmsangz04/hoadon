@@ -1,7 +1,7 @@
-<template>
+﻿<template>
   <div class="container-fluid py-3 email-templates">
 
-    <!-- Ti�u d? v� thao t�c -->
+    <!-- Tiêu đề và thao tác -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 font-weight-bold">Danh sách mẫu email</h4>
       <div>
@@ -20,7 +20,7 @@
       </div>
     </div>
 
-    <!-- H�ng b? l?c -->
+    <!-- Hàng bộ lọc -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="4" class="mb-2">
@@ -72,12 +72,12 @@
           {{ row.index + 1 }}
         </template>
 
-        <!-- C�ng ty -->
+        <!-- Công ty -->
         <template #cell(companyName)="row">
           {{ row.item.companyName || '-' }}
         </template>
 
-        <!-- Kh�a -->
+        <!-- Khóa -->
         <template #cell(key)="row">
           <div>
             <div class="text-mono font-weight-bold">{{ row.item.key }}</div>
@@ -90,24 +90,24 @@
           </div>
         </template>
 
-        <!-- Ti�u d? -->
+        <!-- Tiêu đề -->
         <template #cell(title)="row">
           <div class="font-weight-bold">{{ row.item.title }}</div>
         </template>
 
-        <!-- Tr?ng th�i -->
+        <!-- Trạng thái -->
         <template #cell(status)="row">
           <b-badge :variant="row.item.status === 1 ? 'success' : 'secondary'">
             {{ row.item.status === 1 ? 'Kích hoạt' : 'Ngưng hoạt động' }}
           </b-badge>
         </template>
 
-        <!-- C?p nh?t l�c -->
+        <!-- Cập nhật lúc -->
         <template #cell(updatedAt)="row">
           {{ formatDate(row.item.updatedAt) }}
         </template>
 
-        <!-- H�nh d?ng -->
+        <!-- Hành động -->
         <template #cell(actions)="row">
           <b-dropdown
             size="sm"

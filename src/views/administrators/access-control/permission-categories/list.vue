@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="container-fluid py-3 permission-categories">
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 font-weight-bold">Nhóm quyền</h4>
@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <!-- B? l?c -->
+    <!-- Bộ lọc -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col cols="8">
@@ -37,7 +37,7 @@
       </b-row>
     </b-card>
 
-    <!-- Danh s�ch k�o th? -->
+    <!-- Danh sách kéo thả -->
     <b-card class="mb-2 shadow-sm">
       <div class="d-flex align-items-center mb-2">
         <h6 class="mb-0 mr-2">Thứ tự hiển thị</h6>
@@ -143,7 +143,7 @@
       />
     </b-card>
 
-    <!-- Modal -->
+    <!-- Hộp thoại -->
     <b-modal ref="categoryModal" :title="form.id ? 'Cập nhật nhóm quyền' : 'Thêm nhóm quyền'" hide-footer>
       <b-form @submit.prevent="saveCategory">
         <b-form-group label="Tên nhóm">

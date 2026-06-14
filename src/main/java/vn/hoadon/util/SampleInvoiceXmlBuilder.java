@@ -1,4 +1,4 @@
-package vn.hoadon.util;
+﻿package vn.hoadon.util;
 
 import vn.hoadon.entity.CompanyBankEntity;
 import vn.hoadon.entity.CompanyEntity;
@@ -9,8 +9,8 @@ import vn.hoadon.entity.UserEntity;
 import java.time.LocalDate;
 
 /**
- * Build sample invoice XML for previewing XSLT templates.
- * This is intentionally static and detached from DB, used only for render preview.
+ * Tạo XML hóa đơn mẫu để xem trước mẫu XSLT.
+ * Dữ liệu này cố định, không phụ thuộc DB và chỉ dùng cho chức năng xem trước.
  */
 public final class SampleInvoiceXmlBuilder {
     private SampleInvoiceXmlBuilder() {}
@@ -19,19 +19,19 @@ public final class SampleInvoiceXmlBuilder {
     private static final String PBAN = "2.1.0";
 
     /**
-     * Backward-compatible builder with placeholders when no data provided.
+     * Hàm tạo tương thích ngược, dùng placeholder khi không truyền dữ liệu.
      */
     public static String build() {
         return build(null, null, null, null, null);
     }
 
     /**
-     * Build sample XML string using provided entities. Fields mapping:
+     * Tạo chuỗi XML mẫu từ các entity được truyền vào. Quy tắc ánh xạ:
      * - THDon <- form.name
      * - KHMSHDon <- form.formCode
      * - KHHDon <- form.serial
-     * - NLap <- today (yyyy-MM-dd)
-     * - Company info tags from Company/Bank/Representative
+     * - NLap <- ngày hiện tại (yyyy-MM-dd)
+     * - Thông tin công ty lấy từ Company, Bank và Representative
      */
     public static String build(UserEntity user,
                                FormInvoiceEntity form,

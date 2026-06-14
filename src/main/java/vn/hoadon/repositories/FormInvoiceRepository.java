@@ -1,4 +1,4 @@
-package vn.hoadon.repositories;
+﻿package vn.hoadon.repositories;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,15 +10,15 @@ public interface FormInvoiceRepository extends JpaRepository<FormInvoiceEntity, 
     Page<FormInvoiceEntity> findByCompanyId(Long companyId, Pageable pageable);
     Page<FormInvoiceEntity> findByCompanyIdAndSystem(Long companyId, Integer system, Pageable pageable);
     
-    // Find templates by system only (for system=0 templates that are shared across all companies)
+    // Tìm template chỉ theo system (system = 0 là template dùng chung cho mọi công ty)
     Page<FormInvoiceEntity> findBySystem(Integer system, Pageable pageable);
 
-    // Find templates created by a user
+    // Tìm template do người dùng tạo
     Page<FormInvoiceEntity> findByUserId(Long userId, Pageable pageable);
 
     boolean existsByCompanyIdAndSystemAndCategoryAndSerial(Long companyId, Integer system, Integer category, String serial);
     boolean existsByCompanyIdAndSystemAndCategoryAndSerialAndIdNot(Long companyId, Integer system, Integer category, String serial, Long id);
 
-    // Find latest active VAT form for company
+    // Tìm mẫu VAT đang hoạt động mới nhất của công ty
     FormInvoiceEntity findTopByCompanyIdAndStatusAndCategoryOrderByUpdatedAtDesc(Long companyId, Integer status, Integer category);
 }

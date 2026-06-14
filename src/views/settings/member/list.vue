@@ -1,6 +1,6 @@
-<template>
+﻿<template>
   <div class="container-fluid py-3 members">
-    <!-- Header v� thao t�c -->
+    <!-- Tiêu đề và thao tác -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="d-flex align-items-center">
         <h4 class="mb-0 font-weight-bold">Danh sách thành viên</h4>
@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <!-- B? l?c -->
+    <!-- Bộ lọc -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="4" class="mb-2">
@@ -48,7 +48,7 @@
       </b-row>
     </b-card>
 
-    <!-- B?ng th�nh vi�n -->
+    <!-- Bảng thành viên -->
     <b-card class="shadow-sm">
       <b-table
         bordered
@@ -109,7 +109,7 @@
         </template>
       </b-table>
 
-      <!-- Skeleton t?i khi chuy?n trang -->
+      <!-- Khung tải khi chuyển trang -->
       <div v-if="isBusy" class="mt-2">
         <b-skeleton width="100%" height="20px" animated class="mb-2" />
         <b-skeleton width="96%" height="20px" animated class="mb-2" />
@@ -153,10 +153,10 @@
       </b-row>
     </b-card>
 
-    <!-- Modal t?o/c?p nh?t th�nh vi�n -->
+    <!-- Hộp thoại tạo/cập nhật thành viên -->
     <b-modal ref="memberModal" :title="form.id ? 'Cập nhật thành viên' : 'Thêm thành viên'" hide-footer>
       <b-form @submit.prevent="saveMember">
-        <!-- Hi?n th? th�ng tin cho th�nh vi�n m?i -->
+        <!-- Hiển thị thông tin cho thành viên mới -->
         <b-form-group label="Họ và tên">
           <b-form-input v-model.trim="form.fullName" required />
         </b-form-group>
@@ -221,7 +221,7 @@
       </b-form>
     </b-modal>
 
-    <!-- Modal phân quyền -->
+    <!-- Hộp thoại phân quyền -->
     <b-modal
       ref="permissionModal"
       title="Phân quyền thành viên"
@@ -303,7 +303,7 @@ export default {
   data() {
     return {
       isBusy: false,
-      // Object phân trang mới theo cấu trúc yêu cầu
+      // Đối tượng phân trang mới theo cấu trúc yêu cầu
       list: {
         current_page: 1,
         data: [],
@@ -444,7 +444,7 @@ export default {
     permVisiblePermissions() {
       // Cơ bản: chỉ lấy trạng thái active hoặc không chỉ định
       let perms = (this.allPermissions || []).filter(p => Number(p.status) === 1 || p.status == null)
-      // Business rule: when editing a member with role === 2 (Nhân viên), only show permissions with level === 0
+      // Quy tắc nghiệp vụ: khi sửa nhân viên role === 2, chỉ hiển thị quyền level === 0
       const targetRole = Number(this.permForm?.role)
       if (targetRole === 2) {
         perms = perms.filter(p => Number(p.level) === 0)
@@ -525,7 +525,7 @@ export default {
     async loadCategories() {
       try {
         const res = await axios.post('/administrator/permission-categories/list', null, { params: { page: 0, size: 200 } })
-        // Backend đã sắp xếp theo orderIndex (sothutu), nhưng vẫn thêm lớp bảo vệ
+        // Phía backend đã sắp xếp theo orderIndex (sothutu), nhưng vẫn thêm lớp bảo vệ
         const cats = res.data?.content || []
         this.categories = cats.sort((a, b) => {
           const aOrder = Number(a.orderIndex ?? a.sothutu ?? 999)
@@ -820,7 +820,7 @@ export default {
 .perm-group { border-top: 1px dashed #eee; padding-top: 8px; margin-top: 8px; }
 .perm-group-header { display: flex; align-items: center; margin-bottom: 6px; }
 .perm-group-items { display: flex; flex-direction: column; gap: 10px; }
-/* Tái dùng style modal role cho modal phân quyền */
+/* Tái dùng kiểu hộp thoại role cho hộp thoại phân quyền */
 .members .role-modal-content { border-radius: 14px; overflow: hidden; border: 1px solid #eef0f6; box-shadow: 0 10px 30px rgba(18, 38, 63, 0.08); }
 .members .role-modal-header { background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%); border-bottom: 1px solid #ecf0f6; }
 .members .role-modal-body { background: #ffffff; max-height: 72vh; overflow: auto; padding-bottom: 8px; }
@@ -854,7 +854,7 @@ export default {
   border-top: 1px dashed #e5e7eb;
 }
 
-/* Select */
+/* Ô chọn */
 .pagination-bar .custom-select-sm {
   height: 30px;
   padding: 4px 10px;
@@ -909,7 +909,7 @@ export default {
   margin-top: 16px;
 }
 
-/* Mobile */
+/* Di động */
 @media (max-width: 576px) {
   .pagination-bar {
     flex-direction: column;

@@ -1,4 +1,4 @@
-package vn.hoadon.controllers.customers;
+﻿package vn.hoadon.controllers.customers;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -85,7 +85,7 @@ public class ReportController extends BaseController {
                 pageable
         );
 
-        // Map ra DTO cho phù hợp với list.vue
+        // Ánh xạ ra DTO cho phù hợp với list.vue
         List<Map<String, Object>> items = new ArrayList<>();
         Map<Long, FormInvoiceEntity> formCache = new HashMap<>();
         for (InvoiceEntity inv : pageData.getContent()) {
@@ -97,7 +97,7 @@ public class ReportController extends BaseController {
             row.put("status", inv.getStatus());
             row.put("amount", inv.getAmount());
             row.put("orderCode", inv.getLookupCode());
-            // Bill code nếu có cột bill.code trong JSON others hoặc bill; ở đây dùng lookupCode làm mã đơn hàng
+            // Mã hóa đơn nếu có cột bill.code trong JSON others hoặc bill; ở đây dùng lookupCode làm mã đơn hàng
 
             Long formId = inv.getFormId() != null ? inv.getFormId().longValue() : null;
             if (formId != null) {
@@ -160,7 +160,7 @@ public class ReportController extends BaseController {
             Sheet sheet = wb.createSheet("Bao_cao_hoa_don");
             int rowIdx = 0;
 
-            // Header style
+            // Kiểu tiêu đề
             CellStyle headerStyle = wb.createCellStyle();
             Font headerFont = wb.createFont();
             headerFont.setBold(true);

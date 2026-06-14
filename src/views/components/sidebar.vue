@@ -1,7 +1,7 @@
-<template>
+﻿<template>
   <aside class="sidebar" aria-label="Main sidebar">
     <div class="sidebar-inner">
-      <!-- Thương hiệu / Logo -->
+      <!-- Thương hiệu / biểu trưng -->
       <div class="brand">
         <router-link class="brand-link" to="/">
           <img class="logo" :src="logoSrc" alt="logo" />

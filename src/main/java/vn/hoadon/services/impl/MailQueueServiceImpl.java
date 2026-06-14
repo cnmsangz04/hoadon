@@ -1,4 +1,4 @@
-package vn.hoadon.services.impl;
+﻿package vn.hoadon.services.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -13,8 +13,8 @@ import vn.hoadon.repositories.MailTemplateRepository;
 import vn.hoadon.services.MailQueueService;
 
 /**
- * Database-backed mail queue — tương tự Laravel Queue driver "database".
- * Job được lưu vào bảng mail_jobs, DbMailQueueWorker poll và xử lý mỗi 5 giây.
+ * Hàng đợi mail lưu bằng cơ sở dữ liệu.
+ * Job được lưu vào bảng mail_jobs, DbMailQueueWorker quét và xử lý mỗi 5 giây.
  */
 @Service
 public class MailQueueServiceImpl implements MailQueueService {

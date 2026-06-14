@@ -1,4 +1,4 @@
-package vn.hoadon.controllers.customers;
+﻿package vn.hoadon.controllers.customers;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -111,7 +111,7 @@ public class InvoiceController extends BaseController {
             companyId = user.getCompanyId();
         }
         
-        // If user doesn't have companyId (which shouldn't happen), return empty result
+        // Nếu user không có companyId (trường hợp không mong đợi), trả về kết quả rỗng
         if (companyId == null) {
             return ResponseEntity.ok(new PageDTO<>(java.util.List.of(), 1, size, 0L, 1));
         }
@@ -290,7 +290,7 @@ public class InvoiceController extends BaseController {
         java.util.Optional<vn.hoadon.entity.InvoiceEntity> opt = invoiceRepository.findById(id);
         vn.hoadon.entity.InvoiceEntity inv = opt.orElse(null);
         if (inv == null) return ResponseEntity.badRequest().body(new ErrorDTO("Không tìm thấy hóa đơn"));
-        // Build response with parsed JSON blobs
+        // Tạo phản hồi với các khối JSON đã parse
         java.util.Map<String,Object> resp = new java.util.LinkedHashMap<>();
         resp.put("id", inv.getId());
         resp.put("formId", inv.getFormId());
@@ -363,13 +363,13 @@ public class InvoiceController extends BaseController {
         String raw = String.valueOf(o);
         if (raw == null || raw.isEmpty()) return java.util.Collections.emptyList();
         String s = raw.trim();
-        // If looks like JSON array, parse it
+        // Nếu giống mảng JSON thì parse
         if (s.startsWith("[") && s.endsWith("]")) {
             try {
                 return JSON.readValue(s, new TypeReference<java.util.List<String>>(){});
             } catch (Exception ignore) { /* fall through to CSV */ }
         }
-        // Fallback: CSV split
+        // Dự phòng: tách theo CSV
         String[] parts = s.split(",");
         java.util.List<String> out = new java.util.ArrayList<>();
         for (String p : parts) { if (p != null) out.add(p.trim().replaceAll("^\"|\"$", "")); }
@@ -474,7 +474,7 @@ public class InvoiceController extends BaseController {
             html = ensureUtf8Meta(html);
             // Ép thay font-family thường thiếu glyph tiếng Việt
             html = forceReplaceFontFamilies(html);
-            // Normalize to XHTML-ish by self-closing void tags like <meta>, <link>, <img>, etc.
+            // Chuẩn hóa gần XHTML bằng cách tự đóng các thẻ rỗng như <meta>, <link>, <img>, ...
             html = normalizeToXhtml(html);
             // Inject a simulated QR code into placeholders if present
             html = injectQrPlaceholder(html);
@@ -582,7 +582,7 @@ public class InvoiceController extends BaseController {
             html = injectQrPlaceholder(html);
             html = sanitizeImgSrcAttributes(html);
 
-            // Apply PDF-specific layout and font fallbacks similar to FileController
+            // Áp dụng layout và font dự phòng riêng cho PDF tương tự FileController
             html = ensurePdfLayoutFallbackCss(html);
             html = ensurePdfCss(html);
             html = ensurePdfFontCss(html);
@@ -605,7 +605,7 @@ public class InvoiceController extends BaseController {
                     m2.invoke(builder, true);
                 } catch (Exception ignore2) {}
             }
-            // Use same URI resolver as FileController
+            // Dùng cùng URI resolver như FileController
             builder.useUriResolver(new ClasspathFirstUriResolver());
             // Register available Unicode fonts to fix missing glyphs
             registerAvailableUnicodeFonts(builder);
@@ -667,7 +667,7 @@ public class InvoiceController extends BaseController {
             return ResponseEntity.badRequest().body(new ErrorDTO("Quý khách đã sử dụng hết số hóa đơn"));
         }
         
-        // Find active invoice number counter for VAT category (1) with status=1
+        // Tìm bộ đếm số hóa đơn đang hoạt động cho loại VAT (1) với status = 1
         java.util.List<InvoiceNumberEntity> counters = invoiceNumberRepository.findByCompanyIdAndFormId(companyId, formId);
         InvoiceNumberEntity counter = null;
         for (InvoiceNumberEntity c : counters) {
@@ -698,7 +698,7 @@ public class InvoiceController extends BaseController {
         buyInvoice.setUpdatedAt(java.time.LocalDateTime.now());
         buyInvoiceRepository.save(buyInvoice);
         
-        // 2) Update invoice: set invoice_number_id if missing, set no, set status=1 (Đã ký)
+        // 2. Cập nhật hóa đơn: set invoice_number_id nếu thiếu, set no, set status = 1 (Đã ký)
         if (inv.getInvoiceNumberId() == null) {
             inv.setInvoiceNumberId(counter.getId().intValue());
         }
@@ -706,7 +706,7 @@ public class InvoiceController extends BaseController {
         inv.setStatus((short)1);
         inv.setUpdatedAt(java.time.LocalDateTime.now());
         invoiceRepository.save(inv);
-        // 3) Build XML with company info and bank, using current form
+        // 3. Tạo XML với thông tin công ty và ngân hàng, dùng mẫu hiện tại
         FormInvoiceEntity form = null;
         try {
             form = formInvoiceRepository.findById(formId).orElse(null);
@@ -719,7 +719,7 @@ public class InvoiceController extends BaseController {
                 if (banks != null && !banks.isEmpty()) bank = banks.get(0);
             }
         } else {
-            // Fallback by invoice.company_id
+            // Dự phòng theo invoice.company_id
             company = companyRepository.findById(companyId).orElse(null);
             if (company != null) {
                 java.util.List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
@@ -745,7 +745,7 @@ public class InvoiceController extends BaseController {
         return ResponseEntity.ok(resp);
     }
 
-    // Build and inject a mock XMLDSIG signature under <DSCKS><NBan>...</NBan></DSCKS>
+    // Tạo và chèn chữ ký XMLDSIG giả dưới <DSCKS><NBan>...</NBan></DSCKS>
     private String injectMockSignature(String xml, CompanyEntity company) {
         if (xml == null || xml.isBlank()) return xml;
         String id = extractDlhDonId(xml);
@@ -823,8 +823,8 @@ public class InvoiceController extends BaseController {
     private static final String SAMPLE_DIGEST_VALUE_2 = "2pqCy/KvD9b88B4AWHNgxIFA9YTWbKOd8cHudzk1XwE=";
 
     /**
-     * Inject mock CQT (tax authority) signature into the XML at HDon/DSCKS/CQT
-     * This simulates the tax authority signing the invoice.
+     * Chèn chữ ký CQT giả vào XML tại HDon/DSCKS/CQT
+     * Phần này mô phỏng việc cơ quan thuế ký hóa đơn.
      */
     private String injectCqtSignature(String xml) {
         if (xml == null || xml.isBlank()) return xml;
@@ -841,7 +841,7 @@ public class InvoiceController extends BaseController {
         String sigPropId = "Id-" + java.util.UUID.randomUUID().toString().replace("-", "");
         String now = java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
         
-        // Build the CQT signature XML (using the sample provided by user)
+        // Tạo XML chữ ký CQT bằng mẫu người dùng cung cấp
         String cqtSignature = "<CQT>" +
             "<Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\" Id=\"" + escapeXml(cqtSigId) + "\">" +
             "<SignedInfo>" +
@@ -884,7 +884,7 @@ public class InvoiceController extends BaseController {
         replaced = xml.replaceFirst("(?is)<CQT>\\s*</CQT>", java.util.regex.Matcher.quoteReplacement(cqtSignature));
         if (!replaced.equals(xml)) return replaced;
         
-        // If no CQT tag found, try to insert it in DSCKS before </DSCKS>
+        // Nếu không tìm thấy thẻ CQT, thử chèn vào DSCKS trước </DSCKS>
         replaced = xml.replaceFirst("(?is)</DSCKS>", java.util.regex.Matcher.quoteReplacement(cqtSignature) + "</DSCKS>");
         if (!replaced.equals(xml)) return replaced;
         
@@ -1374,7 +1374,7 @@ public class InvoiceController extends BaseController {
         h.setXmlData(sig.getXml());
         try { historyService.save(h); } catch (Exception e) { log.warn("History save failed for invoice {}: {}", id, e.toString()); }
 
-        // Update invoice status to 2 (đã gửi thuế)
+        // Cập nhật invoice status to 2 (đã gửi thuế)
         inv.setStatus((short)2);
         inv.setUpdatedAt(java.time.LocalDateTime.now());
         invoiceRepository.save(inv);
@@ -1386,7 +1386,7 @@ public class InvoiceController extends BaseController {
         new Thread(() -> {
             try {
                 Thread.sleep(1500L);
-                // Use self-injection to ensure @Transactional works
+                // Dùng self-injection để bảo đảm @Transactional hoạt động
                 if (self != null) {
                     self.processCqtResponse(finalInvoiceId, finalCompanyId, finalHave);
                 } else {
@@ -1452,7 +1452,7 @@ public class InvoiceController extends BaseController {
                         log.error("Persist CQT xml failed for invoice {}: {}", invoiceId, e.toString()); 
                     }
                     
-                    // Update invoice code_cqt and status = 3 (Đã phát hành)
+                    // Cập nhật invoice code_cqt and status = 3 (Đã phát hành)
                     try { inv.setCodeCqt(code); } catch (Exception ignore) {}
                     inv.setStatus((short)3);
                     inv.setUpdatedAt(java.time.LocalDateTime.now());
@@ -1461,7 +1461,7 @@ public class InvoiceController extends BaseController {
                     // Auto-send mail khi phát hành
                     tryEnqueueInvoiceIssueMail(inv, companyId);
 
-                    // History type=202, user_id=0
+                    // Lịch sử type = 202, user_id = 0
                     HistoryDto h202 = new HistoryDto();
                     h202.setCompanyId(companyId);
                     h202.setUserId(0L);
@@ -1655,7 +1655,7 @@ public class InvoiceController extends BaseController {
         }
     }
 
-    // Build a minimal 204 response payload with DLieu->TBao->DLTBao->LTBao
+    // Tạo payload phản hồi 204 tối thiểu với DLieu->TBao->DLTBao->LTBao
     private String buildMock204ResponseXml(boolean accepted, InvoiceEntity inv, String extra) {
         String ltBao = accepted ? "2" : "1"; // 2: accepted, others: rejected
         String id = inv != null ? String.valueOf(inv.getId()) : "";
@@ -1692,7 +1692,7 @@ public class InvoiceController extends BaseController {
     private String insertMccqt(String xml, String code) {
         if (xml == null || xml.isBlank()) return xml;
         String safeCode = escapeXml(code);
-        // If MCCQT exists, replace its content
+        // Nếu MCCQT tồn tại thì thay nội dung
         String replaced = xml.replaceFirst("(?is)(<MCCQT>)(.*?)(</MCCQT>)", "$1" + java.util.regex.Matcher.quoteReplacement(safeCode) + "$3");
         if (!replaced.equals(xml)) return replaced;
         // Else insert <MCCQT> before closing </HDon>
@@ -1711,9 +1711,9 @@ public class InvoiceController extends BaseController {
         InvoiceEntity inv = opt.orElse(null);
         if (inv == null) return ResponseEntity.status(404).body(new ErrorDTO("Không tìm thấy hóa đơn"));
         
-        // Use HistoryService for efficient querying
+        // Dùng HistoryService để truy vấn hiệu quả
         if (historyService == null) {
-            // Fallback to old implementation if service not available
+            // Dự phòng về cách xử lý cũ nếu service không khả dụng
             java.util.List<vn.hoadon.entity.HistoryEntity> all = java.util.Collections.emptyList();
             try { all = historyRepository.findAll(); } catch (Exception ignore) {}
             java.util.List<java.util.Map<String,Object>> out = new java.util.ArrayList<>();
@@ -1748,7 +1748,7 @@ public class InvoiceController extends BaseController {
             return ResponseEntity.ok(out);
         }
         
-        // Use HistoryService
+        // Dùng HistoryService
         List<HistoryDto> rows = historyService.listByInvoice(user.getCompanyId(), id);
         return ResponseEntity.ok(rows);
     }
@@ -1768,7 +1768,7 @@ public class InvoiceController extends BaseController {
         if (iCompany != null && !uCompany.equals(iCompany)) {
             return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền thao tác hóa đơn của công ty khác"));
         }
-        // Only allow sending for issued invoices
+        // Chỉ cho phép gửi với hóa đơn đã phát hành
         Short st = inv.getStatus();
         if (st == null || st.shortValue() != 3) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Hóa đơn chưa phát hành"));
@@ -1838,7 +1838,7 @@ public class InvoiceController extends BaseController {
             vars.put("COM_HOTLINE", hotline);
             vars.put("COM_EMAIL",   comEmail);
             vars.put("COM_WEBSITE", website);
-            // Fallback if no DB template found
+            // Dự phòng nếu không tìm thấy template trong DB
             vars.put("SUBJECT",  subject);
             vars.put("HTML_BODY", html);
             msg.setVariables(vars);
@@ -1912,7 +1912,7 @@ public class InvoiceController extends BaseController {
 
     /**
      * Pick invoice XML source by status:
-     * - status = 0: generate XML from InvoiceXmlBuilder
+     * - status = 0: sinh XML từ InvoiceXmlBuilder
      * - status = 1 or 2: use signature_vats.xml (signed XML)
      * - status > 2: use signature_authorities_tax.xml, fallback signature_vats.xml
      */
@@ -1931,7 +1931,7 @@ public class InvoiceController extends BaseController {
         if (status == 1 || status == 2) {
             String xml = getXmlFromSignatureVats(invoiceId);
             if (xml != null && !xml.isBlank()) return xml;
-            // Fallback
+            // Dự phòng
             return vn.hoadon.util.InvoiceXmlBuilder.build(inv, form, company, bank);
         }
 

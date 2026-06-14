@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="p-3">
     <b-container class="mb-3">
       <b-card class="filter-card shadow-sm">
@@ -162,13 +162,13 @@ export default {
 .style-chooser { width: 100%; }
 .text-secondary p { margin-bottom: 0.5rem; }
 
-/* Style thẻ bộ lọc */
+/* Kiểu thẻ bộ lọc */
 .filter-card { border: 1px solid #e9eef5; }
 .filter-header { font-size: 14px; }
 .font-weight-600 { font-weight: 600; }
 .filter-label { display: inline-block; margin-bottom: 6px; color: #6b7280; font-size: 12px; }
 
-/* Style thông báo */
+/* Kiểu thông báo */
 .notify-alert { border-color: #e9eef5; color: #4b5563; }
 .notify-text { font-size: 13px; }
 

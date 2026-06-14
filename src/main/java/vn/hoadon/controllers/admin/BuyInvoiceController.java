@@ -1,4 +1,4 @@
-package vn.hoadon.controllers.admin;
+﻿package vn.hoadon.controllers.admin;
 
 import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.dto.buyinvoice.BuyInvoiceCreateDTO;
@@ -72,7 +72,7 @@ public class BuyInvoiceController extends BaseController {
         
         BuyInvoiceEntity entity;
         
-        // If updating (id != null), load existing entity to preserve amountUsed
+        // Nếu cập nhật (id != null), nạp entity hiện có để giữ amountUsed
         if (dto.getId() != null) {
             entity = service.findById(dto.getId())
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bản ghi buy_invoice với id: " + dto.getId()));
@@ -84,13 +84,13 @@ public class BuyInvoiceController extends BaseController {
                         .body(java.util.Map.of("message", "Số lượng không được nhỏ hơn số lượng đã sử dụng (" + amountUsed + " hóa đơn đã cấp số)"));
             }
             
-            // Update only the fields that user can modify
+            // Chỉ cập nhật các trường người dùng được phép sửa
             entity.setAmount(dto.getAmount());
             entity.setStatus(dto.getStatus());
             // Keep amountUsed unchanged
         } else {
             // Creating new entity - CHECK IF COMPANY ALREADY HAS ONE
-            // Business rule: Each company can only have ONE buy_invoice record
+            // Quy tắc nghiệp vụ: mỗi công ty chỉ có một bản ghi buy_invoice
             java.util.List<BuyInvoiceEntity> existingInvoices = service.findAll((root, query, cb) -> 
                 cb.equal(root.get("companyId"), companyId)
             );

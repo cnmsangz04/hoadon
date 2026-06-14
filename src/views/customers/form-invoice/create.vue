@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="container py-3">
     <!-- Phần đầu trang -->
     <div class="page-header d-flex align-items-center justify-content-between mb-3">
@@ -163,7 +163,7 @@ export default {
         form_code: '', // ký tự đầu được lưu riêng ở backend
         have_code: 0, // C -> 1, K -> 0
       },
-      // State tạo serial
+      // Trạng thái tạo serial
       serialCK: 'C',
       serialCKOptions: [
         { value: 'C', text: 'C' },
@@ -264,7 +264,7 @@ export default {
             this.serialYear = s.substring(2,4)
             this.serialSuffix = s.substring(5,7).toUpperCase()
           }
-          // Map have_code từ item nếu có; nếu không thì suy ra từ CK
+          // Ánh xạ have_code từ item nếu có; nếu không thì suy ra từ CK
           this.form.have_code = it.have_code != null ? Number(it.have_code) : (this.serialCK === 'C' ? 1 : 0)
           this.composeSerial()
           // Đảm bảo đang tạo mới, không phải mẫu hệ thống
@@ -383,7 +383,7 @@ export default {
 .page-title { font-weight: 700; color: #0f172a; letter-spacing: -0.2px; }
 .page-subtitle { font-size: 0.95rem; }
 
-/* Header khu vực */
+/* Tiêu đề khu vực */
 .section-header { font-weight: 700; color: #1f2937; margin: 8px 0 14px; position: relative; }
 .section-header::after { content: ""; display: block; height: 2px; background: linear-gradient(90deg, #eef2f7, #e0e7ff); margin-top: 8px; border-radius: 2px; }
 

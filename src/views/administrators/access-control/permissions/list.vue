@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="container-fluid py-3 permissions">
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 font-weight-bold">Danh sách quyền</h4>
@@ -213,7 +213,7 @@ export default {
   },
   computed: {
     categoryOptions() {
-      // Only show visible categories (status === 1)
+      // Chỉ hiển thị nhóm quyền đang bật (status === 1)
       return this.categories
         .filter(c => c.status === 1)
         .map(c => ({ value: c.id, text: c.name }));
@@ -242,7 +242,7 @@ export default {
     this.loadData();
   },
   methods: {
-    // Return category display name robustly using object name or id lookup
+    // Trả về tên nhóm quyền bằng tên object hoặc tra cứu theo id
     categoryName(item) {
       const cat = item?.category;
       if (!cat && cat !== 0) return 'Khác';
@@ -285,7 +285,7 @@ export default {
         { params: { page: 0, size: 100 } }
       );
       const cats = res.data.content || [];
-      // Sort by orderIndex (sothutu) ascending
+      // Sắp xếp tăng dần theo orderIndex (sothutu)
       this.categories = cats.sort((a, b) => {
         const aOrder = Number(a.orderIndex ?? a.sothutu ?? 999);
         const bOrder = Number(b.orderIndex ?? b.sothutu ?? 999);
@@ -331,12 +331,12 @@ export default {
           "/administrator/permissions/saveOrUpdate",
           this.form
         );
-        // Toast th�nh c�ng
+        // Toast thành công
         this.$toastr.success(this.form.id ? 'Cập nhật quyền thành công' : 'Thêm quyền thành công');
         this.$refs.permissionModal.hide();
         this.loadData();
       } catch (e) {
-        // Interceptor Axios d� hi?n th? toast l?i
+        // Interceptor Axios đã hiển thị toast lỗi
         console.error(e);
       }
     },

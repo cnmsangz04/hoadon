@@ -1,4 +1,4 @@
-package vn.hoadon.security;
+﻿package vn.hoadon.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -58,7 +58,7 @@ public class JwtUtil {
     }
 
     /**
-     * Extract username from token
+     * Lấy username từ token
      */
     public String getUsername(String token) {
         return parseClaims(token).getSubject();

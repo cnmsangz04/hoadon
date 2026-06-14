@@ -4,16 +4,23 @@ import jakarta.persistence.criteria.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.CompanyRegistrationRequestEntity;
 import vn.hoadon.entity.UserEntity;
-import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.CompanyRegistrationRequestRepository;
+import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.services.CompanyService;
 
 import java.time.LocalDateTime;
@@ -58,7 +65,7 @@ public class CompanyRegistrationRequestController extends BaseController {
             Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             return ResponseEntity.ok(repository.findAll(spec, pageable));
         } catch (Exception e) {
-            log.error("Error listing company registration requests", e);
+            log.error("Không thể tải danh sách đăng ký", e);
             return ResponseEntity.status(500).body(Map.of("message", "Không thể tải danh sách đăng ký"));
         }
     }
@@ -103,7 +110,7 @@ public class CompanyRegistrationRequestController extends BaseController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
-            log.error("Error approving company registration request", e);
+            log.error("Không thể duyệt hồ sơ đăng ký", e);
             return ResponseEntity.status(500).body(Map.of("message", "Không thể duyệt hồ sơ đăng ký"));
         }
     }
@@ -128,7 +135,7 @@ public class CompanyRegistrationRequestController extends BaseController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
-            log.error("Error rejecting company registration request", e);
+            log.error("Không thể từ chối hồ sơ đăng ký", e);
             return ResponseEntity.status(500).body(Map.of("message", "Không thể từ chối hồ sơ đăng ký"));
         }
     }
@@ -136,6 +143,7 @@ public class CompanyRegistrationRequestController extends BaseController {
     public static class FilterDTO {
         private String keyword;
         private Integer status;
+
         public String getKeyword() { return keyword; }
         public void setKeyword(String keyword) { this.keyword = keyword; }
         public Integer getStatus() { return status; }
@@ -144,6 +152,7 @@ public class CompanyRegistrationRequestController extends BaseController {
 
     public static class RejectDTO {
         private String note;
+
         public String getNote() { return note; }
         public void setNote(String note) { this.note = note; }
     }

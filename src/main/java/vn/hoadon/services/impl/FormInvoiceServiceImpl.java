@@ -1,4 +1,4 @@
-package vn.hoadon.services.impl;
+﻿package vn.hoadon.services.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -119,7 +119,7 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
             }
         }
 
-        // Helper to copy a single path
+        // Hàm hỗ trợ sao chép một đường dẫn
         java.util.function.Function<String, String> copyPath = (String original) -> {
             if (original == null || original.isBlank()) return original;
             try {
@@ -141,7 +141,7 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
                 if (targetDir == null) targetDir = Paths.get("").toAbsolutePath();
                 Path dst = targetDir.resolve(newName);
                 Files.copy(src, dst);
-                // Return path in same style as original (relative if original was relative)
+                // Trả về đường dẫn cùng kiểu với bản gốc (tương đối nếu bản gốc là tương đối)
                 if (Paths.get(original).isAbsolute()) {
                     return dst.toString();
                 } else {
@@ -150,7 +150,7 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
                     return rel.toString().replace('\\','/');
                 }
             } catch (Exception ex) {
-                // If copy fails, keep original reference
+                // Nếu sao chép lỗi thì giữ tham chiếu gốc
                 return original;
             }
         };
@@ -165,7 +165,7 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         FormInvoiceEntity saved = repo.save(e);
         log.debug("FormInvoice saved: id={}, companyId={}, category={}, status={}", saved.getId(), saved.getCompanyId(), saved.getCategory(), saved.getStatus());
 
-        // If not active, do not touch invoice_numbers at all
+        // Nếu không kích hoạt thì không đụng tới invoice_numbers
         if (saved.getStatus() == null || saved.getStatus() != 1) {
             log.debug("Form not active (status={}), returning without touching invoice_numbers", saved.getStatus());
             return saved;

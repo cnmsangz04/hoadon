@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <div class="container-fluid py-3 tax-authorities">
         <div class="d-flex align-items-center justify-content-between mb-3">
             <h4 class="mb-0 font-weight-bold">Danh sách Cơ quan thuế</h4>
@@ -210,7 +210,7 @@ export default {
                 { key: "option", label: "Chức năng", class: "text-center", thStyle: { width: "80px" } }
             ],
 
-            // Form State
+            // Trạng thái form
             fetchingDetail: false,
             processing: false,
             form: {
@@ -239,7 +239,7 @@ export default {
         }
     },
     mounted() {
-        this.loadParents(); // Load danh sách cha trước để fill combobox
+        this.loadParents(); // Tải danh sách cha trước để điền combobox
         this.loadData();
     },
     methods: {
@@ -274,7 +274,7 @@ export default {
                     this.list.current_page = (responseData.page.number || 0) + 1;
                     this.list.per_page = responseData.page.size || this.list.per_page;
                 } else {
-                    // Fallback nếu API không trả về object page (trường hợp lỗi hoặc rỗng)
+                    // Dự phòng nếu API không trả về object page (trường hợp lỗi hoặc rỗng)
                     this.list.total = 0;
                 }
 

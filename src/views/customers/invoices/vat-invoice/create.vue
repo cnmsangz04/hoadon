@@ -1,14 +1,14 @@
-<template>
+﻿<template>
   <div class="invoice-container">
     <b-card class="invoice-card">
-      <!-- Header -->
+      <!-- Tiêu đề -->
       <div class="invoice-header">
         <h4 class="invoice-title">Lập hóa đơn GTGT</h4>
       </div>
 
-      <!-- Removed inline alert; use toastr for error notifications -->
+      <!-- Đã bỏ cảnh báo inline; dùng toastr để hiển thị lỗi -->
       
-      <!-- Skeleton tải -->
+      <!-- Khung tải -->
       <div v-if="isBusy" class="loading-skeleton">
         <b-skeleton width="100%" height="20px" animated class="mb-2" />
         <b-skeleton width="96%" height="20px" animated class="mb-2" />
@@ -375,7 +375,7 @@
           </b-row>
         </div>
 
-        <!-- Action buttons -->
+        <!-- Nút thao tác -->
         <div class="action-buttons">
 		  <b-button size="sm" variant="outline-secondary" @click="goBack">
 		    <i class="fas fa-arrow-left mr-1"></i> Quay lại
@@ -403,7 +403,7 @@ export default {
       isBusy: false,
       isBusyDetail: false,
       error: null,
-      // Track shown error keys to avoid duplicate toasts
+      // Theo dõi key lỗi đã hiển thị để tránh toast trùng
       shownErrorKeys: new Set(),
       prepare: { formId: null, formCode: null, serial: null, haveCode: null, registerId: null, registerEffectiveDate: null },
       formInvoices: { name: null, form_code: null, serial: null, have_code: null },
@@ -512,20 +512,20 @@ export default {
         this.$toastr.error(message, 'Lỗi')
       }
     },
-    // Format a date to YYYY-MM-DD using local time
+    // Định dạng ngày thành YYYY-MM-DD theo giờ local
     formatLocalDateYYYYMMDD (d = new Date()) {
       const year = d.getFullYear()
       const month = String(d.getMonth() + 1).padStart(2, '0')
       const day = String(d.getDate()).padStart(2, '0')
       return `${year}-${month}-${day}`
     },
-    // Normalize VAT rate to number or null
+    // Chuẩn hóa thuế suất VAT thành số hoặc null
     normalizeVatRate (v) {
       if (v === null || v === undefined || v === '') return null
       const n = Number(v)
       return Number.isNaN(n) ? null : n
     },
-    // Map raw product item to normalized fields we use in the invoice row
+    // Ánh xạ sản phẩm thô sang các trường chuẩn dùng trong dòng hóa đơn
     normalizeProduct (item) {
       if (!item) return null
       return {
@@ -537,7 +537,7 @@ export default {
         feature: item.feature != null ? Number(item.feature) : (item.type != null ? Number(item.type) : 1)
       }
     },
-    // Find a product by exact name first, then by code, then contains name (case-insensitive)
+    // Tìm sản phẩm theo tên chính xác trước, sau đó theo mã, rồi theo tên chứa chuỗi (không phân biệt hoa thường)
     findProductByNameOrCode (input) {
       const s = String(input || '').trim().toLowerCase()
       if (!s) return null
@@ -547,7 +547,7 @@ export default {
       if (!found) found = arr.find(p => String(p?.name || '').toLowerCase().includes(s))
       return this.normalizeProduct(found)
     },
-    // Apply normalized product data to a table row and recalc
+    // Áp dữ liệu sản phẩm đã chuẩn hóa vào dòng bảng và tính lại
     applyProductToRow (p, idx) {
       if (!p || idx == null) return
       const r = this.frmData.detail[idx]
@@ -628,7 +628,7 @@ export default {
         const customers = customersPage && customersPage.data ? customersPage.data : []
         // store full customers for later lookup
         this.customersRaw = customers
-        // Format for v-select: array of objects with value and text properties
+        // Định dạng cho v-select: mảng đối tượng có giá trị và chữ hiển thị.
         const opts = customers.map(c => ({
           value: c.code,
           text: `${c.code} - ${(c.companyName || c.buyerName || '')}`.trim()
@@ -655,7 +655,7 @@ export default {
       this.frmData.customer.bank_name = c.bankName || c.bank_name || this.frmData.customer.bank_name
       this.frmData.customer.bank_no = c.bankAccountNumber || c.bank_no || this.frmData.customer.bank_no
     },
-    // Handle customer code input change (for datalist)
+    // Xử lý thay đổi mã khách hàng (cho datalist)
     onCustomerCodeChange () {
       const code = String(this.frmData.customer.code || '').trim()
       if (!code) return
@@ -729,7 +729,7 @@ export default {
       // recalc totals
       this.recalcTotals()
     },
-    // Navigate back
+    // Quay lại
     goBack () {
       if (this.$router && typeof this.$router.back === 'function') {
         this.$router.back()
@@ -743,7 +743,7 @@ export default {
         const { data } = await axios.get(`/invoices/${this.editId}`)
         this.loadedInvoice = data
         this.invoiceStatus = data?.status ?? 0
-        // Map response back to form
+        // Ánh xạ phản hồi về form
         this.frmData.no = data?.no ?? this.frmData.no
         this.frmData.date_export = data?.dateExport ?? this.frmData.date_export
         this.frmData.payment_type = data?.paymentType ?? this.frmData.payment_type
@@ -830,7 +830,7 @@ export default {
         if (this.editId) {
           res = await axios.put(`/invoices/${this.editId}`, basePayload, { successMessage: 'Đã cập nhật hóa đơn' })
         } else {
-          // Backend will auto-generate id_attr (32 chars) and lookup_code (10 chars)
+          // Phía backend sẽ tự sinh id_attr (32 ký tự) và lookup_code (10 ký tự)
           res = await axios.post('/invoices', basePayload, { successMessage: 'Đã lưu hóa đơn' })
         }
         const data = res?.data || {}
@@ -1028,7 +1028,7 @@ export default {
   overflow: hidden;
 }
 
-/* Header */
+/* Tiêu đề */
 .invoice-header {
   display: flex;
   align-items: center;
@@ -1211,7 +1211,7 @@ export default {
 .small { font-size: 11.5px; }
 .mt-2 { margin-top: 6px; }
 
-/* Tinh ch?nh responsive */
+/* Tinh chỉnh responsive */
 @media (max-width: 992px) {
   .form-section { padding: 10px 12px; }
   .invoice-header { margin-bottom: 12px; }

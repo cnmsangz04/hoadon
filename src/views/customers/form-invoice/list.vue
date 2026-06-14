@@ -1,6 +1,6 @@
-<template>
+﻿<template>
   <div class="container-fluid py-3 form-invoices">
-    <!-- Header v� thao t�c -->
+    <!-- Tiêu đề và thao tác -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="d-flex align-items-center">
         <h4 class="mb-0 font-weight-bold">Danh sách mẫu hóa đơn</h4>
@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <!-- B? l?c -->
+    <!-- Bộ lọc -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="4" class="mb-2">
@@ -57,7 +57,7 @@
       </b-row>
     </b-card>
 
-    <!-- B?ng m?u h�a don -->
+    <!-- Bảng mẫu hóa đơn -->
     <b-card class="shadow-sm">
       <b-table
         bordered
@@ -110,7 +110,7 @@
         </template>
       </b-table>
 
-      <!-- Skeleton t?i khi chuy?n trang -->
+      <!-- Khung tải khi chuyển trang -->
       <div v-if="isBusy" class="mt-2">
         <b-skeleton width="100%" height="20px" animated class="mb-2" />
         <b-skeleton width="96%" height="20px" animated class="mb-2" />
@@ -154,7 +154,7 @@
       </b-row>
     </b-card>
 
-    <!-- Modal xem h�a don b?ng iframe -->
+    <!-- Hộp thoại xem hóa đơn bằng iframe -->
     <b-modal
       id="modalFormInvoice"
       size="lg"
@@ -209,7 +209,7 @@ export default {
     return {
       isBusy: false,
       usersMap: {},
-      // State iframe để xem hóa đơn
+      // Trạng thái iframe để xem hóa đơn
       iframe: {
         src: null,
         form_id: null,

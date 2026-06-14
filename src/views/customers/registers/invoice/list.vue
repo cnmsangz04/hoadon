@@ -1,6 +1,6 @@
-<template>
+﻿<template>
   <div class="container-fluid py-3 register-invoices">
-    <!-- Header v� thao t�c -->
+    <!-- Tiêu đề và thao tác -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="d-flex align-items-center">
         <h4 class="mb-0 font-weight-bold">Danh sách tờ khai hóa đơn điện tử</h4>
@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <!-- B? l?c -->
+    <!-- Bộ lọc -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="4" class="mb-2">
@@ -77,7 +77,7 @@
       </b-row>
     </b-card>
 
-    <!-- B?ng t? khai h�a don -->
+    <!-- Bảng tờ khai hóa đơn -->
     <b-card class="shadow-sm">
       <b-table
         bordered
@@ -132,7 +132,7 @@
         </template>
       </b-table>
 
-      <!-- Skeleton t?i khi chuy?n trang -->
+      <!-- Khung tải khi chuyển trang -->
       <div v-if="isBusy" class="mt-2">
         <b-skeleton width="100%" height="20px" animated class="mb-2" />
         <b-skeleton width="96%" height="20px" animated class="mb-2" />
@@ -176,7 +176,7 @@
       </b-row>
     </b-card>
 
-    <!-- Modal l?ch s? -->
+    <!-- Hộp thoại lịch sử -->
     <b-modal ref="historyModal" size="lg" title="Lịch sử truyền nhận" hide-header-close>
       <div>
         <b-table-simple bordered small responsive show-empty :busy="historyBusy" empty-text="Không có dữ liệu">
@@ -336,7 +336,7 @@ export default {
       return 'secondary' // Khởi tạo hoặc khác
     },
     mapItem(raw) {
-      // Convert camelCase keys from backend into snake_case expected by the table
+      // Chuyển key camelCase từ backend sang snake_case theo bảng
       if (!raw || typeof raw !== 'object') return raw
       const m = {
         formPattern: 'form_pattern',
@@ -361,9 +361,9 @@ export default {
     },
     normalizePageResponse(raw) {
       const out = { ...this.list }
-      // Laravel style
+      // Định dạng phân trang tương tự hệ cũ
       if (Array.isArray(raw.data)) {
-        // Map items
+        // Ánh xạ danh sách item
         out.data = raw.data.map(this.mapItem)
         out.total = Number(raw.total || raw.data.length) || 0
         // Pagination links
@@ -373,7 +373,7 @@ export default {
         out.to = Math.min(out.from + out.per_page - 1, out.total) || 0
         return out
       }
-      // Fallback: array
+      // Dự phòng: mảng dữ liệu
       if (Array.isArray(raw)) {
         out.data = raw.map(this.mapItem)
         out.total = raw.length
@@ -383,7 +383,7 @@ export default {
         out.to = raw.length
         return out
       }
-      // Unknown format
+      // Định dạng không xác định
       return out
     },
     async fetchList() {
@@ -392,7 +392,7 @@ export default {
         const params = this.buildQuery()
         const { data } = await axios.get('/register-invoices/list', { params })
         let normalized = this.normalizePageResponse(data)
-        // Client-side fallback: enforce declaration type filter if backend did not
+        // Dự phòng phía client: lọc loại tờ khai nếu backend chưa lọc
         if (this.filters.declarationType != null) {
           const want = Number(this.filters.declarationType)
           const filtered = (normalized.data || []).filter(item => Number((item.declaration_type ?? item.declarationType)) === want)
@@ -476,7 +476,7 @@ export default {
       try {
         const base = axios.defaults.baseURL || ''
         const url = `${base}/register-invoices/${item.id}/download-xml`
-        // Use fetch to get XML and download with a filename
+        // Dùng fetch để lấy XML và tải xuống với tên file
         fetch(url, {
           headers: {
             'Accept': 'application/xml',
@@ -498,7 +498,7 @@ export default {
           document.body.removeChild(link)
           URL.revokeObjectURL(link.href)
         }).catch(() => {
-          // Fallback: open in new tab
+          // Dự phòng: mở trong tab mới
           window.open(url, '_blank')
         })
       } catch {
@@ -532,7 +532,7 @@ export default {
           }
         )
         if (!ok) return
-        // Backend allows delete; we show delete only when status === 0
+        // Phía backend cho phép xóa; giao diện chỉ hiện xóa khi status === 0
         await axios.delete(`/register-invoices/${id}`)
         this.$bvToast && this.$bvToast.toast('Đã xóa tờ khai', { title: 'Thành công', variant: 'success', solid: true, autoHideDelay: 3000 })
         // Tải lại danh sách sau khi xóa
@@ -573,7 +573,7 @@ export default {
         }
         if (!ok) return
         const { data } = await axios.post(`/register-invoices/${id}/sign`, null, { successMessage: 'Đã ký số tờ khai thành công' })
-        // Update the row item with returned fields
+        // Cập nhật the row item with returned fields
         const signatureName = data?.signatureInfo || data?.signature_info || null
         const signDate = data?.signDate || data?.sign_date || new Date().toISOString()
         const signedXml = data?.signedXml || data?.signed_xml || null
@@ -626,12 +626,12 @@ export default {
         if (!ok) return
         this.isBusy = true
         await axios.post(`/register-invoices/${id}/send`, null, { successMessage: 'Đã gửi tờ khai lên Cơ quan thuế' })
-        // Align with create.vue: do not force a local status update; refresh row from backend
+        // Đồng bộ với create.vue: không ép cập nhật status cục bộ, nạp lại dòng từ backend
         await this.refreshRow(id)
-        // Start polling for async tax responses with user notifications
+        // Bắt đầu polling phản hồi thuế bất đồng bộ kèm thông báo người dùng
         this.pollTaxStatusForRow(id)
       } catch (e) {
-        // Error toast handled globally by axios plugin
+        // Toast lỗi đã được axios plugin xử lý toàn cục
       } finally {
         this.isBusy = false
       }
@@ -639,7 +639,7 @@ export default {
     async refreshRow(id) {
       try {
         const { data } = await axios.get(`/register-invoices/${id}`)
-        // Map camelCase to snake_case for the table
+        // Chuyển camelCase sang snake_case cho bảng
         const mapped = this.mapItem(data)
         const idx = this.list.data.findIndex(x => (x.id||x.ID||x.Id) === id)
         if (idx >= 0) this.$set(this.list.data, idx, { ...this.list.data[idx], ...mapped })
@@ -656,7 +656,7 @@ export default {
           tries++
           const { data } = await axios.get(`/register-invoices/${id}`)
           const status = Number(data?.status)
-          // Notify receive stage (102)
+          // Thông báo giai đoạn tiếp nhận (102)
           if (!notifiedReceive && (status === 3 || status === 4)) {
             notifiedReceive = true
             if (status === 4) {
@@ -665,7 +665,7 @@ export default {
               this.$bvToast && this.$bvToast.toast('Cơ quan thuế không tiếp nhận tờ khai', { title: 'Thông báo', variant: 'warning', solid: true, autoHideDelay: 4000 })
             }
           }
-          // Notify accept stage (103)
+          // Thông báo giai đoạn chấp nhận (103)
           if (!notifiedAccept && (status === 5 || status === 6)) {
             notifiedAccept = true
             if (status === 6) {
@@ -674,9 +674,9 @@ export default {
               this.$bvToast && this.$bvToast.toast('Cơ quan thuế không chấp nhận tờ khai', { title: 'Thông báo', variant: 'danger', solid: true, autoHideDelay: 4000 })
             }
           }
-          // Update row in list with latest data
+          // Cập nhật row in list with latest data
           this.refreshRow(id)
-          // Stop when done or timeout
+          // Dừng khi hoàn tất hoặc hết thời gian chờ
           if ((notifiedReceive && notifiedAccept) || tries >= 10) {
             clearInterval(timer)
           }
@@ -696,7 +696,7 @@ export default {
         this.historyRows = []
         this.historyForId = id
         const { data } = await axios.get(`/register-invoices/${id}/history`)
-        // Normalize keys to snake_case for view
+        // Chuẩn hóa key sang snake_case cho phần hiển thị
         this.historyRows = Array.isArray(data) ? data.map(r => ({
           id: r.id,
           title: r.title,

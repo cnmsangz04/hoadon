@@ -1,6 +1,6 @@
-<template>
+﻿<template>
   <div class="container-fluid py-3 vat-rates">
-    <!-- Ti�u d? v� thao t�c -->
+    <!-- Tiêu đề và thao tác -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 font-weight-bold">Danh sách thuế suất</h4>
       <div>
@@ -15,7 +15,7 @@
       </div>
     </div>
 
-    <!-- B? l?c -->
+    <!-- Bộ lọc -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="6" class="mb-2">
@@ -40,7 +40,7 @@
       </b-row>
     </b-card>
 
-    <!-- Danh s�ch k�o th? -->
+    <!-- Danh sách kéo thả -->
     <b-card class="mb-2 shadow-sm">
       <div class="d-flex align-items-center mb-2">
         <h6 class="mb-0 mr-2">Thứ tự hiển thị</h6>
@@ -146,11 +146,11 @@
         </template>
       </b-table>
 
-      <!-- Ph�n trang -->
+      <!-- Phân trang -->
       <b-pagination v-if="list.total > list.per_page" v-model="list.current_page" :per-page="list.per_page" :total-rows="list.total" align="right" class="mt-2" @input="onPageChange" />
     </b-card>
 
-    <!-- Modal -->
+    <!-- Hộp thoại -->
     <b-modal ref="vatRateModal" title="Thêm / Cập nhật thuế suất" hide-footer>
       <b-form @submit.prevent="saveVatRate">
 

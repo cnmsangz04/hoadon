@@ -1,9 +1,9 @@
-<template>
+﻿<template>
   <div class="right_col" role="main">
     <div class="page-content">
       <div class="page-account">
         <div>
-          <!-- Header -->
+          <!-- Tiêu đề -->
           <div class="profile-avatar text-center">
             <div class="img-avatar">
               <b-avatar
@@ -24,7 +24,7 @@
             <p>{{ $t('account.description') }}</p>
           </div>
 
-          <!-- �ang t?i -->
+          <!-- Đang tải -->
           <b-skeleton-wrapper v-if="loading">
             <b-card>
               <div class="p-3" v-for="n in 3" :key="n">
@@ -34,11 +34,11 @@
             </b-card>
           </b-skeleton-wrapper>
 
-          <!-- Th�ng tin -->
+          <!-- Thông tin -->
           <b-card v-else class="profile-card">
             <h4 class="section-title">Thông tin cá nhân</h4>
 
-            <!-- Username (ch? d?c) -->
+            <!-- Tên đăng nhập (chỉ đọc) -->
             <div class="list-info">
               <div class="list-item">
                 <div>
@@ -48,7 +48,7 @@
               </div>
             </div>
 
-            <!-- T�n -->
+            <!-- Tên -->
             <div class="list-info">
               <div class="list-item" v-if="!showName">
                 <div>
@@ -104,7 +104,7 @@
               </b-form>
             </div>
 
-            <!-- �i?n tho?i -->
+            <!-- Điện thoại -->
             <div class="list-info">
               <div class="list-item" v-if="!showPhone">
                 <div>
@@ -132,7 +132,7 @@
               </b-form>
             </div>
 
-            <!-- �?i m?t kh?u -->
+            <!-- Đổi mật khẩu -->
             <div class="list-info">
               <div class="list-item" v-if="!showPassword">
                 <div>
@@ -170,7 +170,7 @@
       </div>
     </div>
 
-    <!-- Modal avatar -->
+    <!-- Hộp thoại ảnh đại diện -->
     <b-modal
       ref="profile-photo"
       centered
@@ -234,14 +234,14 @@ export default {
       const src = this.account?.avatar
       if (!src) return null
       try {
-        // If absolute URL to localhost:8081, rewrite to relative so dev proxy handles it
+        // Nếu URL tuyệt đối trỏ về localhost:8081 thì đổi sang đường dẫn tương đối để proxy dev xử lý
         const u = new URL(src, window.location.origin)
         if (u.hostname === 'localhost' && u.port === '8081' && u.pathname.startsWith('/uploads/')) {
           return u.pathname + u.search
         }
         return src
       } catch {
-        // If parsing fails, return as-is
+        // Nếu parse lỗi thì giữ nguyên giá trị
         return src
       }
     },
@@ -392,7 +392,7 @@ export default {
 
 
 <style scoped>
-/* B? c?c */
+/* Bố cục */
 .right_col {
   background: #f4f6f9;
   min-height: 100vh;
@@ -403,7 +403,7 @@ export default {
   margin: auto;
 }
 
-/* Header */
+/* Tiêu đề */
 .profile-avatar {
   margin-bottom: 24px;
 }
@@ -416,7 +416,7 @@ export default {
   color: #6b7280;
 }
 
-/* Avatar */
+/* Ảnh đại diện */
 .img-avatar {
   position: relative;
   display: inline-block;
@@ -437,7 +437,7 @@ export default {
   box-shadow: 0 6px 20px rgba(37,99,235,.35);
 }
 
-/* Th? */
+/* Thẻ */
 .profile-card {
   border-radius: 16px;
   border: none;
@@ -448,7 +448,7 @@ export default {
   margin-bottom: 16px;
 }
 
-/* D�ng th�ng tin */
+/* Dòng thông tin */
 .list-info {
   padding: 16px 0;
   border-top: 1px solid #eee;
@@ -467,20 +467,20 @@ export default {
   font-weight: 500;
 }
 
-/* Bi?u m?u */
+/* Biểu mẫu */
 .form-profile {
   background: #f9fafb;
   padding: 12px;
   border-radius: 10px;
 }
 
-/* N�t */
+/* Nút */
 .btn-primary {
   background: #2563eb;
   border: none;
 }
 
-/* Upload */
+/* Tải lên */
 .upload-btn-wrapper {
   border: 2px dashed #cbd5e1;
   padding: 40px;
@@ -498,14 +498,14 @@ export default {
   inset: 0;
 }
 
-/* B? c?t ?nh */
+/* Bố cục ảnh */
 .cropper {
   height: 420px;
   border-radius: 12px;
   overflow: hidden;
 }
 
-/* Khu v?c d?i m?t kh?u */
+/* Khu vực đổi mật khẩu */
 .list-info h5 {
   font-weight: 700;
   color: #111827;
@@ -542,17 +542,17 @@ export default {
   padding-right: 6px;
 }
 
-/* �?ng b? kho?ng c�ch */
+/* Đồng bộ khoảng cách */
 .profile-card .list-info + .list-info { border-top: 1px dashed #eef2f7; }
 .profile-card .list-info { padding-top: 14px; padding-bottom: 14px; }
 
-/* �?ng b? m�u n�t */
+/* Đồng bộ màu nút */
 :deep(.btn-primary) {
   background: linear-gradient(180deg, #4f77ff, #3b66f0);
 }
 :deep(.btn-primary:hover) { filter: brightness(1.03); }
 
-/* Tinh ch?nh responsive */
+/* Tinh chỉnh responsive */
 @media (max-width: 576px) {
   .form-profile .btn-primary { width: 100%; }
 }

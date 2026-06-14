@@ -1,4 +1,4 @@
-package vn.hoadon.services.impl;
+﻿package vn.hoadon.services.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -198,7 +198,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             String s = java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase(); // 32 chars
             if (!invoiceRepository.existsByIdAttr(s)) return s;
         }
-        // Fallback: nanoTime + random, truncated to 32, uppercase
+        // Dự phòng: nanoTime + random, cắt còn 32 ký tự và viết hoa
         String s = (Long.toHexString(System.nanoTime()) + java.util.UUID.randomUUID().toString().replace("-", "")).toUpperCase();
         if (s.length() > 32) s = s.substring(0, 32);
         return s;
@@ -212,7 +212,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             String s = randomString(rnd, ALPHANUM, 10);
             if (!invoiceRepository.existsByLookupCode(s)) return s;
         }
-        // Fallback with timestamp prefix trimmed to 10
+        // Dự phòng với tiền tố timestamp cắt còn 10 ký tự
         String s = ("LK" + Long.toString(System.currentTimeMillis(), 36).toUpperCase() + randomString(rnd, ALPHANUM, 6)).toUpperCase();
         if (s.length() > 10) s = s.substring(0, 10);
         return s;

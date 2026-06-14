@@ -1,4 +1,4 @@
-package vn.hoadon.services.impl;
+﻿package vn.hoadon.services.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -66,7 +66,7 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
         // 4. Query DB với bộ lọc tổng hợp
         Page<TaxAuthorityEntity> entities = taxRepo.findAll(spec, pageable);
 
-        // 5. Convert sang DTO Response
+        // 5. Chuyển sang DTO phản hồi
         return entities.map(this::mapToResponse);
     }
 
@@ -149,7 +149,7 @@ public class TaxAuthorityServiceImpl implements TaxAuthorityService {
     }
 
     private void mapRequestToEntity(TaxAuthorityRequest req, TaxAuthorityEntity entity) {
-        // Convert Code String -> Integer
+        // Chuyển Code từ String sang Integer
         if (req.getCode() != null && !req.getCode().trim().isEmpty()) {
             try {
                 entity.setCode(Integer.valueOf(req.getCode().trim()));

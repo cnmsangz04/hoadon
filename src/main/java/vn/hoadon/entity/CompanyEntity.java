@@ -1,4 +1,4 @@
-package vn.hoadon.entity;
+﻿package vn.hoadon.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -87,7 +87,7 @@ public class CompanyEntity {
     )
     private List<MailTemplateEntity> mailTemplates = new ArrayList<>();
 
-    // One company có nhiều ngân hàng
+    // Một công ty có nhiều ngân hàng
     @OneToMany(mappedBy = "company", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CompanyBankEntity> companyBanks;
 

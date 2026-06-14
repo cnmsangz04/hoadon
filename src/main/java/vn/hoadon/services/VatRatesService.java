@@ -1,4 +1,4 @@
-package vn.hoadon.services;
+﻿package vn.hoadon.services;
 
 
 import org.springframework.data.domain.Page;
@@ -21,7 +21,7 @@ public interface VatRatesService {
     // Read - get by id
     VatRatesEntity findById(Integer id);
 
-    // Update
+    // Cập nhật
     VatRatesEntity update(Integer id, VatRatesEntity taxRate);
 
     // Delete

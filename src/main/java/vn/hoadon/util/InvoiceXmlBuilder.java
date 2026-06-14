@@ -1,4 +1,4 @@
-package vn.hoadon.util;
+﻿package vn.hoadon.util;
 
 import vn.hoadon.entity.FormInvoiceEntity;
 import vn.hoadon.entity.UserEntity;
@@ -9,17 +9,17 @@ import vn.hoadon.entity.CompanyBankEntity;
 import java.util.*;
 
 /**
- * Build XML for an invoice (HDon) based on InvoiceEntity and related company info.
+ * Tạo XML hóa đơn (HDon) dựa trên InvoiceEntity và thông tin công ty liên quan.
  */
 public final class InvoiceXmlBuilder {
     private InvoiceXmlBuilder() {}
 
     /**
-     * Build invoice XML from entities.
-     * @param inv InvoiceEntity
-     * @param form FormInvoiceEntity (to derive KHHDon)
-     * @param company CompanyEntity
-     * @param bank Preferred CompanyBankEntity (may be null)
+     * Tạo XML hóa đơn từ các entity.
+     * @param inv entity hóa đơn
+     * @param form entity mẫu hóa đơn, dùng để suy ra KHHDon
+     * @param company entity công ty
+     * @param bank entity ngân hàng ưu tiên của công ty, có thể null
      */
     public static String build(InvoiceEntity inv, FormInvoiceEntity form, CompanyEntity company, CompanyBankEntity bank) {
         if (inv == null) return "";

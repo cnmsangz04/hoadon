@@ -1,4 +1,4 @@
-package vn.hoadon.controllers.setting;
+﻿package vn.hoadon.controllers.setting;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -116,7 +116,7 @@ public class ProfileController extends BaseController {
                 dto.bankNo = cb.getAccountNumber();
                 dto.bankAddress = cb.getBankAddress();
                 dto.bankBrand = cb.getBankBrand();
-                // Thử map tên ngân hàng sang mã viết tắt cho select
+                // Thử ánh xạ tên ngân hàng sang mã viết tắt cho ô chọn
                 if (cb.getBankName() != null) {
                     bankService.findByName(cb.getBankName()).ifPresentOrElse(
                         b -> {

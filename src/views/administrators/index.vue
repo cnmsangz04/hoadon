@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="administrators-index admin-page">
     <section class="admin-hero">
       <div class="hero-content">
@@ -40,7 +40,7 @@ export default {
   opacity: 0.95;
 }
 
-/* Lu?i th?ng k� */
+/* Lưới thống kê */
 .admin-stats {
   margin-top: 18px;
 }
@@ -67,7 +67,7 @@ export default {
   font-size: 0.95rem;
 }
 
-/* Tuong th�ch m�n h�nh */
+/* Tương thích màn hình */
 @media (max-width: 992px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);

@@ -1,4 +1,4 @@
-package vn.hoadon.util;
+﻿package vn.hoadon.util;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,7 +10,7 @@ public final class UploadPath {
 
     public static final String BASE_DIR = "uploads";
 
-    // If you want to obfuscate companyId, change this method to encode (e.g., Base64, hash, etc.)
+    // Nếu cần che companyId, có thể đổi hàm này sang dạng mã hóa như Base64 hoặc hash.
     public static String encodeCompanyId(Long companyId) {
         return String.valueOf(companyId);
     }

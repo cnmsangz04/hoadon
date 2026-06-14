@@ -1,4 +1,4 @@
-package vn.hoadon.services.impl;
+﻿package vn.hoadon.services.impl;
 
 import org.springframework.stereotype.Service;
 import vn.hoadon.dto.history.HistoryDto;
@@ -104,7 +104,7 @@ public class HistoryServiceImpl implements HistoryService {
                 filtered.add(h);
             }
         }
-        // Sort by createdAt descending
+        // Sắp xếp giảm dần theo createdAt
         filtered.sort((a, b) -> {
             java.time.LocalDateTime ca = a.getCreatedAt();
             java.time.LocalDateTime cb = b.getCreatedAt();

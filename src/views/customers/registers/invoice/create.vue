@@ -1,6 +1,6 @@
-<template>
+﻿<template>
   <div class="container-fluid py-3 register-invoice-create">
-    <!-- Header -->
+    <!-- Tiêu đề -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="d-flex align-items-center">
         <h4 class="mb-0 font-weight-bold">Tờ Khai Hóa Đơn Điện Tử</h4>
@@ -278,7 +278,7 @@
         </b-col>
       </b-row>
 
-      <!-- Bottom Actions Bar -->
+      <!-- Thanh thao tác dưới -->
       <div class="action-bar mt-3 pt-3">
         <div class="d-flex align-items-center justify-content-between">
           <div>
@@ -302,7 +302,7 @@
       </div>
     </b-card>
 
-    <!-- Signature modal -->
+    <!-- Hộp thoại chữ ký số -->
     <b-modal ref="modalSignature" no-close-on-esc no-close-on-backdrop hide-header-close header-bg-variant="light" @hidden="onSignatureModalHidden">
       <template #modal-title>
         <div class="modal-title">{{ signatureModal.index !== false ? 'Cập nhật chữ ký số' : 'Thêm chữ ký số' }}</div>
@@ -558,7 +558,7 @@ export default {
       else if (typeof raw === 'string' && raw.trim()) {
         try {
           let p = JSON.parse(raw)
-          // Handle double-encoded JSON: if result is string, parse again
+          // Xử lý JSON bị encode hai lần: nếu kết quả là chuỗi thì parse thêm lần nữa
           if (typeof p === 'string' && p.trim()) {
             try { p = JSON.parse(p) } catch {}
           }
@@ -567,7 +567,7 @@ export default {
       } else if (raw && typeof raw === 'object') {
         arr = [raw]
       }
-      // Map to UI codes if a dict provided
+      // Ánh xạ sang mã giao diện nếu có dict
       if (mapDict && Array.isArray(arr)) {
         return arr.map(item => {
           if (typeof item === 'string') return mapDict[item] || item
@@ -581,7 +581,7 @@ export default {
       return arr
     },
     normalizeInvoiceForms(raw) {
-      // Backend may use codes: CMa, KCMa, CMTMTTien; align to same
+      // Phía backend có thể dùng các mã CMa, KCMa, CMTMTTien; đồng bộ về cùng kiểu
       const dict = { CMa: 'CMa', KCMa: 'KCMa', CMTMTTien: 'CMTMTTien', 'CO_MA': 'CMa', 'KHONG_MA': 'KCMa', 'MA_MAY_TINH_TIEN': 'CMTMTTien' }
       return Array.from(new Set(this.normalizeArray(raw, dict)))
     },
@@ -610,7 +610,7 @@ export default {
               const parsed = JSON.parse(item)
               arr.push(parsed)
             } catch {
-              // Handle malformed format {key=value}
+              // Xử lý định dạng sai {key=value}
               arr.push(this.parseKeyValueString(item))
             }
           } else if (item && typeof item === 'object') {
@@ -629,7 +629,7 @@ export default {
             arr = [p]
           }
         } catch {
-          // Handle malformed data like "[{orgName=VNPT, serialNo=123, ...}]"
+          // Xử lý dữ liệu sai định dạng như "[{orgName=VNPT, serialNo=123, ...}]"
           arr = [this.parseKeyValueString(raw)]
         }
       } else if (raw && typeof raw === 'object') {
@@ -823,7 +823,7 @@ export default {
         await this.loadDetail(id)
         this.pollTaxStatus(id)
       } catch (e) {
-        // Error toast handled globally by axios plugin
+        // Toast lỗi đã được axios plugin xử lý toàn cục
       } finally {
         this.btnLoading = false
       }
@@ -855,9 +855,9 @@ export default {
               this.$bvToast && this.$bvToast.toast('Cơ quan thuế không chấp nhận tờ khai', { title: 'Thông báo', variant: 'danger', solid: true, autoHideDelay: 4000 })
             }
           }
-          // Update UI detail
+          // Cập nhật UI detail
           this.applyDetail(data)
-          // Stop when both notifications done or timeout
+          // Dừng khi cả hai thông báo hoàn tất hoặc hết thời gian chờ
           if ((notifiedReceive && notifiedAccept) || tries >= 10) {
             clearInterval(timer)
           }
@@ -867,7 +867,7 @@ export default {
       }, 2000)
     },
     goBack() {
-      // Navigate back to the list view route explicitly
+      // Quay lại route danh sách một cách rõ ràng
       if (this.$router) {
         this.$router.push({ name: 'registers-invoice' })
       } else if (window && typeof window.location !== 'undefined') {

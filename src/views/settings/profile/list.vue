@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="right_col" role="main">
     <div class="page-content">
       <b-container fluid>
@@ -1269,7 +1269,7 @@ export default {
         });
     },
 
-    // Helper validate
+    // Hàm hỗ trợ validate
     state(field) {
       const errors = this.errors || {};
       if (!Object.prototype.hasOwnProperty.call(errors, field)) {
@@ -1286,7 +1286,7 @@ export default {
       return (errors[field] || []).join("");
     },
 
-    // Định vị popper của v-select
+    // Định vị menu xổ xuống của v-select.
     withPopper(dropdownList, component, { width }) {
       dropdownList.style.width = width;
       const popper = Popperjs(component.$refs.toggle, dropdownList, {

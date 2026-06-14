@@ -1,4 +1,4 @@
-import Vue from 'vue'
+﻿import Vue from 'vue'
 import VueRouter from 'vue-router'
 
 import authRoute from "./modules/auth";
@@ -147,7 +147,7 @@ router.beforeEach((to, from, next) => {
 	if (needUser && !tokenUser) return next('/auth/login')
 	if (tokenUser && guestUser) return next('/')
 
-	// Helper: validate token admin (role 0 Root hoặc role 1 Admin)
+	// Hàm hỗ trợ kiểm tra token admin (role 0 Root hoặc role 1 Admin)
 	function validateAdminToken(rawToken) {
 		if (!rawToken) return { valid: false, reason: 'missing' }
 		let payload

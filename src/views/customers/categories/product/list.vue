@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <div class="container-fluid py-3 product-list">
         <div class="d-flex align-items-center justify-content-between mb-3">
             <h4 class="mb-0 font-weight-bold">
@@ -335,7 +335,7 @@ export default {
         this.loadData();
     },
     methods: {
-        // 1. Lấy thông tin công ty từ Profile User (Backend tự xử lý token)
+        // 1. Lấy thông tin công ty từ hồ sơ người dùng (phía backend tự xử lý token)
         async loadProfile() {
             try {
                 // Gọi API ProfileController mà bạn đã cung cấp
@@ -353,7 +353,7 @@ export default {
             }
         },
 
-        // 2. Load danh sách sản phẩm
+        // 2. Tải danh sách sản phẩm
         async loadData() {
             this.isBusy = true;
             try {
@@ -400,12 +400,12 @@ export default {
             }
         },
 
-        // 3. Load danh sách thuế suất
+        // 3. Tải danh sách thuế suất
         async loadVatOptions() {
             try {
                 const res = await axios.get("/categories/product/vat-rates");
                 const items = Array.isArray(res.data) ? res.data : [];
-                // Build options for select and map for display
+                // Tạo tùy chọn cho ô chọn và ánh xạ để hiển thị
                 this.vatOptions = items.map(it => ({ value: it.code, text: it.label }));
                 this.vatNameById = items.reduce((acc, it) => {
                     acc[it.code] = it.label;
@@ -455,7 +455,7 @@ export default {
                 description: "",
                 status: 1,
             };
-            // Không cần gán companyId vì Backend tự lấy
+            // Không cần gán companyId vì phía backend tự lấy
             this.$refs.productModal.show();
         },
 
@@ -476,7 +476,7 @@ export default {
             this.isSaving = true;
             try {
                 // Gửi dữ liệu lên Server.
-                // Lưu ý: Không gửi companyId hoặc nếu có gửi thì Backend cũng sẽ override bằng ID của user đang login.
+                // Lưu ý: không gửi companyId; nếu có gửi thì phía backend cũng ghi đè bằng ID của user đang đăng nhập.
                 await axios.post("/categories/product/save", this.form);
 
                 this.$bvToast.toast("Lưu sản phẩm thành công", {
@@ -523,7 +523,7 @@ export default {
 .text-right {
     text-align: right;
 }
-/* Style cho ô input readonly nhìn đẹp hơn */
+/* Kiểu cho ô input chỉ đọc nhìn đẹp hơn */
 .bg-light {
     background-color: #f8f9fa !important;
 }

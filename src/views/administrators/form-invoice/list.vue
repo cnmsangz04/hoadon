@@ -1,6 +1,6 @@
-<template>
+﻿<template>
     <div class="container-fluid py-3 form-invoices-admin">
-        <!-- Ti�u d? v� thao t�c -->
+        <!-- Tiêu đề và thao tác -->
         <div class="d-flex align-items-center justify-content-between mb-3">
             <h4 class="mb-0 font-weight-bold">Mẫu hóa đơn</h4>
             <div>
@@ -15,7 +15,7 @@
             </div>
         </div>
 
-        <!-- H�ng b? l?c -->
+        <!-- Hàng bộ lọc -->
         <b-card class="mb-3 shadow-sm">
             <b-row>
                 <b-col md="4" class="mb-2">
@@ -250,7 +250,7 @@ export default {
 </script>
 
 <style scoped>
-/* Style th? */
+/* Kiểu thẻ */
 .form-invoices-admin .card.shadow-sm {
     border-radius: 10px;
 }
@@ -264,7 +264,7 @@ export default {
     background-color: #fafbfd;
 }
 
-/* N�t */
+/* Nút */
 .form-invoices-admin .btn-outline-primary {
     border-color: #dfe7ff;
 }
@@ -273,7 +273,7 @@ export default {
     background: #eef3ff;
 }
 
-/* Header b?ng */
+/* Tiêu đề bảng */
 .form-invoices-admin .table thead th {
     background: #f7f9fc;
     border-bottom: 1px solid #ecf0f6;
@@ -281,7 +281,7 @@ export default {
     font-weight: 700;
 }
 
-/* Style b?ng hi?n d?i */
+/* Kiểu bảng hiện đại */
 .table-modern thead th {
     background-color: #f9fafb;
     border-bottom: 2px solid #e5e7eb;
@@ -311,13 +311,13 @@ export default {
     border-color: #e9ecef;
 }
 
-/* Style badge */
+/* Kiểu nhãn trạng thái */
 .badge {
     font-size: 13px;
     padding: 0.35em 0.65em;
 }
 
-/* Ti?n �ch text */
+/* Tiện ích text */
 .text-mono {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
@@ -327,7 +327,7 @@ export default {
     padding: 0.75rem 1rem;
 }
 
-/* Nh�m input */
+/* Nhóm input */
 .input-group-text {
     background-color: #f8f9fa;
     border-right: none;
@@ -353,7 +353,7 @@ export default {
     text-align: center;
 }
 
-/* Style h�nh ?nh */
+/* Kiểu hình ảnh */
 img {
     object-fit: cover;
 }

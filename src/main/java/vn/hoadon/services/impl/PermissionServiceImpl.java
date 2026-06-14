@@ -1,4 +1,4 @@
-package vn.hoadon.services.impl;
+﻿package vn.hoadon.services.impl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -130,7 +130,7 @@ public class PermissionServiceImpl implements PermissionService {
             log.warn("Failed assigning permission to roots: {}", ex.getMessage());
         }
 
-        // If level=0, also assign to all admins (role=1)
+        // Nếu level = 0, gán thêm cho toàn bộ admin (role = 1)
         int lvl = saved.getLevel() != null ? saved.getLevel() : 2;
         if (lvl == 0) {
             try {
@@ -210,7 +210,7 @@ public class PermissionServiceImpl implements PermissionService {
             return deny(isBoolean);
         }
 
-        // Normalize input keys
+        // Chuẩn hóa key đầu vào
         List<String> permissionKeys = Arrays.stream(keys.split("\\|")).map(String::trim).filter(s -> !s.isEmpty()).toList();
 
         // Compute user's max level from effective permissions set

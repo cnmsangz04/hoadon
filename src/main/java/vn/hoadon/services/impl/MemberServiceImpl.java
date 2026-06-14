@@ -1,4 +1,4 @@
-package vn.hoadon.services.impl;
+﻿package vn.hoadon.services.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -164,7 +164,7 @@ public class MemberServiceImpl implements MemberService {
             user = userRepository.findById(incoming.getId())
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            // Only update password if provided
+            // Chỉ cập nhật mật khẩu nếu có truyền
             if (incoming.getPassword() != null && !incoming.getPassword().isBlank()) {
                 user.setPassword(passwordEncoder.encode(incoming.getPassword()));
             }
@@ -178,22 +178,22 @@ public class MemberServiceImpl implements MemberService {
                 }
             }
 
-            // Update companyId only when explicitly provided by root; avoid nulling accidentally
+            // Cập nhật companyId only when explicitly provided by root; avoid nulling accidentally
             if (isRoot && incoming.getCompanyId() != null) {
                 user.setCompanyId(incoming.getCompanyId());
             }
 
-            // Only update role if provided
+            // Chỉ cập nhật role nếu có truyền
             if (role != null) {
                 user.setRole(role);
             }
 
-            // Only update status if provided
+            // Chỉ cập nhật status nếu có truyền
             if (incoming.getStatus() != null) {
                 user.setStatus(incoming.getStatus());
             }
 
-            // Only update username if provided and not blank
+            // Chỉ cập nhật username nếu có truyền và không rỗng
             if (incoming.getUsername() != null && !incoming.getUsername().isBlank()) {
                 Optional<UserEntity> existed = userRepository.findByUsername(incoming.getUsername());
                 if (existed.isPresent() && !existed.get().getId().equals(user.getId())) {
@@ -328,7 +328,7 @@ public class MemberServiceImpl implements MemberService {
 
         // Luôn reset lại mật khẩu mới mỗi lần gửi thông tin
         String newPassword = resetPassword(id);
-        // Load lại user sau khi reset mật khẩu
+        // Tải lại user sau khi reset mật khẩu
         user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 

@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="container-fluid py-3">
-    <!-- Header -->
+    <!-- Tiêu đề -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="d-flex align-items-center">
         <h4 class="mb-0 font-weight-bold">
@@ -10,7 +10,7 @@
     </div>
 
     <b-card class="shadow-sm">
-      <!-- SMTP Server -->
+      <!-- Máy chủ SMTP -->
       <b-card no-body class="mb-3">
         <b-card-header class="bg-light font-weight-bold">
           <i class="fas fa-server mr-1"></i> Thông tin máy chủ SMTP
@@ -45,7 +45,7 @@
         </b-card-body>
       </b-card>
 
-      <!-- Auth -->
+      <!-- Xác thực -->
       <b-card no-body class="mb-3">
         <b-card-header class="bg-light font-weight-bold">
           <i class="fas fa-key mr-1"></i> Thông tin đăng nhập
@@ -93,7 +93,7 @@
         </b-card-body>
       </b-card>
 
-      <!-- From -->
+      <!-- Người gửi -->
       <b-card no-body class="mb-3">
         <b-card-header class="bg-light font-weight-bold">
           <i class="fas fa-user-circle mr-1"></i> Thông tin người gửi hiển thị
@@ -121,7 +121,7 @@
         </b-card-body>
       </b-card>
 
-      <!-- Actions -->
+      <!-- Thao tác -->
       <div class="d-flex align-items-center">
         <b-button variant="primary" @click="save" :disabled="saving">
           <b-spinner small v-if="saving" class="mr-1" />
@@ -142,7 +142,7 @@
       </div>
     </b-card>
 
-    <!-- Modal test -->
+    <!-- Hộp thoại kiểm tra -->
     <b-modal
       v-model="showTestModal"
       title="Gửi mail kiểm tra"
@@ -203,7 +203,7 @@ export default {
   },
   methods: {
     async load() {
-      // Load company profile và mail-server song song
+      // Tải hồ sơ công ty và mail-server song song
       const [mailRes, profileRes] = await Promise.allSettled([
         axios.get('/mail-servers'),
         axios.post('/setting/profile/get'),

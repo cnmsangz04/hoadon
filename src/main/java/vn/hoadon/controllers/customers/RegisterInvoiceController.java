@@ -1,4 +1,4 @@
-package vn.hoadon.controllers.customers;
+﻿package vn.hoadon.controllers.customers;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -71,7 +71,7 @@ public class RegisterInvoiceController extends BaseController {
         if (userId != null) {
             return ResponseEntity.ok(service.findByUser(userId));
         }
-        // Fallback: use current user context
+        // Dự phòng: dùng ngữ cảnh người dùng hiện tại
         UserEntity user = currentUser();
         if (user != null) {
             // prefer company scope if available
@@ -144,7 +144,7 @@ public class RegisterInvoiceController extends BaseController {
         entity.setFormPattern(req.getFormPattern() != null ? req.getFormPattern() : "01/ĐKTĐ-HĐĐT");
         entity.setDeclarationDate(parseDate(req.getDeclarationDate(), LocalDate.now()));
         entity.setCreatePlace(req.getCreatePlace());
-        // Stop using effectiveDate from request; leave null initially
+        // Ngừng lấy effectiveDate từ request; ban đầu để null
         entity.setEffectiveDate(null);
         // List fields
         entity.setInvoiceForms(toStringList(req.getInvoiceForms()));
@@ -223,7 +223,7 @@ public class RegisterInvoiceController extends BaseController {
         // 1) Insert history row
         insertHistoryRow(user.getCompanyId(), user.getId(), "register_invoices", entity.getId(),
                 "Gửi Đăng ký/Thay đổi thông tin sử dụng hóa đơn điện tử", "Mã thông điệp 100", 1, 1, 100, "");
-        // 2) Update status to 2 (Đã ký) per requirement on send success
+        // 2. Cập nhật status = 2 (Đã ký) theo yêu cầu khi gửi thành công
         // Preserve all existing fields to avoid accidental data loss if update is a full overwrite
         RegisterInvoiceEntity patch = cloneEntityPreserveAll(entity);
         // Mutating fields only
@@ -236,7 +236,7 @@ public class RegisterInvoiceController extends BaseController {
         return ResponseEntity.accepted().build();
     }
 
-    // Helper: JPA-based history save replacing raw SQL
+    // Hàm hỗ trợ lưu lịch sử bằng JPA thay cho SQL thô
     private void insertHistoryRow(Long companyId, Long userId, String tableName, Long tableId,
                                   String title, String description, Integer showNotify, Integer status,
                                   Integer type, String xmlData) {
@@ -258,7 +258,7 @@ public class RegisterInvoiceController extends BaseController {
         }
     }
 
-    // Helper: clone an entity and preserve all fields, used for safe overwrites
+    // Hàm hỗ trợ clone entity và giữ toàn bộ trường để ghi đè an toàn
     private RegisterInvoiceEntity cloneEntityPreserveAll(RegisterInvoiceEntity src) {
         if (src == null) return new RegisterInvoiceEntity();
         RegisterInvoiceEntity e = new RegisterInvoiceEntity();
@@ -317,7 +317,7 @@ public class RegisterInvoiceController extends BaseController {
             RegisterInvoiceEntity patch = cloneEntityPreserveAll(entity);
             patch.setStatus(accepted ? 6 : 5);
             patch.setResponseAcceptFile(xml);
-            // When status = 6 (accepted), set effectiveDate to current datetime
+            // Khi status = 6 (đã chấp nhận), set effectiveDate là thời gian hiện tại
             if (accepted) {
                 try { patch.setEffectiveDate(java.time.LocalDateTime.now()); } catch (Exception ignored) {}
             }
@@ -368,7 +368,7 @@ public class RegisterInvoiceController extends BaseController {
         Integer actorRole = user != null ? user.getRole() : null;
         boolean isRoot = actorRole != null && actorRole == 0;
 
-        // If not root, restrict to user's company
+        // Nếu không phải root, giới hạn theo công ty của người dùng
         if (!isRoot) {
             companyId = actorCompanyId;
         }
@@ -377,7 +377,7 @@ public class RegisterInvoiceController extends BaseController {
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<RegisterInvoiceEntity> p;
 
-        // If root and no companyId provided, allow global listing
+        // Nếu là root và không truyền companyId, cho phép xem toàn bộ
         if (isRoot && companyId == null) {
             p = service.pageAll(pageable);
             // Optional filter by status
@@ -414,7 +414,7 @@ public class RegisterInvoiceController extends BaseController {
                         .toList();
                 p = new org.springframework.data.domain.PageImpl<>(filteredByDecl, pageable, filteredByDecl.size());
             }
-            // Apply date filters in global branch as well
+            // Áp dụng bộ lọc ngày cho cả nhánh toàn cục
             try {
                 java.time.LocalDate from = (dateFrom != null && !dateFrom.isBlank()) ? java.time.LocalDate.parse(dateFrom) : null;
                 java.time.LocalDate to = (dateTo != null && !dateTo.isBlank()) ? java.time.LocalDate.parse(dateTo) : null;
@@ -440,7 +440,7 @@ public class RegisterInvoiceController extends BaseController {
             return toPaginationResponse(p);
         }
 
-        // If companyId is still null (no scope), return empty pagination
+        // Nếu companyId vẫn null (không có phạm vi), trả về phân trang rỗng
         if (companyId == null) {
             Map<String, Object> empty = new HashMap<>();
             empty.put("data", List.of());
@@ -636,7 +636,7 @@ public class RegisterInvoiceController extends BaseController {
         Integer actorRole = user != null ? user.getRole() : null;
         boolean isRoot = actorRole != null && actorRole == 0;
 
-        // If not root, restrict to user's company
+        // Nếu không phải root, giới hạn theo công ty của người dùng
         if (!isRoot) {
             companyId = actorCompanyId;
         }
@@ -645,7 +645,7 @@ public class RegisterInvoiceController extends BaseController {
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<RegisterInvoiceEntity> p;
 
-        // If root and no companyId provided, allow global listing
+        // Nếu là root và không truyền companyId, cho phép xem toàn bộ
         if (isRoot && companyId == null) {
             p = service.pageAll(pageable);
             // Optional filter by status
@@ -682,7 +682,7 @@ public class RegisterInvoiceController extends BaseController {
                         .toList();
                 p = new org.springframework.data.domain.PageImpl<>(filteredByDecl, pageable, filteredByDecl.size());
             }
-            // Apply date filters in global branch as well
+            // Áp dụng bộ lọc ngày cho cả nhánh toàn cục
             try {
                 java.time.LocalDate from = (dateFrom != null && !dateFrom.isBlank()) ? java.time.LocalDate.parse(dateFrom) : null;
                 java.time.LocalDate to = (dateTo != null && !dateTo.isBlank()) ? java.time.LocalDate.parse(dateTo) : null;
@@ -708,7 +708,7 @@ public class RegisterInvoiceController extends BaseController {
             return toPaginationResponse(p);
         }
 
-        // If companyId is still null (no scope), return empty pagination
+        // Nếu companyId vẫn null (không có phạm vi), trả về phân trang rỗng
         if (companyId == null) {
             Map<String, Object> empty = new HashMap<>();
             empty.put("data", List.of());
@@ -812,7 +812,7 @@ public class RegisterInvoiceController extends BaseController {
     private String toJson(Object v) {
         if (v == null) return null;
         try {
-            // If already a JSON-looking string, return as-is to avoid double encoding
+            // Nếu đã giống chuỗi JSON thì giữ nguyên để tránh encode hai lần
             if (v instanceof String s) {
                 String trimmed = s.trim();
                 if (trimmed.startsWith("[") && trimmed.endsWith("]")) return s; // array JSON
@@ -823,7 +823,7 @@ public class RegisterInvoiceController extends BaseController {
             // For collections/arrays/maps/POJOs, serialize directly
             return mapper.writeValueAsString(v);
         } catch (Exception e) {
-            // Fallback: string value
+            // Dự phòng: giá trị chuỗi
             return String.valueOf(v);
         }
     }
@@ -986,7 +986,7 @@ public class RegisterInvoiceController extends BaseController {
                 return prefix + block + suffix;
             }
         }
-        // Fallback: replace empty NNT
+        // Dự phòng: thay NNT rỗng
         String emptyNnt = "<NNT></NNT>";
         if (xml.contains(emptyNnt)) {
             return xml.replace(emptyNnt, "<NNT>" + block + "</NNT>");

@@ -1,4 +1,4 @@
-package vn.hoadon.controllers.customers;
+﻿package vn.hoadon.controllers.customers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -148,7 +148,7 @@ public class FormInvoiceController extends BaseController {
             filtered = filtered.stream().filter(it -> Objects.equals(type, it.getType())).toList();
         }
         
-        // Sort templates by id desc (nulls last)
+        // Sắp xếp template theo id giảm dần (null ở cuối)
         filtered = filtered.stream()
                 .sorted(Comparator.comparing(FormInvoiceEntity::getId,
                         Comparator.nullsLast(Comparator.naturalOrder())).reversed())
@@ -166,7 +166,7 @@ public class FormInvoiceController extends BaseController {
         
         Map<String, Object> res = new HashMap<>();
         res.put("items", items);
-        res.put("total", (long) filtered.size()); // Use filtered size as total
+        res.put("total", (long) filtered.size()); // Dùng kích thước sau lọc làm total
         res.put("per_page", p.getSize());
         res.put("current_page", p.getNumber() + 1);
         res.put("last_page", Math.max(1, (int) Math.ceil((double) filtered.size() / p.getSize())));
@@ -186,7 +186,7 @@ public class FormInvoiceController extends BaseController {
         if (Objects.equals(e.getSystem(), 1) && !Objects.equals(e.getCompanyId(), user.getCompanyId())) {
             return ResponseEntity.status(403).build();
         }
-        // Only allow access to system templates (system=0), reject other system values
+        // Chỉ cho phép truy cập template hệ thống (system = 0), từ chối giá trị system khác
         if (!Objects.equals(e.getSystem(), 0) && !Objects.equals(e.getSystem(), 1)) {
             return ResponseEntity.status(403).build();
         }
@@ -213,7 +213,7 @@ public class FormInvoiceController extends BaseController {
         return ResponseEntity.ok(e);
     }
 
-    // --- Render HTML preview by applying XSLT template to sample XML ---
+    // Render HTML xem trước bằng cách áp mẫu XSLT vào XML mẫu
     @GetMapping(value = "/{id}/view", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<?> viewHtml(@PathVariable Long id) {
         permission("form-invoice-list");
@@ -234,7 +234,7 @@ public class FormInvoiceController extends BaseController {
             return ResponseEntity.status(404).body("<html><body>Không tồn tại tệp XSLT trên hệ thống</body></html>");
         }
 
-        // Build sample XML using SampleInvoiceXmlBuilder with mapped data
+        // Tạo XML mẫu bằng SampleInvoiceXmlBuilder với dữ liệu đã ánh xạ
         CompanyEntity company = null;
         CompanyBankEntity bank = null;
         LegalRepresentativeEntity rep = null;
@@ -307,7 +307,7 @@ public class FormInvoiceController extends BaseController {
     }
 
     private String sampleStatus() {
-        // Use numeric status default per requirement
+        // Dùng trạng thái số mặc định theo yêu cầu
         return "0";
     }
 
@@ -400,14 +400,14 @@ public class FormInvoiceController extends BaseController {
         String formCode = serialFull.substring(0, 1);
         String serialRemainder = serialFull.substring(1);
 
-        // If creating from a system template, copy its file/photo into company uploads and use those new paths
+        // Nếu tạo từ template hệ thống, sao chép file/photo vào uploads của công ty và dùng đường dẫn mới
         if (templateId != null) {
             Optional<FormInvoiceEntity> optTpl = service.findById(templateId);
             if (optTpl.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Không tìm thấy mẫu template"));
             }
             FormInvoiceEntity tpl = optTpl.get();
-            // Only allow copying from system templates (system=0), which are shared across all companies
+            // Chỉ cho phép sao chép từ template hệ thống (system = 0), dùng chung cho mọi công ty
             if (!Objects.equals(tpl.getSystem(), 0)) {
                 return ResponseEntity.status(403).body(Map.of("message", "Chỉ được sao chép từ mẫu hệ thống"));
             }
@@ -463,8 +463,8 @@ public class FormInvoiceController extends BaseController {
 
     // --- Helpers for uploads path resolving and copying ---
     /**
-     * Copy a file from an existing public uploads path to the company's uploads subfolder and return the new public path.
-     * Subfolder: "photo" or "template".
+     * Sao chép file từ đường dẫn uploads công khai hiện có sang thư mục uploads con của công ty và trả về đường dẫn công khai mới.
+     * Thư mục con: "photo" hoặc "template" (tên thư mục trên hệ thống).
      */
     private String copyToCompanyUploads(String sourcePublicPath, Long companyId, String subfolder) {
         try {
@@ -573,7 +573,7 @@ public class FormInvoiceController extends BaseController {
     }
 
     /**
-     * Deactivate (status=0) other active records within the same company and category, excluding keepId.
+     * Tắt (status = 0) các bản ghi đang hoạt động khác trong cùng công ty và loại, trừ keepId.
      */
     private void deactivateOthersActive(Long companyId, Integer category, Long keepId) {
         Pageable pageable = PageRequest.of(0, 1000, Sort.by(Sort.Direction.DESC, "updatedAt"));
@@ -611,7 +611,7 @@ public class FormInvoiceController extends BaseController {
                 return ResponseEntity.status(400).build();
             }
         } catch (Exception ignore) {}
-        // Only allow delete when status == 0
+        // Chỉ cho phép xóa khi status == 0
         if (!Objects.equals(e.getStatus(), 0)) {
             return ResponseEntity.status(400).build();
         }
@@ -658,7 +658,7 @@ public class FormInvoiceController extends BaseController {
             FormInvoiceListItemDto d = new FormInvoiceListItemDto();
             d.setId(it.getId());
             d.setName(it.getName());
-            // Use combined serial: formCode + serial
+            // Dùng serial ghép: formCode + serial
             String combinedSerial = (it.getFormCode() != null ? it.getFormCode() : "") + (it.getSerial() != null ? it.getSerial() : "");
             d.setSerial(combinedSerial);
             d.setCategory(it.getCategory());
@@ -775,10 +775,10 @@ public class FormInvoiceController extends BaseController {
             // Resolve named HTML entities to avoid XML parser errors in the renderer
             html = resolveNamedHtmlEntities(html);
 
-            // Normalize to XHTML-ish by self-closing void tags like <meta>, <link>, <img>, etc.
+            // Chuẩn hóa gần XHTML bằng cách tự đóng các thẻ rỗng như <meta>, <link>, <img>, ...
             html = normalizeToXhtml(html);
 
-            // Convert HTML to PDF
+            // Chuyển HTML sang PDF
             ByteArrayOutputStream pdfOut = new ByteArrayOutputStream();
             PdfRendererBuilder builder = new PdfRendererBuilder();
             String baseUri = xsltFsPath.getParent() != null ? xsltFsPath.getParent().toUri().toString() : null;

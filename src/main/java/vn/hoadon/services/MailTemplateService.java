@@ -1,4 +1,4 @@
-package vn.hoadon.services;
+﻿package vn.hoadon.services;
 
 
 import vn.hoadon.dto.mail.MailTemplateDto;
@@ -9,27 +9,27 @@ import java.util.List;
 public interface MailTemplateService {
 
     /**
-     * Lấy danh sách mail template theo company
+     * Lấy danh sách mẫu mail theo công ty
      */
     List<MailTemplateDto> getByCompanyId(Integer companyId);
 
     /**
-     * Lấy mail template theo id
+     * Lấy mẫu mail theo id
      */
     MailTemplateDto getById(Integer id);
 
     /**
-     * Thêm mới mail template
+     * Thêm mới mẫu mail
      */
     MailTemplateDto create(MailTemplateDto dto);
 
     /**
-     * Cập nhật mail template
+     * Cập nhật mẫu mail
      */
     MailTemplateDto update(Integer id, MailTemplateDto dto);
 
     /**
-     * Xóa mail template
+     * Xóa mẫu mail
      */
     void delete(Integer id);
 }

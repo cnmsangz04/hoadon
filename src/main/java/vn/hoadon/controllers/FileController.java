@@ -1,4 +1,4 @@
-package vn.hoadon.controllers;
+﻿package vn.hoadon.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -61,7 +61,7 @@ public class FileController {
         return renderHtml(id);
     }
 
-    // Mở cùng preview dưới /v1/file/{id}/view cho client ưu tiên prefix v1.
+    // Mở cùng trang xem trước dưới /v1/file/{id}/view cho phía gọi ưu tiên tiền tố v1.
     @GetMapping(value = "/file/{id}/view", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<?> viewHtmlV1(@PathVariable Long id) {
         return renderHtml(id);
@@ -237,7 +237,7 @@ public class FileController {
             // Chèn meta UTF-8 và font fallback chắc chắn để tránh thiếu glyph
             html = ensureUtf8Meta(html);
             html = forceReplaceFontFamilies(html);
-            // Normalize to XHTML-ish by self-closing void tags like <meta>, <link>, <img>, etc.
+            // Chuẩn hóa gần XHTML bằng cách tự đóng các thẻ rỗng như <meta>, <link>, <img>, ...
             html = normalizeToXhtml(html);
             html = injectQrPlaceholder(html);
             // Sanitize các giá trị <img src> có thể chứa '<' thô trước khi gửi sang renderer
@@ -272,7 +272,7 @@ public class FileController {
                     m2.invoke(builder, true);
                 } catch (Exception ignore2) {}
             }
-            // Use an URI resolver that can read from classpath:/static, absolute "/" and filesystem
+            // Dùng URI resolver đọc được từ classpath:/static, đường dẫn tuyệt đối "/" và filesystem
             builder.useUriResolver(new ClasspathFirstUriResolver());
 
             // Đăng ký font có glyph tiếng Việt (font phổ biến trên Windows)
@@ -344,7 +344,7 @@ public class FileController {
             html = injectQrPlaceholder(html);
             html = sanitizeImgSrcAttributes(html);
 
-            // Apply the same CSS adjustments used in PDF generation so this exactly matches the PDF input
+            // Áp dụng cùng tinh chỉnh CSS như khi tạo PDF để khớp dữ liệu đầu vào PDF
             html = ensurePdfLayoutFallbackCss(html);
             html = ensurePdfCss(html);
             html = ensurePdfFontCss(html);
@@ -406,7 +406,7 @@ public class FileController {
     }
 
     private String transformWithInjectedParams(TransformerFactory factory, String xsltValue, Path xsltFsPath, String sampleXml, java.util.Set<String> missingNames) throws Exception {
-        // Load stylesheet text from inline value or filesystem
+        // Nạp nội dung stylesheet từ giá trị inline hoặc filesystem
         String xsltText;
         if (looksLikeInlineXslt(xsltValue)) {
             xsltText = xsltValue;
@@ -443,7 +443,7 @@ public class FileController {
         StreamResult result = new StreamResult(outWriter);
         transformer.transform(xmlSource, result);
         String html = outWriter.toString();
-        // Normalize named HTML entities to Unicode
+        // Chuẩn hóa named HTML entities sang Unicode
         html = resolveNamedHtmlEntities(html);
         // Ensure void elements are self-closed for XML parsers
         html = normalizeToXhtml(html);
@@ -517,7 +517,7 @@ public class FileController {
             }
             String repl = HTML_ENTITY_TO_UNICODE.get(name);
             if (repl == null) {
-                // Fallback: replace unknown named entity with a plain space to avoid XML parser errors
+                // Dự phòng: thay named entity không xác định bằng khoảng trắng để tránh lỗi XML parser
                 repl = " ";
             }
             // Quote replacement for regex
@@ -662,7 +662,7 @@ public class FileController {
                     int comma = src.indexOf(',');
                     if (comma > 0) {
                         String svgPayload = src.substring(comma + 1);
-                        // Convert the SVG payload to base64
+                        // Chuyển nội dung SVG sang base64
                         String base64 = java.util.Base64.getEncoder().encodeToString(svgPayload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
                         safeSrc = "data:image/svg+xml;base64," + base64;
                     } else {
@@ -753,7 +753,7 @@ public class FileController {
     // Ensure PDF-friendly CSS if the HTML lacks @page rules; also force print-color-adjust for color accuracy
     private String ensurePdfCss(String html) {
         if (html == null || html.isBlank()) return html;
-        // If the template already defines @page, don't inject defaults
+        // Nếu template đã khai báo @page thì không chèn mặc định
         if (html.matches("(?is).*@page\\s*\\{")) return html;
         String css = "<style>" +
                 "@page { size: A4; margin: 10mm; }" +
@@ -873,7 +873,7 @@ public class FileController {
         registerFontIfExists(builder, fontsDir, "ARIALUNI.TTF", "Arial Unicode MS");
     }
 
-    // Helper: register a font file with the PDF renderer if it exists at the given path
+    // Hàm hỗ trợ đăng ký font cho bộ render PDF nếu file tồn tại ở đường dẫn chỉ định
     private void registerFontIfExists(PdfRendererBuilder builder, Path fontsDir, String fileName, String family) {
         if (fontsDir == null) return;
         try {

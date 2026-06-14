@@ -1,4 +1,4 @@
-package vn.hoadon.controllers.admin;
+﻿package vn.hoadon.controllers.admin;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -101,7 +101,7 @@ public class VatRatesController extends BaseController {
         return vatRatesService.findAllOrderedByPrioritize();
     }
 
-    // 3️⃣ Update (nhận DTO)
+    // 3. Cập nhật (nhận DTO)
     @PutMapping("/{id}")
     public VatRatesEntity update(
             @PathVariable Integer id,

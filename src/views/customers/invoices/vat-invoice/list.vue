@@ -1,6 +1,6 @@
-<template>
+﻿<template>
   <div class="container-fluid py-3 vat-invoices">
-    <!-- Header v� thao t�c -->
+    <!-- Tiêu đề và thao tác -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="d-flex align-items-center">
         <h4 class="mb-0 font-weight-bold">Danh sách hóa đơn giá trị gia tăng</h4>
@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <!-- B? l?c -->
+    <!-- Bộ lọc -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="4" class="mb-2">
@@ -58,7 +58,7 @@
       </b-row>
     </b-card>
 
-    <!-- Invoices table -->
+    <!-- Bảng hóa đơn -->
     <b-card class="shadow-sm">
       <b-table
         bordered
@@ -130,7 +130,7 @@
         </template>
       </b-table>
 
-      <!-- Skeleton t?i khi chuy?n trang -->
+      <!-- Khung tải khi chuyển trang -->
       <div v-if="isBusy" class="mt-2">
         <b-skeleton width="100%" height="20px" animated class="mb-2" />
         <b-skeleton width="96%" height="20px" animated class="mb-2" />
@@ -174,7 +174,7 @@
       </b-row>
     </b-card>
 
-    <!-- Modal: View invoice (HTML via iframe) -->
+    <!-- Hộp thoại xem hóa đơn (HTML qua iframe) -->
     <b-modal
       id="modalVatInvoice"
       size="lg"
@@ -220,7 +220,7 @@
       </template>
     </b-modal>
 
-    <!-- Modal: History -->
+    <!-- Hộp thoại lịch sử -->
     <b-modal ref="historyModal" size="lg" title="Lịch sử truyền nhận" hide-header-close>
       <div>
         <b-table-simple bordered small responsive show-empty :busy="historyBusy" empty-text="Không có dữ liệu">
@@ -252,7 +252,7 @@
       </template>
     </b-modal>
 
-    <!-- Modal: Send email notice -->
+    <!-- Hộp thoại gửi thông báo email -->
     <b-modal
       id="modalSendEmail"
       size="md"
@@ -331,7 +331,7 @@ export default {
         lookup_code: null,
         status: null,
       },
-      // send email modal state
+      // Trạng thái hộp thoại gửi email
       mail: {
         id: null,
         invoice: { formSerial: '', no: null, dateExport: null, amount: 0 },
@@ -384,7 +384,7 @@ export default {
       // Poll trackers to cancel on component destroy
       _pollTimers: {},
       _pollAttempts: {},
-      // History modal state
+      // Trạng thái hộp thoại lịch sử
       historyBusy: false,
       historyRows: [],
       historyForId: null,
@@ -577,7 +577,7 @@ export default {
         if (iframe && iframe.contentWindow) {
           iframe.contentWindow.print()
         } else {
-          // Fallback: open print dialog for current window
+          // Dự phòng: open print dialog for current window
           window.print()
         }
       } catch (e) {
@@ -616,7 +616,7 @@ export default {
         if (!ok) return
         this.isBusy = true
         const { data } = await axios.post(`/invoices/${id}/sign`, null, { successMessage: 'Đã ký số hóa đơn thành công' })
-        // Update local row fields: no and status
+        // Cập nhật local row fields: no and status
         const newNo = data?.no ?? data?.No ?? null
         const updated = { ...item, no: newNo, status: 1 }
         const idx = this.list.data.findIndex(x => (x.id||x.ID||x.Id) === id)
@@ -670,7 +670,7 @@ export default {
       }
     },
 
-    // Send email: open modal and prefill name/email from invoice customer
+    // Gửi email: mở hộp thoại và điền sẵn tên/email từ khách hàng của hóa đơn
     async sendMail (item) {
       try {
         const id = item && (item.id || item.ID || item.Id)
@@ -685,7 +685,7 @@ export default {
           errors: { name: null, email: null },
           loading: false,
         }
-        // Load customer details from invoice detail API
+        // Tải chi tiết khách hàng từ API chi tiết hóa đơn
         try {
           const { data } = await axios.get(`/invoices/${id}`, { meta: { suppressGlobalErrorToast: true } })
           const c = data && data.customer ? data.customer : null
@@ -732,7 +732,7 @@ export default {
       try { return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(String(email || '').trim()) } catch { return false }
     },
 
-    // Update local list item status by invoiceId
+    // Cập nhật local list item status by invoiceId
     _updateLocalStatus (invoiceId, status, extras = {}) {
       try {
         const id = Number(invoiceId)
@@ -902,7 +902,7 @@ export default {
         this.historyRows = []
         this.historyForId = id
         const { data } = await axios.get(`/invoices/${id}/history`)
-        // Normalize keys to snake_case for view
+        // Chuẩn hóa key sang snake_case cho phần hiển thị
         this.historyRows = Array.isArray(data) ? data.map(r => ({
           id: r.id,
           title: r.title,

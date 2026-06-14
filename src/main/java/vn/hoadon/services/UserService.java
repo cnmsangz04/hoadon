@@ -1,4 +1,4 @@
-package vn.hoadon.services;
+﻿package vn.hoadon.services;
 
 import org.springframework.web.multipart.MultipartFile;
 import vn.hoadon.dto.user.UserDto;
@@ -13,10 +13,10 @@ public interface UserService {
     // Get current user info (mapped to DTO)
     UserDto getCurrentUserInfo();
 
-    // Update current user fields
+    // Cập nhật current user fields
     UserDto updateCurrentUser(UserDto update);
 
-    // Update avatar for current user
+    // Cập nhật avatar for current user
     UserDto updateAvatar(MultipartFile avatar);
 
     // Change password for current user

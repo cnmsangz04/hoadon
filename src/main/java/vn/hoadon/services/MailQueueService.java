@@ -1,18 +1,17 @@
-package vn.hoadon.services;
+﻿package vn.hoadon.services;
 
 import vn.hoadon.messaging.MailJobMessage;
 
 /**
- * Pushes mail jobs onto the SQL Server database queue.
- * Decouples producers (controllers, background threads)
- * from the mail-sending implementation.
+ * Đưa job gửi mail vào hàng đợi cơ sở dữ liệu SQL Server.
+ * Tách phần tạo job ở controller hoặc tiến trình nền khỏi phần xử lý gửi mail.
  */
 public interface MailQueueService {
 
     /**
-     * Enqueue a mail job. Returns immediately; delivery is asynchronous.
+     * Đưa job gửi mail vào hàng đợi và trả về ngay, việc gửi mail xử lý bất đồng bộ.
      *
-     * @param message the job payload (template key + recipient + variables)
+     * @param message dữ liệu job gồm key mẫu, người nhận và biến thay thế
      */
     void enqueue(MailJobMessage message);
 }

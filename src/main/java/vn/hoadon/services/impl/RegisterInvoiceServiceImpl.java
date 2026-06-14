@@ -1,4 +1,4 @@
-package vn.hoadon.services.impl;
+﻿package vn.hoadon.services.impl;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -90,7 +90,7 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
             existing.setSignedXml(signedXml);
             existing.setSignatureInfo(signatureInfo);
             existing.setSignDate(java.time.LocalDateTime.now());
-            // Update status to 1 (signed) as required by spec
+            // Cập nhật status to 1 (signed) as required by spec
             existing.setStatus(1);
             existing.setUpdatedAt(java.time.LocalDateTime.now());
             return repository.save(existing);
@@ -205,7 +205,7 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
             if (signed != null && !signed.isBlank()) {
                 return signed;
             }
-            // Fallback: build unsigned XML from legal/company info
+            // Dự phòng: build unsigned XML from legal/company info
             return buildUnsignedXml(e);
         });
     }

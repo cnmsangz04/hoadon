@@ -13,7 +13,7 @@ public interface MailJobRepository extends JpaRepository<MailJobEntity, Long> {
 
     /**
      * Lấy các job còn pending: chưa thất bại, chưa được reserved, đến giờ xử lý.
-     * Sắp xếp theo createdAt ASC (FIFO — giống Laravel Queue).
+     * Sắp xếp theo createdAt ASC để xử lý theo thứ tự vào trước ra trước.
      */
     @Query("SELECT j FROM MailJobEntity j " +
            "WHERE j.failed = false " +

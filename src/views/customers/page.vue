@@ -1,19 +1,19 @@
-<template>
+﻿<template>
   <div>
-    <!-- Header -->
+    <!-- Tiêu đề -->
     <Header />
 
     <div class="main-container">
-      <!-- Sidebar -->
+      <!-- Thanh bên -->
       <Sidebar />
 
-      <!-- N?i dung ch�nh -->
+      <!-- Nội dung chính -->
       <div class="content">
         <router-view />
       </div>
     </div>
 
-    <!-- Footer -->
+    <!-- Chân trang -->
     <Footer />
   </div>
 </template>

@@ -1,4 +1,4 @@
-package vn.hoadon.dto.registerinvoice;
+﻿package vn.hoadon.dto.registerinvoice;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -80,7 +80,7 @@ public class RegisterInvoiceUpsertRequest {
 
     @JsonProperty("sendMethods")
     @JsonAlias({"send_methods"})
-    private Object sendMethods; // Map<String, List<String>> hoặc chuỗi JSON
+    private Object sendMethods; // Dữ liệu dạng ánh xạ danh sách hoặc chuỗi JSON
 
     @JsonProperty("digitalCertificates")
     @JsonAlias({"digital_certificates"})

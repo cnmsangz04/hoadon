@@ -1,6 +1,6 @@
-<template>
+﻿<template>
   <div class="container-fluid py-3 buy-invoices">
-    <!-- Ti�u d? v� thao t�c -->
+    <!-- Tiêu đề và thao tác -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 font-weight-bold">Danh sách hóa đơn mua</h4>
       <div>
@@ -15,7 +15,7 @@
       </div>
     </div>
 
-    <!-- B? l?c -->
+    <!-- Bộ lọc -->
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="6" class="mb-2">
@@ -94,11 +94,11 @@
         </template>
       </b-table>
 
-      <!-- Ph�n trang -->
+      <!-- Phân trang -->
       <b-pagination v-if="list.total > list.per_page" v-model="list.current_page" :per-page="list.per_page" :total-rows="list.total" align="right" class="mt-2" @change="onPageChange" />
     </b-card>
 
-    <!-- Modal -->
+    <!-- Hộp thoại -->
     <b-modal ref="buyInvoiceModal" :title="invoiceForm.id ? 'Cập nhật hóa đơn' : 'Thêm hóa đơn'" hide-footer>
       <b-form @submit.prevent="saveInvoice">
         <b-form-group label="Công ty" label-class="font-weight-bold">
@@ -324,7 +324,7 @@ export default {
       }
     },
 
-    // Map mã trạng thái sang text hiển thị
+    // Ánh xạ mã trạng thái sang chữ hiển thị
     statusText(s) {
       const n = Number(s)
       if (Number.isNaN(n)) return '—'
@@ -334,7 +334,7 @@ export default {
       }
       return map[n] ?? '—'
     },
-    // Map mã trạng thái sang biến thể badge
+    // Ánh xạ mã trạng thái sang biến thể nhãn
     statusVariant(s) {
       const n = Number(s)
       if (Number.isNaN(n)) return 'light'
@@ -358,7 +358,7 @@ export default {
 
 .buy-invoices .table thead th { background: #f7f9fc; border-bottom: 1px solid #ecf0f6; color: #4a5568; font-weight: 700; }
 
-/* Tinh ch?nh b?ng hi?n d?i d? kh?p danh s�ch c�ng ty */
+/* Tinh chỉnh bảng hiện đại để khớp danh sách công ty */
 .table-modern thead th { background-color: #f9fafb; border-bottom: 2px solid #e5e7eb; position: sticky; top: 0; z-index: 1; }
 .table-compact td, .table-compact th { padding: 0.5rem 0.75rem; }
 .table td { vertical-align: middle; }

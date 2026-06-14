@@ -2,14 +2,14 @@
   <div class="sidebar">
     <div class="sidebar-inner">
 
-      <!-- Logo -->
+      <!-- Biểu trưng -->
       <div class="brand">
         <router-link class="brand-link" to="/">
           <img class="logo" :src="logoSrc" alt="logo" />
         </router-link>
       </div>
 
-      <!-- Menu -->
+      <!-- Trình đơn -->
       <nav class="menu">
         <ul>
           <li v-for="(item, index) in menu" :key="index" :class="{
@@ -18,7 +18,7 @@
             active: isActive(item),
           }">
 
-            <!-- Menu có con -->
+            <!-- Trình đơn có con -->
             <template v-if="item.children">
               <a href="#" class="menu-item" @click.prevent="toggle(index)">
                 <i :class="item.icon"></i>
@@ -39,7 +39,7 @@
 
             </template>
 
-            <!-- Menu không con -->
+            <!-- Trình đơn không con -->
             <template v-else>
               <router-link class="menu-item" :to="item.to">
                 <i :class="item.icon"></i>

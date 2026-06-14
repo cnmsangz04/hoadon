@@ -1,18 +1,18 @@
-package vn.hoadon.util;
+﻿package vn.hoadon.util;
 
 import vn.hoadon.entity.RegisterInvoiceEntity;
 
 import java.util.UUID;
 import java.util.*;
 
-// JSON parsing
+// Xử lý JSON
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
- * Build XML for register invoice (ĐKTĐ-HĐĐT) from RegisterInvoiceEntity.
- * This builds an unsigned XML document compatible with CQT template.
+ * Tạo XML đăng ký hóa đơn (ĐKTĐ-HĐĐT) từ RegisterInvoiceEntity.
+ * Hàm này tạo tài liệu XML chưa ký, tương thích với mẫu CQT.
  */
 public final class RegisterInvoiceXmlBuilder {
     private RegisterInvoiceXmlBuilder() {}
@@ -20,17 +20,16 @@ public final class RegisterInvoiceXmlBuilder {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
-     * Build unsigned XML string from entity.
-     * Contact info is no longer stored in register_invoices; callers should
-     * prefer the overload with explicit contact parameters. This method will
-     * render empty contact fields.
+     * Tạo chuỗi XML chưa ký từ entity.
+     * Thông tin liên hệ không còn lưu trong register_invoices, nên nơi gọi nên
+     * dùng overload truyền rõ các tham số liên hệ. Hàm này sẽ render trống các trường liên hệ.
      */
     public static String buildUnsigned(RegisterInvoiceEntity e) {
-        // Delegate to overload with null contact info
+        // Chuyển sang overload với thông tin liên hệ null.
         return buildUnsigned(e, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
-    /** Build unsigned XML using overrides for contact info */
+    /** Tạo XML chưa ký bằng thông tin liên hệ được truyền đè. */
     public static String buildUnsigned(RegisterInvoiceEntity e,
                                        String contactName,
                                        String contactPhone,
@@ -44,8 +43,8 @@ public final class RegisterInvoiceXmlBuilder {
     }
 
     /**
-     * Build unsigned XML with explicit contact info and tax authority code/name provided by caller.
-     * Also require company name and tax code to be passed in by caller.
+     * Tạo XML chưa ký với thông tin liên hệ và mã/tên cơ quan thuế do nơi gọi truyền vào.
+     * Tên công ty và mã số thuế cũng được nơi gọi truyền vào.
      */
     public static String buildUnsigned(RegisterInvoiceEntity e,
                                        String contactName,
@@ -83,7 +82,7 @@ public final class RegisterInvoiceXmlBuilder {
         String ddanh = nullToEmpty(e.getCreatePlace());
         String nlap = e.getDeclarationDate() != null ? e.getDeclarationDate().toString() : java.time.LocalDate.now().toString();
 
-        // Convert list fields from entity
+        // Chuyển các trường dạng danh sách từ entity
         Set<String> invoiceForms = toSet(e.getInvoiceForms());
         Set<String> sendMethodCodes = toSet(e.getSendMethods());
         Set<String> transferMethods = toSet(e.getTransferMethods());
@@ -252,7 +251,7 @@ public final class RegisterInvoiceXmlBuilder {
                     cert.signToDate = getJsonString(node, "signToDate", "sign_to_date", "to");
                     cert.sigRegMethod = getJsonString(node, "sigRegMethod", "sig_reg_method", "method");
                 } catch (JsonProcessingException e) {
-                    // Handle malformed data like "{orgName=VNPT, serialNo=123, ...}"
+                    // Xử lý dữ liệu sai định dạng như "{orgName=VNPT, serialNo=123, ...}"
                     cert = parseKeyValueFormat(item);
                 }
                 

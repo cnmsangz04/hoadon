@@ -1,4 +1,4 @@
-package vn.hoadon.controllers.admin;
+﻿package vn.hoadon.controllers.admin;
 
 import vn.hoadon.controllers.base.BaseController;
 import jakarta.validation.Valid;
@@ -22,8 +22,8 @@ public class MailTemplateController extends BaseController {
     }
 
     /**
-     * Lấy danh sách mail template theo company
-     * GET /v1/administrator/mail-template?companyId=1
+     * Lấy danh sách mẫu mail theo công ty
+     * Đường dẫn: GET /v1/administrator/mail-template?companyId=1
      */
     @GetMapping
     public ResponseEntity<List<MailTemplateDto>> getByCompany(
@@ -46,8 +46,8 @@ public class MailTemplateController extends BaseController {
     }
 
     /**
-     * Thêm mới mail template
-     * POST /v1/administrator/mail-template
+     * Thêm mới mẫu mail
+     * Đường dẫn: POST /v1/administrator/mail-template
      */
     @PostMapping
     public ResponseEntity<MailTemplateDto> create(
@@ -60,8 +60,8 @@ public class MailTemplateController extends BaseController {
     }
 
     /**
-     * Cập nhật mail template
-     * PUT /v1/administrator/mail-template/{id}
+     * Cập nhật mẫu mail
+     * Đường dẫn: PUT /v1/administrator/mail-template/{id}
      */
     @PutMapping("/{id}")
     public ResponseEntity<MailTemplateDto> update(
@@ -75,8 +75,8 @@ public class MailTemplateController extends BaseController {
     }
 
     /**
-     * Xóa mail template
-     * DELETE /v1/administrator/mail-template/{id}
+     * Xóa mẫu mail
+     * Đường dẫn: DELETE /v1/administrator/mail-template/{id}
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(

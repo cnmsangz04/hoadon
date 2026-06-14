@@ -1,4 +1,4 @@
-package vn.hoadon.util;
+﻿package vn.hoadon.util;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -11,19 +11,19 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
- * AES-256-GCM encryption utility for sensitive fields (e.g. SMTP passwords).
+ * Tiện ích mã hóa AES-256-GCM cho các trường nhạy cảm, ví dụ mật khẩu SMTP.
  *
- * Encrypted format (Base64): [12-byte IV][ciphertext+16-byte auth tag]
+ * Định dạng sau mã hóa (Base64): [IV 12 byte][dữ liệu mã hóa + thẻ xác thực 16 byte]
  *
- * The encryption key is derived from {@code app.encryption.key} in
- * application.properties (must be 32-character hex or plain string padded to 32 bytes).
+ * Khóa mã hóa được lấy từ {@code app.encryption.key} trong
+ * application.properties. Khóa cần là chuỗi hex 32 ký tự hoặc chuỗi thường được đệm đến 32 byte.
  */
 @Component
 public class AesEncryptor {
 
     private static final String ALGORITHM  = "AES/GCM/NoPadding";
-    private static final int    IV_BYTES   = 12;   // 96-bit IV recommended for GCM
-    private static final int    TAG_BITS   = 128;  // authentication tag length
+    private static final int    IV_BYTES   = 12;   // IV 96-bit được khuyến nghị cho GCM
+    private static final int    TAG_BITS   = 128;  // độ dài auth tag
 
     private final SecretKey secretKey;
 
@@ -32,7 +32,7 @@ public class AesEncryptor {
         this.secretKey = new SecretKeySpec(keyBytes, "AES");
     }
 
-    /** Encrypt plaintext. Returns Base64-encoded [IV + ciphertext]. */
+    /** Mã hóa văn bản thường. Trả về chuỗi Base64 dạng [IV + ciphertext]. */
     public String encrypt(String plaintext) {
         if (plaintext == null || plaintext.isBlank()) return plaintext;
         try {
@@ -43,7 +43,7 @@ public class AesEncryptor {
             cipher.init(Cipher.ENCRYPT_MODE, secretKey, new GCMParameterSpec(TAG_BITS, iv));
             byte[] encrypted = cipher.doFinal(plaintext.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
-            // Prepend IV to ciphertext
+            // Gắn IV vào trước dữ liệu đã mã hóa.
             byte[] combined = new byte[IV_BYTES + encrypted.length];
             System.arraycopy(iv,        0, combined, 0,        IV_BYTES);
             System.arraycopy(encrypted, 0, combined, IV_BYTES, encrypted.length);
@@ -54,7 +54,7 @@ public class AesEncryptor {
         }
     }
 
-    /** Decrypt a value produced by {@link #encrypt(String)}. */
+    /** Giải mã giá trị được tạo bởi {@link #encrypt(String)}. */
     public String decrypt(String cipherBase64) {
         if (cipherBase64 == null || cipherBase64.isBlank()) return cipherBase64;
         try {
@@ -76,7 +76,7 @@ public class AesEncryptor {
         }
     }
 
-    // Pad or truncate rawKey to exactly 32 bytes for AES-256
+    // Đệm hoặc cắt rawKey về đúng 32 byte cho AES-256.
     private byte[] prepareKey(String rawKey) {
         byte[] src = rawKey.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         byte[] key = new byte[32];

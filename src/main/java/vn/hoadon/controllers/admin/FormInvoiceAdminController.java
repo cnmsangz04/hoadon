@@ -1,4 +1,4 @@
-package vn.hoadon.controllers.admin;
+﻿package vn.hoadon.controllers.admin;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -98,7 +98,7 @@ public ResponseEntity<?> list(@RequestBody Map<String, Object> body,
     return ResponseEntity.ok(res);
 }
 
-// Hàm hỗ trợ lấy số an toàn từ Map
+// Hàm hỗ trợ lấy số an toàn từ dữ liệu ánh xạ
 private Integer getInt(Map<String, Object> body, String key) {
     Object val = body.get(key);
     if (val == null) return null;
@@ -185,7 +185,7 @@ private Long getLong(Map<String, Object> body, String key) {
             // Resolve upload company id theo company_id đã detect
             Long uploadCompanyId = detectedCompanyId;
 
-            // Handle uploaded files: store under uploads/<companyId>/template and uploads/<companyId>/photo
+            // Xử lý file tải lên: lưu dưới uploads/<companyId>/template và uploads/<companyId>/photo
             if (file != null && !file.isEmpty()) {
                 try {
                     Path dir = UploadPath.resolveCompanyTypeDir(uploadCompanyId, "template");
@@ -220,7 +220,7 @@ private Long getLong(Map<String, Object> body, String key) {
             if (creating) {
                 saved = service.create(e);
             } else {
-                // Use update to avoid duplicate-checking against itself
+                // Dùng update để tránh kiểm tra trùng với chính bản ghi hiện tại
                 saved = service.update(id, e).orElseThrow(() -> new RuntimeException("Unable to update template"));
             }
             return ResponseEntity.ok(saved);

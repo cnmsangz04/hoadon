@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <header class="top-nav d-flex align-items-center justify-content-between px-3 shadow-sm">
     <div class="menu-toggle">
       <a href="javascript:void(0)" @click="menuToggle">
@@ -361,7 +361,7 @@ export default {
 </script>
 
 <style scoped>
-/* Style thanh điều hướng trên đã tinh chỉnh */
+/* Kiểu thanh điều hướng trên đã tinh chỉnh */
 .top-nav {
   height: 64px;
   background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
@@ -400,7 +400,7 @@ nav.d-flex.align-items-center {
 .circle-btn:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 .circle-btn:active { transform: scale(0.98); }
 
-/* Style mẫu chuông thông báo */
+/* Kiểu mẫu chuông thông báo */
 .bell-notify { list-style: none; }
 .bell-notify .circle-icon-top {
   display: inline-flex;
@@ -547,7 +547,7 @@ nav.d-flex.align-items-center {
   border-radius: 12px;
 }
 
-/* Style tiêu đề popover */
+/* Kiểu tiêu đề popover */
 ::v-deep .popover-header { background: #f9fafb; font-weight: 600; }
 
 /* Tinh chỉnh responsive */
