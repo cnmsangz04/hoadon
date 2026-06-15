@@ -21,6 +21,7 @@ import vn.hoadon.entity.CompanyRegistrationRequestEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.repositories.CompanyRegistrationRequestRepository;
 import vn.hoadon.repositories.CompanyRepository;
+import vn.hoadon.repositories.UserRepository;
 import vn.hoadon.services.CompanyService;
 
 import java.time.LocalDateTime;
@@ -36,6 +37,7 @@ public class CompanyRegistrationRequestController extends BaseController {
 
     @Autowired private CompanyRegistrationRequestRepository repository;
     @Autowired private CompanyRepository companyRepository;
+    @Autowired private UserRepository userRepository;
     @Autowired private CompanyService companyService;
 
     @PostMapping("/list")
@@ -79,22 +81,13 @@ public class CompanyRegistrationRequestController extends BaseController {
             if (!Integer.valueOf(0).equals(req.getStatus())) {
                 throw new IllegalArgumentException("Hồ sơ đăng ký đã được xử lý");
             }
-            if (companyRepository.existsByTaxcode(req.getTaxcode())) {
+            CompanyEntity existingCompany = companyRepository.findByTaxcode(req.getTaxcode()).orElse(null);
+            boolean resumePartialApproval = isPartialApprovalCompany(existingCompany, req);
+            if (existingCompany != null && !resumePartialApproval) {
                 throw new IllegalArgumentException("Mã số thuế đã được sử dụng bởi công ty khác");
             }
 
-            CompanyEntity company = new CompanyEntity();
-            company.setName(req.getCompanyName());
-            company.setTaxcode(req.getTaxcode());
-            company.setAddress(req.getAddress());
-            company.setEmail(req.getEmail());
-            company.setHotline(req.getPhone());
-            company.setContactName(req.getContactName());
-            company.setContactMail(req.getEmail());
-            company.setContactPhone(req.getPhone());
-            company.setStatus(2);
-
-            CompanyEntity saved = companyService.saveOrUpdate(company);
+            CompanyEntity saved = existingCompany != null ? existingCompany : companyService.saveOrUpdate(toCompany(req));
             UserEntity reviewer = currentUser();
             req.setStatus(1);
             req.setCompanyId(saved.getId());
@@ -162,5 +155,40 @@ public class CompanyRegistrationRequestController extends BaseController {
         if (user == null) return null;
         if (user.getName() != null && !user.getName().isBlank()) return user.getName();
         return user.getUsername();
+    }
+
+    private CompanyEntity toCompany(CompanyRegistrationRequestEntity req) {
+        CompanyEntity company = new CompanyEntity();
+        company.setName(req.getCompanyName());
+        company.setTaxcode(req.getTaxcode());
+        company.setAddress(req.getAddress());
+        company.setEmail(req.getEmail());
+        company.setHotline(req.getPhone());
+        company.setContactName(req.getContactName());
+        company.setContactMail(req.getEmail());
+        company.setContactPhone(req.getPhone());
+        company.setStatus(2);
+        return company;
+    }
+
+    private boolean isPartialApprovalCompany(CompanyEntity company, CompanyRegistrationRequestEntity req) {
+        if (company == null || req == null || company.getId() == null) return false;
+        if (!sameText(company.getTaxcode(), req.getTaxcode())) return false;
+        if (!sameText(company.getEmail(), req.getEmail())) return false;
+        if (!sameText(company.getName(), req.getCompanyName())) return false;
+        return !hasCompanyAdmin(company.getId());
+    }
+
+    private boolean hasCompanyAdmin(Long companyId) {
+        if (companyId == null) return false;
+        List<UserEntity> users = userRepository.findByCompanyId(companyId);
+        return users != null && users.stream()
+                .anyMatch(user -> user != null && Integer.valueOf(1).equals(user.getRole()));
+    }
+
+    private boolean sameText(String a, String b) {
+        String left = a != null ? a.trim() : "";
+        String right = b != null ? b.trim() : "";
+        return left.equalsIgnoreCase(right);
     }
 }

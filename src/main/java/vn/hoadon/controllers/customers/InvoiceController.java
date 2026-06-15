@@ -41,6 +41,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ContentDisposition;
+
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.stream.StreamSource;
@@ -63,6 +64,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.services.MailQueueService;
+import vn.hoadon.util.InvoiceXmlTaxValidator;
 import vn.hoadon.worker.MailWorker;
 
 @RestController
@@ -1563,14 +1565,18 @@ public class InvoiceController extends BaseController {
             }
             if (xml == null || xml.isBlank()) {
                 log.warn("processCqtResponse: No XML found for invoice {}", invoiceId);
+                rejectInvoiceFromCqt(inv, companyId,
+                        "Hóa đơn số " + inv.getNo() + " bị từ chối từ CQT",
+                        "Không tìm thấy XML hóa đơn đã ký");
                 return;
             }
             
             boolean isCapMa = have != null && have == 1;
+            InvoiceXmlTaxValidator.Result validation = InvoiceXmlTaxValidator.validate(xml);
 
             if (isCapMa) {
                 // Message 200: either accepted (202) or rejected (204)
-                boolean accepted = true; // Always accept in simulation
+                boolean accepted = validation.isValid();
                 if (accepted) {
                     // 202: Chấp nhận, generate MCCQT and update invoice
                     String code = generateCqtCode(34);
@@ -1624,32 +1630,13 @@ public class InvoiceController extends BaseController {
                     }
                 } else {
                     // 204: Từ chối cấp mã
-                    inv.setStatus((short)7); // Không đủ điều kiện
-                    inv.setUpdatedAt(java.time.LocalDateTime.now());
-                    invoiceRepository.save(inv);
-                    
-                    HistoryDto h204rej = new HistoryDto();
-                    h204rej.setCompanyId(companyId);
-                    h204rej.setUserId(0L);
-                    h204rej.setTableName("invoices");
-                    h204rej.setTableId(inv.getId().longValue());
-                    h204rej.setTitle("Hóa đơn số " + inv.getNo() + " bị từ chối cấp mã từ CQT");
-                    h204rej.setDescription("Hóa đơn không đủ điều kiện");
-                    h204rej.setShowNotify(1);
-                    h204rej.setStatus(1);
-                    h204rej.setType(204);
-                    h204rej.setXmlData(buildMock204ResponseXml(false, inv, null));
-                    
-                    try { 
-                        historyService.save(h204rej);
-                        log.info("History 204 reject saved for invoice {}", invoiceId);
-                    } catch (Exception e) { 
-                        log.error("History 204 reject save failed for invoice {}: {}", invoiceId, e.toString(), e); 
-                    }
+                    rejectInvoiceFromCqt(inv, companyId,
+                            "Hóa đơn số " + inv.getNo() + " bị từ chối cấp mã từ CQT",
+                            validation.getMessage());
                 }
             } else {
-                // Message 203: always respond 204; LTBao determines acceptance
-                boolean ltBao2 = true; // true => accepted (LTBao==2)
+                // Message 203: CQT returns 204; LTBao=2 when XML is accepted.
+                boolean ltBao2 = validation.isValid();
                 if (ltBao2) {
                     // Add CQT signature to the XML (simulated)
                     String xmlWithCqtSignature = injectCqtSignature(xml);
@@ -1695,32 +1682,40 @@ public class InvoiceController extends BaseController {
                         log.error("History 204 accept save failed for invoice {}: {}", invoiceId, e.toString(), e); 
                     }
                 } else {
-                    inv.setStatus((short)7); // Không đủ điều kiện
-                    inv.setUpdatedAt(java.time.LocalDateTime.now());
-                    invoiceRepository.save(inv);
-                    
-                    HistoryDto h204rej = new HistoryDto();
-                    h204rej.setCompanyId(companyId);
-                    h204rej.setUserId(0L);
-                    h204rej.setTableName("invoices");
-                    h204rej.setTableId(inv.getId().longValue());
-                    h204rej.setTitle("Hóa đơn số " + inv.getNo() + " bị từ chối từ CQT");
-                    h204rej.setDescription("Hóa đơn không đủ điều kiện");
-                    h204rej.setShowNotify(1);
-                    h204rej.setStatus(1);
-                    h204rej.setType(204);
-                    h204rej.setXmlData(buildMock204ResponseXml(false, inv, null)); // LTBao!=2
-                    
-                    try { 
-                        historyService.save(h204rej);
-                        log.info("History 204 reject saved for invoice {}", invoiceId);
-                    } catch (Exception e) { 
-                        log.error("History 204 reject save failed for invoice {}: {}", invoiceId, e.toString(), e); 
-                    }
+                    rejectInvoiceFromCqt(inv, companyId,
+                            "Hóa đơn số " + inv.getNo() + " bị từ chối từ CQT",
+                            validation.getMessage());
                 }
             }
         } catch (Exception e) {
             log.error("processCqtResponse failed for invoice {}: {}", invoiceId, e.toString(), e);
+        }
+    }
+
+    private void rejectInvoiceFromCqt(InvoiceEntity inv, Long companyId, String title, String reason) {
+        if (inv == null) return;
+        String message = reason != null && !reason.trim().isEmpty() ? reason : "Hóa đơn không đủ điều kiện";
+        inv.setStatus((short)7);
+        inv.setUpdatedAt(java.time.LocalDateTime.now());
+        invoiceRepository.save(inv);
+
+        HistoryDto h204rej = new HistoryDto();
+        h204rej.setCompanyId(companyId);
+        h204rej.setUserId(0L);
+        h204rej.setTableName("invoices");
+        h204rej.setTableId(inv.getId().longValue());
+        h204rej.setTitle(title);
+        h204rej.setDescription(message);
+        h204rej.setShowNotify(1);
+        h204rej.setStatus(1);
+        h204rej.setType(204);
+        h204rej.setXmlData(buildMock204ResponseXml(false, inv, message));
+
+        try {
+            historyService.save(h204rej);
+            log.info("History 204 reject saved for invoice {}", inv.getId());
+        } catch (Exception e) {
+            log.error("History 204 reject save failed for invoice {}: {}", inv.getId(), e.toString(), e);
         }
     }
 

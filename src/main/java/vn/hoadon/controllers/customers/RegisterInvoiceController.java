@@ -17,6 +17,7 @@ import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.services.RegisterInvoiceService;
 import vn.hoadon.services.HistoryService;
 import vn.hoadon.dto.history.HistoryDto;
+import vn.hoadon.util.RegisterInvoiceXmlTaxValidator;
 
 import java.net.URI;
 import java.time.LocalDate;
@@ -295,26 +296,35 @@ public class RegisterInvoiceController extends BaseController {
         // Clone basic info needed
         final Long id = entity.getId();
         final Long companyId = entity.getCompanyId();
+        final RegisterInvoiceXmlTaxValidator.Result receiveValidation =
+                RegisterInvoiceXmlTaxValidator.validateForReceive(entity.getSignedXml());
+        final RegisterInvoiceXmlTaxValidator.Result acceptValidation =
+                RegisterInvoiceXmlTaxValidator.validate(entity.getSignedXml());
         // Simulate 102 after ~2 seconds
         new Thread(() -> {
             try { Thread.sleep(2000L); } catch (InterruptedException ignored) {}
-            boolean acceptedReceive = decideByCompany(companyId);
-            String xml = buildResponseXml(102, acceptedReceive ? 1 : 0);
-            RegisterInvoiceEntity patch = cloneEntityPreserveAll(entity);
+            boolean acceptedReceive = receiveValidation.isValid();
+            String reason = acceptedReceive ? null : receiveValidation.getMessage();
+            String xml = buildResponseXml(102, acceptedReceive ? 1 : 0, reason);
+            RegisterInvoiceEntity current = service.findById(id).orElse(entity);
+            RegisterInvoiceEntity patch = cloneEntityPreserveAll(current);
             patch.setStatus(acceptedReceive ? 4 : 3);
             patch.setResponseReceiveFile(xml);
             service.update(id, patch);
             // Insert history row for message 102
-            String desc102 = acceptedReceive ? "Mã thông điệp 102 đã tiếp nhận" : "Mã thông điệp 102 không tiếp nhận";
+            String desc102 = acceptedReceive ? "Mã thông điệp 102 đã tiếp nhận" : "Mã thông điệp 102 không tiếp nhận: " + reason;
             insertHistoryRow(companyId, 0L, "register_invoices", id,
                     "Thông điệp 102 tiếp nhận thông tin tờ khai hóa đơn điện tử", desc102, 1, 1, 102, xml);
         }).start();
         // Simulate 103 after ~5 seconds
         new Thread(() -> {
             try { Thread.sleep(5000L); } catch (InterruptedException ignored) {}
-            boolean accepted = decideByCompany(companyId);
-            String xml = buildResponseXml(103, accepted ? 1 : 0);
-            RegisterInvoiceEntity patch = cloneEntityPreserveAll(entity);
+            if (!receiveValidation.isValid()) return;
+            boolean accepted = acceptValidation.isValid();
+            String reason = accepted ? null : acceptValidation.getMessage();
+            String xml = buildResponseXml(103, accepted ? 1 : 0, reason);
+            RegisterInvoiceEntity current = service.findById(id).orElse(entity);
+            RegisterInvoiceEntity patch = cloneEntityPreserveAll(current);
             patch.setStatus(accepted ? 6 : 5);
             patch.setResponseAcceptFile(xml);
             // Khi status = 6 (đã chấp nhận), set effectiveDate là thời gian hiện tại
@@ -323,19 +333,17 @@ public class RegisterInvoiceController extends BaseController {
             }
             service.update(id, patch);
             // Insert history row for message 103
-            String desc103 = accepted ? "Mã thông điệp 103 đã chấp nhận" : "Mã thông điệp 103 không chấp nhận";
+            String desc103 = accepted ? "Mã thông điệp 103 đã chấp nhận" : "Mã thông điệp 103 không chấp nhận: " + reason;
             insertHistoryRow(companyId, 0L, "register_invoices", id,
                     "Thông điệp 103 tiếp nhận thông tin tờ khai hóa đơn điện tử", desc103, 1, 1, 103, xml);
         }).start();
     }
 
-    private boolean decideByCompany(Long companyId) {
-        if (companyId == null) return true;
-        // simple deterministic pseudo-random decision based on companyId
-        return Math.abs(Objects.hash(companyId)) % 2 == 0;
+    private String buildResponseXml(int mltDiep, int flag) {
+        return buildResponseXml(mltDiep, flag, null);
     }
 
-    private String buildResponseXml(int mltDiep, int flag) {
+    private String buildResponseXml(int mltDiep, int flag, String note) {
         // TTChung->MLTDiep and DLieu->TBao->DLTBao->THop or TTXNCQT per requirement
         StringBuilder sb = new StringBuilder();
         sb.append("<TBaoCQT>");
@@ -345,6 +353,9 @@ public class RegisterInvoiceController extends BaseController {
             sb.append("<THop>").append(flag).append("</THop>");
         } else {
             sb.append("<TTXNCQT>").append(flag).append("</TTXNCQT>");
+        }
+        if (note != null && !note.isBlank()) {
+            sb.append("<GChu>").append(escapeXml(note)).append("</GChu>");
         }
         sb.append("</DLTBao></TBao></DLieu>");
         sb.append("</TBaoCQT>");

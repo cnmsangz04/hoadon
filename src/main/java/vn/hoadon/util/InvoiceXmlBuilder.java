@@ -37,6 +37,7 @@ public final class InvoiceXmlBuilder {
         String shdon = inv.getNo() != null ? String.valueOf(inv.getNo()) : "0";
         String mhso = "";
         String nlap = inv.getDateExport() != null ? inv.getDateExport().toString() : "";
+        String hdcttChinh = "0";
         String sbke = "";
         String nbke = "";
         String dvtte = nullToEmpty(inv.getCurrency());
@@ -58,7 +59,7 @@ public final class InvoiceXmlBuilder {
         Map<String,Object> customer = parseJsonObject(inv.getCustomer());
         String buyerName = deriveBuyerName(customer);
         String buyerFullName = str(customer.get("buyer"));
-        String buyerMst = str(customer.get("taxcode"));
+        String buyerMst = firstText(customer.get("taxcode"), customer.get("tax_code"), customer.get("taxCode"));
         String buyerAddr = str(customer.get("address"));
         String buyerCode = str(customer.get("code"));
         String buyerPhone = str(customer.get("phone"));
@@ -80,6 +81,7 @@ public final class InvoiceXmlBuilder {
           .append(tag("SHDon", shdon))
           .append(tag("MHSo", mhso))
           .append(tag("NLap", nlap))
+          .append(tag("HDCTTChinh", hdcttChinh))
           .append(tag("SBKe", sbke))
           .append(tag("NBKe", nbke))
           .append(tag("DVTTe", dvtte))
@@ -322,6 +324,14 @@ public final class InvoiceXmlBuilder {
         String buyer = str(customer.get("buyer"));
         if (hasText(name)) return name;
         if (hasText(buyer)) return buyer;
+        return "";
+    }
+    private static String firstText(Object... values) {
+        if (values == null) return "";
+        for (Object value : values) {
+            String s = str(value);
+            if (hasText(s)) return s;
+        }
         return "";
     }
     private static String str(Object o) { return o == null ? "" : String.valueOf(o); }

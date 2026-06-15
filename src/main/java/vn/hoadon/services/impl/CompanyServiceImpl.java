@@ -7,6 +7,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import vn.hoadon.dto.company.CompanyFilterDTO;
@@ -91,6 +92,7 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     @Override
+    @Transactional
     public CompanyEntity saveOrUpdate(CompanyEntity company) {
         if (company.getId() == null) {
             if (company.getPrefix() == null || company.getPrefix().isEmpty()) {
@@ -154,22 +156,18 @@ public class CompanyServiceImpl implements CompanyService {
         repo.deleteById(id);
     }
 
-    // Create user (username=admin) for company and assign level=0 permissions
+    // Create company admin user and assign level=0 permissions.
     private void createDefaultCompanyAdmin(CompanyEntity company) {
         if (company == null || company.getId() == null) return;
 
-        // If an admin user already exists for this company with username 'admin', skip
-        try {
-            Optional<UserEntity> existingAdmin = userRepository.findByUsername("admin");
-            if (existingAdmin.isPresent() && company.getId().equals(existingAdmin.get().getCompanyId())) {
-                return;
-            }
-        } catch (Exception ignore) {}
+        if (findCompanyAdmin(company.getId()).isPresent()) {
+            return;
+        }
 
         // Build user entity
         UserEntity user = new UserEntity();
         user.setCompanyId(company.getId());
-        user.setUsername("admin");
+        user.setUsername(generateTemporaryUsername());
         user.setName("Admin");
         user.setRole(1); // Admin
         user.setStatus((byte)1);
@@ -177,6 +175,8 @@ public class CompanyServiceImpl implements CompanyService {
         user.setPassword(passwordEncoder.encode(rawPassword));
 
         UserEntity savedUser = userRepository.save(user);
+        savedUser.setUsername(expectedUsername(savedUser.getId()));
+        savedUser = userRepository.save(savedUser);
 
         // Assign all permissions with level=0 and status=1
         List<PermissionEntity> basePerms = permissionRepository.findByLevelAndStatus(0, (byte)1);
@@ -191,6 +191,27 @@ public class CompanyServiceImpl implements CompanyService {
             }
             userPermissionRepository.saveAll(assigns);
         }
+    }
+
+    private Optional<UserEntity> findCompanyAdmin(Long companyId) {
+        if (companyId == null) return Optional.empty();
+        List<UserEntity> users = userRepository.findByCompanyId(companyId);
+        if (users == null) return Optional.empty();
+        return users.stream()
+                .filter(u -> u != null && Integer.valueOf(1).equals(u.getRole()))
+                .findFirst();
+    }
+
+    private String expectedUsername(Long userId) {
+        return userId == null ? null : "cp-" + userId;
+    }
+
+    private String generateTemporaryUsername() {
+        String username;
+        do {
+            username = "tmp-" + System.nanoTime();
+        } while (userRepository.existsByUsername(username));
+        return username;
     }
 
     private static final String LOWER = "abcdefghijkmnopqrstuvwxyz";
@@ -234,16 +255,10 @@ public class CompanyServiceImpl implements CompanyService {
             throw new IllegalArgumentException("Công ty chưa cấu hình email nhận thông tin");
         }
 
-        // Find first admin user (role = 1) of this company
-        List<UserEntity> users = userRepository.findByCompanyId(companyId);
-        UserEntity admin = null;
-        if (users != null) {
-            for (UserEntity u : users) {
-                if (u != null && Integer.valueOf(1).equals(u.getRole())) {
-                    admin = u;
-                    break;
-                }
-            }
+        UserEntity admin = findCompanyAdmin(companyId).orElse(null);
+        if (admin == null) {
+            createDefaultCompanyAdmin(company);
+            admin = findCompanyAdmin(companyId).orElse(null);
         }
 
         if (admin == null) {
