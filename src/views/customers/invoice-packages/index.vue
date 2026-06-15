@@ -63,6 +63,7 @@
       </div>
 
       <b-table
+        class="invoice-package-purchases-table"
         bordered
         hover
         responsive
@@ -77,8 +78,8 @@
           {{ index + 1 + (purchaseList.current_page - 1) * purchaseList.per_page }}
         </template>
         <template #cell(packageName)="{ item }">
-          <div class="font-weight-bold">{{ item.packageName }}</div>
-          <small class="text-muted">{{ item.paymentCode }}</small>
+          <div class="font-weight-bold text-wrap-anywhere">{{ item.packageName }}</div>
+          <small class="text-muted text-wrap-anywhere">{{ item.paymentCode }}</small>
         </template>
         <template #cell(invoiceQuantity)="{ item }">
           {{ formatNumber(item.invoiceQuantity) }}
@@ -163,13 +164,13 @@ export default {
       },
       pageSizes: [10, 20, 50, 100],
       purchaseFields: [
-        { key: 'index', label: '#', thStyle: { width: '60px' }, tdClass: 'text-center' },
-        { key: 'packageName', label: 'Gói / mã giao dịch', thStyle: { minWidth: '220px' } },
-        { key: 'invoiceQuantity', label: 'Số hóa đơn', thStyle: { width: '120px' }, tdClass: 'text-right' },
-        { key: 'totalPrice', label: 'Thành tiền', thStyle: { width: '150px' }, tdClass: 'text-right' },
-        { key: 'paymentMethod', label: 'Thanh toán', thStyle: { width: '110px' }, tdClass: 'text-center' },
-        { key: 'paymentStatus', label: 'Trạng thái', thStyle: { width: '120px' }, tdClass: 'text-center' },
-        { key: 'paidAt', label: 'Ngày mua', thStyle: { width: '160px' } },
+        { key: 'index', label: '#', thStyle: { width: '5%' }, tdClass: 'text-center' },
+        { key: 'packageName', label: 'Gói / mã giao dịch', thStyle: { width: '28%' } },
+        { key: 'invoiceQuantity', label: 'Số hóa đơn', thStyle: { width: '12%' }, tdClass: 'text-right' },
+        { key: 'totalPrice', label: 'Thành tiền', thStyle: { width: '15%' }, tdClass: 'text-right' },
+        { key: 'paymentMethod', label: 'Thanh toán', thStyle: { width: '12%' }, tdClass: 'text-center' },
+        { key: 'paymentStatus', label: 'Trạng thái', thStyle: { width: '13%' }, tdClass: 'text-center' },
+        { key: 'paidAt', label: 'Ngày mua', thStyle: { width: '15%' } },
       ],
     }
   },
@@ -391,6 +392,28 @@ export default {
 
 .table th {
   background: #f7f9fc;
+}
+
+.invoice-packages-page::v-deep .table-responsive {
+  overflow-x: hidden;
+}
+
+.invoice-packages-page::v-deep .invoice-package-purchases-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.invoice-packages-page::v-deep .invoice-package-purchases-table th,
+.invoice-packages-page::v-deep .invoice-package-purchases-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: middle;
+}
+
+.text-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 @media (max-width: 768px) {

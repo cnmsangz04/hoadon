@@ -106,6 +106,7 @@
     <!-- Bảng báo cáo hóa đơn -->
     <b-card class="shadow-sm">
       <b-table
+        class="customer-report-invoices-table"
         bordered
         hover
         responsive
@@ -121,7 +122,7 @@
         </template>
 
         <template #cell(orderCode)="{ item }">
-          <span>{{ item.orderCode || item.billCode || '—' }}</span>
+          <span class="text-wrap-anywhere">{{ item.orderCode || item.billCode || '—' }}</span>
         </template>
 
         <template #cell(formCode)="{ item }">
@@ -137,7 +138,7 @@
         </template>
 
         <template #cell(customerName)="{ item }">
-          {{ item.customerName || '—' }}
+          <span class="text-wrap-anywhere">{{ item.customerName || '—' }}</span>
         </template>
 
         <template #cell(paymentType)="{ item }">
@@ -217,15 +218,15 @@ export default {
       },
       yearOptions: Array.from({ length: 6 }).map((_, i) => currentYear - 3 + i),
       fields: [
-        { key: 'index', label: '#', thStyle: { width: '50px' } },
-        { key: 'orderCode', label: 'Mã đơn hàng', thStyle: { width: '140px' } },
-        { key: 'formCode', label: 'Ký hiệu', thStyle: { width: '120px' } },
-        { key: 'no', label: 'Số hóa đơn', thStyle: { width: '110px' } },
-        { key: 'dateExport', label: 'Ngày lập', thStyle: { width: '120px' } },
-        { key: 'customerName', label: 'Tên đơn vị / khách hàng', thStyle: { width: '150px' } },
-        { key: 'paymentType', label: 'Hình thức thanh toán', thStyle: { width: '120px' } },
-        { key: 'status', label: 'Trạng thái', thStyle: { width: '130px' } },
-        { key: 'amount', label: 'Tổng tiền', thStyle: { width: '140px' }, tdClass: 'text-right' }
+        { key: 'index', label: '#', thStyle: { width: '4%' } },
+        { key: 'orderCode', label: 'Mã đơn hàng', thStyle: { width: '13%' } },
+        { key: 'formCode', label: 'Ký hiệu', thStyle: { width: '10%' } },
+        { key: 'no', label: 'Số hóa đơn', thStyle: { width: '8%' } },
+        { key: 'dateExport', label: 'Ngày lập', thStyle: { width: '10%' } },
+        { key: 'customerName', label: 'Tên đơn vị / khách hàng', thStyle: { width: '19%' } },
+        { key: 'paymentType', label: 'Hình thức thanh toán', thStyle: { width: '13%' } },
+        { key: 'status', label: 'Trạng thái', thStyle: { width: '11%' } },
+        { key: 'amount', label: 'Tổng tiền', thStyle: { width: '12%' }, tdClass: 'text-right' }
       ]
     }
   },
@@ -448,7 +449,29 @@ export default {
 
 <style scoped>
 .customer-report-invoices {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+}
+
+.customer-report-invoices::v-deep .table-responsive {
+  overflow-x: hidden;
+}
+
+.customer-report-invoices::v-deep .customer-report-invoices-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.customer-report-invoices::v-deep .customer-report-invoices-table th,
+.customer-report-invoices::v-deep .customer-report-invoices-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: middle;
+}
+
+.text-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 </style>

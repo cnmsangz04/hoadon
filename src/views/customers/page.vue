@@ -52,7 +52,9 @@ export default {
 
 .content {
   flex: 1;
+  min-width: 0;
   padding: 20px;
   background-color: #f5f6fa;
+  overflow-x: hidden;
 }
 </style>

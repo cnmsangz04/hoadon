@@ -61,6 +61,7 @@
     <!-- Bảng hóa đơn -->
     <b-card class="shadow-sm">
       <b-table
+        class="vat-invoices-table"
         bordered
         hover
         responsive
@@ -341,17 +342,17 @@ export default {
       // Hiển thị dd/mm/YYYY trong datepicker
       dateFormatOptions: { year: 'numeric', month: '2-digit', day: '2-digit' },
       fields: [
-        { key: 'index', label: 'STT', thStyle: { width: '60px' } },
-        { key: 'form_serial', label: 'Ký hiệu', thStyle: { width: '140px' } },
-        { key: 'no', label: 'Số', thStyle: { width: '100px' } },
-        { key: 'date_export', label: 'Ngày lập', thStyle: { width: '140px' } },
-        { key: 'lookup_code', label: 'Mã tra cứu', thStyle: { width: '100px' } },
-        { key: 'customer_or_cqt', label: 'Khách hàng / Mã CQT', thStyle: { width: '200px' } },
-        { key: 'amount', label: 'Tổng tiền', thStyle: { width: '140px' }, tdClass: 'text-right' },
-        { key: 'username', label: 'Người phát hành', thStyle: { width: '160px' } },
-        { key: 'status', label: 'Trạng thái', thStyle: { width: '160px' } },
-        { key: 'invoice_relation', label: 'Loại hóa đơn', thStyle: { width: '130px' } },
-        { key: 'option', label: 'Chức năng', thStyle: { width: '180px' } },
+        { key: 'index', label: 'STT', thStyle: { width: '4%' } },
+        { key: 'form_serial', label: 'Ký hiệu', thStyle: { width: '9%' } },
+        { key: 'no', label: 'Số', thStyle: { width: '6%' } },
+        { key: 'date_export', label: 'Ngày lập', thStyle: { width: '8%' } },
+        { key: 'lookup_code', label: 'Mã tra cứu', thStyle: { width: '9%' } },
+        { key: 'customer_or_cqt', label: 'Khách hàng / Mã CQT', thStyle: { width: '18%' } },
+        { key: 'amount', label: 'Tổng tiền', thStyle: { width: '9%' }, tdClass: 'text-right' },
+        { key: 'username', label: 'Người phát hành', thStyle: { width: '11%' } },
+        { key: 'status', label: 'Trạng thái', thStyle: { width: '10%' } },
+        { key: 'invoice_relation', label: 'Loại hóa đơn', thStyle: { width: '8%' } },
+        { key: 'option', label: 'Chức năng', thStyle: { width: '8%' } },
       ],
       statusOptions: [
         { value: 0, text: 'Mới khởi tạo' },
@@ -965,5 +966,22 @@ export default {
   font-weight: 600;
   letter-spacing: 0;
   white-space: nowrap;
+}
+
+.vat-invoices::v-deep .table-responsive {
+  overflow-x: hidden;
+}
+
+.vat-invoices::v-deep .vat-invoices-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.vat-invoices::v-deep .vat-invoices-table th,
+.vat-invoices::v-deep .vat-invoices-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: middle;
 }
 </style>

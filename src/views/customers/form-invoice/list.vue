@@ -60,6 +60,7 @@
     <!-- Bảng mẫu hóa đơn -->
     <b-card class="shadow-sm">
       <b-table
+        class="form-invoices-table"
         bordered
         hover
         responsive
@@ -209,15 +210,15 @@ export default {
         status: null,
       },
       fields: [
-        { key: 'index', label: '#', thStyle: { width: '50px' } },
-        { key: 'name', label: 'Tên mẫu', thStyle: { width: '160px' } },
-        { key: 'serial', label: 'Ký hiệu', thStyle: { width: '140px' } },
-        { key: 'category', label: 'Loại hóa đơn', thStyle: { width: '180px' } },
-        { key: 'type', label: 'Loại thuế suất', thStyle: { width: '160px' } },
-        { key: 'status', label: 'Trạng thái', thStyle: { width: '120px' } },
-        { key: 'username', label: 'Người tạo', thStyle: { width: '160px' } },
-        { key: 'updated_at', label: 'Ngày cập nhật', thStyle: { width: '140px' } },
-        { key: 'option', label: 'Chức năng', thStyle: { width: '140px' } }
+        { key: 'index', label: '#', thStyle: { width: '4%' } },
+        { key: 'name', label: 'Tên mẫu', thStyle: { width: '18%' } },
+        { key: 'serial', label: 'Ký hiệu', thStyle: { width: '11%' } },
+        { key: 'category', label: 'Loại hóa đơn', thStyle: { width: '14%' } },
+        { key: 'type', label: 'Loại thuế suất', thStyle: { width: '13%' } },
+        { key: 'status', label: 'Trạng thái', thStyle: { width: '10%' } },
+        { key: 'username', label: 'Người tạo', thStyle: { width: '13%' } },
+        { key: 'updated_at', label: 'Ngày cập nhật', thStyle: { width: '12%' } },
+        { key: 'option', label: 'Chức năng', thStyle: { width: '5%' } }
       ],
       categoryOptions: [
         { value: 1, text: 'Hóa đơn giá trị gia tăng' },
@@ -368,4 +369,21 @@ export default {
 .shadow-sm { border-radius: 10px; }
 
 #viewInv { min-height: 300px; }
+
+.form-invoices::v-deep .table-responsive {
+  overflow-x: hidden;
+}
+
+.form-invoices::v-deep .form-invoices-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.form-invoices::v-deep .form-invoices-table th,
+.form-invoices::v-deep .form-invoices-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: middle;
+}
 </style>

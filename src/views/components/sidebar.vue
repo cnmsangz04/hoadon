@@ -193,6 +193,7 @@ export default {
 /* Nền tảng sidebar */
 .sidebar {
   width: 260px;
+  flex: 0 0 260px;
   background: linear-gradient(180deg, #0f1724 0%, #0b2238 100%);
   color: #e6eef8;
   height: 100vh;
@@ -244,6 +245,6 @@ export default {
 .slide-enter, .slide-leave-to { opacity: 0; transform: translateY(-6px); height: 0; }
 /* Responsive: thu gọn chiều rộng trên màn hình nhỏ */
 @media (max-width: 768px) {
-  .sidebar { width: 100%; height: auto; position: relative; }
+  .sidebar { width: 100%; flex-basis: auto; height: auto; position: relative; }
 }
 </style>

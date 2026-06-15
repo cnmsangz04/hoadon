@@ -80,6 +80,7 @@
     <!-- Bảng tờ khai hóa đơn -->
     <b-card class="shadow-sm">
       <b-table
+        class="register-invoices-table"
         bordered
         hover
         responsive
@@ -95,7 +96,7 @@
         </template>
 
         <template #cell(form_pattern)="{ item }">
-          <code>{{ item.form_pattern || '—' }}</code>
+          <code class="text-wrap-anywhere">{{ item.form_pattern || '—' }}</code>
         </template>
 
         <template #cell(declaration_date)="{ item }">
@@ -110,7 +111,7 @@
 
         <template #cell(invoice_forms)="{ item }">
           <span class="text-muted" v-if="!item.invoice_forms">—</span>
-          <span v-else>{{ summarizeInvoiceForms(item.invoice_forms) }}</span>
+          <span v-else class="text-wrap-anywhere">{{ summarizeInvoiceForms(item.invoice_forms) }}</span>
         </template>
 
         <template #cell(status)="{ item }">
@@ -213,13 +214,13 @@ export default {
         dateTo: null
       },
       fields: [
-        { key: 'index', label: '#', thStyle: { width: '50px' } },
-        { key: 'form_pattern', label: 'Mẫu số', thStyle: { width: '140px' } },
-        { key: 'declaration_date', label: 'Ngày lập', thStyle: { width: '130px' } },
-        { key: 'declaration_type', label: 'Hình thức tờ khai', thStyle: { width: '140px' } },
-        { key: 'invoice_forms', label: 'Hình thức hóa đơn' },
-        { key: 'status', label: 'Trạng thái', thStyle: { width: '120px' } },
-        { key: 'option', label: 'Chức năng', thStyle: { width: '140px' } }
+        { key: 'index', label: '#', thStyle: { width: '4%' } },
+        { key: 'form_pattern', label: 'Mẫu số', thStyle: { width: '13%' } },
+        { key: 'declaration_date', label: 'Ngày lập', thStyle: { width: '11%' } },
+        { key: 'declaration_type', label: 'Hình thức tờ khai', thStyle: { width: '13%' } },
+        { key: 'invoice_forms', label: 'Hình thức hóa đơn', thStyle: { width: '37%' } },
+        { key: 'status', label: 'Trạng thái', thStyle: { width: '10%' } },
+        { key: 'option', label: 'Chức năng', thStyle: { width: '12%' } }
       ],
       declarationTypeOptions: [
         { value: 1, text: 'Đăng ký mới' },
@@ -696,7 +697,29 @@ export default {
 
 <style scoped>
 .register-invoices {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+}
+
+.register-invoices::v-deep .table-responsive {
+  overflow-x: hidden;
+}
+
+.register-invoices::v-deep .register-invoices-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.register-invoices::v-deep .register-invoices-table th,
+.register-invoices::v-deep .register-invoices-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: middle;
+}
+
+.text-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 </style>

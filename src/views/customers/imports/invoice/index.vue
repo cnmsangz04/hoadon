@@ -44,6 +44,7 @@
       </div>
 
       <b-table
+        class="import-history-table"
         bordered
         hover
         responsive
@@ -59,7 +60,7 @@
         </template>
 
         <template #cell(originalFilename)="{ item }">
-          <div class="font-weight-bold">{{ item.originalFilename || '—' }}</div>
+          <div class="font-weight-bold text-wrap-anywhere">{{ item.originalFilename || '—' }}</div>
         </template>
 
         <template #cell(status)="{ item }">
@@ -75,7 +76,7 @@
         </template>
 
         <template #cell(importedInvoiceIds)="{ item }">
-          <span>{{ shortIds(item.importedInvoiceIds) }}</span>
+          <span class="text-wrap-anywhere">{{ shortIds(item.importedInvoiceIds) }}</span>
         </template>
 
         <template #cell(createdAt)="{ item }">
@@ -135,13 +136,13 @@ export default {
       },
       pageSizes: [10, 20, 50, 100],
       fields: [
-        { key: 'index', label: '#', class: 'text-center', thStyle: { width: '60px' } },
-        { key: 'originalFilename', label: 'File import' },
-        { key: 'status', label: 'Trạng thái', class: 'text-center', thStyle: { width: '140px' } },
-        { key: 'summary', label: 'Kết quả', class: 'text-center', thStyle: { width: '150px' } },
-        { key: 'importedInvoiceIds', label: 'Mã tra cứu' },
-        { key: 'createdAt', label: 'Ngày import', thStyle: { width: '160px' } },
-        { key: 'actions', label: '', class: 'text-center', thStyle: { width: '80px' } }
+        { key: 'index', label: '#', class: 'text-center', thStyle: { width: '5%' } },
+        { key: 'originalFilename', label: 'File import', thStyle: { width: '30%' } },
+        { key: 'status', label: 'Trạng thái', class: 'text-center', thStyle: { width: '14%' } },
+        { key: 'summary', label: 'Kết quả', class: 'text-center', thStyle: { width: '14%' } },
+        { key: 'importedInvoiceIds', label: 'Mã tra cứu', thStyle: { width: '20%' } },
+        { key: 'createdAt', label: 'Ngày import', thStyle: { width: '12%' } },
+        { key: 'actions', label: '', class: 'text-center', thStyle: { width: '5%' } }
       ]
     }
   },
@@ -317,7 +318,20 @@ export default {
 }
 
 .history-card::v-deep .table-responsive {
-  overflow: visible;
+  overflow-x: hidden;
+}
+
+.history-card::v-deep .import-history-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.history-card::v-deep .import-history-table th,
+.history-card::v-deep .import-history-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: middle;
 }
 
 .history-card::v-deep .dropdown-menu {
@@ -328,6 +342,11 @@ export default {
 .upload-main {
   flex: 1;
   min-width: 0;
+}
+
+.text-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .upload-label {

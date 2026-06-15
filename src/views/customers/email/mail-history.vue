@@ -39,6 +39,7 @@
 
     <b-card class="shadow-sm">
       <b-table
+        class="mail-history-table"
         bordered
         hover
         responsive
@@ -54,8 +55,8 @@
         </template>
 
         <template #cell(templateKey)="{ item }">
-          <div class="font-weight-bold">{{ item.templateName || mailTypeText(item.templateKey) }}</div>
-          <small class="text-muted">{{ item.subject || item.templateName || '—' }}</small>
+          <div class="font-weight-bold text-wrap-anywhere">{{ item.templateName || mailTypeText(item.templateKey) }}</div>
+          <small class="text-muted text-wrap-anywhere">{{ item.subject || item.templateName || '—' }}</small>
         </template>
 
         <template #cell(sender)="">
@@ -63,12 +64,12 @@
         </template>
 
         <template #cell(toName)="{ item }">
-          {{ item.toName || '—' }}
+          <span class="text-wrap-anywhere">{{ item.toName || '—' }}</span>
         </template>
 
         <template #cell(toEmail)="{ item }">
           <b-badge variant="success" class="mr-1">To</b-badge>
-          <span>{{ item.toEmail || '—' }}</span>
+          <span class="text-wrap-anywhere">{{ item.toEmail || '—' }}</span>
         </template>
 
         <template #cell(attempts)="{ item }">
@@ -165,15 +166,15 @@ export default {
         to: 0,
       },
       fields: [
-        { key: 'index', label: '#', thStyle: { width: '70px' }, tdClass: 'text-center' },
-        { key: 'templateKey', label: 'Loại email', thStyle: { minWidth: '220px' } },
-        { key: 'sender', label: 'Người gửi', thStyle: { width: '130px' } },
-        { key: 'toName', label: 'Người nhận', thStyle: { minWidth: '200px' } },
-        { key: 'toEmail', label: 'Email nhận', thStyle: { minWidth: '260px' } },
-        { key: 'attempts', label: 'Số lần gửi', thStyle: { width: '110px' }, tdClass: 'text-center' },
-        { key: 'status', label: 'Trạng thái', thStyle: { width: '130px' }, tdClass: 'text-center' },
-        { key: 'updatedAt', label: 'Ngày cập nhật', thStyle: { width: '170px' } },
-        { key: 'option', label: '', thStyle: { width: '70px' }, tdClass: 'text-center' },
+        { key: 'index', label: '#', thStyle: { width: '4%' }, tdClass: 'text-center' },
+        { key: 'templateKey', label: 'Loại email', thStyle: { width: '20%' } },
+        { key: 'sender', label: 'Người gửi', thStyle: { width: '8%' } },
+        { key: 'toName', label: 'Người nhận', thStyle: { width: '16%' } },
+        { key: 'toEmail', label: 'Email nhận', thStyle: { width: '23%' } },
+        { key: 'attempts', label: 'Số lần gửi', thStyle: { width: '7%' }, tdClass: 'text-center' },
+        { key: 'status', label: 'Trạng thái', thStyle: { width: '8%' }, tdClass: 'text-center' },
+        { key: 'updatedAt', label: 'Ngày cập nhật', thStyle: { width: '11%' } },
+        { key: 'option', label: '', thStyle: { width: '3%' }, tdClass: 'text-center' },
       ],
     }
   },
@@ -308,12 +309,30 @@ export default {
 </script>
 
 <style scoped>
-.mail-history .table th {
-  background: #eef4fa;
-  vertical-align: middle;
+.mail-history::v-deep .table-responsive {
+  overflow-x: hidden;
 }
 
-.mail-history .table td {
+.mail-history::v-deep .mail-history-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.mail-history::v-deep .mail-history-table th {
+  background: #eef4fa;
   vertical-align: middle;
+  white-space: normal;
+}
+
+.mail-history::v-deep .mail-history-table td {
+  vertical-align: middle;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.text-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 </style>
