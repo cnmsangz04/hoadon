@@ -1,4 +1,4 @@
-﻿package vn.hoadon.controllers.admin;
+package vn.hoadon.controllers.admin;
 
 import vn.hoadon.controllers.base.BaseController;
 import jakarta.validation.Valid;

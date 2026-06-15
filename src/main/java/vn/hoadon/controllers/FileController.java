@@ -1,4 +1,4 @@
-﻿package vn.hoadon.controllers;
+package vn.hoadon.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
