@@ -22,6 +22,7 @@ import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.repositories.MailJobRepository;
 import vn.hoadon.repositories.MailTemplateRepository;
 import vn.hoadon.services.MailQueueService;
+import vn.hoadon.util.SystemMail;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -119,9 +120,10 @@ public class MailJobController extends BaseController {
             return null;
         }
 
-        if (job.getCompanyId() != null) {
+        Long templateCompanyId = SystemMail.resolveCompanyId(job.getTemplateKey(), job.getCompanyId());
+        if (templateCompanyId != null) {
             MailTemplateEntity tpl = mailTemplateRepository.findByKeyAndCompanyId(
-                    job.getTemplateKey(), job.getCompanyId().intValue());
+                    job.getTemplateKey(), templateCompanyId.intValue());
             if (tpl != null && tpl.getStatus() != null && tpl.getStatus() == 1
                     && tpl.getTitle() != null && !tpl.getTitle().isBlank()) {
                 return tpl.getTitle();

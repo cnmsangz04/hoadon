@@ -38,6 +38,7 @@ import vn.hoadon.repositories.MailTemplateRepository;
 import vn.hoadon.services.BuyInvoiceHistoryService;
 import vn.hoadon.services.InvoicePackageService;
 import vn.hoadon.services.MailQueueService;
+import vn.hoadon.util.SystemMail;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
@@ -425,8 +426,10 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
         if (existing != null) {
             return;
         }
+        CompanyEntity templateCompany = companyRepository.findById(SystemMail.COMPANY_ID)
+                .orElse(company);
         MailTemplateEntity template = new MailTemplateEntity();
-        template.setCompany(company);
+        template.setCompany(templateCompany);
         template.setKey(MAIL_KEY);
         template.setTitle("Thông báo mua gói hóa đơn thành công");
         template.setStatus((byte) 1);

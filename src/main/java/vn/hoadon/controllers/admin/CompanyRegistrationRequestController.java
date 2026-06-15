@@ -102,6 +102,7 @@ public class CompanyRegistrationRequestController extends BaseController {
             req.setReviewedById(reviewer != null ? reviewer.getId() : null);
             req.setReviewedByName(resolveReviewerName(reviewer));
             repository.save(req);
+            companyService.sendAdminCredentials(saved.getId());
 
             return ResponseEntity.ok(Map.of(
                     "message", "Đã duyệt đăng ký, tạo công ty và gửi mail thông tin đăng nhập",

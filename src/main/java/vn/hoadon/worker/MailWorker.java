@@ -15,6 +15,7 @@ import vn.hoadon.entity.MailTemplateEntity;
 import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.repositories.MailServerRepository;
 import vn.hoadon.repositories.MailTemplateRepository;
+import vn.hoadon.util.SystemMail;
 
 import java.util.Base64;
 import java.util.Map;
@@ -100,17 +101,14 @@ public class MailWorker {
 
     // Xác định công ty dùng để lấy cấu hình gửi mail.
     private Long resolveSenderCompanyId(MailJobMessage job) {
-        if (job != null && ("LOGIN_INFO_MAIL".equals(job.getTemplateKey())
-                || "RESET_PASSWORD_MAIL".equals(job.getTemplateKey()))) {
-            return 1L;
-        }
-        return job != null ? job.getCompanyId() : null;
+        if (job == null) return null;
+        return SystemMail.resolveCompanyId(job.getTemplateKey(), job.getCompanyId());
     }
 
     // Xác định template email.
     private ResolvedTemplate resolveTemplate(MailJobMessage job) {
         String key = job.getTemplateKey();
-        Long companyId = job.getCompanyId();
+        Long companyId = SystemMail.resolveCompanyId(key, job.getCompanyId());
 
         if (companyId != null) {
             MailTemplateEntity tpl = mailTemplateRepository.findByKeyAndCompanyId(key, companyId.intValue());
@@ -124,8 +122,8 @@ public class MailWorker {
             return new ResolvedTemplate(sysTpl.getTitle(), sysTpl.getContent());
         }
 
-        if ("LOGIN_INFO_MAIL".equals(key) || "RESET_PASSWORD_MAIL".equals(key)) {
-            throw new IllegalStateException("Chưa cấu hình template email LOGIN_INFO_MAIL đang hoạt động trong mail_templates");
+        if (SystemMail.usesCompanyOne(key)) {
+            throw new IllegalStateException("Chưa cấu hình template email " + key + " đang hoạt động trong mail_templates cho company_id=1");
         }
 
         if (job.getVariables() != null) {

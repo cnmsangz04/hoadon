@@ -11,6 +11,7 @@ import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.repositories.MailJobRepository;
 import vn.hoadon.repositories.MailTemplateRepository;
 import vn.hoadon.services.MailQueueService;
+import vn.hoadon.util.SystemMail;
 
 /**
  * Hàng đợi mail lưu bằng cơ sở dữ liệu.
@@ -73,9 +74,10 @@ public class MailQueueServiceImpl implements MailQueueService {
     private MailTemplateEntity resolveTemplate(MailJobMessage message) {
         if (message.getTemplateKey() == null || message.getTemplateKey().isBlank()) return null;
 
-        if (message.getCompanyId() != null) {
+        Long companyId = SystemMail.resolveCompanyId(message.getTemplateKey(), message.getCompanyId());
+        if (companyId != null) {
             MailTemplateEntity tpl = mailTemplateRepository.findByKeyAndCompanyId(
-                    message.getTemplateKey(), message.getCompanyId().intValue());
+                    message.getTemplateKey(), companyId.intValue());
             if (tpl != null && tpl.getStatus() != null && tpl.getStatus() == 1) {
                 return tpl;
             }

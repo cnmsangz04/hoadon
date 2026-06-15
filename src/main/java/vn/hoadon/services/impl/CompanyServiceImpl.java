@@ -4,8 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
@@ -15,16 +14,20 @@ import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.PermissionEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.entity.UserPermissionEntity;
+import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.PermissionRepository;
 import vn.hoadon.repositories.UserPermissionRepository;
 import vn.hoadon.repositories.UserRepository;
 import vn.hoadon.services.CompanyService;
+import vn.hoadon.services.MailQueueService;
 
 import jakarta.persistence.criteria.Predicate;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -46,8 +49,11 @@ public class CompanyServiceImpl implements CompanyService {
     @Autowired
     private UserPermissionRepository userPermissionRepository;
 
-    @Autowired(required = false)
-    private JavaMailSender mailSender;
+    @Autowired
+    private MailQueueService mailQueueService;
+
+    @Value("${app.frontend-url:http://localhost:8080}")
+    private String frontendUrl;
 
     public CompanyServiceImpl(CompanyRepository repo) {
         this.repo = repo;
@@ -223,7 +229,8 @@ public class CompanyServiceImpl implements CompanyService {
         CompanyEntity company = repo.findById(companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty"));
 
-        if (company.getEmail() == null || company.getEmail().isEmpty()) {
+        String toEmail = firstNotBlank(company.getContactMail(), company.getEmail());
+        if (toEmail == null) {
             throw new IllegalArgumentException("Công ty chưa cấu hình email nhận thông tin");
         }
 
@@ -248,23 +255,53 @@ public class CompanyServiceImpl implements CompanyService {
         admin.setPassword(passwordEncoder.encode(rawPassword));
         userRepository.save(admin);
 
-        // Log the credentials being sent (for audit/debug)
-        log.info("Sending admin credentials for companyId={}, username={}, password={}",
-                companyId, admin.getUsername(), rawPassword);
+        enqueueLoginInfoMail(admin, company, toEmail, rawPassword);
+        log.info("Queued admin credentials mail for companyId={}, username={}", companyId, admin.getUsername());
+    }
 
-        // Simulate sending email with credentials
-        if (mailSender != null) {
-            SimpleMailMessage msg = new SimpleMailMessage();
-            msg.setTo(company.getEmail());
-            msg.setSubject("Thông tin tài khoản quản trị hệ thống hóa đơn");
-            StringBuilder body = new StringBuilder();
-            body.append("Kính gửi Quý công ty \n\n");
-            body.append("Thông tin tài khoản quản trị: \n");
-            body.append("Tên đăng nhập: ").append(admin.getUsername()).append("\n");
-            body.append("Mật khẩu: ").append(rawPassword).append("\n\n");
-            body.append("Vui lòng đăng nhập và đổi mật khẩu sau khi sử dụng lần đầu.");
-            msg.setText(body.toString());
-            mailSender.send(msg);
+    private void enqueueLoginInfoMail(UserEntity admin, CompanyEntity company, String toEmail, String rawPassword) {
+        String companyName = firstNotBlank(company.getName(), company.getContactName(), admin.getUsername(), "");
+        if (companyName == null) companyName = "";
+        String registeredCompanyName = firstNotBlank(company.getName());
+        Map<String, String> vars = new HashMap<>();
+        vars.put("SUBJECT", "Thông tin tài khoản quản trị hệ thống hóa đơn");
+        vars.put("NAME", companyName);
+        vars.put("CUS_NAME", companyName);
+        vars.put("COMPANY", registeredCompanyName != null ? registeredCompanyName : "");
+        vars.put("CUS_COM_NAME", vars.get("COMPANY"));
+        vars.put("COM_NAME", resolveLoginMailSenderCompanyName());
+        vars.put("LINK", buildLoginLink());
+        vars.put("USERNAME", admin.getUsername() != null ? admin.getUsername() : "");
+        vars.put("PASSWORD", rawPassword != null ? rawPassword : "");
+
+        MailJobMessage msg = new MailJobMessage();
+        msg.setTemplateKey("LOGIN_INFO_MAIL");
+        msg.setCompanyId(company.getId());
+        msg.setToEmail(toEmail.trim());
+        msg.setToName(companyName);
+        msg.setVariables(vars);
+        mailQueueService.enqueue(msg);
+    }
+
+    private String resolveLoginMailSenderCompanyName() {
+        return repo.findById(1L)
+                .map(CompanyEntity::getName)
+                .filter(name -> name != null && !name.isBlank())
+                .orElse("");
+    }
+
+    private String buildLoginLink() {
+        String base = frontendUrl != null && !frontendUrl.isBlank() ? frontendUrl.trim() : "http://localhost:8080";
+        return base.replaceAll("/+$", "") + "/auth/login";
+    }
+
+    private String firstNotBlank(String... values) {
+        if (values == null) return null;
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
         }
+        return null;
     }
 }
