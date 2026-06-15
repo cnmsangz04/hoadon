@@ -85,18 +85,14 @@
                 </template>
             </b-table>
 
-            <b-row class="mt-3" v-if="list.total > 0">
-                <b-col cols="6" class="d-flex align-items-center">
-                    <span class="text-muted small mr-2">Hiển thị từ {{ list.from }} đến {{ list.to }} trong {{ list.total }}</span>
-                </b-col>
-                <b-col cols="6">
-                    <b-pagination
-                        align="right" v-model="list.current_page"
-                        :total-rows="list.total" :per-page="list.per_page"
-                        @change="onPageChange" size="sm" pills
-                    />
-                </b-col>
-            </b-row>
+            <pagination-bar
+                :current.sync="list.current_page"
+                :size.sync="list.per_page"
+                :total="list.total"
+                :sizes="pageSizes"
+                @page-change="onPageChange"
+                @size-change="onPageSizeChange"
+            />
         </b-card>
 
         <b-modal
@@ -193,8 +189,10 @@
 
 <script>
 import axios from "@/plugins/axios";
+import PaginationBar from "@/views/components/pagination_bar.vue";
 
 export default {
+    components: { PaginationBar },
     data() {
         return {
             isBusy: false,
@@ -208,6 +206,7 @@ export default {
                 from: 0,
                 to: 0,
             },
+            pageSizes: [10, 20, 50, 100],
             filters: { keyword: "", status: null },
             statusOptions: [
                 { value: 1, text: "Hoạt động" },
@@ -287,6 +286,11 @@ export default {
         },
         onPageChange(page) {
             this.list.current_page = page;
+            this.loadData();
+        },
+        onPageSizeChange(size) {
+            this.list.per_page = Number(size) || this.list.per_page;
+            this.list.current_page = 1;
             this.loadData();
         },
         openCreate() {

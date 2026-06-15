@@ -176,7 +176,12 @@ public class InvoiceController extends BaseController {
         Long companyId = user.getCompanyId();
         Long userId = user.getId();
         InvoiceService.InvoicePayload p = toPayload(req);
-        vn.hoadon.entity.InvoiceEntity saved = invoiceService.create(p, companyId, userId);
+        vn.hoadon.entity.InvoiceEntity saved;
+        try {
+            saved = invoiceService.create(p, companyId, userId);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(new ErrorDTO(ex.getMessage()));
+        }
         if (saved == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Không thể lưu hóa đơn"));
         }
@@ -193,7 +198,12 @@ public class InvoiceController extends BaseController {
         Long companyId = user.getCompanyId();
         Long userId = user.getId();
         InvoiceService.InvoicePayload p = toPayload(req);
-        vn.hoadon.entity.InvoiceEntity saved = invoiceService.update(id, p, companyId, userId);
+        vn.hoadon.entity.InvoiceEntity saved;
+        try {
+            saved = invoiceService.update(id, p, companyId, userId);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(new ErrorDTO(ex.getMessage()));
+        }
         if (saved == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Không tìm thấy hóa đơn để cập nhật"));
         }
@@ -284,17 +294,56 @@ public class InvoiceController extends BaseController {
         return ResponseEntity.ok(new CreateResponse(saved.getId()));
     }
 
+    @GetMapping("/processing/lookup")
+    public ResponseEntity<?> lookupProcessingInvoice(
+            @AuthenticationPrincipal UserEntity user,
+            @RequestParam(name = "no") Integer no,
+            @RequestParam(name = "invoiceType") Short invoiceType
+    ) {
+        permission("invoice-list");
+
+        if (user == null || user.getCompanyId() == null) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Vui lòng xác định công ty/người dùng"));
+        }
+        if (no == null || no <= 0) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Vui lòng nhập số hóa đơn cần tìm"));
+        }
+        if (invoiceType == null || (invoiceType != 1 && invoiceType != 2)) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Loại xử lý hóa đơn không hợp lệ"));
+        }
+
+        InvoiceEntity inv = invoiceRepository
+                .findFirstByCompanyIdAndNoOrderByIdDesc(user.getCompanyId().intValue(), no)
+                .orElse(null);
+        if (inv == null) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Không tìm thấy hóa đơn theo số đã nhập"));
+        }
+
+        String validationError = processingValidationError(inv, invoiceType);
+        if (validationError != null) {
+            return ResponseEntity.badRequest().body(new ErrorDTO(validationError));
+        }
+
+        return ResponseEntity.ok(toProcessingInvoiceDto(inv));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> get(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
         if (id == null) return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu ID hóa đơn"));
         java.util.Optional<vn.hoadon.entity.InvoiceEntity> opt = invoiceRepository.findById(id);
         vn.hoadon.entity.InvoiceEntity inv = opt.orElse(null);
         if (inv == null) return ResponseEntity.badRequest().body(new ErrorDTO("Không tìm thấy hóa đơn"));
+        if (user != null && user.getCompanyId() != null && inv.getCompanyId() != null && !user.getCompanyId().equals(inv.getCompanyId().longValue())) {
+            return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền xem hóa đơn của công ty khác"));
+        }
         // Tạo phản hồi với các khối JSON đã parse
         java.util.Map<String,Object> resp = new java.util.LinkedHashMap<>();
         resp.put("id", inv.getId());
         resp.put("formId", inv.getFormId());
         resp.put("invoiceNumberId", inv.getInvoiceNumberId());
+        resp.put("referenceId", inv.getReferenceId());
+        resp.put("invoiceType", inv.getInvoiceType());
+        resp.put("invoiceTypeAdjust", inv.getInvoiceTypeAdjust());
         resp.put("no", inv.getNo());
         resp.put("dateExport", inv.getDateExport());
         resp.put("paymentType", inv.getPaymentType());
@@ -308,6 +357,13 @@ public class InvoiceController extends BaseController {
         resp.put("exchangeRate", inv.getExchangeRate());
         resp.put("vatRate", inv.getVatRate());
         resp.put("vatRateOther", inv.getVatRateOther());
+        if (inv.getFormId() != null) {
+            FormInvoiceEntity form = formInvoiceRepository.findById(inv.getFormId().longValue()).orElse(null);
+            if (form != null) {
+                resp.put("formCode", form.getFormCode());
+                resp.put("serial", form.getSerial());
+            }
+        }
         // Parse JSON fields
         resp.put("customer", parseJson(inv.getCustomer()));
         resp.put("detail", parseJson(inv.getDetail()));
@@ -345,7 +401,86 @@ public class InvoiceController extends BaseController {
         p.exchangeRate = r.exchangeRate;
         p.vatRate = r.vatRate;
         p.vatRateOther = r.vatRateOther;
+        p.referenceId = r.referenceId;
+        p.invoiceType = r.invoiceType;
+        p.invoiceTypeAdjust = r.invoiceTypeAdjust;
         return p;
+    }
+
+    private String processingValidationError(InvoiceEntity inv, Short invoiceType) {
+        if (inv == null) return "Không tìm thấy hóa đơn";
+        short status = inv.getStatus() != null ? inv.getStatus() : 0;
+        short type = inv.getInvoiceType() != null ? inv.getInvoiceType() : 0;
+        if (invoiceType == 1) {
+            if (status != 3 || (type != 0 && type != 1)) {
+                return "Chỉ được thay thế hóa đơn đã phát hành và là hóa đơn gốc hoặc hóa đơn thay thế";
+            }
+            return null;
+        }
+        if (invoiceType == 2) {
+            if ((status != 3 && status != 5) || type != 0) {
+                return "Chỉ được điều chỉnh hóa đơn gốc đã phát hành hoặc đã bị điều chỉnh";
+            }
+            return null;
+        }
+        return "Loại xử lý hóa đơn không hợp lệ";
+    }
+
+    private java.util.Map<String,Object> toProcessingInvoiceDto(InvoiceEntity inv) {
+        java.util.Map<String,Object> dto = new java.util.LinkedHashMap<>();
+        dto.put("id", inv.getId());
+        dto.put("no", inv.getNo());
+        dto.put("dateExport", inv.getDateExport());
+        dto.put("status", inv.getStatus());
+        dto.put("statusText", statusLabel(inv.getStatus()));
+        dto.put("invoiceType", inv.getInvoiceType());
+        dto.put("invoiceTypeText", invoiceTypeLabel(inv.getInvoiceType()));
+        dto.put("amount", inv.getAmount());
+        dto.put("lookupCode", inv.getLookupCode());
+        dto.put("customerName", extractCustomerName(inv.getCustomer()));
+        if (inv.getFormId() != null) {
+            FormInvoiceEntity form = formInvoiceRepository.findById(inv.getFormId().longValue()).orElse(null);
+            if (form != null) {
+                dto.put("formCode", form.getFormCode());
+                dto.put("serial", form.getSerial());
+            }
+        }
+        return dto;
+    }
+
+    private String extractCustomerName(String customerJson) {
+        Object parsed = parseJson(customerJson);
+        if (parsed instanceof java.util.Map<?,?> map) {
+            Object name = map.get("name");
+            Object buyer = map.get("buyer");
+            if (name != null && !String.valueOf(name).trim().isEmpty()) return String.valueOf(name);
+            if (buyer != null && !String.valueOf(buyer).trim().isEmpty()) return String.valueOf(buyer);
+        }
+        return "";
+    }
+
+    private String statusLabel(Short status) {
+        if (status == null) return "";
+        return switch (status) {
+            case 0 -> "Mới khởi tạo";
+            case 1 -> "Đã ký";
+            case 2 -> "Đã gửi thuế";
+            case 3 -> "Đã phát hành";
+            case 4 -> "Bị thay thế";
+            case 5 -> "Bị điều chỉnh";
+            case 6 -> "Đã hủy";
+            case 7 -> "Không đủ điều kiện";
+            default -> "";
+        };
+    }
+
+    private String invoiceTypeLabel(Short invoiceType) {
+        if (invoiceType == null) return "Hóa đơn gốc";
+        return switch (invoiceType) {
+            case 1 -> "Hóa đơn thay thế";
+            case 2 -> "Hóa đơn điều chỉnh";
+            default -> "Hóa đơn gốc";
+        };
     }
 
     private static boolean containsToken(java.util.List<String> arr, String token) {
@@ -407,6 +542,9 @@ public class InvoiceController extends BaseController {
         public Double exchangeRate;
         public Short vatRate;
         public Integer vatRateOther;
+        public Long referenceId;
+        public Short invoiceType;
+        public Short invoiceTypeAdjust;
     }
 
     public static class CreateResponse { public Long id; public CreateResponse(Long id){ this.id = id; } }
@@ -726,7 +864,7 @@ public class InvoiceController extends BaseController {
                 if (banks != null && !banks.isEmpty()) bank = banks.get(0);
             }
         }
-        String xml = vn.hoadon.util.InvoiceXmlBuilder.build(inv, form, company, bank);
+        String xml = buildInvoiceXml(inv, form, company, bank);
         // Inject mock digital signature into <DSCKS><NBan>...</NBan></DSCKS>
         xml = injectMockSignature(xml, company);
         // 4) Persist signature_vats with xml
@@ -1924,7 +2062,7 @@ public class InvoiceController extends BaseController {
 
         // 0: build from current data
         if (status == 0) {
-            return vn.hoadon.util.InvoiceXmlBuilder.build(inv, form, company, bank);
+            return buildInvoiceXml(inv, form, company, bank);
         }
 
         // 1-2: signed XML
@@ -1932,7 +2070,7 @@ public class InvoiceController extends BaseController {
             String xml = getXmlFromSignatureVats(invoiceId);
             if (xml != null && !xml.isBlank()) return xml;
             // Dự phòng
-            return vn.hoadon.util.InvoiceXmlBuilder.build(inv, form, company, bank);
+            return buildInvoiceXml(inv, form, company, bank);
         }
 
         // >2: CQT XML preferred
@@ -1942,7 +2080,23 @@ public class InvoiceController extends BaseController {
         String xmlSigned = getXmlFromSignatureVats(invoiceId);
         if (xmlSigned != null && !xmlSigned.isBlank()) return xmlSigned;
 
-        return vn.hoadon.util.InvoiceXmlBuilder.build(inv, form, company, bank);
+        return buildInvoiceXml(inv, form, company, bank);
+    }
+
+    private String buildInvoiceXml(InvoiceEntity inv, FormInvoiceEntity form, CompanyEntity company, CompanyBankEntity bank) {
+        InvoiceEntity referenceInvoice = null;
+        FormInvoiceEntity referenceForm = null;
+        if (inv != null && inv.getReferenceId() != null) {
+            referenceInvoice = invoiceRepository.findById(inv.getReferenceId().longValue()).orElse(null);
+            if (referenceInvoice != null && inv.getCompanyId() != null && referenceInvoice.getCompanyId() != null
+                    && !inv.getCompanyId().equals(referenceInvoice.getCompanyId())) {
+                referenceInvoice = null;
+            }
+            if (referenceInvoice != null && referenceInvoice.getFormId() != null) {
+                referenceForm = formInvoiceRepository.findById(referenceInvoice.getFormId().longValue()).orElse(null);
+            }
+        }
+        return vn.hoadon.util.InvoiceXmlBuilder.build(inv, form, company, bank, referenceInvoice, referenceForm);
     }
 
     private String getXmlFromSignatureVats(Integer invoiceId) {

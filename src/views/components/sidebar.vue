@@ -8,9 +8,8 @@
         </router-link>
       </div>
 
-      <!-- Tìm kiếm -->
       <div v-if="isCompanyPending" class="pending-company">
-        Tài khoản công ty đang chờ kích hoạt.
+        Tài khoản công ty đang chờ kích hoạt. Vui lòng mua gói hóa đơn để kích hoạt.
       </div>
 
       <div v-else class="search">
@@ -68,9 +67,9 @@ export default {
     return {
       isOpen: null,
       search: '',
-      // Khai báo menu dạng data để dễ mở rộng và render
       menuItems: [
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
+        { title: 'Gói hóa đơn', icon: 'fas fa-box-open', to: '/invoice-packages', pendingAllowed: true },
         {
           title: 'Đăng ký phát hành',
           icon: 'fas fa-file-signature',
@@ -84,6 +83,21 @@ export default {
           icon: 'fas fa-file-invoice-dollar',
           children: [
             { title: 'Hóa đơn GTGT', icon: 'fas fa-receipt', to: '/invoice/vat-invoice/list' },
+          ],
+        },
+        {
+          title: 'Import dữ liệu',
+          icon: 'fas fa-file-import',
+          children: [
+            { title: 'Import hóa đơn', icon: 'fas fa-file-excel', to: '/imports/invoice' },
+          ],
+        },
+        {
+          title: 'Xử lý hóa đơn',
+          icon: 'fas fa-tasks',
+          children: [
+            { title: 'Hóa đơn thay thế', icon: 'fas fa-exchange-alt', to: '/invoice/replace' },
+            { title: 'Hóa đơn điều chỉnh', icon: 'fas fa-sliders-h', to: '/invoice/adjust' },
           ],
         },
         { title: 'Báo cáo', icon: 'fas fa-chart-bar', to: '/reports/invoice/list' },
@@ -109,11 +123,12 @@ export default {
   },
   computed: {
     filteredItems() {
-      if (this.isCompanyPending) return [];
+      const source = this.isCompanyPending
+        ? this.menuItems.filter(item => item.pendingAllowed)
+        : this.menuItems;
       const q = (this.search || '').trim().toLowerCase();
-      if (!q) return this.menuItems;
-      // Lọc mục cha và mục con theo từ khóa tìm kiếm
-      return this.menuItems
+      if (!q) return source;
+      return source
         .map((item) => {
           if (!item.children) {
             return item.title.toLowerCase().indexOf(q) !== -1 ? item : null;
@@ -232,4 +247,3 @@ export default {
   .sidebar { width: 100%; height: auto; position: relative; }
 }
 </style>
-

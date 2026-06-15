@@ -7,7 +7,7 @@
       path: "",
       name: "admin",
       component: () => import("../../views/administrators/index.vue"),
-      meta: { requiresAdmin: true, title: "Danh sách công ty" },
+      meta: { requiresAdmin: true, title: "Thống kê mua gói hóa đơn" },
     },
     {
       path: "company/list",
@@ -27,6 +27,13 @@
       component: () =>
         import("../../views/administrators/buy-invoice/list.vue"),
       meta: { requiresAdmin: true, title: "Mua hóa đơn" },
+    },
+    {
+      path: "invoice-package/list",
+      name: "admin-invoice-package-list",
+      component: () =>
+        import("../../views/administrators/invoice-package/list.vue"),
+      meta: { requiresAdmin: true, title: "Quản lý gói hóa đơn" },
     },
     {
       path: "bank/list",

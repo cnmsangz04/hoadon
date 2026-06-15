@@ -62,14 +62,14 @@
         responsive
         small
         show-empty
-        :items="filteredItems"
+        :items="pagedItems"
         :fields="fields"
         empty-text="Không có dữ liệu"
         class="mb-0 table-modern table-compact"
       >
         <!-- STT -->
         <template #cell(index)="row">
-          {{ row.index + 1 }}
+          {{ row.index + 1 + (list.current_page - 1) * list.per_page }}
         </template>
 
         <!-- Công ty -->
@@ -130,6 +130,14 @@
           </b-dropdown>
         </template>
       </b-table>
+      <pagination-bar
+        :current.sync="list.current_page"
+        :size.sync="list.per_page"
+        :total="filteredItems.length"
+        :sizes="pageSizes"
+        @page-change="onPageChange"
+        @size-change="onPageSizeChange"
+      />
     </b-card>
 
   </div>
@@ -137,9 +145,11 @@
 
 <script>
 import axios from '@/plugins/axios'
+import PaginationBar from '@/views/components/pagination_bar.vue'
 
 export default {
   name: 'MailTemplateList',
+  components: { PaginationBar },
 
   data() {
     return {
@@ -164,7 +174,12 @@ export default {
         { key: 'actions', label: 'Thao tác', thStyle: { width: '80px' }, class: 'text-center' }
       ],
 
-      items: []
+      items: [],
+      list: {
+        current_page: 1,
+        per_page: 10
+      },
+      pageSizes: [10, 20, 50, 100]
     }
   },
 
@@ -174,6 +189,15 @@ export default {
         return this.items;
       }
       return this.items.filter(item => item.status === this.filter.status);
+    },
+    pagedItems() {
+      const start = (this.list.current_page - 1) * this.list.per_page
+      return this.filteredItems.slice(start, start + this.list.per_page)
+    }
+  },
+  watch: {
+    'filter.status'() {
+      this.list.current_page = 1
     }
   },
 
@@ -201,6 +225,7 @@ export default {
         }
       }).then(res => {
         this.items = res.data || []
+        this.list.current_page = 1
       }).catch(err => {
         const message = err.response?.data?.message || 'Không thể tải danh sách mẫu email';
         this.$toastr && this.$toastr.error(message);
@@ -241,7 +266,17 @@ export default {
 
     reload() {
       this.filter.status = null;
+      this.list.current_page = 1;
       this.fetchData();
+    },
+
+    onPageChange(page) {
+      this.list.current_page = Number(page) || 1;
+    },
+
+    onPageSizeChange(size) {
+      this.list.per_page = Number(size) || this.list.per_page;
+      this.list.current_page = 1;
     }
   }
 }

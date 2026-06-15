@@ -115,7 +115,7 @@ public class CompanyServiceImpl implements CompanyService {
     public void updateStatus(Long id, Integer status) {
         CompanyEntity existing = repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Company not found"));
-        existing.setStatus(status != null && status == 1 ? 1 : 0);
+        existing.setStatus(status != null && (status == 1 || status == 2) ? status : 0);
         repo.save(existing);
     }
 

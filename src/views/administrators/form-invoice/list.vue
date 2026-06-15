@@ -135,14 +135,13 @@
                 </template>
             </b-table>
 
-            <b-pagination
-                v-if="total > size"
-                v-model="page"
-                :per-page="size"
-                :total-rows="total"
-                align="right"
-                class="mt-2"
-                @change="fetch"
+            <pagination-bar
+                :current.sync="page"
+                :size.sync="size"
+                :total="total"
+                :sizes="pageSizes"
+                @page-change="onPageChange"
+                @size-change="onPageSizeChange"
             />
         </b-card>
     </div>
@@ -150,9 +149,11 @@
 
 <script>
 import axios from '@/plugins/axios'
+import PaginationBar from '@/views/components/pagination_bar.vue'
 
 export default {
     name: 'AdminFormInvoiceList',
+    components: { PaginationBar },
     data() {
         return {
             isBusy: false,
@@ -160,6 +161,7 @@ export default {
             page: 1,
             size: 10,
             total: 0,
+            pageSizes: [10, 20, 50, 100],
             filters: { q: '', category: null, type: null, status: null },
             fields: [
                 { key: 'id', label: 'STT', thStyle: { width: '60px' } },
@@ -219,6 +221,8 @@ export default {
             return opt ? opt.text : (val || '—')
         },
         applyFilters() { this.page = 1; this.fetch() },
+        onPageChange(page) { this.page = Number(page) || 1; this.fetch() },
+        onPageSizeChange(size) { this.size = Number(size) || this.size; this.page = 1; this.fetch() },
         goCreate() { this.$router.push({ name: 'admin-form-invoice-create' }) },
         edit(item) { this.$router.push({ name: 'admin-form-invoice-edit', params: { id: item.id } }) },
         preview(item) {

@@ -162,50 +162,25 @@
         <b-skeleton width="92%" height="20px" animated class="mb-2" />
       </div>
 
-      <b-row class="mt-2">
-        <b-col cols="6">
-          <b-form inline>
-            <b-form-select
-              size="sm"
-              class="d-inline-block mb-2 mr-2 pl-2 pr-4"
-              v-model.number="list.per_page"
-              :options="pageSizes"
-              @input="onPageSizeChange"
-            />
-            <div class="pt-1 text-muted">
-              <i class="fas fa-globe mr-1"></i> Hiển thị từ
-              <b class="pl-1 pr-2">{{ list.from || 0 }}</b>
-              đến
-              <b class="pl-1 pr-2">{{ list.to || 0 }}</b>
-              trong tổng số
-              <b class="pl-1 pr-2">{{ list.total || 0 }}</b>
-              bản ghi.
-            </div>
-          </b-form>
-        </b-col>
-        <b-col cols="6">
-          <b-pagination
-            align="right"
-            v-model.number="list.current_page"
-            :per-page="list.per_page"
-            :total-rows="list.total"
-            :hide-goto-end-buttons="true"
-            v-if="list.last_page > 1"
-            size="sm"
-            pills
-            @input="onPageChange"
-          />
-        </b-col>
-      </b-row>
+      <pagination-bar
+        :current.sync="list.current_page"
+        :size.sync="list.per_page"
+        :total="list.total"
+        :sizes="pageSizes"
+        @page-change="onPageChange"
+        @size-change="onPageSizeChange"
+      />
     </b-card>
   </div>
 </template>
 
 <script>
 import axios from '@/plugins/axios'
+import PaginationBar from '@/views/components/pagination_bar.vue'
 
 export default {
   name: 'CustomerReportInvoiceList',
+  components: { PaginationBar },
   data () {
     const currentYear = new Date().getFullYear()
     return {
@@ -393,11 +368,13 @@ export default {
         this.isBusy = false
       }
     },
-    onPageSizeChange () {
+    onPageSizeChange (size) {
+      this.list.per_page = Number(size) || this.list.per_page
       this.list.current_page = 1
       this.fetchList()
     },
-    onPageChange () {
+    onPageChange (page) {
+      this.list.current_page = Number(page) || 1
       this.fetchList()
     },
     applyFilters () {

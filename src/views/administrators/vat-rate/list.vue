@@ -146,8 +146,14 @@
         </template>
       </b-table>
 
-      <!-- Phân trang -->
-      <b-pagination v-if="list.total > list.per_page" v-model="list.current_page" :per-page="list.per_page" :total-rows="list.total" align="right" class="mt-2" @input="onPageChange" />
+      <pagination-bar
+        :current.sync="list.current_page"
+        :size.sync="list.per_page"
+        :total="list.total"
+        :sizes="pageSizes"
+        @page-change="onPageChange"
+        @size-change="onPageSizeChange"
+      />
     </b-card>
 
     <!-- Hộp thoại -->
@@ -182,10 +188,11 @@
 <script>
 import axios from "@/plugins/axios";
 import draggable from "vuedraggable";
+import PaginationBar from "@/views/components/pagination_bar.vue";
 
 export default {
   name: "VatRateList",
-  components: { draggable },
+  components: { draggable, PaginationBar },
 
   data() {
     return {
@@ -218,6 +225,7 @@ export default {
         per_page: 10,
         total: 0
       },
+      pageSizes: [10, 20, 50, 100],
 
       fields: [
         { key: "id", label: "#", thStyle: { width: "50px" } },
@@ -312,6 +320,12 @@ export default {
 
     onPageChange(page) {
       this.list.current_page = page;
+      this.loadData();
+    },
+
+    onPageSizeChange(size) {
+      this.list.per_page = Number(size) || this.list.per_page;
+      this.list.current_page = 1;
       this.loadData();
     },
 

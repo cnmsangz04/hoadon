@@ -65,6 +65,47 @@
         <li v-if="list.length === 0" class="text-center text-muted py-2">Không có thông báo</li>
       </ul>
     </b-sidebar>
+
+    <b-modal
+      v-model="limitReminder.show"
+      centered
+      hide-footer
+      title="Nhắc nhở hạn mức hóa đơn"
+      modal-class="invoice-limit-modal"
+    >
+      <div class="limit-reminder">
+        <div class="limit-reminder-icon" :class="limitReminder.variant">
+          <i :class="limitReminder.icon"></i>
+        </div>
+        <div class="limit-reminder-body">
+          <h5>{{ limitReminder.title }}</h5>
+          <p>{{ limitReminder.message }}</p>
+          <b-progress height="10px" :value="limitReminder.percent" :variant="limitReminder.progressVariant" class="mb-3"></b-progress>
+          <div class="limit-reminder-stats">
+            <div>
+              <span>Đã dùng</span>
+              <strong>{{ formatNumber(limitReminder.used) }}</strong>
+            </div>
+            <div>
+              <span>Tổng hạn mức</span>
+              <strong>{{ formatNumber(limitReminder.total) }}</strong>
+            </div>
+            <div>
+              <span>Còn lại</span>
+              <strong>{{ formatNumber(limitReminder.remaining) }}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="text-right mt-3">
+        <b-button variant="success" to="/invoice-packages" @click="closeLimitReminder">
+          Mua thêm hóa đơn
+        </b-button>
+        <b-button variant="secondary" class="ml-2" @click="closeLimitReminder">
+          Đóng
+        </b-button>
+      </div>
+    </b-modal>
   </header>
 </template>
 
@@ -86,7 +127,20 @@ export default {
         }
       },
       pollingInterval: null,
-      lastNotificationCount: 0
+      lastNotificationCount: 0,
+      limitReminder: {
+        show: false,
+        threshold: 0,
+        percent: 0,
+        total: 0,
+        used: 0,
+        remaining: 0,
+        title: '',
+        message: '',
+        icon: 'fas fa-info-circle',
+        variant: 'info',
+        progressVariant: 'info'
+      }
     };
   },
   computed: {
@@ -212,13 +266,23 @@ export default {
           } else {
             this.fetchNotifications()
             this.startPolling()
+            this.checkInvoiceLimitReminder({ oncePerLogin: true })
           }
         })
+        .catch(() => {})
+    } catch {}
+    try {
+      window.addEventListener('invoice-limit-used', this.handleInvoiceLimitUsed)
+      window.addEventListener('invoice-limit-check', this.handleInvoiceLimitUsed)
     } catch {}
   },
   beforeDestroy() {
     // Dọn interval polling khi component bị hủy
     this.stopPolling()
+    try {
+      window.removeEventListener('invoice-limit-used', this.handleInvoiceLimitUsed)
+      window.removeEventListener('invoice-limit-check', this.handleInvoiceLimitUsed)
+    } catch {}
   },
   methods: {
     // Trả về chữ cái đầu viết hoa từ tên; mặc định là '?'
@@ -230,6 +294,7 @@ export default {
       this.reloading = true;
       setTimeout(() => { this.reloading = false }, 2000);
       if (!this.isCompanyPending) this.fetchNotifications()
+      this.checkInvoiceLimitReminder({ oncePerLogin: true })
     },
     menuToggle() {
       document.body.classList.toggle('nav-sm');
@@ -247,6 +312,7 @@ export default {
         localStorage.removeItem('token');
         localStorage.removeItem('last-account');
         localStorage.removeItem('company-status');
+        this.clearInvoiceLimitPopupKeys();
         window.location.href = '/auth/login';
       }
     },
@@ -336,6 +402,110 @@ export default {
         clearInterval(this.pollingInterval)
         this.pollingInterval = null
       }
+    },
+    handleInvoiceLimitUsed(event) {
+      const oncePerThreshold = event?.type === 'invoice-limit-used'
+      const oncePerLogin = event?.type === 'invoice-limit-check'
+      this.checkInvoiceLimitReminder({ oncePerThreshold, oncePerLogin })
+    },
+    isCustomerContext() {
+      try {
+        const path = window.location?.pathname || ''
+        return !path.startsWith('/administrator') && !path.startsWith('/auth/login-admin')
+      } catch {
+        return true
+      }
+    },
+    resolveCompanyId() {
+      try {
+        const id = this.$app?.info?.company?.id
+        if (id != null && id !== '') return id
+      } catch {}
+      return 'current'
+    },
+    resolveLoginKey(companyId, total, threshold) {
+      let tokenHash = 'no-token'
+      try {
+        const token = localStorage.getItem('token') || ''
+        if (token) {
+          let hash = 0
+          for (let i = 0; i < token.length; i += 1) {
+            hash = ((hash * 31) + token.charCodeAt(i)) >>> 0
+          }
+          tokenHash = hash.toString(36)
+        }
+      } catch {}
+      return `invoice-limit-login-popup:${companyId}:${total}:${threshold}:${tokenHash}`
+    },
+    async checkInvoiceLimitReminder(options = {}) {
+      if (this.isCompanyPending || !this.isCustomerContext()) return
+      try {
+        const { data } = await axios.get('/dashboard/stats', {
+          meta: { suppressGlobalErrorToast: true }
+        })
+        const total = Number(data?.totalInvoices || 0)
+        const used = Number(data?.usedInvoices || 0)
+        if (total <= 0 || used <= 0) return
+
+        const remaining = Math.max(0, total - used)
+        const percent = Math.floor((used / total) * 100)
+        const threshold = [100, 75, 50].find(level => percent >= level)
+        if (!threshold) return
+
+        const companyId = this.resolveCompanyId()
+        const signStorageKey = `invoice-limit-sign-popup:${companyId}:${total}:${threshold}`
+        const loginStorageKey = this.resolveLoginKey(companyId, total, threshold)
+        if (options.oncePerThreshold && sessionStorage.getItem(signStorageKey)) return
+        if (options.oncePerLogin && sessionStorage.getItem(loginStorageKey)) return
+
+        if (options.oncePerThreshold) {
+          sessionStorage.setItem(signStorageKey, new Date().toISOString())
+        }
+        if (options.oncePerLogin) {
+          sessionStorage.setItem(loginStorageKey, new Date().toISOString())
+        }
+        this.showInvoiceLimitReminder({ threshold, percent, total, used, remaining })
+      } catch {}
+    },
+    showInvoiceLimitReminder({ threshold, percent, total, used, remaining }) {
+      const usedText = new Intl.NumberFormat('vi-VN').format(used)
+      const totalText = new Intl.NumberFormat('vi-VN').format(total)
+      const remainingText = new Intl.NumberFormat('vi-VN').format(remaining)
+      const exactThreshold = percent === threshold
+      const actionText = exactThreshold ? 'đạt' : 'vượt'
+      const title = `Cảnh báo ${actionText} mốc ${threshold}% hạn mức hóa đơn`
+      const message = exactThreshold && threshold >= 100
+        ? `Bạn đã sử dụng hết ${usedText}/${totalText} hóa đơn, đạt mốc 100% hạn mức. Vui lòng mua thêm gói hóa đơn để tiếp tục phát hành.`
+        : exactThreshold
+        ? `Bạn đã sử dụng ${usedText}/${totalText} hóa đơn (${percent}%), đạt mốc ${threshold}% hạn mức. Còn lại ${remainingText} hóa đơn, vui lòng cân nhắc mua thêm.`
+        : `Bạn đã sử dụng ${usedText}/${totalText} hóa đơn (${percent}%), đã vượt mốc ${threshold}%. Còn lại ${remainingText} hóa đơn, vui lòng cân nhắc mua thêm.`
+      const variant = threshold >= 100 ? 'danger' : threshold >= 75 ? 'warning' : 'info'
+      this.limitReminder = {
+        show: true,
+        threshold,
+        percent,
+        total,
+        used,
+        remaining,
+        title,
+        message,
+        icon: threshold >= 100 ? 'fas fa-exclamation-triangle' : 'fas fa-bell',
+        variant,
+        progressVariant: variant
+      }
+    },
+    closeLimitReminder() {
+      this.limitReminder.show = false
+    },
+    formatNumber(value) {
+      return new Intl.NumberFormat('vi-VN').format(Number(value || 0))
+    },
+    clearInvoiceLimitPopupKeys() {
+      try {
+        Object.keys(sessionStorage)
+          .filter(key => key.startsWith('invoice-limit-popup:') || key.startsWith('invoice-limit-sign-popup:') || key.startsWith('invoice-limit-login-popup:'))
+          .forEach(key => sessionStorage.removeItem(key))
+      } catch {}
     },
     relativeTime(d) {
       if (!d) return ''
@@ -578,9 +748,103 @@ nav.d-flex.align-items-center {
   max-height: calc(100vh - 56px) !important; /* chừa chỗ cho tiêu đề/header */
   overflow-y: auto;
 }
+
+.invoice-limit-modal .modal-content {
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+}
+
+.invoice-limit-modal .modal-header {
+  border-bottom: 1px solid #eef2f7;
+  background: #f8fafc;
+}
+
+.limit-reminder {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.limit-reminder-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 8px;
+  font-size: 1.25rem;
+}
+
+.limit-reminder-icon.info {
+  background: #e8f7ff;
+  color: #0984e3;
+}
+
+.limit-reminder-icon.warning {
+  background: #fff7e6;
+  color: #d97706;
+}
+
+.limit-reminder-icon.danger {
+  background: #fff1f2;
+  color: #dc2626;
+}
+
+.limit-reminder-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.limit-reminder-body h5 {
+  margin: 0 0 8px;
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.limit-reminder-body p {
+  margin: 0 0 14px;
+  color: #4b5563;
+  line-height: 1.55;
+}
+
+.limit-reminder-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.limit-reminder-stats div {
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.limit-reminder-stats span {
+  display: block;
+  color: #667085;
+  font-size: 12px;
+}
+
+.limit-reminder-stats strong {
+  display: block;
+  margin-top: 2px;
+  color: #1f2937;
+  font-size: 1rem;
+}
+
 @media (max-width: 768px) {
   .b-sidebar#sidebar-right { max-height: 100vh !important; }
   .b-sidebar#sidebar-right .list-unstyled { max-height: calc(100vh - 56px) !important; }
+  .limit-reminder {
+    display: block;
+  }
+  .limit-reminder-icon {
+    margin-bottom: 12px;
+  }
+  .limit-reminder-stats {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
-

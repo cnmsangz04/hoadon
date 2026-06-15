@@ -102,41 +102,14 @@
         </template>
       </b-table>
 
-      <b-row class="mt-2">
-        <b-col cols="12" md="6">
-          <b-form inline>
-            <b-form-select
-              size="sm"
-              class="d-inline-block mb-2 mr-2 pl-2 pr-4"
-              v-model.number="list.per_page"
-              :options="pageSizes"
-              @input="onPageSizeChange"
-            />
-            <div class="pt-1 text-muted">
-              Hiển thị từ
-              <b class="px-1">{{ list.from || 0 }}</b>
-              đến
-              <b class="px-1">{{ list.to || 0 }}</b>
-              trong tổng số
-              <b class="px-1">{{ list.total || 0 }}</b>
-              bản ghi.
-            </div>
-          </b-form>
-        </b-col>
-        <b-col cols="12" md="6">
-          <b-pagination
-            align="right"
-            v-model.number="list.current_page"
-            :per-page="list.per_page"
-            :total-rows="list.total"
-            :hide-goto-end-buttons="true"
-            v-if="list.last_page > 1"
-            size="sm"
-            pills
-            @input="onPageChange"
-          />
-        </b-col>
-      </b-row>
+      <pagination-bar
+        :current.sync="list.current_page"
+        :size.sync="list.per_page"
+        :total="list.total"
+        :sizes="pageSizes"
+        @page-change="onPageChange"
+        @size-change="onPageSizeChange"
+      />
     </b-card>
 
     <b-modal ref="detailModal" title="Chi tiết gửi mail" ok-only ok-title="Đóng" size="lg">
@@ -159,9 +132,11 @@
 
 <script>
 import axios from '@/plugins/axios'
+import PaginationBar from '@/views/components/pagination_bar.vue'
 
 export default {
   name: 'EmailMailHistory',
+  components: { PaginationBar },
   data() {
     return {
       isBusy: false,
@@ -240,11 +215,13 @@ export default {
       this.filters = { keyword: '', status: null }
       this.applyFilters()
     },
-    onPageSizeChange() {
+    onPageSizeChange(size) {
+      this.list.per_page = Number(size) || this.list.per_page
       this.list.current_page = 1
       this.fetchList()
     },
-    onPageChange() {
+    onPageChange(page) {
+      this.list.current_page = Number(page) || 1
       this.fetchList()
     },
     showDetail(item) {

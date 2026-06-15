@@ -14,14 +14,18 @@ import vn.hoadon.dto.auth.AuthRequest;
 import vn.hoadon.dto.auth.AuthResponse;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.CompanyRegistrationRequestEntity;
+import vn.hoadon.entity.LoginHistoryEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.CompanyRegistrationRequestRepository;
+import vn.hoadon.repositories.LoginHistoryRepository;
 import vn.hoadon.repositories.UserRepository;
 import vn.hoadon.security.JwtUtil;
+import vn.hoadon.services.CompanyIpSecurityService;
 import vn.hoadon.services.MailQueueService;
 import vn.hoadon.services.UserService;
+import vn.hoadon.util.ClientIpUtil;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -40,12 +44,14 @@ public class Auth {
     @Autowired private CompanyRepository companyRepository;
     @Autowired private CompanyRegistrationRequestRepository companyRegistrationRequestRepository;
     @Autowired private MailQueueService mailQueueService;
+    @Autowired private LoginHistoryRepository loginHistoryRepository;
+    @Autowired private CompanyIpSecurityService companyIpSecurityService;
 
     @Value("${app.frontend-url:http://localhost:8080}")
     private String frontendUrl;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthRequest req) {
+    public ResponseEntity<?> login(@RequestBody AuthRequest req, HttpServletRequest httpReq) {
         Optional<UserEntity> uOpt = Optional.empty();
         if (req.getUsername() != null && !req.getUsername().isBlank()) {
             uOpt = userService.findByUsername(req.getUsername().trim());
@@ -64,12 +70,18 @@ public class Auth {
             return ResponseEntity.status(401).body("Invalid credentials");
         }
 
+        String ipAddress = ClientIpUtil.resolve(httpReq);
+        if (!companyIpSecurityService.isAllowed(user, ipAddress)) {
+            return ResponseEntity.status(403).body("IP đăng nhập chưa được phép truy cập");
+        }
+
         String token = jwtUtil.generateToken(user);
+        recordLogin(user, httpReq, ipAddress, "USER");
         return ResponseEntity.ok(new AuthResponse(token, "Bearer", user.getId(), user.getRole()));
     }
 
     @PostMapping("/login-admin")
-    public ResponseEntity<?> loginAdmin(@RequestBody AuthRequest req) {
+    public ResponseEntity<?> loginAdmin(@RequestBody AuthRequest req, HttpServletRequest httpReq) {
         Optional<UserEntity> uOpt = Optional.empty();
         if (req.getUsername() != null && !req.getUsername().isBlank()) {
             uOpt = userService.findByUsername(req.getUsername().trim());
@@ -99,7 +111,13 @@ public class Auth {
             return ResponseEntity.status(401).body("Invalid admin credentials");
         }
 
+        String ipAddress = ClientIpUtil.resolve(httpReq);
+        if (!companyIpSecurityService.isAllowed(user, ipAddress)) {
+            return ResponseEntity.status(403).body("IP đăng nhập chưa được phép truy cập");
+        }
+
         String token = jwtUtil.generateToken(user);
+        recordLogin(user, httpReq, ipAddress, "ADMIN");
         return ResponseEntity.ok(new AuthResponse(token, "Bearer", user.getId(), user.getRole()));
     }
 
@@ -300,6 +318,22 @@ public class Auth {
         if (value == null) return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void recordLogin(UserEntity user, HttpServletRequest request, String ipAddress, String loginType) {
+        try {
+            LoginHistoryEntity entity = new LoginHistoryEntity();
+            entity.setCompanyId(user.getCompanyId());
+            entity.setUserId(user.getId());
+            entity.setUsername(user.getUsername());
+            entity.setIpAddress(ipAddress);
+            entity.setUserAgent(request != null ? request.getHeader("User-Agent") : null);
+            entity.setLoginType(loginType);
+            entity.setLoginAt(LocalDateTime.now());
+            loginHistoryRepository.save(entity);
+        } catch (Exception ignored) {
+            // Không để lỗi ghi lịch sử làm gián đoạn đăng nhập.
+        }
     }
 
     public static class ForgotRequest {

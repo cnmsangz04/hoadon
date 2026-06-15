@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.hoadon.dto.InvoiceDTO;
 import vn.hoadon.entity.FormInvoiceEntity;
 import vn.hoadon.entity.InvoiceEntity;
@@ -51,6 +52,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         // Preload related forms and users to avoid N+1 lookups
         Map<Long, FormInvoiceEntity> formCache = new HashMap<>();
         Map<Long, UserEntity> userCache = new HashMap<>();
+        Map<Long, InvoiceEntity> invoiceCache = new HashMap<>();
 
         return page.map(inv -> {
             InvoiceDTO dto = new InvoiceDTO();
@@ -61,6 +63,9 @@ public class InvoiceServiceImpl implements InvoiceService {
             dto.codeCqt = inv.getCodeCqt();
             dto.amount = inv.getAmount();
             dto.status = inv.getStatus();
+            dto.referenceId = inv.getReferenceId();
+            dto.invoiceType = inv.getInvoiceType();
+            dto.invoiceTypeAdjust = inv.getInvoiceTypeAdjust();
             Long formId = inv.getFormId() != null ? inv.getFormId().longValue() : null;
             if (formId != null) {
                 FormInvoiceEntity form = formCache.computeIfAbsent(formId, id -> formInvoiceRepository.findById(id).orElse(null));
@@ -76,6 +81,21 @@ public class InvoiceServiceImpl implements InvoiceService {
             if (userId != null) {
                 UserEntity u = userCache.computeIfAbsent(userId, id -> userRepository.findById(id).orElse(null));
                 dto.username = (u != null ? u.getUsername() : null);
+            }
+            Long referenceId = inv.getReferenceId() != null ? inv.getReferenceId().longValue() : null;
+            if (referenceId != null) {
+                InvoiceEntity ref = invoiceCache.computeIfAbsent(referenceId, id -> invoiceRepository.findById(id).orElse(null));
+                if (ref != null) {
+                    dto.referenceNo = ref.getNo();
+                    Long refFormId = ref.getFormId() != null ? ref.getFormId().longValue() : null;
+                    if (refFormId != null) {
+                        FormInvoiceEntity refForm = formCache.computeIfAbsent(refFormId, id -> formInvoiceRepository.findById(id).orElse(null));
+                        if (refForm != null) {
+                            dto.referenceFormCode = refForm.getFormCode();
+                            dto.referenceSerial = refForm.getSerial();
+                        }
+                    }
+                }
             }
             return dto;
         });
@@ -100,7 +120,9 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     @Override
+    @Transactional
     public InvoiceEntity create(InvoicePayload payload, Long companyId, Long userId) {
+        InvoiceEntity original = validateRelatedInvoiceForCreate(payload, companyId);
         InvoiceEntity e = new InvoiceEntity();
         applyPayload(e, payload, companyId, userId, true);
         // Ensure invoice_number_id from formId
@@ -110,7 +132,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setLookupCode(generateUniqueLookupCode());
         e.setCreatedAt(java.time.LocalDateTime.now());
         e.setUpdatedAt(java.time.LocalDateTime.now());
-        return invoiceRepository.save(e);
+        InvoiceEntity saved = invoiceRepository.save(e);
+        updateOriginalInvoiceStatus(original, saved.getInvoiceType());
+        return saved;
     }
 
     @Override
@@ -159,8 +183,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setRelated(src.getRelated());
         e.setCustomer(src.getCustomer());
         e.setDetail(src.getDetail());
-        e.setInvoiceType(src.getInvoiceType());
-        e.setInvoiceTypeAdjust(src.getInvoiceTypeAdjust());
+        e.setReferenceId(null);
+        e.setInvoiceType((short)0);
+        e.setInvoiceTypeAdjust((short)0);
         e.setSendMailDirectly((short)0);
         e.setDiscount(src.getDiscount());
         e.setDiscountAmount(src.getDiscountAmount());
@@ -255,16 +280,74 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setRelated(null);
         e.setCustomer(serializeSafely(p.customer));
         e.setDetail(serializeSafely(p.detail));
+        applyInvoiceRelationFields(e, p, isCreate);
         if (isCreate) {
             e.setSendMailDirectly((short)0);
             e.setDiscount(0d);
             e.setDiscountAmount(0d);
             e.setVatAmountDiscount(0d);
             e.setTypeApi((short)0);
-            e.setInvoiceType((short)0);
-            e.setInvoiceTypeAdjust((short)0);
             e.setStatusConvert((short)0);
         }
+    }
+
+    private void applyInvoiceRelationFields(InvoiceEntity e, InvoicePayload p, boolean isCreate) {
+        boolean hasRelation = p.referenceId != null || p.invoiceType != null || p.invoiceTypeAdjust != null;
+        if (!isCreate && !hasRelation) return;
+
+        Short invoiceType = p.invoiceType != null ? p.invoiceType : (short)0;
+        Short invoiceTypeAdjust = p.invoiceTypeAdjust != null ? p.invoiceTypeAdjust : (short)0;
+        e.setReferenceId(p.referenceId != null ? p.referenceId.intValue() : null);
+        e.setInvoiceType(invoiceType);
+        e.setInvoiceTypeAdjust(invoiceType == 2 ? invoiceTypeAdjust : (short)0);
+    }
+
+    private InvoiceEntity validateRelatedInvoiceForCreate(InvoicePayload p, Long companyId) {
+        if (p == null) return null;
+        short invoiceType = p.invoiceType != null ? p.invoiceType : 0;
+        if (invoiceType == 0) return null;
+        if (invoiceType != 1 && invoiceType != 2) {
+            throw new IllegalArgumentException("Loại hóa đơn xử lý không hợp lệ");
+        }
+        if (p.referenceId == null) {
+            throw new IllegalArgumentException("Thiếu hóa đơn gốc cần xử lý");
+        }
+        InvoiceEntity original = invoiceRepository.findById(p.referenceId).orElse(null);
+        if (original == null) {
+            throw new IllegalArgumentException("Không tìm thấy hóa đơn gốc");
+        }
+        if (companyId != null && original.getCompanyId() != null && !companyId.equals(original.getCompanyId().longValue())) {
+            throw new IllegalArgumentException("Hóa đơn gốc không thuộc công ty hiện tại");
+        }
+        short originalStatus = original.getStatus() != null ? original.getStatus() : 0;
+        short originalType = original.getInvoiceType() != null ? original.getInvoiceType() : 0;
+        if (invoiceType == 1) {
+            if (originalStatus != 3 || (originalType != 0 && originalType != 1)) {
+                throw new IllegalArgumentException("Chỉ được thay thế hóa đơn đã phát hành và là hóa đơn gốc hoặc hóa đơn thay thế");
+            }
+        } else {
+            short adjustType = p.invoiceTypeAdjust != null ? p.invoiceTypeAdjust : 0;
+            if (adjustType < 1 || adjustType > 3) {
+                throw new IllegalArgumentException("Vui lòng chọn loại điều chỉnh hóa đơn");
+            }
+            if ((originalStatus != 3 && originalStatus != 5) || originalType != 0) {
+                throw new IllegalArgumentException("Chỉ được điều chỉnh hóa đơn gốc đã phát hành hoặc đã bị điều chỉnh");
+            }
+        }
+        return original;
+    }
+
+    private void updateOriginalInvoiceStatus(InvoiceEntity original, Short invoiceType) {
+        if (original == null || invoiceType == null) return;
+        if (invoiceType == 1) {
+            original.setStatus((short)4);
+        } else if (invoiceType == 2) {
+            original.setStatus((short)5);
+        } else {
+            return;
+        }
+        original.setUpdatedAt(LocalDateTime.now());
+        invoiceRepository.save(original);
     }
 
     private String serializeSafely(Object o) {

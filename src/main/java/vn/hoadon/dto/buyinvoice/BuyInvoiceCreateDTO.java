@@ -5,6 +5,7 @@ public class BuyInvoiceCreateDTO {
     private Long companyId;
     private Integer amount;
     private Integer status;
+    private String note;
 
     // getter / setter
     public Long getId() { return id; }
@@ -15,4 +16,6 @@ public class BuyInvoiceCreateDTO {
     public void setAmount(Integer amount) { this.amount = amount; }
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
+    public String getNote() { return note; }
+    public void setNote(String note) { this.note = note; }
 }

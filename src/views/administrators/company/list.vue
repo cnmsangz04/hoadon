@@ -94,14 +94,13 @@
         </template>
       </b-table>
 
-      <b-pagination
-        v-if="list.total > list.per_page"
-        v-model="list.current_page"
-        :per-page="list.per_page"
-        :total-rows="list.total"
-        align="right"
-        class="mt-2 mb-0"
-        @change="onPageChange"
+      <pagination-bar
+        :current.sync="list.current_page"
+        :size.sync="list.per_page"
+        :total="list.total"
+        :sizes="pageSizes"
+        @page-change="onPageChange"
+        @size-change="onPageSizeChange"
       />
     </b-card>
 
@@ -217,9 +216,11 @@
 
 <script>
 import axios from '@/plugins/axios'
+import PaginationBar from '@/views/components/pagination_bar.vue'
 
 export default {
   name: 'CompanyList',
+  components: { PaginationBar },
   data() {
     return {
       isBusy: false,
@@ -239,6 +240,7 @@ export default {
         per_page: 10,
         total: 0,
       },
+      pageSizes: [10, 20, 50, 100],
       fields: [
         { key: 'id', label: '#', thStyle: { width: '50px' }, class: 'text-center' },
         { key: 'company', label: 'Tên công ty / Địa chỉ' },
@@ -294,7 +296,12 @@ export default {
       this.$refs.tblCompany.refresh()
     },
     onPageChange(page) {
-      this.list.current_page = page
+      this.list.current_page = Number(page) || 1
+      this.$refs.tblCompany.refresh()
+    },
+    onPageSizeChange(size) {
+      this.list.per_page = Number(size) || this.list.per_page
+      this.list.current_page = 1
       this.$refs.tblCompany.refresh()
     },
     showModal() {

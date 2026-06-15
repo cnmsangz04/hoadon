@@ -90,7 +90,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            if (isBusinessApi(uri) && isPendingCompany(user)) {
+            if (isBusinessApi(uri) && isPendingCompany(user) && !isAllowedWhenCompanyPending(uri)) {
                 log.warn("Company is pending activation, blocked API access: user={}, uri={}", username, uri);
                 forbidden(response, "COMPANY_PENDING_ACTIVATION", "C\u00f4ng ty ch\u01b0a \u0111\u01b0\u1ee3c k\u00edch ho\u1ea1t");
                 return;
@@ -185,6 +185,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private boolean isBusinessApi(String uri) {
         return uri != null && uri.startsWith("/v1/") && !uri.startsWith("/v1/auth/");
+    }
+
+    private boolean isAllowedWhenCompanyPending(String uri) {
+        return uri != null && uri.startsWith("/v1/invoice-packages");
     }
 
     private boolean isPendingCompany(UserEntity user) {

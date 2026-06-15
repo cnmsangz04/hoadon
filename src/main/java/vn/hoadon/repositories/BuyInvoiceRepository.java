@@ -10,4 +10,6 @@ public interface BuyInvoiceRepository
                 JpaSpecificationExecutor<BuyInvoiceEntity> {
     
     Optional<BuyInvoiceEntity> findFirstByCompanyIdAndStatusOrderByIdDesc(Long companyId, Integer status);
+
+    Optional<BuyInvoiceEntity> findFirstByCompanyIdOrderByIdDesc(Long companyId);
 }

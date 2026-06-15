@@ -88,33 +88,14 @@
         </template>
       </b-table>
 
-      <b-row class="mt-3" v-if="list.total > 0">
-        <b-col cols="6" class="d-flex align-items-center">
-          <span class="text-muted small mr-2">Hiển thị</span>
-          <b-form-select
-            size="sm"
-            style="width: 80px"
-            v-model.number="list.per_page"
-            :options="pageSizes"
-            @change="onPageSizeChange"
-          />
-          <span class="text-muted small ml-2">
-            từ {{ list.from }} đến {{ list.to }} trong {{ list.total }} bản ghi.
-          </span>
-        </b-col>
-        <b-col cols="6">
-          <b-pagination
-            align="right"
-            v-model="list.current_page"
-            :total-rows="list.total"
-            :per-page="list.per_page"
-            @change="onPageChange" 
-            v-if="list.total > list.per_page" 
-            size="sm"
-            pills
-          />
-        </b-col>
-      </b-row>
+      <pagination-bar
+        :current.sync="list.current_page"
+        :size.sync="list.per_page"
+        :total="list.total"
+        :sizes="pageSizes"
+        @page-change="onPageChange"
+        @size-change="onPageSizeChange"
+      />
     </b-card>
 
     <b-modal
@@ -157,9 +138,11 @@
 
 <script>
 import axios from '@/plugins/axios'
+import PaginationBar from '@/views/components/pagination_bar.vue'
 
 export default {
   name: 'BankList',
+  components: { PaginationBar },
   data() {
     return {
       isBusy: false,

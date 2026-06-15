@@ -6,6 +6,7 @@ import vn.hoadon.entity.InvoiceEntity;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.CompanyBankEntity;
 
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -22,6 +23,11 @@ public final class InvoiceXmlBuilder {
      * @param bank entity ngân hàng ưu tiên của công ty, có thể null
      */
     public static String build(InvoiceEntity inv, FormInvoiceEntity form, CompanyEntity company, CompanyBankEntity bank) {
+        return build(inv, form, company, bank, null, null);
+    }
+
+    public static String build(InvoiceEntity inv, FormInvoiceEntity form, CompanyEntity company, CompanyBankEntity bank,
+                               InvoiceEntity relatedInvoice, FormInvoiceEntity relatedForm) {
         if (inv == null) return "";
         String id = java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
         String pban = "2.1.0";
@@ -46,6 +52,7 @@ public final class InvoiceXmlBuilder {
         String sellerWebsite = company != null ? nullToEmpty(company.getInvoiceWebsite()) : "";
         String sellerBankNo = bank != null ? nullToEmpty(bank.getAccountNumber()) : "";
         String sellerBankName = bank != null ? (nullToEmpty(bank.getBankName()) + (hasText(bank.getBankBrand()) ? (" " + bank.getBankBrand()) : "")) : "";
+        RelatedInvoiceXml relatedXml = buildRelatedInvoiceXml(inv, relatedInvoice, relatedForm);
 
         // Parse customer JSON
         Map<String,Object> customer = parseJsonObject(inv.getCustomer());
@@ -83,17 +90,7 @@ public final class InvoiceXmlBuilder {
           .append(tag("TDVNUNLHDon", ""))
           .append(tag("DCDVNUNLHDon", ""))
           .append(tag("TTKhac", ""))
-          .append("<TTHDLQuan>")
-          .append(tag("TCHDon", ""))
-          .append(tag("LHDCLQuan", ""))
-          .append(tag("KHMSHDCLQuan", ""))
-          .append(tag("KHHDCLQuan", ""))
-          .append(tag("SHDCLQuan", ""))
-          .append(tag("NLHDCLQuan", ""))
-          .append(tag("GChu", ""))
-          .append(tag("SBKCLQuan", ""))
-          .append(tag("NBKCLQuan", ""))
-          .append("</TTHDLQuan>")
+          .append(relatedXml.toXml())
           .append("</TTChung>");
         sb.append("<NDHDon>");
         sb.append("<NBan>")
@@ -213,6 +210,73 @@ public final class InvoiceXmlBuilder {
         sb.append("<DSCKS><NBan/><NMua/><CCKSKhac/></DSCKS>");
         sb.append("</HDon>");
         return sb.toString();
+    }
+
+    private static RelatedInvoiceXml buildRelatedInvoiceXml(InvoiceEntity inv, InvoiceEntity relatedInvoice, FormInvoiceEntity relatedForm) {
+        RelatedInvoiceXml xml = new RelatedInvoiceXml();
+        short invoiceType = inv != null && inv.getInvoiceType() != null ? inv.getInvoiceType() : 0;
+        if ((invoiceType != 1 && invoiceType != 2) || relatedInvoice == null) {
+            return xml;
+        }
+        xml.tchDon = String.valueOf(invoiceType);
+        xml.lhdcLQuan = relatedForm != null && relatedForm.getCategory() != null ? String.valueOf(relatedForm.getCategory()) : "1";
+        xml.khmsHdcLQuan = relatedForm != null ? nullToEmpty(relatedForm.getFormCode()) : "";
+        xml.khhdcLQuan = relatedForm != null ? nullToEmpty(relatedForm.getSerial()) : "";
+        xml.shdcLQuan = relatedInvoice.getNo() != null ? String.valueOf(relatedInvoice.getNo()) : "";
+        xml.nlhdcLQuan = relatedInvoice.getDateExport() != null
+                ? relatedInvoice.getDateExport().atStartOfDay().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                : "";
+        xml.gChu = buildRelatedNote(invoiceType, inv.getInvoiceTypeAdjust(), relatedInvoice, relatedForm);
+        return xml;
+    }
+
+    private static String buildRelatedNote(short invoiceType, Short adjustType, InvoiceEntity relatedInvoice, FormInvoiceEntity relatedForm) {
+        String action = invoiceType == 1 ? "thay thế" : "điều chỉnh";
+        String adjustSuffix = "";
+        if (invoiceType == 2) {
+            adjustSuffix = switch (adjustType == null ? 0 : adjustType) {
+                case 1 -> " tăng";
+                case 2 -> " giảm";
+                case 3 -> " thông tin";
+                default -> "";
+            };
+        }
+        String no = relatedInvoice != null && relatedInvoice.getNo() != null ? String.valueOf(relatedInvoice.getNo()) : "";
+        String formCode = relatedForm != null ? nullToEmpty(relatedForm.getFormCode()) : "";
+        String serial = relatedForm != null ? nullToEmpty(relatedForm.getSerial()) : "";
+        String dateText = "";
+        if (relatedInvoice != null && relatedInvoice.getDateExport() != null) {
+            dateText = "ngày " + relatedInvoice.getDateExport().format(DateTimeFormatter.ofPattern("dd 'tháng' MM 'năm' yyyy"));
+        }
+        return "Là hóa đơn " + action + adjustSuffix + " cho hóa đơn số " + no
+                + ", mẫu số " + formCode + ", ký hiệu " + serial
+                + (hasText(dateText) ? ", " + dateText : "");
+    }
+
+    private static final class RelatedInvoiceXml {
+        String tchDon = "";
+        String lhdcLQuan = "";
+        String khmsHdcLQuan = "";
+        String khhdcLQuan = "";
+        String shdcLQuan = "";
+        String nlhdcLQuan = "";
+        String gChu = "";
+
+        String toXml() {
+            return new StringBuilder()
+                    .append("<TTHDLQuan>")
+                    .append(tag("TCHDon", tchDon))
+                    .append(tag("LHDCLQuan", lhdcLQuan))
+                    .append(tag("KHMSHDCLQuan", khmsHdcLQuan))
+                    .append(tag("KHHDCLQuan", khhdcLQuan))
+                    .append(tag("SHDCLQuan", shdcLQuan))
+                    .append(tag("NLHDCLQuan", nlhdcLQuan))
+                    .append(tag("GChu", gChu))
+                    .append(tag("SBKCLQuan", ""))
+                    .append(tag("NBKCLQuan", ""))
+                    .append("</TTHDLQuan>")
+                    .toString();
+        }
     }
 
     private static String paymentTypeLabel(Short paymentType) {

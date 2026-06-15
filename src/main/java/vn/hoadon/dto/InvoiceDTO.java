@@ -15,4 +15,10 @@ public class InvoiceDTO {
     public Long userId;
     public String username;
     public Short status;
+    public Integer referenceId;
+    public Integer referenceNo;
+    public String referenceFormCode;
+    public String referenceSerial;
+    public Short invoiceType;
+    public Short invoiceTypeAdjust;
 }

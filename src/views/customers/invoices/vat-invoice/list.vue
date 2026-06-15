@@ -111,6 +111,12 @@
           <b-badge :variant="statusVariant(item.status)">{{ statusText(item.status) }}</b-badge>
         </template>
 
+        <template #cell(invoice_relation)="{ item }">
+          <b-badge :variant="relationVariant(item)" class="relation-chip" :title="relationTitle(item)">
+            {{ relationColumnText(item) }}
+          </b-badge>
+        </template>
+
         <template #cell(option)="{ item }">
           <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret boundary="window">
             <template #button-content>
@@ -137,41 +143,14 @@
         <b-skeleton width="92%" height="20px" animated class="mb-2" />
       </div>
 
-      <b-row class="mt-2">
-        <b-col cols="6">
-          <b-form inline>
-            <b-form-select
-              size="sm"
-              class="d-inline-block mb-2 mr-2 pl-2 pr-4"
-              v-model.number="list.per_page"
-              :options="pageSizes"
-              @input="onPageSizeChange"
-            />
-            <div class="pt-1 text-muted">
-              <i class="fas fa-globe mr-1"></i> Hiển thị từ
-              <b class="pl-1 pr-2">{{ list.from || 0 }}</b>
-              đến
-              <b class="pl-1 pr-2">{{ list.to || 0 }}</b>
-              trong tổng số
-              <b class="pl-1 pr-2">{{ list.total || 0 }}</b>
-              bản ghi.
-            </div>
-          </b-form>
-        </b-col>
-        <b-col cols="6">
-          <b-pagination
-            align="right"
-            v-model.number="list.current_page"
-            :per-page="list.per_page"
-            :total-rows="list.total"
-            :hide-goto-end-buttons="true"
-            v-if="list.last_page > 1"
-            size="sm"
-            pills
-            @input="onPageChange"
-          />
-        </b-col>
-      </b-row>
+      <pagination-bar
+        :current.sync="list.current_page"
+        :size.sync="list.per_page"
+        :total="list.total"
+        :sizes="pageSizes"
+        @page-change="onPageChange"
+        @size-change="onPageSizeChange"
+      />
     </b-card>
 
     <!-- Hộp thoại xem hóa đơn (HTML qua iframe) -->
@@ -316,10 +295,12 @@
 
 <script>
 import axios from '@/plugins/axios'
+import PaginationBar from '@/views/components/pagination_bar.vue'
 import { toastSuccess, toastWarning } from '@/utils/toast'
 
 export default {
   name: 'VatInvoiceList',
+  components: { PaginationBar },
   data () {
     return {
       isBusy: false,
@@ -369,6 +350,7 @@ export default {
         { key: 'amount', label: 'Tổng tiền', thStyle: { width: '140px' }, tdClass: 'text-right' },
         { key: 'username', label: 'Người phát hành', thStyle: { width: '160px' } },
         { key: 'status', label: 'Trạng thái', thStyle: { width: '160px' } },
+        { key: 'invoice_relation', label: 'Loại hóa đơn', thStyle: { width: '130px' } },
         { key: 'option', label: 'Chức năng', thStyle: { width: '180px' } },
       ],
       statusOptions: [
@@ -462,6 +444,12 @@ export default {
           userId: it.userId,
           username: it.username,
           status: it.status,
+          referenceId: it.referenceId,
+          referenceNo: it.referenceNo,
+          referenceFormCode: it.referenceFormCode,
+          referenceSerial: it.referenceSerial,
+          invoiceType: it.invoiceType,
+          invoiceTypeAdjust: it.invoiceTypeAdjust,
         }))
         this.list.data = items
         this.list.total = data.total || 0
@@ -485,8 +473,15 @@ export default {
     goCreate () { this.$router.push({ name: 'CustomerVatInvoiceCreate' }) },
     goEdit (item) { this.$router.push({ name: 'CustomerVatInvoiceEdit', params: { id: item.id } }) },
 
-    onPageSizeChange () { this.list.current_page = 1; this.fetchList() },
-    onPageChange () { this.fetchList() },
+    onPageSizeChange (size) {
+      this.list.per_page = Number(size) || this.list.per_page
+      this.list.current_page = 1
+      this.fetchList()
+    },
+    onPageChange (page) {
+      this.list.current_page = Number(page) || 1
+      this.fetchList()
+    },
     applyFilters () { this.list.current_page = 1; this.fetchList() },
     resetFilters () { this.filters = { keyword: '', status: null, date: null }; this.applyFilters() },
 
@@ -514,6 +509,45 @@ export default {
       if (v === 5) return 'primary'
       if (v === 6) return 'danger'
       return 'secondary'
+    },
+    relationColumnText (item) {
+      const type = Number(item?.invoiceType || 0)
+      const status = Number(item?.status)
+      if (status === 4) return 'Bị thay'
+      if (status === 5) return 'Bị ĐC'
+      const no = item?.referenceNo || item?.referenceId || ''
+      const suffix = no ? ` #${no}` : ''
+      if (type === 1) return `Thay${suffix}`
+      if (type === 2) return `${this.adjustTypeShort(item?.invoiceTypeAdjust)}${suffix}`
+      return 'Gốc'
+    },
+    relationTitle (item) {
+      const type = Number(item?.invoiceType || 0)
+      const status = Number(item?.status)
+      const no = item?.referenceNo || item?.referenceId || ''
+      const serial = `${item?.referenceFormCode || ''}${item?.referenceSerial || ''}`
+      const suffix = [no ? `số ${no}` : '', serial ? `ký hiệu ${serial}` : ''].filter(Boolean).join(', ')
+      if (status === 4) return 'Hóa đơn gốc đã bị thay thế'
+      if (status === 5) return 'Hóa đơn gốc đã bị điều chỉnh'
+      if (type === 1) return suffix ? `Hóa đơn thay thế cho ${suffix}` : 'Hóa đơn thay thế'
+      if (type === 2) return suffix ? `Hóa đơn điều chỉnh cho ${suffix}` : 'Hóa đơn điều chỉnh'
+      return 'Hóa đơn gốc'
+    },
+    relationVariant (item) {
+      const type = Number(item?.invoiceType || 0)
+      const status = Number(item?.status)
+      if (type === 1) return 'warning'
+      if (type === 2) return 'primary'
+      if (status === 4) return 'dark'
+      if (status === 5) return 'info'
+      return 'light'
+    },
+    adjustTypeShort (type) {
+      const v = Number(type)
+      if (v === 1) return 'ĐC tăng'
+      if (v === 2) return 'ĐC giảm'
+      if (v === 3) return 'ĐC TT'
+      return 'Điều chỉnh'
     },
     usernameOf (uid) { return this.usersMap[uid] || '—' },
     formatDate (dt) { try { return (dt || '').toString().replace('T', ' ') } catch { return '—' } },
@@ -621,6 +655,9 @@ export default {
         const updated = { ...item, no: newNo, status: 1 }
         const idx = this.list.data.findIndex(x => (x.id||x.ID||x.Id) === id)
         if (idx >= 0) this.$set(this.list.data, idx, updated)
+        try {
+          window.dispatchEvent(new CustomEvent('invoice-limit-used', { detail: { invoiceId: id } }))
+        } catch {}
         // Refresh list to reflect latest data
         await this.fetchList()
       } catch (e) {
@@ -924,5 +961,9 @@ export default {
 </script>
 
 <style scoped>
-/* ...existing code... */
+.relation-chip {
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
 </style>

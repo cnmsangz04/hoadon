@@ -120,27 +120,25 @@
         </template>
       </b-table>
 
-      <div class="d-flex justify-content-between align-items-center mt-3 pagination-row">
-        <div class="text-muted small">Tổng: {{ totalRows }}</div>
-        <b-pagination
-          v-if="totalRows > size"
-          v-model="page"
-          :total-rows="totalRows"
-          :per-page="size"
-          align="right"
-          class="mb-0"
-          @change="onPageChange"
-        />
-      </div>
+      <pagination-bar
+        :current.sync="page"
+        :size.sync="size"
+        :total="totalRows"
+        :sizes="pageSizes"
+        @page-change="onPageChange"
+        @size-change="onPageSizeChange"
+      />
     </b-card>
   </div>
 </template>
 
 <script>
 import axios from '@/plugins/axios'
+import PaginationBar from '@/views/components/pagination_bar.vue'
 
 export default {
   name: 'AdminCompanyRegistrationList',
+  components: { PaginationBar },
   data() {
     return {
       loading: false,
@@ -148,6 +146,7 @@ export default {
       totalRows: 0,
       page: 1,
       size: 10,
+      pageSizes: [10, 20, 50, 100],
       filter: {
         keyword: '',
         status: null,
@@ -191,7 +190,12 @@ export default {
       }
     },
     onPageChange(page) {
-      this.page = page
+      this.page = Number(page) || 1
+      this.load()
+    },
+    onPageSizeChange(size) {
+      this.size = Number(size) || this.size
+      this.page = 1
       this.load()
     },
     async approve(item) {
@@ -325,21 +329,9 @@ export default {
   font-size: 13px;
 }
 
-.pagination-row {
-  min-height: 34px;
-}
-
 :deep(.dropdown-menu) {
   border-radius: 8px;
   border-color: #e5e7eb;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
-}
-
-@media (max-width: 768px) {
-  .pagination-row {
-    align-items: flex-start !important;
-    flex-direction: column;
-    gap: 10px;
-  }
 }
 </style>

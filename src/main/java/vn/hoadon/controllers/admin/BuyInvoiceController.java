@@ -3,10 +3,13 @@ package vn.hoadon.controllers.admin;
 import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.dto.buyinvoice.BuyInvoiceCreateDTO;
 import vn.hoadon.dto.buyinvoice.BuyInvoiceFilterDTO;
+import vn.hoadon.dto.buyinvoice.BuyInvoiceHistoryDTO;
+import vn.hoadon.dto.buyinvoice.BuyInvoiceHistoryFilterDTO;
 import vn.hoadon.dto.buyinvoice.BuyInvoiceListItemDTO;
 import vn.hoadon.dto.common.IdRequestDTO;
 import vn.hoadon.entity.BuyInvoiceEntity;
 import vn.hoadon.entity.UserEntity;
+import vn.hoadon.services.BuyInvoiceHistoryService;
 import vn.hoadon.services.BuyInvoiceService;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +25,9 @@ public class BuyInvoiceController extends BaseController {
 
     @Autowired
     private BuyInvoiceService service;
+
+    @Autowired
+    private BuyInvoiceHistoryService historyService;
 
     @PostMapping("/list")
     public ResponseEntity<Page<BuyInvoiceListItemDTO>> list(
@@ -49,6 +55,29 @@ public class BuyInvoiceController extends BaseController {
         return ResponseEntity.ok(service.list(filter, pageable));
     }
 
+    @PostMapping("/histories")
+    public ResponseEntity<Page<BuyInvoiceHistoryDTO>> histories(
+            @RequestBody(required = false) BuyInvoiceHistoryFilterDTO filter,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size
+    ) {
+        permission("buy-invoice-list");
+
+        if (filter == null) filter = new BuyInvoiceHistoryFilterDTO();
+        int pageNum = page != null ? page : 0;
+        int pageSize = size != null ? size : 10;
+
+        UserEntity user = currentUser();
+        Integer actorRole = user != null ? user.getRole() : null;
+        boolean isRoot = actorRole != null && actorRole == 0;
+        if (!isRoot) {
+            filter.setCompanyId(user != null ? user.getCompanyId() : null);
+        }
+
+        Pageable pageable = PageRequest.of(pageNum, pageSize, Sort.by("createdAt").descending());
+        return ResponseEntity.ok(historyService.list(filter, pageable));
+    }
+
     @PostMapping("/get")
     public ResponseEntity<BuyInvoiceEntity> get(@RequestBody @Valid IdRequestDTO request) {
         permission("buy-invoice-list");
@@ -71,11 +100,15 @@ public class BuyInvoiceController extends BaseController {
         }
         
         BuyInvoiceEntity entity;
+        BuyInvoiceEntity before = null;
+        String changeType;
         
         // Nếu cập nhật (id != null), nạp entity hiện có để giữ amountUsed
         if (dto.getId() != null) {
             entity = service.findById(dto.getId())
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bản ghi buy_invoice với id: " + dto.getId()));
+            before = snapshot(entity);
+            changeType = "ADMIN_UPDATE";
             
             // Validate: amount cannot be less than amountUsed
             Integer amountUsed = entity.getAmountUsed() != null ? entity.getAmountUsed() : 0;
@@ -105,9 +138,22 @@ public class BuyInvoiceController extends BaseController {
             entity.setAmount(dto.getAmount());
             entity.setAmountUsed(0); // Initialize to 0 for new records
             entity.setStatus(dto.getStatus());
+            changeType = "ADMIN_CREATE";
         }
         
-        return ResponseEntity.ok(service.saveOrUpdate(entity));
+        BuyInvoiceEntity saved = service.saveOrUpdate(entity);
+        historyService.record(
+                before,
+                snapshot(saved),
+                changeType,
+                "ADMIN",
+                user,
+                null,
+                null,
+                null,
+                noteOrDefault(dto.getNote(), changeType.equals("ADMIN_CREATE") ? "Admin thêm hạn mức hóa đơn" : "Admin cập nhật hạn mức hóa đơn")
+        );
+        return ResponseEntity.ok(saved);
     }
 
     @PostMapping("/delete")
@@ -131,7 +177,35 @@ public class BuyInvoiceController extends BaseController {
                     .body(java.util.Map.of("message", "Không thể xóa gói hóa đơn đã được sử dụng (" + amountUsed + " hóa đơn đã cấp số)"));
         }
         
+        historyService.record(
+                snapshot(entity),
+                null,
+                "ADMIN_DELETE",
+                "ADMIN",
+                currentUser(),
+                null,
+                null,
+                null,
+                "Admin xóa hạn mức hóa đơn"
+        );
         service.delete(request.getId());
         return ResponseEntity.noContent().build();
+    }
+
+    private BuyInvoiceEntity snapshot(BuyInvoiceEntity source) {
+        if (source == null) return null;
+        BuyInvoiceEntity copy = new BuyInvoiceEntity();
+        copy.setId(source.getId());
+        copy.setCompanyId(source.getCompanyId());
+        copy.setAmount(source.getAmount());
+        copy.setAmountUsed(source.getAmountUsed());
+        copy.setStatus(source.getStatus());
+        copy.setCreatedAt(source.getCreatedAt());
+        copy.setUpdatedAt(source.getUpdatedAt());
+        return copy;
+    }
+
+    private String noteOrDefault(String note, String defaultValue) {
+        return note != null && !note.isBlank() ? note.trim() : defaultValue;
     }
 }

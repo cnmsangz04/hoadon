@@ -116,41 +116,14 @@
         <b-skeleton width="92%" height="20px" animated class="mb-2" />
       </div>
 
-      <b-row class="mt-2">
-        <b-col cols="6">
-          <b-form inline>
-            <b-form-select
-              size="sm"
-              class="d-inline-block mb-2 mr-2 pl-2 pr-4"
-              v-model.number="list.per_page"
-              :options="pageSizes"
-              @input="onPageSizeChange"
-            />
-            <div class="pt-1 text-muted">
-              <i class="fas fa-globe mr-1"></i> Hiển thị từ
-              <b class="pl-1 pr-2">{{ list.from || 0 }}</b>
-              đến
-              <b class="pl-1 pr-2">{{ list.to || 0 }}</b>
-              trong tổng số
-              <b class="pl-1 pr-2">{{ list.total || 0 }}</b>
-              bản ghi.
-            </div>
-          </b-form>
-        </b-col>
-        <b-col cols="6">
-          <b-pagination
-            align="right"
-            v-model.number="list.current_page"
-            :per-page="list.per_page"
-            :total-rows="list.total"
-            :hide-goto-end-buttons="true"
-            v-if="list.last_page > 1"
-            size="sm"
-            pills
-            @input="onPageChange"
-          />
-        </b-col>
-      </b-row>
+      <pagination-bar
+        :current.sync="list.current_page"
+        :size.sync="list.per_page"
+        :total="list.total"
+        :sizes="pageSizes"
+        @page-change="onPageChange"
+        @size-change="onPageSizeChange"
+      />
     </b-card>
 
     <!-- Hộp thoại tạo/cập nhật thành viên -->
@@ -295,11 +268,12 @@
 
 <script>
 import axios from '@/plugins/axios'
+import PaginationBar from '@/views/components/pagination_bar.vue'
 import { parseJwt } from '@/utils/jwt'
 
 export default {
   name: 'SettingsMemberList',
-  components: { },
+  components: { PaginationBar },
   data() {
     return {
       isBusy: false,
@@ -827,98 +801,10 @@ export default {
 .members .section-card { border: 1px solid #e8e8e8; border-radius: 12px; padding: 12px 14px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
 .members .perm-group { border: 1px solid #e8e8e8; border-radius: 12px; }
 .members .perm-group-header { border-bottom: 1px dashed #ecf0f6; padding-bottom: 6px; margin-bottom: 8px; }
-.members .pagination { margin: 0; }
-.members .page-item .page-link {
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  color: #374151;
-  padding: 4px 10px;
-  line-height: 1.2;
-}
-.members .page-item:not(.active) .page-link:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-  color: #111827;
-}
-.members .page-item.active .page-link {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: #fff;
-  box-shadow: 0 0 0 2px rgba(59,130,246,.15);
-}
-.members .page-item.disabled .page-link { color: #9ca3af; background: #f9fafb; }
-
-.pagination-bar {
-  padding-top: 10px;
-  margin-top: 12px;
-  border-top: 1px dashed #e5e7eb;
-}
-
-/* Ô chọn */
-.pagination-bar .custom-select-sm {
-  height: 30px;
-  padding: 4px 10px;
-  font-size: 13px;
-  border-radius: 8px;
-}
-
-/* Phân trang */
-.pagination-bar .pagination {
-  margin: 0;
-  gap: 6px;
-}
-
-.pagination-bar .page-item .page-link {
-  min-width: 32px;
-  height: 30px;
-  padding: 0 10px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  color: #374151;
-  font-size: 13px;
-  line-height: 28px;
-  text-align: center;
-  background-color: #fff;
-  transition: all 0.15s ease;
-}
-
-.pagination-bar .page-item:not(.active):not(.disabled) .page-link:hover {
-  background-color: #f3f4f6;
-  border-color: #d1d5db;
-  color: #111827;
-}
-
-.pagination-bar .page-item.active .page-link {
-  background-color: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
-  font-weight: 600;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
-}
-
-.pagination-bar .page-item.disabled .page-link {
-  background-color: #f9fafb;
-  color: #9ca3af;
-  border-color: #e5e7eb;
-}
-
 .member-modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
-}
-
-/* Di động */
-@media (max-width: 576px) {
-  .pagination-bar {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: 8px;
-  }
-
-  .pagination-bar .pagination {
-    justify-content: flex-start;
-  }
 }
 </style>

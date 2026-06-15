@@ -24,6 +24,18 @@ export default {
 	  name: 'setting-member',
 	  component: () => import('../../views/settings/member/list.vue'),
 	  meta: { requiresUser: true, title: 'Thành viên', rolePolicy: 'role<2' }
+	},
+	{
+	  path: 'login-history/list',
+	  name: 'setting-login-history',
+	  component: () => import('../../views/settings/login-history/list.vue'),
+	  meta: { requiresUser: true, title: 'Lịch sử đăng nhập', rolePolicy: 'role<2' }
+	},
+	{
+	  path: 'security/ip',
+	  name: 'setting-security-ip',
+	  component: () => import('../../views/settings/security/ip.vue'),
+	  meta: { requiresUser: true, title: 'Bảo mật bằng IP', rolePolicy: 'role<2' }
 	}
   ]
 }

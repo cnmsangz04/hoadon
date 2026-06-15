@@ -94,8 +94,115 @@
         </template>
       </b-table>
 
-      <!-- Phân trang -->
-      <b-pagination v-if="list.total > list.per_page" v-model="list.current_page" :per-page="list.per_page" :total-rows="list.total" align="right" class="mt-2" @change="onPageChange" />
+      <pagination-bar
+        :current.sync="list.current_page"
+        :size.sync="list.per_page"
+        :total="list.total"
+        :sizes="pageSizes"
+        @page-change="onPageChange"
+        @size-change="onPageSizeChange"
+      />
+    </b-card>
+
+    <!-- Hộp thoại -->
+    <b-card class="mt-3 shadow-sm">
+      <div class="d-flex align-items-center justify-content-between flex-wrap mb-3">
+        <div>
+          <h5 class="mb-1 font-weight-bold">Lịch sử thay đổi hạn mức</h5>
+        </div>
+        <b-button size="sm" variant="outline-primary" class="mt-2 mt-md-0" @click="loadHistories">
+          <i class="fas fa-sync-alt mr-1"></i>
+          Tải lại
+        </b-button>
+      </div>
+
+      <b-row class="mb-2">
+        <b-col md="3" class="mb-2">
+          <v-select v-model="historyFilter.companyId" :options="companyOptions" label="label" :reduce="c => c.value" placeholder="Tất cả công ty" />
+        </b-col>
+        <b-col md="2" class="mb-2">
+          <b-form-select v-model="historyFilter.source" :options="historySourceOptions" />
+        </b-col>
+        <b-col md="2" class="mb-2">
+          <b-form-select v-model="historyFilter.changeType" :options="historyChangeTypeOptions" />
+        </b-col>
+        <b-col md="2" class="mb-2">
+          <b-form-input v-model="historyFilter.fromDate" type="date" />
+        </b-col>
+        <b-col md="2" class="mb-2">
+          <b-form-input v-model="historyFilter.toDate" type="date" />
+        </b-col>
+        <b-col md="1" class="mb-2 text-md-right">
+          <b-button size="sm" variant="primary" block @click="applyHistoryFilter">
+            Lọc
+          </b-button>
+        </b-col>
+      </b-row>
+
+      <b-table
+        bordered
+        hover
+        responsive
+        small
+        show-empty
+        :fields="historyFields"
+        :items="histories"
+        :busy="historyBusy"
+        empty-text="Chưa có lịch sử thay đổi"
+        class="mb-0 table-modern table-compact"
+      >
+        <template #cell(createdAt)="data">
+          {{ formatDateTime(data.item.createdAt) }}
+        </template>
+
+        <template #cell(company)="data">
+          <div class="font-weight-bold">{{ data.item.companyName || '—' }}</div>
+          <small class="text-muted">{{ data.item.companyTaxcode || '—' }}</small>
+        </template>
+
+        <template #cell(changeType)="data">
+          <b-badge :variant="historyChangeVariant(data.item.changeType)">
+            {{ historyChangeText(data.item.changeType) }}
+          </b-badge>
+        </template>
+
+        <template #cell(amountDelta)="data">
+          <span class="font-weight-bold" :class="deltaClass(data.item.amountDelta)">
+            {{ formatDelta(data.item.amountDelta) }}
+          </span>
+        </template>
+
+        <template #cell(amount)="data">
+          <span class="text-mono">{{ formatNumber(data.item.previousAmount) }} → {{ formatNumber(data.item.newAmount) }}</span>
+        </template>
+
+        <template #cell(source)="data">
+          <b-badge :variant="historySourceVariant(data.item.source)">
+            {{ historySourceText(data.item.source) }}
+          </b-badge>
+        </template>
+
+        <template #cell(actor)="data">
+          <div>{{ data.item.actorName || data.item.actorUsername || '—' }}</div>
+          <small v-if="data.item.actorUsername" class="text-muted">{{ data.item.actorUsername }}</small>
+        </template>
+
+        <template #cell(note)="data">
+          <div>{{ data.item.note || '—' }}</div>
+          <small v-if="data.item.packageName || data.item.paymentCode" class="text-muted">
+            {{ data.item.packageName || '—' }}<span v-if="data.item.paymentCode"> · {{ data.item.paymentCode }}</span>
+          </small>
+        </template>
+      </b-table>
+
+      <pagination-bar
+        :current.sync="historyList.current_page"
+        :size.sync="historyList.per_page"
+        :total="historyList.total"
+        :sizes="pageSizes"
+        @page-change="onHistoryPageChange"
+        @size-change="onHistoryPageSizeChange"
+      />
     </b-card>
 
     <!-- Hộp thoại -->
@@ -125,8 +232,12 @@
           <b-form-select v-model="invoiceForm.status" :options="statusOptions" />
         </b-form-group>
 
+        <b-form-group label="Ghi chú thay đổi" label-class="font-weight-bold">
+          <b-form-textarea v-model.trim="invoiceForm.note" rows="2" max-rows="4" placeholder="VD: Bổ sung theo yêu cầu khách hàng, điều chỉnh sai hạn mức..." />
+        </b-form-group>
+
         <div class="text-right">
-          <b-button type="submit" variant="primary" :disabled="!canSubmit">Lưu</b-button>
+          <b-button type="submit" variant="primary" class="mr-2" :disabled="!canSubmit">Lưu</b-button>
           <b-button variant="secondary" @click="$refs.buyInvoiceModal.hide()">Hủy</b-button>
         </div>
       </b-form>
@@ -136,28 +247,40 @@
 
 <script>
 import axios from "@/plugins/axios";
+import PaginationBar from "@/views/components/pagination_bar.vue";
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 
 export default {
   name: "BuyInvoiceList",
-  components: { vSelect },
+  components: { vSelect, PaginationBar },
 
   data() {
     return {
       isBusy: false,
+      historyBusy: false,
       items: [],
+      histories: [],
 
       filter: {
         companyId: null,
         status: null
       },
 
+      historyFilter: {
+        companyId: null,
+        source: null,
+        changeType: null,
+        fromDate: null,
+        toDate: null
+      },
+
       invoiceForm: {
         id: null,
         companyId: null,
         amount: 0,
-        status: 1
+        status: 1,
+        note: ''
       },
 
       companyOptions: [],
@@ -166,12 +289,30 @@ export default {
         { value: 1, text: "Kích hoạt" },
         { value: 0, text: "Ngưng hoạt động" }
       ],
+      historySourceOptions: [
+        { value: null, text: "Tất cả nguồn" },
+        { value: "CUSTOMER", text: "Khách mua gói" },
+        { value: "ADMIN", text: "Admin thao tác" }
+      ],
+      historyChangeTypeOptions: [
+        { value: null, text: "Tất cả thao tác" },
+        { value: "PACKAGE_PURCHASE", text: "Mua gói" },
+        { value: "ADMIN_CREATE", text: "Admin thêm" },
+        { value: "ADMIN_UPDATE", text: "Admin cập nhật" },
+        { value: "ADMIN_DELETE", text: "Admin xóa" }
+      ],
 
       list: {
         current_page: 1,
         per_page: 10,
         total: 0
       },
+      historyList: {
+        current_page: 1,
+        per_page: 10,
+        total: 0
+      },
+      pageSizes: [10, 20, 50, 100],
 
       fields: [
         { key: "id", label: "#", thStyle: { width: "50px" } },
@@ -179,6 +320,16 @@ export default {
         { key: "amount", label: "Số lượng" },
         { key: "status", label: "Trạng thái" },
         { key: "option", label: "Chức năng", thStyle: { width: "150px" } }
+      ],
+      historyFields: [
+        { key: "createdAt", label: "Thời gian", thStyle: { width: "145px" } },
+        { key: "company", label: "Công ty", thStyle: { minWidth: "220px" } },
+        { key: "changeType", label: "Thao tác", thStyle: { width: "130px" }, tdClass: "text-center" },
+        { key: "amountDelta", label: "Tăng/Giảm", thStyle: { width: "110px" }, tdClass: "text-right" },
+        { key: "amount", label: "Hạn mức", thStyle: { width: "150px" }, tdClass: "text-right" },
+        { key: "source", label: "Nguồn", thStyle: { width: "125px" }, tdClass: "text-center" },
+        { key: "actor", label: "Người thao tác", thStyle: { width: "150px" } },
+        { key: "note", label: "Ghi chú", thStyle: { minWidth: "220px" } }
       ]
     };
   },
@@ -234,15 +385,63 @@ export default {
       await this.loadData();
     },
     onPageChange(page) {
-      this.list.current_page = page;
+      this.list.current_page = Number(page) || 1;
       this.loadData();
+    },
+    onPageSizeChange(size) {
+      this.list.per_page = Number(size) || this.list.per_page;
+      this.list.current_page = 1;
+      this.loadData();
+    },
+    async loadHistories() {
+      this.historyBusy = true;
+      try {
+        const page = this.historyList.current_page - 1;
+        const res = await axios.post(
+          "/administrator/buy-invoice/histories",
+          this.normalizedHistoryFilter(),
+          { params: { page, size: this.historyList.per_page } }
+        );
+        const data = res.data || {};
+        this.histories = Array.isArray(data.content) ? data.content : [];
+        this.historyList.total = data.totalElements || 0;
+      } catch (e) {
+        console.error(e);
+        this.histories = [];
+        this.historyList.total = 0;
+        this.$toastr && this.$toastr.error('Không thể tải lịch sử thay đổi hạn mức');
+      } finally {
+        this.historyBusy = false;
+      }
+    },
+    async applyHistoryFilter() {
+      this.historyList.current_page = 1;
+      await this.loadHistories();
+    },
+    onHistoryPageChange(page) {
+      this.historyList.current_page = Number(page) || 1;
+      this.loadHistories();
+    },
+    onHistoryPageSizeChange(size) {
+      this.historyList.per_page = Number(size) || this.historyList.per_page;
+      this.historyList.current_page = 1;
+      this.loadHistories();
+    },
+    normalizedHistoryFilter() {
+      return {
+        companyId: this.historyFilter.companyId || null,
+        source: this.historyFilter.source || null,
+        changeType: this.historyFilter.changeType || null,
+        fromDate: this.historyFilter.fromDate || null,
+        toDate: this.historyFilter.toDate || null
+      };
     },
 
     async showModal() {
       if (!this.companyOptions || this.companyOptions.length === 0) {
         await this.loadCompanies();
       }
-      this.invoiceForm = { id: null, companyId: null, amount: 0, status: 1 };
+      this.invoiceForm = { id: null, companyId: null, amount: 0, status: 1, note: '' };
       this.$refs.buyInvoiceModal.show();
     },
 
@@ -256,7 +455,8 @@ export default {
         companyId: item.companyId,
         amount: item.amount,
         amountUsed: item.amountUsed || 0,
-        status: item.status
+        status: item.status,
+        note: ''
       };
       this.$refs.buyInvoiceModal.show();
     },
@@ -266,7 +466,8 @@ export default {
         await axios.post("/administrator/buy-invoice/create", this.invoiceForm);
         this.$toastr && this.$toastr.success(this.invoiceForm.id ? 'Cập nhật hóa đơn thành công' : 'Thêm hóa đơn thành công');
         this.$refs.buyInvoiceModal.hide();
-        this.loadData();
+        await this.loadData();
+        await this.loadHistories();
       } catch (error) {
         const message = error.response?.data?.message || 'Không thể lưu hóa đơn';
         this.$toastr && this.$toastr.error(message);
@@ -284,7 +485,8 @@ export default {
       try {
         await axios.post("/administrator/buy-invoice/delete", { id: item.id });
         this.$toastr && this.$toastr.success('Đã xóa hóa đơn');
-        this.loadData();
+        await this.loadData();
+        await this.loadHistories();
       } catch (error) {
         const message = error.response?.data?.message || 'Không thể xóa hóa đơn';
         this.$toastr && this.$toastr.error(message);
@@ -339,6 +541,60 @@ export default {
       const n = Number(s)
       if (Number.isNaN(n)) return 'light'
       return n === 1 ? 'success' : n === 0 ? 'secondary' : 'light'
+    },
+    historyChangeText(type) {
+      const map = {
+        PACKAGE_PURCHASE: 'Mua gói',
+        ADMIN_CREATE: 'Admin thêm',
+        ADMIN_UPDATE: 'Admin cập nhật',
+        ADMIN_DELETE: 'Admin xóa'
+      };
+      return map[type] || type || '—';
+    },
+    historyChangeVariant(type) {
+      const map = {
+        PACKAGE_PURCHASE: 'success',
+        ADMIN_CREATE: 'primary',
+        ADMIN_UPDATE: 'warning',
+        ADMIN_DELETE: 'danger'
+      };
+      return map[type] || 'secondary';
+    },
+    historySourceText(source) {
+      const map = {
+        CUSTOMER: 'Khách hàng',
+        ADMIN: 'Admin'
+      };
+      return map[source] || source || '—';
+    },
+    historySourceVariant(source) {
+      return source === 'CUSTOMER' ? 'success' : source === 'ADMIN' ? 'primary' : 'secondary';
+    },
+    formatNumber(value) {
+      return new Intl.NumberFormat('vi-VN').format(Number(value || 0));
+    },
+    formatDelta(value) {
+      const n = Number(value || 0);
+      if (n > 0) return `+${this.formatNumber(n)}`;
+      if (n < 0) return `-${this.formatNumber(Math.abs(n))}`;
+      return '0';
+    },
+    deltaClass(value) {
+      const n = Number(value || 0);
+      if (n > 0) return 'text-success';
+      if (n < 0) return 'text-danger';
+      return 'text-muted';
+    },
+    formatDateTime(value) {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value).replace('T', ' ');
+      const dd = String(date.getDate()).padStart(2, '0');
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const yyyy = date.getFullYear();
+      const hh = String(date.getHours()).padStart(2, '0');
+      const mi = String(date.getMinutes()).padStart(2, '0');
+      return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
     }
   },
 
@@ -346,6 +602,7 @@ export default {
     // Tải công ty trước để map tên sẵn sàng, sau đó tải hóa đơn
     await this.loadCompanies();
     await this.loadData();
+    await this.loadHistories();
   }
 };
 </script>

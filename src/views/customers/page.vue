@@ -29,6 +29,17 @@ export default {
     Header,
     Sidebar,
     Footer
+  },
+  mounted () {
+    window.$crisp = [];
+    window.CRISP_WEBSITE_ID = 'b7a71c3f-2527-40e3-a16d-6b1913b4dedc';
+    if (!document.getElementById('crisp-sdk')) {
+      const script = document.createElement('script');
+      script.id = 'crisp-sdk';
+      script.src = 'https://client.crisp.chat/l.js';
+      script.async = true;
+      document.head.appendChild(script);
+    }
   }
 }
 </script>

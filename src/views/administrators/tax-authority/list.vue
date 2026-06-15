@@ -100,24 +100,14 @@
                 </template>
             </b-table>
 
-            <div class="pagination-bar" v-if="list.total > 0 || isBusy">
-                <b-row class="align-items-center">
-                    <b-col md="6" cols="12">
-                        <b-form inline class="justify-content-md-start justify-content-center">
-                            <span class="mr-2 text-muted small">Hiển thị</span>
-                            <b-form-select size="sm" class="custom-select-sm mr-2" v-model.number="list.per_page"
-                                :options="pageSizes" @change="onPageSizeChange" style="width: 70px" />
-                            <span class="text-muted small">
-                                từ <b>{{ list.from }}</b> đến <b>{{ list.to }}</b> trong tổng <b>{{ list.total }}</b>
-                            </span>
-                        </b-form>
-                    </b-col>
-                    <b-col md="6" cols="12">
-                        <b-pagination v-model="list.current_page" :total-rows="list.total" :per-page="list.per_page"
-                            align="right" size="sm" class="my-0" @change="onPageChange"></b-pagination>
-                    </b-col>
-                </b-row>
-            </div>
+            <pagination-bar
+                :current.sync="list.current_page"
+                :size.sync="list.per_page"
+                :total="list.total"
+                :sizes="pageSizes"
+                @page-change="onPageChange"
+                @size-change="onPageSizeChange"
+            />
         </b-card>
 
         <b-modal ref="modalForm" :title="form.id ? 'Cập nhật Cơ quan thuế' : 'Thêm mới Cơ quan thuế'" hide-footer
@@ -170,9 +160,11 @@
 
 <script>
 import axios from "axios";
+import PaginationBar from "@/views/components/pagination_bar.vue";
 
 export default {
     name: "TaxAuthoritiesList",
+    components: { PaginationBar },
     data() {
         return {
             isBusy: false,
@@ -323,12 +315,12 @@ export default {
         },
 
         onPageChange(page) {
-            this.list.current_page = page;
+            this.list.current_page = Number(page) || 1;
             this.loadData();
         },
 
         onPageSizeChange(size) {
-            this.list.per_page = size;
+            this.list.per_page = Number(size) || this.list.per_page;
             this.list.current_page = 1;
             this.loadData();
         },
@@ -456,60 +448,4 @@ export default {
     vertical-align: middle;
 }
 
-/* Pagination Bar Styles (Copied & Adapted) */
-.pagination-bar {
-    padding-top: 10px;
-    margin-top: 12px;
-    border-top: 1px dashed #e5e7eb;
-}
-
-.pagination-bar .custom-select-sm {
-    height: 30px;
-    padding: 4px 10px;
-    font-size: 13px;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-}
-
-/* Pagination Buttons */
-.pagination-bar ::v-deep .page-item .page-link {
-    min-width: 32px;
-    height: 30px;
-    padding: 0 10px;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-    color: #374151;
-    font-size: 13px;
-    line-height: 28px;
-    text-align: center;
-    background-color: #fff;
-    transition: all 0.15s ease;
-    margin-left: 4px;
-}
-
-.pagination-bar ::v-deep .page-item:not(.active):not(.disabled) .page-link:hover {
-    background-color: #f3f4f6;
-    border-color: #d1d5db;
-    color: #111827;
-}
-
-.pagination-bar ::v-deep .page-item.active .page-link {
-    background-color: #2563eb;
-    border-color: #2563eb;
-    color: #fff;
-    font-weight: 600;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
-}
-
-.pagination-bar ::v-deep .page-item.disabled .page-link {
-    background-color: #f9fafb;
-    color: #9ca3af;
-    border-color: #e5e7eb;
-}
-
-@media (max-width: 576px) {
-    .pagination-bar {
-        text-align: center;
-    }
-}
 </style>

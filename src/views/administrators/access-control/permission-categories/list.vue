@@ -132,14 +132,13 @@
         </template>
       </b-table>
 
-      <b-pagination
-        v-if="list.total > list.per_page"
-        v-model="list.current_page"
-        :per-page="list.per_page"
-        :total-rows="list.total"
-        align="right"
-        class="mt-2"
-        @change="onPageChange"
+      <pagination-bar
+        :current.sync="list.current_page"
+        :size.sync="list.per_page"
+        :total="list.total"
+        :sizes="pageSizes"
+        @page-change="onPageChange"
+        @size-change="onPageSizeChange"
       />
     </b-card>
 
@@ -167,10 +166,11 @@
 <script>
 import axios from "@/plugins/axios";
 import draggable from "vuedraggable";
+import PaginationBar from "@/views/components/pagination_bar.vue";
 
 export default {
   name: "PermissionCategoriesList",
-  components: { draggable },
+  components: { draggable, PaginationBar },
   data() {
     return {
       keyword: "",
@@ -180,6 +180,7 @@ export default {
       dirtyOrder: false,
       savingOrder: false,
       list: { current_page: 1, per_page: 10, total: 0 },
+      pageSizes: [10, 20, 50, 100],
       form: { id: null, name: "", orderIndex: 0, status: 1 },
       statusOptions: [
         { value: 1, text: "Hiển thị" },
@@ -234,6 +235,11 @@ export default {
     },
     onPageChange(page) {
       this.list.current_page = page;
+      this.loadData();
+    },
+    onPageSizeChange(size) {
+      this.list.per_page = Number(size) || this.list.per_page;
+      this.list.current_page = 1;
       this.loadData();
     },
     onDragEnd() {

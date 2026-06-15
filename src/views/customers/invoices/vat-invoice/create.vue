@@ -3,8 +3,22 @@
     <b-card class="invoice-card">
       <!-- Tiêu đề -->
       <div class="invoice-header">
-        <h4 class="invoice-title">Lập hóa đơn GTGT</h4>
+        <h4 class="invoice-title">{{ pageTitle }}</h4>
       </div>
+
+      <b-alert v-if="isProcessingInvoice" show :variant="processingVariant" class="mb-3">
+        <div class="font-weight-bold">{{ processingLabel }}</div>
+        <div class="small mt-1">
+          Hóa đơn gốc:
+          <b>Số {{ referenceInvoice ? referenceInvoice.no : frmData.reference_id }}</b>
+          <span v-if="referenceInvoice && referenceInvoice.formCode">
+            - Mẫu {{ referenceInvoice.formCode }}{{ referenceInvoice.serial || '' }}
+          </span>
+          <span v-if="referenceInvoice && referenceInvoice.dateExport">
+            - Ngày {{ referenceInvoice.dateExport }}
+          </span>
+        </div>
+      </b-alert>
 
       <!-- Đã bỏ cảnh báo inline; dùng toastr để hiển thị lỗi -->
       
@@ -426,6 +440,9 @@ export default {
       frmData: {
         action: null,
         type_create: null,
+        reference_id: null,
+        invoice_type: 0,
+        invoice_type_adjust: 0,
         order: { code: null },
         no: null,
         date_export: null,
@@ -473,10 +490,32 @@ export default {
       company_id: null,
       editId: null,
       loadedInvoice: null,
+      referenceInvoice: null,
       invoiceStatus: 0
     }
   },
   computed: {
+    pageTitle () {
+      if (this.editId) return 'Cập nhật hóa đơn GTGT'
+      if (Number(this.frmData.invoice_type) === 1) return 'Lập hóa đơn thay thế'
+      if (Number(this.frmData.invoice_type) === 2) return 'Lập hóa đơn điều chỉnh'
+      return 'Lập hóa đơn GTGT'
+    },
+    isProcessingInvoice () {
+      return Number(this.frmData.invoice_type) === 1 || Number(this.frmData.invoice_type) === 2
+    },
+    processingVariant () {
+      return Number(this.frmData.invoice_type) === 1 ? 'warning' : 'info'
+    },
+    processingLabel () {
+      if (Number(this.frmData.invoice_type) === 1) return 'Đang lập hóa đơn thay thế'
+      if (Number(this.frmData.invoice_type) === 2) {
+        const type = Number(this.frmData.invoice_type_adjust)
+        const label = type === 1 ? 'tăng' : (type === 2 ? 'giảm' : 'thông tin')
+        return `Đang lập hóa đơn điều chỉnh ${label}`
+      }
+      return ''
+    },
     haveCodeLabel () {
       const v = this.formInvoices.have_code != null ? this.formInvoices.have_code : this.prepare && this.prepare.haveCode
       if (v === 1) return 'Có mã của cơ quan thuế'
@@ -492,6 +531,7 @@ export default {
   async created () { 
     // set default 'Ngày lập' to today's local date
     this.frmData.date_export = this.formatLocalDateYYYYMMDD(new Date())
+    this.applyProcessingQuery()
     // detect edit mode from route: /invoice/:id/edit or params.id
     const rid = this.$route && (this.$route.params?.id || this.$route.query?.id)
     const id = rid ? Number(rid) : null
@@ -500,9 +540,24 @@ export default {
     }
     const ready = await this.checkPrerequisites()
     if (!ready) return
-    if (this.editId) this.loadInvoice()
+    if (this.editId) {
+      await this.loadInvoice()
+    } else if (this.frmData.reference_id) {
+      await this.loadReferenceInvoice()
+    }
   },
   methods: {
+    applyProcessingQuery () {
+      const q = (this.$route && this.$route.query) || {}
+      const referenceId = Number(q.referenceId || q.reference_id || 0)
+      const invoiceType = Number(q.invoiceType || q.invoice_type || 0)
+      const invoiceTypeAdjust = Number(q.invoiceTypeAdjust || q.invoice_type_adjust || 0)
+      if (referenceId > 0 && (invoiceType === 1 || invoiceType === 2)) {
+        this.frmData.reference_id = referenceId
+        this.frmData.invoice_type = invoiceType
+        this.frmData.invoice_type_adjust = invoiceType === 2 && [1, 2, 3].includes(invoiceTypeAdjust) ? invoiceTypeAdjust : 0
+      }
+    },
     // Unified error toast with deduplication by key
     toastError (message, key = null) {
       const k = key || message
@@ -743,27 +798,56 @@ export default {
         const { data } = await axios.get(`/invoices/${this.editId}`)
         this.loadedInvoice = data
         this.invoiceStatus = data?.status ?? 0
-        // Ánh xạ phản hồi về form
-        this.frmData.no = data?.no ?? this.frmData.no
-        this.frmData.date_export = data?.dateExport ?? this.frmData.date_export
-        this.frmData.payment_type = data?.paymentType ?? this.frmData.payment_type
-        this.frmData.order = { code: data?.orderCode ?? this.frmData.order?.code }
-        // customer: object or null
-        const cust = data?.customer || {}
-        this.frmData.customer = {
-          code: cust.code ?? this.frmData.customer.code,
-          name: cust.name ?? this.frmData.customer.name,
-          buyer: cust.buyer ?? this.frmData.customer.buyer,
-          taxcode: cust.taxcode ?? cust.taxCode ?? this.frmData.customer.taxcode,
-          address: cust.address ?? cust.companyAddress ?? this.frmData.customer.address,
-          email: cust.email ?? this.frmData.customer.email,
-          phone: cust.phone ?? this.frmData.customer.phone,
-          bank_name: cust.bank_name ?? cust.bankName ?? this.frmData.customer.bank_name,
-          bank_no: cust.bank_no ?? cust.bankAccountNumber ?? this.frmData.customer.bank_no
-        }
-        // detail rows: array
-        const rows = Array.isArray(data?.detail) ? data.detail : []
-        this.frmData.detail = rows.length > 0 ? rows.map((r, i) => ({
+        this.applyInvoiceData(data, { copyNo: true, copyDate: true, copyRelation: true })
+      } catch (e) {
+        const msg = e?.response?.data?.message || 'Không tải được dữ liệu hóa đơn để chỉnh sửa'
+        this.toastError(msg, 'load_invoice')
+      } finally {
+        this.isBusy = false
+      }
+    },
+    async loadReferenceInvoice () {
+      try {
+        this.isBusy = true
+        const { data } = await axios.get(`/invoices/${this.frmData.reference_id}`)
+        this.referenceInvoice = data
+        this.applyInvoiceData(data, { copyNo: false, copyDate: false, copyRelation: false })
+        this.frmData.no = null
+        this.frmData.date_export = this.formatLocalDateYYYYMMDD(new Date())
+      } catch (e) {
+        const msg = e?.response?.data?.message || 'Không tải được dữ liệu hóa đơn gốc'
+        this.toastError(msg, 'load_reference_invoice')
+      } finally {
+        this.isBusy = false
+      }
+    },
+    applyInvoiceData (data, options = {}) {
+      if (!data) return
+      if (options.copyRelation) {
+        this.frmData.reference_id = data?.referenceId ?? this.frmData.reference_id
+        this.frmData.invoice_type = data?.invoiceType ?? this.frmData.invoice_type
+        this.frmData.invoice_type_adjust = data?.invoiceTypeAdjust ?? this.frmData.invoice_type_adjust
+      }
+      if (options.copyNo) this.frmData.no = data?.no ?? this.frmData.no
+      if (options.copyDate) this.frmData.date_export = data?.dateExport ?? this.frmData.date_export
+      this.frmData.payment_type = data?.paymentType ?? this.frmData.payment_type
+      this.frmData.order = { code: data?.orderCode ?? this.frmData.order?.code }
+      const cust = data?.customer || {}
+      this.frmData.customer = {
+        code: cust.code ?? this.frmData.customer.code,
+        name: cust.name ?? this.frmData.customer.name,
+        buyer: cust.buyer ?? this.frmData.customer.buyer,
+        taxcode: cust.taxcode ?? cust.taxCode ?? this.frmData.customer.taxcode,
+        address: cust.address ?? cust.companyAddress ?? this.frmData.customer.address,
+        email: cust.email ?? this.frmData.customer.email,
+        phone: cust.phone ?? this.frmData.customer.phone,
+        bank_name: cust.bank_name ?? cust.bankName ?? this.frmData.customer.bank_name,
+        bank_no: cust.bank_no ?? cust.bankAccountNumber ?? this.frmData.customer.bank_no
+      }
+      const rows = Array.isArray(data?.detail) ? data.detail : []
+      this.frmData.detail = rows.length > 0 ? rows.map((r, i) => {
+        const vatRate = r.vatRate ?? r.vat_rate
+        return {
           num: r.num ?? (i + 1),
           isNum: r.isNum ?? true,
           hidden: r.hidden ?? false,
@@ -774,23 +858,17 @@ export default {
           quantity: Number(r.quantity ?? 0),
           price: Number(r.price ?? 0),
           total: Number(r.total ?? 0),
-          vatRate: typeof r.vatRate === 'number' ? r.vatRate : -1,
+          vatRate: vatRate != null && vatRate !== '' ? Number(vatRate) : -1,
           vatRateOther: Number(r.vatRateOther ?? 0),
           vatAmount: Number(r.vatAmount ?? 0),
           amount: Number(r.amount ?? 0),
           feature: Number(r.feature ?? 1)
-        })) : this.frmData.detail
-        // totals
-        this.frmData.total = Number(data?.total ?? this.frmData.total)
-        this.frmData.vat_amount = Number(data?.vatAmount ?? this.frmData.vat_amount)
-        this.frmData.amount = Number(data?.amount ?? this.frmData.amount)
-        this.frmData.amount_in_words = data?.amountInWords ?? this.frmData.amount_in_words
-      } catch (e) {
-        const msg = e?.response?.data?.message || 'Không tải được dữ liệu hóa đơn để chỉnh sửa'
-        this.toastError(msg, 'load_invoice')
-      } finally {
-        this.isBusy = false
-      }
+        }
+      }) : this.frmData.detail
+      this.frmData.total = Number(data?.total ?? this.frmData.total)
+      this.frmData.vat_amount = Number(data?.vatAmount ?? this.frmData.vat_amount)
+      this.frmData.amount = Number(data?.amount ?? this.frmData.amount)
+      this.frmData.amount_in_words = data?.amountInWords ?? this.frmData.amount_in_words
     },
     async onSubmit () {
       try {
@@ -824,7 +902,10 @@ export default {
           currency: 'VND',
           exchangeRate: 0,
           vatRate: null,
-          vatRateOther: 0
+          vatRateOther: 0,
+          referenceId: this.frmData.reference_id || null,
+          invoiceType: Number(this.frmData.invoice_type || 0),
+          invoiceTypeAdjust: Number(this.frmData.invoice_type) === 2 ? Number(this.frmData.invoice_type_adjust || 0) : 0
         }
         let res
         if (this.editId) {

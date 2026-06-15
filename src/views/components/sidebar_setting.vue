@@ -106,6 +106,14 @@ export default {
     // Thêm menu Thành viên nếu được phép
     if (this.canSeeMember) {
       this.menu.push({ title: 'Thành viên', icon: 'fas fa-users', to: '/setting/member/list' })
+      this.menu.push({
+        title: 'Bảo mật',
+        icon: 'fas fa-shield-alt',
+        children: [
+          { title: 'Bảo mật bằng IP', to: '/setting/security/ip' }
+        ]
+      })
+      this.menu.push({ title: 'Lịch sử đăng nhập', icon: 'fas fa-history', to: '/setting/login-history/list' })
     }
   },
 

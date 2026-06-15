@@ -37,6 +37,9 @@ public class CompanyEntity {
     @Column(nullable = false)
     private Integer status = 1;
 
+    @Column(name = "ip_security_enabled")
+    private Boolean ipSecurityEnabled = false;
+
     @Column(unique = true, columnDefinition = "NVARCHAR(255)")
     private String taxcode;
 
@@ -141,6 +144,9 @@ public class CompanyEntity {
 
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
+
+    public Boolean getIpSecurityEnabled() { return ipSecurityEnabled != null && ipSecurityEnabled; }
+    public void setIpSecurityEnabled(Boolean ipSecurityEnabled) { this.ipSecurityEnabled = ipSecurityEnabled; }
 
     public String getTaxcode() { return taxcode; }
     public void setTaxcode(String taxcode) { this.taxcode = taxcode; }

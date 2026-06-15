@@ -21,6 +21,8 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
 
     java.util.Optional<InvoiceEntity> findByLookupCode(String lookupCode);
 
+    java.util.Optional<InvoiceEntity> findFirstByCompanyIdAndNoOrderByIdDesc(Integer companyId, Integer no);
+
     @Query("SELECT i FROM InvoiceEntity i JOIN FormInvoiceEntity f ON i.formId = f.id " +
             "WHERE (:companyId IS NULL OR i.companyId = :companyId) " +
             "AND (:category IS NULL OR f.category = :category) " +
