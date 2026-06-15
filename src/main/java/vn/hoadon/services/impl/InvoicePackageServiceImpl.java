@@ -1,6 +1,7 @@
 package vn.hoadon.services.impl;
 
 import jakarta.persistence.criteria.Predicate;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -9,6 +10,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +18,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import vn.hoadon.dto.invoicepackage.InvoicePackageFilterDTO;
 import vn.hoadon.dto.invoicepackage.InvoicePackageMonthlyStatisticDTO;
 import vn.hoadon.dto.invoicepackage.InvoicePackagePurchaseDTO;
@@ -38,23 +42,30 @@ import vn.hoadon.repositories.MailTemplateRepository;
 import vn.hoadon.services.BuyInvoiceHistoryService;
 import vn.hoadon.services.InvoicePackageService;
 import vn.hoadon.services.MailQueueService;
+import vn.hoadon.services.MomoPaymentService;
+import vn.hoadon.services.VnpayPaymentService;
 import vn.hoadon.util.SystemMail;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.UUID;
 
 @Service
@@ -62,6 +73,7 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
 
     private static final Logger log = LoggerFactory.getLogger(InvoicePackageServiceImpl.class);
     private static final String MAIL_KEY = "BUY_INVOICE_MAIL";
+    private static final Pattern DIACRITICS = Pattern.compile("\\p{M}+");
 
     @Autowired private InvoicePackageRepository packageRepository;
     @Autowired private InvoicePackagePurchaseRepository purchaseRepository;
@@ -70,6 +82,11 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
     @Autowired private MailTemplateRepository mailTemplateRepository;
     @Autowired private MailQueueService mailQueueService;
     @Autowired private BuyInvoiceHistoryService buyInvoiceHistoryService;
+    @Autowired private MomoPaymentService momoPaymentService;
+    @Autowired private VnpayPaymentService vnpayPaymentService;
+
+    @Value("${app.frontend-url:http://localhost:8080}")
+    private String frontendUrl;
 
     @Override
     public Page<InvoicePackageResponseDTO> listPackages(InvoicePackageFilterDTO filter, Pageable pageable) {
@@ -133,6 +150,148 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
     @Override
     @Transactional
     public InvoicePackagePurchaseDTO purchase(Long packageId, String paymentMethod, UserEntity user) {
+        PurchaseContext context = preparePurchase(packageId, paymentMethod, user);
+        InvoicePackagePurchaseEntity purchase = newPurchase(context.invoicePackage(), context.company(), context.user(), context.method());
+
+        if ("MOMO".equals(context.method())) {
+            return createMomoPurchase(purchase, context.company());
+        }
+        if ("VNPAY".equals(context.method())) {
+            return createVnpayPurchase(purchase, context.company());
+        }
+
+        purchase.setPaymentStatus("SUCCESS");
+        purchase.setPaymentCode(fakePaymentCode(context.method()));
+        purchase.setPaidAt(LocalDateTime.now());
+        purchase.setNote("Thanh toán giả lập thành công");
+        purchase = purchaseRepository.save(purchase);
+        return completeSuccessfulPurchase(
+                purchase,
+                context.company(),
+                context.user(),
+                "CUSTOMER",
+                "Khách hàng mua gói hóa đơn",
+                "Thanh toán giả lập thành công"
+        );
+    }
+
+    @Override
+    @Transactional
+    public InvoicePackagePurchaseDTO retryPayment(Long purchaseId, UserEntity user) {
+        if (purchaseId == null) {
+            throw new IllegalArgumentException("Thiếu mã giao dịch mua gói");
+        }
+        if (user == null || user.getCompanyId() == null) {
+            throw new IllegalArgumentException("Không xác định được công ty");
+        }
+
+        InvoicePackagePurchaseEntity purchase = purchaseRepository.findById(purchaseId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy giao dịch mua gói"));
+        if (!user.getCompanyId().equals(purchase.getCompanyId())) {
+            throw new IllegalArgumentException("Giao dịch không thuộc công ty hiện tại");
+        }
+
+        String status = purchase.getPaymentStatus() != null
+                ? purchase.getPaymentStatus().trim().toUpperCase(Locale.ROOT)
+                : "";
+        if ("SUCCESS".equals(status) || purchase.getBuyInvoiceId() != null) {
+            throw new IllegalArgumentException("Giao dịch đã thanh toán thành công");
+        }
+        if (!"PENDING".equals(status) && !"FAILED".equals(status)) {
+            throw new IllegalArgumentException("Chỉ có thể thanh toán lại giao dịch đang chờ hoặc thất bại");
+        }
+
+        String method = purchase.getPaymentMethod() != null
+                ? purchase.getPaymentMethod().trim().toUpperCase(Locale.ROOT)
+                : "";
+        if (!"MOMO".equals(method) && !"VNPAY".equals(method)) {
+            throw new IllegalArgumentException("Phương thức thanh toán không hỗ trợ thanh toán lại");
+        }
+        purchase.setPaymentMethod(method);
+
+        CompanyEntity company = companyRepository.findById(purchase.getCompanyId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty"));
+        if ("MOMO".equals(method)) {
+            return createMomoCheckout(
+                    purchase,
+                    company,
+                    "Đang chờ thanh toán lại MoMo",
+                    "Đã tạo lại giao dịch MoMo, chờ khách hàng thanh toán"
+            );
+        }
+        return createVnpayCheckout(
+                purchase,
+                company,
+                "Đang chờ thanh toán lại VNPAY",
+                "Đã tạo lại giao dịch VNPAY, chờ khách hàng thanh toán"
+        );
+    }
+
+    @Override
+    @Transactional
+    public InvoicePackagePurchaseDTO handleMomoIpn(Map<String, Object> payload) {
+        InvoicePackagePurchaseDTO purchase = handleMomoCallback(payload, "MOMO_IPN");
+        purchase.setPaymentMessage("Đã nhận kết quả thanh toán MoMo");
+        return purchase;
+    }
+
+    @Override
+    @Transactional
+    public String handleMomoReturn(Map<String, String> params) {
+        try {
+            InvoicePackagePurchaseDTO purchase = handleMomoCallback(params, "MOMO_RETURN");
+            String status = "SUCCESS".equals(purchase.getPaymentStatus()) ? "success" : "failed";
+            return buildFrontendMomoRedirect(status, purchase.getPaymentCode(), purchase.getPaymentMessage());
+        } catch (Exception e) {
+            log.warn("Không thể xử lý redirect MoMo: {}", e.getMessage());
+            String orderId = params != null ? params.get("orderId") : null;
+            return buildFrontendMomoRedirect("failed", orderId, e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public Map<String, String> handleVnpayIpn(Map<String, String> params) {
+        try {
+            return handleVnpayIpnInternal(params);
+        } catch (Exception e) {
+            log.warn("Không thể xử lý IPN VNPAY: {}", e.getMessage());
+            return vnpayResponse("99", "Unknown error");
+        }
+    }
+
+    @Override
+    @Transactional
+    public String handleVnpayReturn(Map<String, String> params) {
+        try {
+            InvoicePackagePurchaseDTO purchase = handleVnpayCallback(params, "VNPAY_RETURN");
+            String status = "SUCCESS".equals(purchase.getPaymentStatus()) ? "success" : "failed";
+            return buildFrontendPaymentRedirect("vnpayStatus", status, purchase.getPaymentCode(), purchase.getPaymentMessage());
+        } catch (Exception e) {
+            log.warn("Không thể xử lý redirect VNPAY: {}", e.getMessage());
+            String orderId = params != null ? params.get("vnp_TxnRef") : null;
+            return buildFrontendPaymentRedirect("vnpayStatus", "failed", orderId, e.getMessage());
+        }
+    }
+
+    @Override
+    public InvoicePackagePurchaseDTO getMyPurchase(Long purchaseId, UserEntity user) {
+        if (purchaseId == null) {
+            throw new IllegalArgumentException("Thiếu mã giao dịch mua gói");
+        }
+        if (user == null || user.getCompanyId() == null) {
+            throw new IllegalArgumentException("Không xác định được công ty");
+        }
+        InvoicePackagePurchaseEntity purchase = purchaseRepository.findById(purchaseId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy giao dịch mua gói"));
+        if (!user.getCompanyId().equals(purchase.getCompanyId())) {
+            throw new IllegalArgumentException("Giao dịch không thuộc công ty hiện tại");
+        }
+        CompanyEntity company = companyRepository.findById(purchase.getCompanyId()).orElse(null);
+        return dtoWithInvoiceState(purchase, company);
+    }
+
+    private PurchaseContext preparePurchase(Long packageId, String paymentMethod, UserEntity user) {
         if (user == null || user.getCompanyId() == null) {
             throw new IllegalArgumentException("Không xác định được công ty mua gói");
         }
@@ -148,9 +307,11 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
 
         CompanyEntity company = companyRepository.findById(user.getCompanyId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty"));
+        return new PurchaseContext(invoicePackage, company, user, normalizePaymentMethod(paymentMethod));
+    }
 
-        String method = normalizePaymentMethod(paymentMethod);
-        LocalDateTime now = LocalDateTime.now();
+    private InvoicePackagePurchaseEntity newPurchase(InvoicePackageEntity invoicePackage, CompanyEntity company,
+                                                     UserEntity user, String method) {
         InvoicePackagePurchaseEntity purchase = new InvoicePackagePurchaseEntity();
         purchase.setPackageId(invoicePackage.getId());
         purchase.setPackageName(invoicePackage.getName());
@@ -164,14 +325,262 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
         purchase.setUnitPrice(money(invoicePackage.getUnitPrice()));
         purchase.setTotalPrice(money(invoicePackage.getTotalPrice()));
         purchase.setPaymentMethod(method);
-        purchase.setPaymentStatus("SUCCESS");
-        purchase.setPaymentCode(fakePaymentCode(method));
-        purchase.setPaidAt(now);
-        purchase.setNote("Thanh toán giả lập thành công");
+        return purchase;
+    }
+
+    private InvoicePackagePurchaseDTO createMomoPurchase(InvoicePackagePurchaseEntity purchase, CompanyEntity company) {
+        return createMomoCheckout(
+                purchase,
+                company,
+                "Đang chờ thanh toán MoMo",
+                "Đã tạo giao dịch MoMo, chờ khách hàng thanh toán"
+        );
+    }
+
+    private InvoicePackagePurchaseDTO createMomoCheckout(InvoicePackagePurchaseEntity purchase, CompanyEntity company,
+                                                         String waitingNote, String paymentMessage) {
+        purchase.setPaymentStatus("PENDING");
+        purchase.setPaidAt(null);
+        purchase.setNote(waitingNote);
         purchase = purchaseRepository.save(purchase);
 
+        String orderId = buildMomoOrderId(purchase.getId());
+        String requestId = buildMomoRequestId(purchase.getId());
+        purchase.setPaymentCode(orderId);
+        purchase = purchaseRepository.save(purchase);
+
+        MomoPaymentService.CreatePaymentResponse momoResponse;
+        try {
+            momoResponse = momoPaymentService.createPayment(
+                    new MomoPaymentService.CreatePaymentRequest(
+                            orderId,
+                            requestId,
+                            amountLong(purchase.getTotalPrice()),
+                            "Thanh toán gói hóa đơn " + nullToBlank(purchase.getPackageName()),
+                            buildMomoExtraData(purchase),
+                            null,
+                            null
+                    )
+            );
+        } catch (IllegalStateException e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
+        }
+
+        purchase.setNote("Đã tạo giao dịch MoMo: " + nullToBlank(momoResponse.message()));
+        purchase = purchaseRepository.save(purchase);
+
+        InvoicePackagePurchaseDTO dto = dtoWithInvoiceState(purchase, company);
+        dto.setPayUrl(momoResponse.payUrl());
+        dto.setDeeplink(momoResponse.deeplink());
+        dto.setQrCodeUrl(momoResponse.qrCodeUrl());
+        dto.setPaymentMessage(paymentMessage);
+        return dto;
+    }
+
+    private InvoicePackagePurchaseDTO createVnpayPurchase(InvoicePackagePurchaseEntity purchase, CompanyEntity company) {
+        return createVnpayCheckout(
+                purchase,
+                company,
+                "Đang chờ thanh toán VNPAY",
+                "Đã tạo giao dịch VNPAY, chờ khách hàng thanh toán"
+        );
+    }
+
+    private InvoicePackagePurchaseDTO createVnpayCheckout(InvoicePackagePurchaseEntity purchase, CompanyEntity company,
+                                                          String waitingNote, String paymentMessage) {
+        purchase.setPaymentStatus("PENDING");
+        purchase.setPaidAt(null);
+        purchase.setNote(waitingNote);
+        purchase = purchaseRepository.save(purchase);
+
+        String txnRef = buildVnpayTxnRef(purchase.getId());
+        purchase.setPaymentCode(txnRef);
+        purchase = purchaseRepository.save(purchase);
+
+        VnpayPaymentService.CreatePaymentResponse vnpayResponse;
+        try {
+            vnpayResponse = vnpayPaymentService.createPaymentUrl(
+                    new VnpayPaymentService.CreatePaymentRequest(
+                            txnRef,
+                            amountLong(purchase.getTotalPrice()),
+                            buildAsciiOrderInfo(purchase),
+                            currentRequestIp(),
+                            null
+                    )
+            );
+        } catch (IllegalStateException e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
+        }
+
+        purchase.setNote(vnpayResponse.message());
+        purchase = purchaseRepository.save(purchase);
+
+        InvoicePackagePurchaseDTO dto = dtoWithInvoiceState(purchase, company);
+        dto.setPayUrl(vnpayResponse.payUrl());
+        dto.setPaymentMessage(paymentMessage);
+        return dto;
+    }
+
+    private Map<String, String> handleVnpayIpnInternal(Map<String, String> params) {
+        if (params == null || params.isEmpty()) {
+            return vnpayResponse("99", "Input data required");
+        }
+        if (!vnpayPaymentService.verifyCallbackSignature(params)) {
+            return vnpayResponse("97", "Invalid signature");
+        }
+
+        String txnRef = vnpayPaymentService.value(params, "vnp_TxnRef");
+        Optional<InvoicePackagePurchaseEntity> purchaseOpt = purchaseRepository.findByPaymentCode(txnRef);
+        if (purchaseOpt.isEmpty()) {
+            return vnpayResponse("01", "Order not found");
+        }
+
+        InvoicePackagePurchaseEntity purchase = purchaseOpt.get();
+        CompanyEntity company = companyRepository.findById(purchase.getCompanyId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty của giao dịch VNPAY"));
+        if (!isValidVnpayCallback(purchase, params)) {
+            return vnpayResponse("04", "Invalid amount");
+        }
+
+        if ("SUCCESS".equals(purchase.getPaymentStatus()) && purchase.getBuyInvoiceId() != null) {
+            return vnpayResponse("02", "Order already confirmed");
+        }
+
+        handleVnpayCallbackResult(purchase, company, params, "VNPAY_IPN");
+        return vnpayResponse("00", "Confirm success");
+    }
+
+    private InvoicePackagePurchaseDTO handleVnpayCallback(Map<String, ?> params, String source) {
+        if (params == null || params.isEmpty()) {
+            throw new IllegalArgumentException("VNPAY không gửi dữ liệu thanh toán");
+        }
+        if (!vnpayPaymentService.verifyCallbackSignature(params)) {
+            throw new IllegalArgumentException("Chữ ký VNPAY không hợp lệ");
+        }
+
+        String txnRef = vnpayPaymentService.value(params, "vnp_TxnRef");
+        if (txnRef.isBlank()) {
+            throw new IllegalArgumentException("VNPAY không gửi vnp_TxnRef");
+        }
+
+        InvoicePackagePurchaseEntity purchase = purchaseRepository.findByPaymentCode(txnRef)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy giao dịch VNPAY: " + txnRef));
+        CompanyEntity company = companyRepository.findById(purchase.getCompanyId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty của giao dịch VNPAY"));
+        if (!isValidVnpayCallback(purchase, params)) {
+            throw new IllegalArgumentException("Số tiền hoặc mã website VNPAY không khớp giao dịch");
+        }
+
+        return handleVnpayCallbackResult(purchase, company, params, source);
+    }
+
+    private InvoicePackagePurchaseDTO handleVnpayCallbackResult(InvoicePackagePurchaseEntity purchase,
+                                                                CompanyEntity company,
+                                                                Map<String, ?> params,
+                                                                String source) {
+        if (vnpayPaymentService.isSuccessResult(params)) {
+            String transactionNo = vnpayPaymentService.value(params, "vnp_TransactionNo");
+            String note = "VNPAY xác nhận thanh toán thành công"
+                    + (!transactionNo.isBlank() ? ", transactionNo=" + transactionNo : "");
+            InvoicePackagePurchaseDTO dto = completeSuccessfulPurchase(purchase, company, null, source, note, note);
+            dto.setPaymentMessage(note);
+            return dto;
+        }
+
+        String message = "VNPAY thanh toán không thành công: responseCode="
+                + vnpayPaymentService.value(params, "vnp_ResponseCode")
+                + ", transactionStatus=" + vnpayPaymentService.value(params, "vnp_TransactionStatus");
+        InvoicePackagePurchaseDTO dto = failVnpayPurchase(purchase, company, message);
+        dto.setPaymentMessage(message);
+        return dto;
+    }
+
+    private boolean isValidVnpayCallback(InvoicePackagePurchaseEntity purchase, Map<String, ?> params) {
+        String tmnCode = vnpayPaymentService.value(params, "vnp_TmnCode");
+        long expectedAmount = amountLong(purchase.getTotalPrice()) * 100;
+        long actualAmount = parseLong(vnpayPaymentService.value(params, "vnp_Amount"), -1);
+        return vnpayPaymentService.isExpectedTmnCode(tmnCode) && actualAmount == expectedAmount;
+    }
+
+    private InvoicePackagePurchaseDTO failVnpayPurchase(InvoicePackagePurchaseEntity purchase, CompanyEntity company,
+                                                        String message) {
+        if (!"SUCCESS".equals(purchase.getPaymentStatus())) {
+            purchase.setPaymentStatus("FAILED");
+            purchase.setNote(message);
+            purchase = purchaseRepository.save(purchase);
+        }
+        return dtoWithInvoiceState(purchase, company);
+    }
+
+    private Map<String, String> vnpayResponse(String rspCode, String message) {
+        return Map.of("RspCode", rspCode, "Message", message);
+    }
+
+    private InvoicePackagePurchaseDTO handleMomoCallback(Map<String, ?> payload, String source) {
+        if (payload == null || payload.isEmpty()) {
+            throw new IllegalArgumentException("MoMo không gửi dữ liệu thanh toán");
+        }
+        if (!momoPaymentService.verifyCallbackSignature(payload)) {
+            throw new IllegalArgumentException("Chữ ký MoMo không hợp lệ");
+        }
+
+        String orderId = momoPaymentService.value(payload, "orderId");
+        if (orderId.isBlank()) {
+            throw new IllegalArgumentException("MoMo không gửi orderId");
+        }
+
+        InvoicePackagePurchaseEntity purchase = purchaseRepository.findByPaymentCode(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy giao dịch MoMo: " + orderId));
+        CompanyEntity company = companyRepository.findById(purchase.getCompanyId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty của giao dịch MoMo"));
+        validateMomoCallback(purchase, payload);
+
+        if (momoPaymentService.isSuccessResult(payload)) {
+            String transId = momoPaymentService.value(payload, "transId");
+            String note = "MoMo xác nhận thanh toán thành công"
+                    + (!transId.isBlank() ? ", transId=" + transId : "");
+            InvoicePackagePurchaseDTO dto = completeSuccessfulPurchase(purchase, company, null, source, note, note);
+            dto.setPaymentMessage(note);
+            return dto;
+        }
+
+        String message = "MoMo thanh toán không thành công: resultCode="
+                + momoPaymentService.value(payload, "resultCode")
+                + ", message=" + momoPaymentService.value(payload, "message");
+        InvoicePackagePurchaseDTO dto = failMomoPurchase(purchase, company, message);
+        dto.setPaymentMessage(message);
+        return dto;
+    }
+
+    private void validateMomoCallback(InvoicePackagePurchaseEntity purchase, Map<String, ?> payload) {
+        String partnerCode = momoPaymentService.value(payload, "partnerCode");
+        if (!momoPaymentService.isExpectedPartner(partnerCode)) {
+            throw new IllegalArgumentException("partnerCode MoMo không khớp cấu hình");
+        }
+
+        long expectedAmount = amountLong(purchase.getTotalPrice());
+        long actualAmount = parseLong(momoPaymentService.value(payload, "amount"), -1);
+        if (actualAmount != expectedAmount) {
+            throw new IllegalArgumentException("Số tiền MoMo không khớp giao dịch");
+        }
+    }
+
+    private InvoicePackagePurchaseDTO completeSuccessfulPurchase(InvoicePackagePurchaseEntity purchase,
+                                                                 CompanyEntity company,
+                                                                 UserEntity user,
+                                                                 String source,
+                                                                 String historyNote,
+                                                                 String purchaseNote) {
+        if ("SUCCESS".equals(purchase.getPaymentStatus()) && purchase.getBuyInvoiceId() != null) {
+            return dtoWithInvoiceState(purchase, company);
+        }
+
+        purchase.setPaymentStatus("SUCCESS");
+        purchase.setPaidAt(purchase.getPaidAt() != null ? purchase.getPaidAt() : LocalDateTime.now());
+        purchase.setNote(purchaseNote);
+
         BuyInvoiceEntity beforeBuyInvoice = findCurrentBuyInvoice(company.getId()).map(this::snapshot).orElse(null);
-        BuyInvoiceEntity buyInvoice = upsertBuyInvoice(company.getId(), invoicePackage.getInvoiceQuantity());
+        BuyInvoiceEntity buyInvoice = upsertBuyInvoice(company.getId(), purchase.getInvoiceQuantity());
         purchase.setBuyInvoiceId(buyInvoice.getId());
         purchase = purchaseRepository.save(purchase);
 
@@ -179,12 +588,12 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
                 beforeBuyInvoice,
                 snapshot(buyInvoice),
                 "PACKAGE_PURCHASE",
-                "CUSTOMER",
+                source,
                 user,
                 purchase.getId(),
-                invoicePackage.getName(),
+                purchase.getPackageName(),
                 purchase.getPaymentCode(),
-                "Khách hàng mua gói hóa đơn"
+                historyNote
         );
 
         if (Integer.valueOf(2).equals(company.getStatus())) {
@@ -193,14 +602,125 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
         }
 
         enqueuePurchaseMail(purchase, buyInvoice, company, user);
+        return dtoWithInvoiceState(purchase, company);
+    }
 
+    private InvoicePackagePurchaseDTO failMomoPurchase(InvoicePackagePurchaseEntity purchase, CompanyEntity company,
+                                                       String message) {
+        if (!"SUCCESS".equals(purchase.getPaymentStatus())) {
+            purchase.setPaymentStatus("FAILED");
+            purchase.setNote(message);
+            purchase = purchaseRepository.save(purchase);
+        }
+        return dtoWithInvoiceState(purchase, company);
+    }
+
+    private InvoicePackagePurchaseDTO dtoWithInvoiceState(InvoicePackagePurchaseEntity purchase, CompanyEntity company) {
         InvoicePackagePurchaseDTO dto = toPurchaseDto(purchase);
-        dto.setCompanyStatus(company.getStatus());
-        dto.setTotalInvoices(valueOrZero(buyInvoice.getAmount()));
-        dto.setUsedInvoices(valueOrZero(buyInvoice.getAmountUsed()));
-        dto.setRemainingInvoices(valueOrZero(buyInvoice.getAmount()) - valueOrZero(buyInvoice.getAmountUsed()));
+        dto.setCompanyStatus(company != null ? company.getStatus() : null);
+        Optional<BuyInvoiceEntity> buyInvoice = findCurrentBuyInvoice(purchase.getCompanyId());
+        dto.setTotalInvoices(buyInvoice.map(BuyInvoiceEntity::getAmount).map(this::valueOrZero).orElse(0));
+        dto.setUsedInvoices(buyInvoice.map(BuyInvoiceEntity::getAmountUsed).map(this::valueOrZero).orElse(0));
+        dto.setRemainingInvoices(valueOrZero(dto.getTotalInvoices()) - valueOrZero(dto.getUsedInvoices()));
         return dto;
     }
+
+    private String buildMomoOrderId(Long purchaseId) {
+        String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String random = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(Locale.ROOT);
+        return "MOMO" + purchaseId + time + random;
+    }
+
+    private String buildVnpayTxnRef(Long purchaseId) {
+        String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String random = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(Locale.ROOT);
+        return "VNPAY" + purchaseId + time + random;
+    }
+
+    private String buildMomoRequestId(Long purchaseId) {
+        String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String random = UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase(Locale.ROOT);
+        return "REQ" + purchaseId + time + random;
+    }
+
+    private String buildMomoExtraData(InvoicePackagePurchaseEntity purchase) {
+        String json = "{\"purchaseId\":\"" + purchase.getId() + "\",\"companyId\":\"" + purchase.getCompanyId() + "\"}";
+        return Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String buildAsciiOrderInfo(InvoicePackagePurchaseEntity purchase) {
+        String raw = "Thanh toan goi hoa don " + nullToBlank(purchase.getPackageName())
+                + " ma " + nullToBlank(purchase.getPaymentCode());
+        String normalized = Normalizer.normalize(raw, Normalizer.Form.NFD);
+        return DIACRITICS.matcher(normalized)
+                .replaceAll("")
+                .replaceAll("[^A-Za-z0-9 .:_-]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private String currentRequestIp() {
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs) {
+            HttpServletRequest request = attrs.getRequest();
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                return forwarded.split(",")[0].trim();
+            }
+            String realIp = request.getHeader("X-Real-IP");
+            if (realIp != null && !realIp.isBlank()) {
+                return realIp.trim();
+            }
+            if (request.getRemoteAddr() != null && !request.getRemoteAddr().isBlank()) {
+                return request.getRemoteAddr();
+            }
+        }
+        return "127.0.0.1";
+    }
+
+    private long amountLong(BigDecimal value) {
+        return money(value).longValue();
+    }
+
+    private long parseLong(String value, long fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    private String buildFrontendMomoRedirect(String status, String orderId, String message) {
+        return buildFrontendPaymentRedirect("momoStatus", status, orderId, message);
+    }
+
+    private String buildFrontendPaymentRedirect(String statusParam, String status, String orderId, String message) {
+        return trimTrailingSlash(frontendUrl)
+                + "/invoice-packages?" + statusParam + "=" + encodeUrlParam(status)
+                + "&orderId=" + encodeUrlParam(orderId)
+                + "&message=" + encodeUrlParam(message);
+    }
+
+    private String encodeUrlParam(String value) {
+        return URLEncoder.encode(value != null ? value : "", StandardCharsets.UTF_8);
+    }
+
+    private String trimTrailingSlash(String value) {
+        String normalized = firstNotBlank(value);
+        while (normalized != null && normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized != null ? normalized : "";
+    }
+
+    private record PurchaseContext(
+            InvoicePackageEntity invoicePackage,
+            CompanyEntity company,
+            UserEntity user,
+            String method
+    ) {}
 
     @Override
     public Page<InvoicePackagePurchaseDTO> listPurchases(InvoicePackagePurchaseFilterDTO filter, Pageable pageable) {
@@ -386,7 +906,7 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
 
     private void enqueuePurchaseMail(InvoicePackagePurchaseEntity purchase, BuyInvoiceEntity buyInvoice,
                                      CompanyEntity company, UserEntity user) {
-        String toEmail = firstNotBlank(company.getContactMail(), company.getEmail(), user.getEmail());
+        String toEmail = firstNotBlank(company.getContactMail(), company.getEmail(), user != null ? user.getEmail() : null);
         if (toEmail == null) {
             return;
         }
@@ -394,7 +914,7 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
             ensureBuyInvoiceMailTemplate(company);
             Map<String, String> vars = new HashMap<>();
             vars.put("SUBJECT", "Thông báo mua gói hóa đơn thành công");
-            vars.put("NAME", firstNotBlank(purchase.getBuyerName(), company.getContactName(), company.getName(), user.getUsername(), ""));
+            vars.put("NAME", firstNotBlank(purchase.getBuyerName(), company.getContactName(), company.getName(), user != null ? user.getUsername() : null, ""));
             vars.put("COMPANY", nullToBlank(company.getName()));
             vars.put("PACKAGE_NAME", nullToBlank(purchase.getPackageName()));
             vars.put("INVOICE_QUANTITY", String.valueOf(valueOrZero(purchase.getInvoiceQuantity())));

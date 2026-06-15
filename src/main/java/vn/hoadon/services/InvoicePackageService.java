@@ -11,6 +11,7 @@ import vn.hoadon.dto.invoicepackage.InvoicePackageStatisticsDTO;
 import vn.hoadon.entity.UserEntity;
 
 import java.util.List;
+import java.util.Map;
 
 public interface InvoicePackageService {
     Page<InvoicePackageResponseDTO> listPackages(InvoicePackageFilterDTO filter, Pageable pageable);
@@ -22,6 +23,18 @@ public interface InvoicePackageService {
     void deletePackage(Long id);
 
     InvoicePackagePurchaseDTO purchase(Long packageId, String paymentMethod, UserEntity user);
+
+    InvoicePackagePurchaseDTO retryPayment(Long purchaseId, UserEntity user);
+
+    InvoicePackagePurchaseDTO handleMomoIpn(Map<String, Object> payload);
+
+    String handleMomoReturn(Map<String, String> params);
+
+    Map<String, String> handleVnpayIpn(Map<String, String> params);
+
+    String handleVnpayReturn(Map<String, String> params);
+
+    InvoicePackagePurchaseDTO getMyPurchase(Long purchaseId, UserEntity user);
 
     Page<InvoicePackagePurchaseDTO> listPurchases(InvoicePackagePurchaseFilterDTO filter, Pageable pageable);
 

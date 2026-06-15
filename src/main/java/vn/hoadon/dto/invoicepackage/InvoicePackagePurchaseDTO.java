@@ -26,6 +26,10 @@ public class InvoicePackagePurchaseDTO {
     private Integer totalInvoices;
     private Integer usedInvoices;
     private Integer remainingInvoices;
+    private String payUrl;
+    private String deeplink;
+    private String qrCodeUrl;
+    private String paymentMessage;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -92,4 +96,16 @@ public class InvoicePackagePurchaseDTO {
 
     public Integer getRemainingInvoices() { return remainingInvoices; }
     public void setRemainingInvoices(Integer remainingInvoices) { this.remainingInvoices = remainingInvoices; }
+
+    public String getPayUrl() { return payUrl; }
+    public void setPayUrl(String payUrl) { this.payUrl = payUrl; }
+
+    public String getDeeplink() { return deeplink; }
+    public void setDeeplink(String deeplink) { this.deeplink = deeplink; }
+
+    public String getQrCodeUrl() { return qrCodeUrl; }
+    public void setQrCodeUrl(String qrCodeUrl) { this.qrCodeUrl = qrCodeUrl; }
+
+    public String getPaymentMessage() { return paymentMessage; }
+    public void setPaymentMessage(String paymentMessage) { this.paymentMessage = paymentMessage; }
 }

@@ -52,6 +52,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/v1/invoices/*/download-pdf").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/invoices/*/download-xml").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/invoices/*/xml").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/invoice-packages/momo/ipn").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/invoice-packages/momo/return").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/invoice-packages/vnpay/ipn").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/invoice-packages/vnpay/return").permitAll()
 
                         .requestMatchers("/v1/administrator/**").authenticated()
                         .requestMatchers("/v1/setting/**").authenticated()
