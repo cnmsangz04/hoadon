@@ -101,8 +101,6 @@ public class CompanyServiceImpl implements CompanyService {
         CompanyEntity existing = repo.findById(company.getId())
                 .orElseThrow(() -> new RuntimeException("Company not found"));
 
-        if (company.getDomain() != null) existing.setDomain(company.getDomain());
-        if (company.getDomainLookup() != null) existing.setDomainLookup(company.getDomainLookup());
         if (company.getTaxcode() != null) existing.setTaxcode(company.getTaxcode());
         if (company.getEmail() != null) existing.setEmail(company.getEmail());
         if (company.getHotline() != null) existing.setHotline(company.getHotline());

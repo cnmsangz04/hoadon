@@ -1,4 +1,4 @@
-﻿package vn.hoadon.services;
+package vn.hoadon.services;
 
 import vn.hoadon.messaging.MailJobMessage;
 

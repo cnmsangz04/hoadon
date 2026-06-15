@@ -56,7 +56,7 @@ public class BuyInvoiceServiceImpl implements BuyInvoiceService {
             // Bulk load companies
             List<CompanyEntity> companies = companyRepository.findAllById(ids);
             for (CompanyEntity c : companies) {
-                nameById.put(c.getId(), Optional.ofNullable(c.getName()).orElse(Optional.ofNullable(c.getDomain()).orElse("#" + c.getId())));
+                nameById.put(c.getId(), Optional.ofNullable(c.getName()).orElse("#" + c.getId()));
             }
         }
 

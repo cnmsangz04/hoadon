@@ -1,4 +1,4 @@
-﻿package vn.hoadon.entity;
+package vn.hoadon.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

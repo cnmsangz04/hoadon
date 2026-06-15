@@ -1,4 +1,4 @@
-﻿package vn.hoadon.util;
+package vn.hoadon.util;
 
 import java.io.IOException;
 import java.nio.file.Files;

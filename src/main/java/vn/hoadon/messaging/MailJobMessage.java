@@ -1,4 +1,4 @@
-﻿package vn.hoadon.messaging;
+package vn.hoadon.messaging;
 
 import java.io.Serializable;
 import java.util.Map;

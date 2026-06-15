@@ -1,4 +1,4 @@
-﻿package vn.hoadon.security;
+package vn.hoadon.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

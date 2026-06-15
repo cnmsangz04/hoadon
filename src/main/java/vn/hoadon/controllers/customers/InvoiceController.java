@@ -1,4 +1,4 @@
-﻿package vn.hoadon.controllers.customers;
+package vn.hoadon.controllers.customers;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -1647,7 +1647,7 @@ public class InvoiceController extends BaseController {
                 }
             }
             if (mailWorker != null) {
-                mailWorker.handle(msg);
+                mailWorker.processSync(msg);
                 log.info("Direct-sent ISSUE_INVOICE_MAIL for invoice {} to {}", inv.getId(), toEmail);
             }
         } catch (Exception e) {
@@ -1853,7 +1853,7 @@ public class InvoiceController extends BaseController {
                 }
             }
             if (!sent && mailWorker != null) {
-                mailWorker.handle(msg);
+                mailWorker.processSync(msg);
                 sent = true;
             }
             if (!sent) {

@@ -1,4 +1,4 @@
-﻿package vn.hoadon.dto.taxauthority;
+package vn.hoadon.dto.taxauthority;
 
 import lombok.Data;
 

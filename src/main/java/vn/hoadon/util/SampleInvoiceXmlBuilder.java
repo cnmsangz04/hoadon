@@ -1,4 +1,4 @@
-﻿package vn.hoadon.util;
+package vn.hoadon.util;
 
 import vn.hoadon.entity.CompanyBankEntity;
 import vn.hoadon.entity.CompanyEntity;

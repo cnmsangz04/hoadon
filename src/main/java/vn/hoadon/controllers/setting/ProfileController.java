@@ -1,4 +1,4 @@
-﻿package vn.hoadon.controllers.setting;
+package vn.hoadon.controllers.setting;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

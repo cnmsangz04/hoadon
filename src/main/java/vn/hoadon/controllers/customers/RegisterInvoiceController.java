@@ -1,4 +1,4 @@
-﻿package vn.hoadon.controllers.customers;
+package vn.hoadon.controllers.customers;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

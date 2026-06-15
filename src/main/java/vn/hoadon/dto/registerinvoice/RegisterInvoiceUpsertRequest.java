@@ -1,4 +1,4 @@
-﻿package vn.hoadon.dto.registerinvoice;
+package vn.hoadon.dto.registerinvoice;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

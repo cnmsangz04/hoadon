@@ -1,4 +1,4 @@
-﻿package vn.hoadon.worker;
+package vn.hoadon.worker;
 
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
