@@ -30,20 +30,20 @@
                 .page {
                     width: 210mm;
                     min-height: 297mm;
-                    padding: 6mm;
+                    padding: 10mm;
                     margin: 0 auto;
                     background: white;
                     position: relative;
                 }
                 
-                /* VIEN KHUNG THEO MAU PDF */
+                /* VIỀN HOA VĂN */
                 .border-frame {
                     position: absolute;
-                    top: 6mm;
-                    left: 6mm;
-                    right: 6mm;
-                    bottom: 6mm;
-                    border: 1.5px solid #cfcfcf;
+                    top: 8mm;
+                    left: 8mm;
+                    right: 8mm;
+                    bottom: 8mm;
+                    border: 2.5px solid #0099cc;
                     padding: 3mm;
                 }
                 
@@ -59,84 +59,42 @@
                 .content {
                     position: relative;
                     z-index: 1;
-                    min-height: 279mm;
-                    padding: 3mm 4mm 30mm 4mm;
-                    overflow: hidden;
-                }
-                
-                .header,
-                .title-section,
-                .buyer-section,
-                .amount-words,
-                .tax-authority-section,
-                .signatures,
-                .footer {
-                    position: relative;
-                    z-index: 1;
-                }
-                
-                .watermark {
-                    position: absolute;
-                    left: 50%;
-                    top: 53%;
-                    width: 128mm;
-                    height: 128mm;
-                    transform: translate(-50%, -50%);
-                    border: 5px double rgba(120, 120, 120, 0.08);
-                    border-radius: 50%;
-                    z-index: 0;
-                    pointer-events: none;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-family: Arial, sans-serif;
-                    font-size: 34px;
-                    font-weight: bold;
-                    color: rgba(120, 120, 120, 0.08);
-                    letter-spacing: 3px;
+                    padding: 5mm;
                 }
                 
                 /* HEADER */
                 .header {
-                    display: table;
-                    width: 100%;
-                    min-height: 28mm;
-                    padding-bottom: 5mm;
-                    border-bottom: 1px solid #8a8a8a;
-                    margin-bottom: 4mm;
+                    display: grid;
+                    grid-template-columns: 80px 1fr auto;
+                    gap: 10px;
+                    padding-bottom: 8px;
+                    border-bottom: 2px solid #000;
+                    margin-bottom: 12px;
                 }
                 
                 .logo {
-                    display: table-cell;
-                    width: 34mm;
-                    height: 22mm;
-                    vertical-align: top;
+                    width: 70px;
+                    height: 70px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                     background: white;
                 }
                 
-                .logo img {
-                    width: 34mm !important;
-                    max-height: 22mm;
-                    object-fit: contain;
-                }
-                
                 .company-info {
-                    display: table-cell;
-                    vertical-align: top;
-                    padding-top: 1mm;
-                    padding-left: 4mm;
+                    padding-top: 3px;
                 }
                 
                 .company-name {
-                    font-size: 17px;
+                    font-size: 14px;
                     font-weight: bold;
                     text-transform: uppercase;
-                    margin-bottom: 3px;
+                    margin-bottom: 4px;
                 }
                 
                 .company-details {
-                    font-size: 11.5px;
-                    line-height: 1.35;
+                    font-size: 10.5px;
+                    line-height: 1.4;
                 }
                 
                 .company-details div {
@@ -147,53 +105,46 @@
                     font-style: italic;
                 }
                 
-                .tax-code {
-                    letter-spacing: 2px;
-                }
-                
                 /* QR CODE */
                 .qr-code {
                     position: absolute;
-                    right: 17mm;
-                    top: 45mm;
-                    width: 22mm;
-                    height: 22mm;
-                    border: 0;
+                    left: 15mm;
+                    top: 35mm;
+                    width: 70px;
+                    height: 70px;
+                    border: 2px solid #000;
                     background: white;
-                    z-index: 2;
                 }
                 
                 /* TITLE */
                 .title-section {
                     text-align: center;
-                    min-height: 25mm;
-                    margin: 4mm 30mm 5mm 34mm;
+                    margin: 15px 0 12px 0;
                     position: relative;
                 }
                 
                 .main-title {
-                    font-size: 20px;
+                    font-size: 16px;
                     font-weight: bold;
-                    letter-spacing: 0;
-                    margin-bottom: 1px;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 2px;
                 }
                 
                 .sub-title {
-                    font-size: 14px;
+                    font-size: 13px;
                     font-style: italic;
-                    margin-bottom: 5px;
+                    margin-bottom: 6px;
                 }
                 
                 .date-line {
-                    font-size: 12.5px;
+                    font-size: 11.5px;
                 }
                 
                 .serial-box {
                     position: absolute;
-                    left: -34mm;
+                    right: 0;
                     top: 0;
-                    width: 32mm;
-                    text-align: left;
+                    text-align: right;
                     font-size: 11.5px;
                     line-height: 1.5;
                 }
@@ -206,11 +157,11 @@
                 
                 /* BUYER INFO */
                 .buyer-section {
-                    margin: 4mm 0 3mm 0;
+                    margin: 12px 0;
                     font-size: 11.5px;
                 }
 
-                /* Dong 1 cap label - value */
+                /* Dòng 1 cặp label – value */
                 .buyer-line {
                     display: table;
                     width: 100%;
@@ -224,7 +175,7 @@
                 }
 
                 .buyer-label {
-                    width: 42mm;
+                    width: 200px;
                     font-weight: normal;
                     white-space: nowrap;
                 }
@@ -235,22 +186,8 @@
                     padding-left: 5px;
                     word-break: break-word;
                 }
-                
-                .buyer-line.two-col {
-                    display: table;
-                    width: 100%;
-                }
-                
-                .buyer-line.two-col > div {
-                    display: table-cell;
-                    vertical-align: middle;
-                }
-                
-                .buyer-line.two-col .buyer-label {
-                    width: 39mm;
-                }
 
-                /* Dong 2 cap (payment) */
+                /* Dòng 2 cặp (payment) */
                 .payment-line {
                     display: table;
                     width: 100%;
@@ -263,7 +200,7 @@
                 }
 
                 .payment-line .buyer-label {
-                    width: 42mm;
+                    width: 200px;
                     white-space: nowrap;
                     font-weight: normal;
                 }
@@ -280,14 +217,14 @@
                 .items-table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin: 3mm 0;
-                    font-size: 10.8px;
+                    margin: 10px 0;
+                    font-size: 10.5px;
                 }
                 
                 .items-table th,
                 .items-table td {
                     border: 1px solid #000;
-                    padding: 3px;
+                    padding: 4px 3px;
                     vertical-align: middle;
                 }
                 
@@ -310,7 +247,7 @@
                 }
                 
                 .items-table tbody td {
-                    height: 8mm;
+                    height: 24px;
                 }
                 
                 .items-table .text-center {
@@ -329,12 +266,12 @@
                 
                 .total-row td {
                     font-weight: bold;
-                    background: white;
+                    background: #f9f9f9;
                 }
                 
                 /* AMOUNT IN WORDS */
                 .amount-words {
-                    margin: 2mm 0;
+                    margin: 8px 0;
                     font-size: 11.5px;
                     border-bottom: 1px dotted #666;
                     padding-bottom: 2px;
@@ -342,9 +279,9 @@
                 
                 /* TAX AUTHORITY CODE */
                 .tax-authority-section {
-                    margin: 3mm 0 2mm 0;
+                    margin: 12px 0 8px 0;
                     font-size: 11px;
-                    padding: 6px;
+                    padding: 8px;
                     border: 1px dashed #999;
                     background: #f9f9f9;
                 }
@@ -369,7 +306,7 @@
                 .signatures {
                     display: flex;
                     justify-content: space-around;
-                    margin-top: 8mm;
+                    margin-top: 20px;
                     font-size: 11.5px;
                     text-align: center;
                 }
@@ -391,8 +328,8 @@
                 
                 /* DIGITAL SIGNATURE */
                 .digital-signature {
-                    margin-top: 6px;
-                    padding: 6px;
+                    margin-top: 8px;
+                    padding: 8px;
                     border: 1px solid #666;
                     background: #fafafa;
                     font-size: 9px;
@@ -434,15 +371,9 @@
                 
                 /* FOOTER */
                 .footer {
-                    position: absolute;
-                    left: 4mm;
-                    right: 4mm;
-                    bottom: 2mm;
+                    margin-top: 20px;
                     text-align: center;
-                    font-size: 12px;
-                    line-height: 1.35;
-                    border-top: 1px solid #999;
-                    padding-top: 3mm;
+                    font-size: 10px;
                 }
                 
                 .footer div {
@@ -461,7 +392,6 @@
             <div class="page">
                 <div class="border-frame">
                     <div class="content">
-                        <div class="watermark">HOADON</div>
                         
                         <!-- HEADER -->
                         <div class="header">
@@ -479,19 +409,18 @@
                                          <xsl:value-of select="HDon/DLHDon/NDHDon/NBan/DChi"/>
                                     </div>
                                     <div>
-                                        MST <span class="en">(Tax code):</span> 
-                                        <b class="tax-code"> <xsl:value-of select="HDon/DLHDon/NDHDon/NBan/MST"/></b>
+                                        Mã số thuế <span class="en">(Tax code):</span> 
+                                        <b> <xsl:value-of select="HDon/DLHDon/NDHDon/NBan/MST"/></b>
                                     </div>
                                     <div>
                                         Điện thoại <span class="en">(Tel):</span> 
                                         <xsl:value-of select="HDon/DLHDon/NDHDon/NBan/SDThoai"/> 
-                                        Email: <xsl:value-of select="HDon/DLHDon/NDHDon/NBan/DCTDTu"/>
-                                        Fax: <xsl:value-of select="HDon/DLHDon/NDHDon/NBan/Fax"/>
+                                         Email: <xsl:value-of select="HDon/DLHDon/NDHDon/NBan/DCTDTu"/>
                                     </div>
                                     <div>
-                                        Số TK <span class="en">(Bank Account):</span> 
+                                        Số tài khoản <span class="en">(Bank Account):</span> 
                                          <xsl:value-of select="HDon/DLHDon/NDHDon/NBan/STKNHang"/> 
-                                        Tại <span class="en">(At):</span> 
+                                        tại <span class="en">(At):</span> 
                                          <xsl:value-of select="HDon/DLHDon/NDHDon/NBan/TNHang"/>
                                     </div>
                                 </div>
@@ -514,7 +443,7 @@
                                 </div>
                             </div>
                             
-                            <div class="main-title">HÓA ĐƠN GTGT | NHIỀU DÒNG</div>
+                            <div class="main-title">HÓA ĐƠN GIÁ TRỊ GIA TĂNG</div>
                             <div class="sub-title">(VAT INVOICE)</div>
                             <div class="date-line">
                                 Ngày <span class="en">(day)</span>   
@@ -547,33 +476,12 @@
                                 </div>
                             </div>
 
-                            <div class="buyer-line two-col">
+                            <div class="buyer-line">
                                 <div class="buyer-label">
                                     Mã số thuế <span class="en">(Tax code):</span>
                                 </div>
                                 <div class="buyer-value">
                                     <xsl:value-of select="HDon/DLHDon/NDHDon/NMua/MST"/>
-                                </div>
-                                <div class="buyer-label">
-                                    Mã ngân sách <span class="en">(Budget code):</span>
-                                </div>
-                                <div class="buyer-value">
-                                    <xsl:value-of select="HDon/DLHDon/NDHDon/NMua/MDVQHNSach"/>
-                                </div>
-                            </div>
-
-                            <div class="buyer-line two-col">
-                                <div class="buyer-label">
-                                    Căn cước công dân <span class="en">(Citizen ID):</span>
-                                </div>
-                                <div class="buyer-value">
-                                    <xsl:value-of select="HDon/DLHDon/NDHDon/NMua/CCCDan"/>
-                                </div>
-                                <div class="buyer-label">
-                                    Số hộ chiếu <span class="en">(Passport No.):</span>
-                                </div>
-                                <div class="buyer-value">
-                                    <xsl:value-of select="HDon/DLHDon/NDHDon/NMua/SHChieu"/>
                                 </div>
                             </div>
 
@@ -588,7 +496,7 @@
 
                             <div class="payment-line">
                                 <div class="buyer-label">
-                                    Hình thức thanh toán <span class="en">(Payment Method):</span>
+                                    Thanh toán <span class="en">(Payment Method):</span>
                                 </div>
                                 <div class="buyer-value">
                                     <xsl:value-of select="HDon/DLHDon/TTChung/HTTToan"/>
@@ -600,6 +508,12 @@
                                     <xsl:value-of select="HDon/DLHDon/NDHDon/NMua/STKNHang"/>
                                 </div>
                             </div>
+
+                            <xsl:if test="HDon/DLHDon/TTChung/TTHDLQuan/GChu != ''">
+                                <div style="text-align: center; margin-top: 8px;">
+                                    <xsl:value-of select="HDon/DLHDon/TTChung/TTHDLQuan/GChu"/>
+                                </div>
+                            </xsl:if>
 
                         </div>
                         
@@ -704,8 +618,6 @@
                                         <tr><td colspan="9" style="height: 25px;"></td></tr>
                                         <tr><td colspan="9" style="height: 25px;"></td></tr>
                                         <tr><td colspan="9" style="height: 25px;"></td></tr>
-                                        <tr><td colspan="9" style="height: 25px;"></td></tr>
-                                        <tr><td colspan="9" style="height: 25px;"></td></tr>
                                     </xsl:otherwise>
                                 </xsl:choose>
                                 <tr class="total-row">
@@ -803,7 +715,7 @@
                         
                         <!-- FOOTER -->
                         <div class="footer">
-                            <div>Trang tra cứu: https://tracuu2.hoadon30s.net Mã tra cứu: 
+                            <div>Trang tra cứu: https://tracuu.hoadon.vn Mã tra cứu 
                                 <b><xsl:for-each select="HDon/DLHDon/TTKhac/TTin">
                                     <xsl:if test="TTruong = 'MTCuu'">
                                         <xsl:choose>
@@ -816,8 +728,7 @@
                                         </xsl:choose>
                                     </xsl:if>
                                 </xsl:for-each></b></div>
-                            <div>Giải Pháp Hóa Đơn Điện Tử Thông Minh được cung cấp bởi Công Ty TNHH P.A Việt Nam</div>
-                            <div>MST: 0302431595 - Tel: +84-28-6.2563737 - Website: https://www.pavietnam.vn</div>
+                            <div><b>Giải Pháp Hóa Đơn Điện Tử</b></div>
                         </div>
                         
                     </div>

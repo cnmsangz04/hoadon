@@ -509,6 +509,12 @@
                                 </div>
                             </div>
 
+                            <xsl:if test="HDon/DLHDon/TTChung/TTHDLQuan/GChu != ''">
+                                <div style="text-align: center; margin-top: 8px;">
+                                    <xsl:value-of select="HDon/DLHDon/TTChung/TTHDLQuan/GChu"/>
+                                </div>
+                            </xsl:if>
+
                         </div>
                         
                         <!-- TABLE -->
