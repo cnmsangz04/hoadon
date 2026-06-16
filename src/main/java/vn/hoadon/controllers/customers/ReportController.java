@@ -84,6 +84,13 @@ public class ReportController extends BaseController {
                 range.to,
                 pageable
         );
+        InvoiceRepository.InvoiceReportSummary reportSummary = invoiceRepository.summarizeReportInvoices(
+                companyId,
+                category,
+                status,
+                range.from,
+                range.to
+        );
 
         // Ánh xạ ra DTO cho phù hợp với list.vue
         List<Map<String, Object>> items = new ArrayList<>();
@@ -120,7 +127,8 @@ public class ReportController extends BaseController {
                 pageData.getNumber() + 1,
                 pageData.getSize(),
                 pageData.getTotalElements(),
-                pageData.getTotalPages()
+                pageData.getTotalPages(),
+                buildSummary(reportSummary)
         );
         return ResponseEntity.ok(dto);
     }
@@ -154,6 +162,13 @@ public class ReportController extends BaseController {
                 range.from,
                 range.to,
                 pageable
+        );
+        InvoiceRepository.InvoiceReportSummary reportSummary = invoiceRepository.summarizeReportInvoices(
+                companyId,
+                category,
+                status,
+                range.from,
+                range.to
         );
 
         try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -253,6 +268,19 @@ public class ReportController extends BaseController {
                 if (inv.getAmount() != null) row.createCell(col++).setCellValue(inv.getAmount()); else col++;
             }
 
+            rowIdx++;
+            Row summaryRow = sheet.createRow(rowIdx++);
+            Cell countLabel = summaryRow.createCell(0);
+            countLabel.setCellValue("Tổng số hóa đơn");
+            countLabel.setCellStyle(headerStyle);
+            summaryRow.createCell(1).setCellValue(reportSummary != null && reportSummary.getInvoiceCount() != null ? reportSummary.getInvoiceCount() : 0L);
+            Cell totalLabel = summaryRow.createCell(11);
+            totalLabel.setCellValue("Tổng cộng");
+            totalLabel.setCellStyle(headerStyle);
+            summaryRow.createCell(12).setCellValue(reportSummary != null && reportSummary.getTotalBeforeTax() != null ? reportSummary.getTotalBeforeTax() : 0.0);
+            summaryRow.createCell(13).setCellValue(reportSummary != null && reportSummary.getTotalVat() != null ? reportSummary.getTotalVat() : 0.0);
+            summaryRow.createCell(14).setCellValue(reportSummary != null && reportSummary.getTotalAmount() != null ? reportSummary.getTotalAmount() : 0.0);
+
             for (int i = 0; i < cols.length; i++) {
                 sheet.autoSizeColumn(i);
             }
@@ -293,6 +321,15 @@ public class ReportController extends BaseController {
             toDate = to;
         }
         return new DateRange(fromDate, toDate);
+    }
+
+    private Map<String, Object> buildSummary(InvoiceRepository.InvoiceReportSummary summary) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("invoiceCount", summary != null && summary.getInvoiceCount() != null ? summary.getInvoiceCount() : 0L);
+        m.put("totalBeforeTax", summary != null && summary.getTotalBeforeTax() != null ? summary.getTotalBeforeTax() : 0.0);
+        m.put("totalVat", summary != null && summary.getTotalVat() != null ? summary.getTotalVat() : 0.0);
+        m.put("totalAmount", summary != null && summary.getTotalAmount() != null ? summary.getTotalAmount() : 0.0);
+        return m;
     }
 
     private static class DateRange {
@@ -381,8 +418,13 @@ public class ReportController extends BaseController {
         public int per_page;
         public long total;
         public int last_page;
+        public Map<String, Object> summary;
         public PageDTO(List<T> items, int currentPage, int perPage, long total, int lastPage) {
             this.items = items; this.current_page = currentPage; this.per_page = perPage; this.total = total; this.last_page = lastPage;
+        }
+        public PageDTO(List<T> items, int currentPage, int perPage, long total, int lastPage, Map<String, Object> summary) {
+            this(items, currentPage, perPage, total, lastPage);
+            this.summary = summary;
         }
     }
 }

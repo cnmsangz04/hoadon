@@ -14,6 +14,8 @@ import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.FormInvoiceRepository;
 import vn.hoadon.repositories.InvoiceRepository;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -75,10 +77,23 @@ public class PublicInvoiceLookupController {
         data.put("customerName", readCustomerName(invoice.getCustomer()));
         data.put("formCode", form != null ? form.getFormCode() : null);
         data.put("serial", form != null ? form.getSerial() : null);
-        data.put("viewUrl", "/v1/invoices/" + lookupCode + "/view");
-        data.put("pdfUrl", "/v1/invoices/" + lookupCode + "/download-pdf");
-        data.put("xmlUrl", "/v1/invoices/" + lookupCode + "/download-xml");
+        data.put("viewUrl", publicInvoiceUrl(lookupCode, company.getTaxcode(), "/view"));
+        data.put("pdfUrl", publicInvoiceUrl(lookupCode, company.getTaxcode(), "/download-pdf"));
+        data.put("xmlUrl", publicInvoiceUrl(lookupCode, company.getTaxcode(), "/download-xml"));
         return ResponseEntity.ok(data);
+    }
+
+    private String publicInvoiceUrl(String lookupCode, String sellerTaxcode, String suffix) {
+        return "/v1/invoices/" + encodePath(lookupCode) + suffix + "?taxcode=" + encodeQuery(sellerTaxcode);
+    }
+
+    private String encodePath(String value) {
+        return encodeQuery(value).replace("+", "%20");
+    }
+
+    private String encodeQuery(String value) {
+        if (value == null) return "";
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     private String trim(String value) {
@@ -115,9 +130,9 @@ public class PublicInvoiceLookupController {
             case 1 -> "Đã ký";
             case 2 -> "Đã gửi thuế";
             case 3 -> "Đã phát hành";
-            case 4 -> "Đã hủy";
-            case 5 -> "Đã thay thế";
-            case 6 -> "Đã điều chỉnh";
+            case 4 -> "Bị thay thế";
+            case 5 -> "Bị điều chỉnh";
+            case 6 -> "Đã hủy";
             case 7 -> "Không đủ điều kiện cấp mã";
             default -> "Không xác định";
         };

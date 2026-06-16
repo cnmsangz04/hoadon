@@ -71,8 +71,9 @@
               </b-form-group>
             </b-col>
             <b-col lg="4" md="6">
-              <b-form-group label="Ngày lập" label-class="form-label">
-                <b-form-input type="date" v-model="frmData.date_export" />
+              <b-form-group label="Ngày lập" label-class="form-label" :state="state('date_export')">
+                <b-form-input type="date" v-model="frmData.date_export" :state="state('date_export')" />
+                <b-form-invalid-feedback :state="state('date_export')">{{ invalidFeedback('date_export') }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
           </b-row>
@@ -122,30 +123,34 @@
               </b-form-group>
             </b-col>
             <b-col lg="4" md="6">
-              <b-form-group label="Đơn vị mua" label-class="form-label">
-                <b-form-input v-model="frmData.customer.name" />
+              <b-form-group label="Đơn vị mua" label-class="form-label" :state="state('customerName')">
+                <b-form-input v-model.trim="frmData.customer.name" :state="state('customerName')" />
+                <b-form-invalid-feedback :state="state('customerName')">{{ invalidFeedback('customerName') }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
             <b-col lg="4" md="6">
               <b-form-group label="Người mua" label-class="form-label">
-                <b-form-input v-model="frmData.customer.buyer" />
+                <b-form-input v-model.trim="frmData.customer.buyer" />
               </b-form-group>
             </b-col>
           </b-row>
           <b-row>
             <b-col lg="4" md="6">
-              <b-form-group label="Mã số thuế" label-class="form-label">
-                <b-form-input v-model="frmData.customer.taxcode" />
+              <b-form-group label="Mã số thuế" label-class="form-label" :state="state('customerTaxcode')">
+                <b-form-input v-model.trim="frmData.customer.taxcode" :state="state('customerTaxcode')" />
+                <b-form-invalid-feedback :state="state('customerTaxcode')">{{ invalidFeedback('customerTaxcode') }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
             <b-col lg="4" md="6">
-              <b-form-group label="Email" label-class="form-label">
-                <b-form-input type="email" v-model="frmData.customer.email" />
+              <b-form-group label="Email" label-class="form-label" :state="state('customerEmail')">
+                <b-form-input type="email" v-model.trim="frmData.customer.email" :state="state('customerEmail')" />
+                <b-form-invalid-feedback :state="state('customerEmail')">{{ invalidFeedback('customerEmail') }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
             <b-col lg="4" md="6">
-              <b-form-group label="Điện thoại" label-class="form-label">
-                <b-form-input v-model="frmData.customer.phone" />
+              <b-form-group label="Điện thoại" label-class="form-label" :state="state('customerPhone')">
+                <b-form-input v-model.trim="frmData.customer.phone" :state="state('customerPhone')" />
+                <b-form-invalid-feedback :state="state('customerPhone')">{{ invalidFeedback('customerPhone') }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
           </b-row>
@@ -168,8 +173,9 @@
               </b-form-group>
             </b-col>
             <b-col lg="4" md="6">
-              <b-form-group label="Hình thức thanh toán" label-class="form-label">
-                <b-form-select v-model="frmData.payment_type" :options="paymentTypeOptions" />
+              <b-form-group label="Hình thức thanh toán" label-class="form-label" :state="state('payment_type')">
+                <b-form-select v-model="frmData.payment_type" :options="paymentTypeOptions" :state="state('payment_type')" />
+                <b-form-invalid-feedback :state="state('payment_type')">{{ invalidFeedback('payment_type') }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
           </b-row>
@@ -409,6 +415,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { email, firstError, hasErrors, numberRange, phone, required, taxCode } from '@/utils/validators'
 
 export default {
   name: 'VatInvoiceCreate',
@@ -417,6 +424,7 @@ export default {
       isBusy: false,
       isBusyDetail: false,
       error: null,
+      errors: {},
       // Theo dõi key lỗi đã hiển thị để tránh toast trùng
       shownErrorKeys: new Set(),
       prepare: { formId: null, formCode: null, serial: null, haveCode: null, registerId: null, registerEffectiveDate: null },
@@ -872,6 +880,10 @@ export default {
     },
     async onSubmit () {
       try {
+        if (!this.validateInvoiceData()) {
+          this.toastError(firstError(Object.values(this.errors)) || 'Vui lòng kiểm tra lại thông tin hóa đơn', 'invoice_validation')
+          return
+        }
         const rows = Array.isArray(this.frmData.detail) ? this.frmData.detail.filter(r => String(r.name || '').trim()) : []
         if (rows.length === 0) {
           this.toastError('Vui lòng nhập ít nhất 1 dòng hàng hóa/dịch vụ', 'no_detail_rows')
@@ -928,6 +940,43 @@ export default {
         const msg = e?.response?.data?.message || (this.editId ? 'Không thể cập nhật hóa đơn' : 'Không thể lưu hóa đơn')
         this.toastError(msg, 'submit_error')
       }
+    },
+    validateInvoiceData () {
+      const rows = Array.isArray(this.frmData.detail) ? this.frmData.detail.filter(r => String(r.name || '').trim()) : []
+      const customer = this.frmData.customer || {}
+      const rowError = (() => {
+        if (rows.length === 0) return 'Vui lòng nhập ít nhất 1 dòng hàng hóa/dịch vụ'
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i]
+          const rowNo = r.num || (i + 1)
+          const qtyError = numberRange(r.quantity, 0, null, `Dòng ${rowNo}: số lượng không được âm`)
+          const priceError = numberRange(r.price, 0, null, `Dòng ${rowNo}: đơn giá không được âm`)
+          const totalError = numberRange(r.total, 0, null, `Dòng ${rowNo}: thành tiền không được âm`)
+          const vatError = numberRange(r.vatAmount, 0, null, `Dòng ${rowNo}: tiền thuế không được âm`)
+          const amountError = numberRange(r.amount, 0, null, `Dòng ${rowNo}: tổng tiền không được âm`)
+          const otherVatError = Number(r.vatRate) === -3
+            ? numberRange(r.vatRateOther, 0, 100, `Dòng ${rowNo}: thuế suất khác phải từ 0 đến 100`)
+            : null
+          const err = firstError([qtyError, priceError, totalError, vatError, amountError, otherVatError])
+          if (err) return err
+        }
+        return null
+      })()
+      this.errors = {
+        date_export: required(this.frmData.date_export, 'Vui lòng chọn ngày lập hóa đơn'),
+        customerName: (!String(customer.name || '').trim() && !String(customer.buyer || '').trim())
+          ? 'Vui lòng nhập đơn vị mua hoặc người mua'
+          : null,
+        customerTaxcode: taxCode(customer.taxcode),
+        customerEmail: email(customer.email),
+        customerPhone: phone(customer.phone),
+        payment_type: required(this.frmData.payment_type, 'Vui lòng chọn hình thức thanh toán'),
+        detail: rowError,
+      }
+      Object.keys(this.errors).forEach(key => {
+        if (!this.errors[key]) delete this.errors[key]
+      })
+      return !hasErrors(this.errors)
     },
     recalcRowFromQuantityPrice (idx) {
       const r = this.frmData.detail[idx]
@@ -1069,8 +1118,8 @@ export default {
       const n = String(v).replace(/[^0-9.,-]/g, '')
       return n
     },
-    state (field) { return true },
-    invalidFeedback (field) { return '' },
+    state (field) { return this.errors[field] ? false : null },
+    invalidFeedback (field) { return this.errors[field] || '' },
     checkProductUpdated () {},
     onNewLineName (idx) {},
     loadColumnTable () {

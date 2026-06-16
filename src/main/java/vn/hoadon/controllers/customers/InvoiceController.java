@@ -552,7 +552,8 @@ public class InvoiceController extends BaseController {
     public static class CreateResponse { public Long id; public CreateResponse(Long id){ this.id = id; } }
 
     @GetMapping(value = "/{lookup}/view", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<?> viewByLookup(@PathVariable("lookup") String lookup) {
+    public ResponseEntity<?> viewByLookup(@PathVariable("lookup") String lookup,
+                                          @RequestParam(name = "taxcode", required = false) String taxcode) {
         if (lookup == null || lookup.trim().isEmpty()) {
             return ResponseEntity.status(400).contentType(MediaType.TEXT_HTML).body("<html><body>Thiếu mã tra cứu</body></html>");
         }
@@ -574,6 +575,10 @@ public class InvoiceController extends BaseController {
                 form = formInvoiceRepository.findById(formIdLong).orElse(null);
             }
         }
+        CompanyEntity company = resolveInvoiceCompany(inv, form);
+        ResponseEntity<?> accessError = validatePublicInvoiceAccess(taxcode, company, MediaType.TEXT_HTML);
+        if (accessError != null) return accessError;
+
         String xsltValue = form != null ? form.getFile() : null;
         if (!org.springframework.util.StringUtils.hasText(xsltValue)) {
             log.warn("Invoice view: missing XSLT file value. lookup={}, formId={}", lookup, inv.getFormId());
@@ -586,14 +591,7 @@ public class InvoiceController extends BaseController {
             return ResponseEntity.status(404).contentType(MediaType.TEXT_HTML).body("<html><body>Không tồn tại tệp XSLT trên hệ thống</body></html>");
         }
 
-        CompanyEntity company = null; CompanyBankEntity bank = null;
-        if (form != null && form.getCompanyId() != null) {
-            company = companyRepository.findById(form.getCompanyId()).orElse(null);
-            if (company != null) {
-                java.util.List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
-                if (banks != null && !banks.isEmpty()) bank = banks.get(0);
-            }
-        }
+        CompanyBankEntity bank = resolveCompanyBank(company);
         String xml = getInvoiceXmlByStatus(inv, form, company, bank);
         try {
             TransformerFactory factory = TransformerFactory.newInstance();
@@ -628,7 +626,8 @@ public class InvoiceController extends BaseController {
     }
 
     @GetMapping(value = "/{lookup}/download-xml", produces = MediaType.APPLICATION_XML_VALUE)
-    public ResponseEntity<?> downloadXmlByLookup(@PathVariable("lookup") String lookup) {
+    public ResponseEntity<?> downloadXmlByLookup(@PathVariable("lookup") String lookup,
+                                                 @RequestParam(name = "taxcode", required = false) String taxcode) {
         Optional<InvoiceEntity> optInv = invoiceRepository.findByLookupCode(lookup);
         InvoiceEntity inv = optInv.orElse(null);
         if (inv == null) {
@@ -647,14 +646,11 @@ public class InvoiceController extends BaseController {
                 form = formInvoiceRepository.findById(formIdLong).orElse(null);
             }
         }
-        CompanyEntity company = null; CompanyBankEntity bank = null;
-        if (form != null && form.getCompanyId() != null) {
-            company = companyRepository.findById(form.getCompanyId()).orElse(null);
-            if (company != null) {
-                java.util.List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
-                if (banks != null && !banks.isEmpty()) bank = banks.get(0);
-            }
-        }
+        CompanyEntity company = resolveInvoiceCompany(inv, form);
+        ResponseEntity<?> accessError = validatePublicInvoiceAccess(taxcode, company, MediaType.TEXT_PLAIN);
+        if (accessError != null) return accessError;
+
+        CompanyBankEntity bank = resolveCompanyBank(company);
         String xml = getInvoiceXmlByStatus(inv, form, company, bank);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDisposition(ContentDisposition.attachment().filename("invoice-" + lookup + ".xml").build());
@@ -662,7 +658,8 @@ public class InvoiceController extends BaseController {
     }
 
     @GetMapping(value = "/{lookup}/download-pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<?> downloadPdfByLookup(@PathVariable("lookup") String lookup) {
+    public ResponseEntity<?> downloadPdfByLookup(@PathVariable("lookup") String lookup,
+                                                 @RequestParam(name = "taxcode", required = false) String taxcode) {
         Optional<InvoiceEntity> optInv = invoiceRepository.findByLookupCode(lookup);
         InvoiceEntity inv = optInv.orElse(null);
         if (inv == null) {
@@ -681,6 +678,10 @@ public class InvoiceController extends BaseController {
                 form = formInvoiceRepository.findById(formIdLong).orElse(null);
             }
         }
+        CompanyEntity company = resolveInvoiceCompany(inv, form);
+        ResponseEntity<?> accessError = validatePublicInvoiceAccess(taxcode, company, MediaType.TEXT_PLAIN);
+        if (accessError != null) return accessError;
+
         String xsltValue = form != null ? form.getFile() : null;
         if (!org.springframework.util.StringUtils.hasText(xsltValue)) {
             log.warn("Invoice pdf: missing XSLT file value. lookup={}, formId={}", lookup, inv.getFormId());
@@ -692,14 +693,7 @@ public class InvoiceController extends BaseController {
             log.warn("Invoice pdf: XSLT file not found on system. lookup={}, formId={}, xsltPublicPath={}, resolvedPath={}", lookup, inv.getFormId(), xsltValue, xsltFsPath);
             return ResponseEntity.status(404).contentType(MediaType.TEXT_PLAIN).body("Không tồn tại tệp XSLT trên hệ thống");
         }
-        CompanyEntity company = null; CompanyBankEntity bank = null;
-        if (form != null && form.getCompanyId() != null) {
-            company = companyRepository.findById(form.getCompanyId()).orElse(null);
-            if (company != null) {
-                java.util.List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
-                if (banks != null && !banks.isEmpty()) bank = banks.get(0);
-            }
-        }
+        CompanyBankEntity bank = resolveCompanyBank(company);
         String xml = getInvoiceXmlByStatus(inv, form, company, bank);
         try {
             TransformerFactory factory = TransformerFactory.newInstance();
@@ -1849,6 +1843,64 @@ public class InvoiceController extends BaseController {
         return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8);
     }
 
+    private String encodePath(String value) {
+        return encodeQuery(value).replace("+", "%20");
+    }
+
+    private String buildPublicInvoiceFileLink(String lookupCode, String suffix, String sellerTaxcode) {
+        String url = "/v1/invoices/" + encodePath(lookupCode) + suffix;
+        String taxcode = encodeQuery(sellerTaxcode);
+        return taxcode.isBlank() ? url : url + "?taxcode=" + taxcode;
+    }
+
+    private CompanyEntity resolveInvoiceCompany(InvoiceEntity inv, FormInvoiceEntity form) {
+        Long companyId = null;
+        if (form != null && form.getCompanyId() != null) {
+            companyId = form.getCompanyId();
+        } else if (inv != null && inv.getCompanyId() != null) {
+            companyId = inv.getCompanyId().longValue();
+        }
+        if (companyId == null) return null;
+        return companyRepository.findById(companyId).orElse(null);
+    }
+
+    private CompanyBankEntity resolveCompanyBank(CompanyEntity company) {
+        if (company == null) return null;
+        java.util.List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
+        return banks != null && !banks.isEmpty() ? banks.get(0) : null;
+    }
+
+    private ResponseEntity<?> validatePublicInvoiceAccess(String sellerTaxcode, CompanyEntity company, MediaType errorContentType) {
+        String expected = normalizeTaxcode(company != null ? company.getTaxcode() : null);
+        if (expected.isBlank()) {
+            return publicInvoiceAccessError(404, "Không tìm thấy hóa đơn", errorContentType);
+        }
+        String actual = normalizeTaxcode(sellerTaxcode);
+        if (actual.isBlank()) {
+            return publicInvoiceAccessError(400, "Vui lòng nhập mã số thuế bên bán", errorContentType);
+        }
+        if (!expected.equals(actual)) {
+            return publicInvoiceAccessError(404, "Không tìm thấy hóa đơn phù hợp với mã số thuế", errorContentType);
+        }
+        return null;
+    }
+
+    private String normalizeTaxcode(String value) {
+        if (value == null) return "";
+        return value.trim().replaceAll("[\\s.\\-]", "").toUpperCase();
+    }
+
+    private ResponseEntity<?> publicInvoiceAccessError(int status, String message, MediaType contentType) {
+        if (MediaType.TEXT_HTML.equals(contentType)) {
+            return ResponseEntity.status(status)
+                    .contentType(MediaType.TEXT_HTML)
+                    .body("<html><body>" + escapeHtml(message) + "</body></html>");
+        }
+        return ResponseEntity.status(status)
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(message);
+    }
+
     @GetMapping("/{id}/history")
     public ResponseEntity<?> history(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
         if (id == null) return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu ID hóa đơn"));
@@ -1942,10 +1994,7 @@ public class InvoiceController extends BaseController {
                 }
             } catch (Exception ignore) {}
             String subject = "Thông báo phát hành hóa đơn số " + safeStr(inv.getNo()) + (formSerial != null && !formSerial.isEmpty() ? " (" + formSerial + ")" : "");
-            String lookup = safeStr(inv.getLookupCode());
-            String pdfLink = "/v1/invoices/" + lookup + "/download-pdf";
-            String xmlLink = "/v1/invoices/" + lookup + "/download-xml";
-            String html = buildEmailHtml(inv, formSerial, pdfLink, xmlLink, name);
+            String lookupCode = inv.getLookupCode() != null ? inv.getLookupCode() : String.valueOf(inv.getId());
 
             // Fetch company info for template variables
             String companyName = "", hotline = "", comEmail = "", website = "", sellerTaxcode = "";
@@ -1960,6 +2009,10 @@ public class InvoiceController extends BaseController {
                     if (company.getInvoiceWebsite() != null) website     = company.getInvoiceWebsite();
                 }
             } catch (Exception ignore) {}
+            String pdfLink = buildPublicInvoiceFileLink(lookupCode, "/download-pdf", sellerTaxcode);
+            String xmlLink = buildPublicInvoiceFileLink(lookupCode, "/download-xml", sellerTaxcode);
+            String html = buildEmailHtml(inv, formSerial, pdfLink, xmlLink, name);
+
             String taxCode = "";
             try {
                 String custJson = inv.getCustomer();
@@ -1970,7 +2023,6 @@ public class InvoiceController extends BaseController {
                     if (tc != null) taxCode = tc.toString();
                 }
             } catch (Exception ignore) {}
-            String lookupCode = inv.getLookupCode() != null ? inv.getLookupCode() : String.valueOf(inv.getId());
 
             MailJobMessage msg = new MailJobMessage();
             msg.setTemplateKey("ISSUE_INVOICE_MAIL");

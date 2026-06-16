@@ -51,6 +51,8 @@ public class Info {
             Map<String, Object> c = new HashMap<>();
             c.put("id", company.getId());
             c.put("name", company.getName());
+            c.put("taxcode", company.getTaxcode());
+            c.put("taxCode", company.getTaxcode());
             c.put("logo", company.getLogo());
             c.put("favicon", company.getFavicon());
             c.put("status", company.getStatus());

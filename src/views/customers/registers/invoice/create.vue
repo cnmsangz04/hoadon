@@ -9,6 +9,10 @@
     </div>
 
     <b-card class="shadow-sm">
+      <b-alert v-if="formErrorList.length" show variant="danger" class="mb-3">
+        <div v-for="msg in formErrorList" :key="msg">{{ msg }}</div>
+      </b-alert>
+
       <!-- Khối: Thông tin tờ khai -->
       <b-card no-body class="mb-3">
         <b-card-header class="bg-light font-weight-bold">Thông tin tờ khai</b-card-header>
@@ -26,7 +30,8 @@
             </b-col>
             <b-col cols="12" md="6">
               <b-form-group label="Ngày lập" label-class="font-weight-bold">
-                <b-form-datepicker v-model="frmData.declaration_date" :date-format-options="dateFmt" locale="vi" />
+                <b-form-datepicker v-model="frmData.declaration_date" :date-format-options="dateFmt" locale="vi" :state="state('declaration_date')" />
+                <b-form-invalid-feedback :state="state('declaration_date')">{{ invalidFeedback('declaration_date') }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
           </b-row>
@@ -116,6 +121,7 @@
             <b-form-checkbox class="mb-2" value="KCMa">Hóa đơn không có mã</b-form-checkbox>
             <b-form-checkbox value="CMTMTTien">Hóa đơn có mã từ máy tính tiền</b-form-checkbox>
           </b-form-checkbox-group>
+          <p v-if="!state('invoice_forms')" class="text-danger small mt-2">{{ invalidFeedback('invoice_forms') }}</p>
         </b-col>
       </b-row>
 
@@ -152,6 +158,7 @@
               </b-form-checkbox>
             </div>
           </div>
+          <p v-if="!state('send_methods')" class="text-danger small mt-2">{{ invalidFeedback('send_methods') }}</p>
         </b-col>
       </b-row>
 
@@ -163,6 +170,7 @@
             <b-form-checkbox class="mb-2" value="CDDu">Chuyển đầy đủ nội dung từng hóa đơn</b-form-checkbox>
             <b-form-checkbox value="CBTHop">Chuyển theo bảng tổng hợp dữ liệu hóa đơn điện tử (điểm a1, khoản 3, Điều 22 của Nghị định)</b-form-checkbox>
           </b-form-checkbox-group>
+          <p v-if="!state('transfer_methods')" class="text-danger small mt-2">{{ invalidFeedback('transfer_methods') }}</p>
         </b-col>
       </b-row>
 
@@ -187,6 +195,7 @@
               </b-col>
             </b-row>
           </b-form-checkbox-group>
+          <p v-if="!state('invoice_types')" class="text-danger small mt-2">{{ invalidFeedback('invoice_types') }}</p>
         </b-col>
       </b-row>
 
@@ -255,6 +264,7 @@
               :reduce="v => v.id"
               placeholder="Chọn nơi lập"
               append-to-body />
+            <p v-if="!state('create_place')" class="text-danger small mt-2">{{ invalidFeedback('create_place') }}</p>
           </b-form-group>
         </b-col>
         <b-col cols="12" md="6" class="text-center">
@@ -310,27 +320,31 @@
       <b-form>
         <b-row>
           <b-col cols="12">
-            <b-form-group label="Tên tổ chức cơ quan chứng thực/cấp/công nhận chữ ký số, chữ ký điện tử" label-for="orgName">
-              <b-form-input id="orgName" type="text" v-model.trim="signatureModal.orgName" />
+            <b-form-group label="Tên tổ chức cơ quan chứng thực/cấp/công nhận chữ ký số, chữ ký điện tử" label-for="orgName" :state="signatureState('orgName')">
+              <b-form-input id="orgName" type="text" v-model.trim="signatureModal.orgName" :state="signatureState('orgName')" />
+              <b-form-invalid-feedback :state="signatureState('orgName')">{{ signatureErrors.orgName }}</b-form-invalid-feedback>
             </b-form-group>
           </b-col>
         </b-row>
         <b-row>
           <b-col cols="12">
-            <b-form-group label="Số sê-ri chứng thư" label-for="serialNo">
-              <b-form-input id="serialNo" type="text" v-model.trim="signatureModal.serialNo" />
+            <b-form-group label="Số sê-ri chứng thư" label-for="serialNo" :state="signatureState('serialNo')">
+              <b-form-input id="serialNo" type="text" v-model.trim="signatureModal.serialNo" :state="signatureState('serialNo')" />
+              <b-form-invalid-feedback :state="signatureState('serialNo')">{{ signatureErrors.serialNo }}</b-form-invalid-feedback>
             </b-form-group>
           </b-col>
         </b-row>
         <b-row>
           <b-col cols="12" md="6">
-            <b-form-group label="Thời gian từ ngày" label-for="signFromDate">
-              <b-form-datepicker id="signFromDate" class="mb-2" size="sm" v-model="signatureModal.signFromDate" :date-format-options="dateFmt" locale="vi" />
+            <b-form-group label="Thời gian từ ngày" label-for="signFromDate" :state="signatureState('signFromDate')">
+              <b-form-datepicker id="signFromDate" class="mb-2" size="sm" v-model="signatureModal.signFromDate" :date-format-options="dateFmt" locale="vi" :state="signatureState('signFromDate')" />
+              <b-form-invalid-feedback :state="signatureState('signFromDate')">{{ signatureErrors.signFromDate }}</b-form-invalid-feedback>
             </b-form-group>
           </b-col>
           <b-col cols="12" md="6">
-            <b-form-group label="Thời gian đến ngày" label-for="signToDate">
-              <b-form-datepicker id="signToDate" class="mb-2" size="sm" v-model="signatureModal.signToDate" :date-format-options="dateFmt" locale="vi" />
+            <b-form-group label="Thời gian đến ngày" label-for="signToDate" :state="signatureState('signToDate')">
+              <b-form-datepicker id="signToDate" class="mb-2" size="sm" v-model="signatureModal.signToDate" :date-format-options="dateFmt" locale="vi" :state="signatureState('signToDate')" />
+              <b-form-invalid-feedback :state="signatureState('signToDate')">{{ signatureErrors.signToDate }}</b-form-invalid-feedback>
             </b-form-group>
           </b-col>
         </b-row>
@@ -358,6 +372,7 @@
 import axios from '@/plugins/axios'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
+import { firstError, hasErrors, required } from '@/utils/validators'
 
 export default {
   name: 'RegisterInvoiceCreate',
@@ -375,6 +390,8 @@ export default {
       app: { provinces: [] },
       company: { address: '', email: '', name: '', tax_code: '' },
       legalRep: { fullname: '', phone: '', citizen_id: '', passport_no: '', date_of_birth: null, gender: null },
+      errors: {},
+      signatureErrors: {},
       options: {
         sigRegMethod: [
           { code: 1, label: 'Thêm mới' },
@@ -424,6 +441,9 @@ export default {
     selectedPlaceName() {
       const p = this.app.provinces.find(x => x.id === this.frmData.create_place)
       return p ? p.name : ''
+    },
+    formErrorList() {
+      return Object.values(this.errors || {}).filter(Boolean)
     }
   },
   created() {
@@ -482,6 +502,51 @@ export default {
     }
   },
   methods: {
+    state(field) {
+      return this.errors[field] ? false : null
+    },
+    invalidFeedback(field) {
+      return this.errors[field] || ''
+    },
+    signatureState(field) {
+      return this.signatureErrors[field] ? false : null
+    },
+    validateRegisterForm() {
+      const sendMethodCount = [
+        ...(this.frmData.send_methods_a || []),
+        ...(this.frmData.send_methods_b || []),
+        ...(this.sendToggleC ? ['CQT'] : []),
+      ].length
+      this.errors = {
+        declaration_date: required(this.frmData.declaration_date, 'Vui lòng chọn ngày lập tờ khai'),
+        invoice_forms: (this.frmData.invoice_forms || []).length ? null : 'Vui lòng chọn ít nhất một hình thức hóa đơn',
+        send_methods: sendMethodCount ? null : 'Vui lòng chọn hình thức gửi dữ liệu hóa đơn điện tử',
+        transfer_methods: (this.frmData.transfer_methods || []).length ? null : 'Vui lòng chọn phương thức chuyển dữ liệu',
+        invoice_types: (this.frmData.invoice_types || []).length ? null : 'Vui lòng chọn ít nhất một loại hóa đơn sử dụng',
+        create_place: required(this.frmData.create_place, 'Vui lòng chọn nơi lập'),
+      }
+      Object.keys(this.errors).forEach(key => {
+        if (!this.errors[key]) delete this.errors[key]
+      })
+      return !hasErrors(this.errors)
+    },
+    validateSignatureForm() {
+      const from = this.signatureModal.signFromDate ? new Date(this.signatureModal.signFromDate) : null
+      const to = this.signatureModal.signToDate ? new Date(this.signatureModal.signToDate) : null
+      this.signatureErrors = {
+        orgName: required(this.signatureModal.orgName, 'Vui lòng nhập tên tổ chức chứng thực'),
+        serialNo: required(this.signatureModal.serialNo, 'Vui lòng nhập số sê-ri chứng thư'),
+        signFromDate: required(this.signatureModal.signFromDate, 'Vui lòng chọn ngày bắt đầu'),
+        signToDate: firstError([
+          required(this.signatureModal.signToDate, 'Vui lòng chọn ngày kết thúc'),
+          from && to && from > to ? 'Ngày kết thúc phải sau ngày bắt đầu' : null,
+        ]),
+      }
+      Object.keys(this.signatureErrors).forEach(key => {
+        if (!this.signatureErrors[key]) delete this.signatureErrors[key]
+      })
+      return !hasErrors(this.signatureErrors)
+    },
     bootstrap() {
       this.loadProvinces()
       const id = this.$route?.params?.id
@@ -752,6 +817,10 @@ export default {
       this.sendToggleC = Array.isArray(sendParsed.c) && sendParsed.c.length > 0
     },
     async onSubmit() {
+      if (!this.validateRegisterForm()) {
+        this.$bvToast && this.$bvToast.toast(firstError(Object.values(this.errors)) || 'Vui lòng kiểm tra lại tờ khai', { title: 'Lỗi nhập liệu', variant: 'danger', solid: true })
+        return
+      }
       this.btnLoading = true
       try {
         const payload = this.buildPayload()
@@ -935,6 +1004,7 @@ export default {
       } else {
         this.signatureModal = { index: false, orgName: '', serialNo: '', signFromDate: null, signToDate: null, sigRegMethod: 1 }
       }
+      this.signatureErrors = {}
       this.$refs.modalSignature.show()
     },
     closeSignatureModal() {
@@ -944,6 +1014,10 @@ export default {
       // cleanup if needed
     },
     onSubmitSignature() {
+      if (!this.validateSignatureForm()) {
+        this.$bvToast && this.$bvToast.toast(firstError(Object.values(this.signatureErrors)) || 'Vui lòng kiểm tra lại chữ ký số', { title: 'Lỗi nhập liệu', variant: 'danger', solid: true })
+        return
+      }
       const payload = { ...this.signatureModal }
       const entry = {
         orgName: payload.orgName,

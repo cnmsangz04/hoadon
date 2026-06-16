@@ -117,19 +117,22 @@
                     </b-col>
 
                     <b-col md="6">
-                        <b-form-group label="Mã khách hàng">
-                            <b-form-input v-model="form.code" placeholder="KH001" :disabled="!!form.id" />
+                        <b-form-group label="Mã khách hàng" :state="state('code')">
+                            <b-form-input v-model.trim="form.code" placeholder="KH001" :disabled="!!form.id" :state="state('code')" />
+                            <b-form-invalid-feedback :state="state('code')">{{ errors.code }}</b-form-invalid-feedback>
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
-                        <b-form-group label="Mã số thuế">
-                            <b-form-input v-model="form.taxCode" placeholder="Nhập MST khách hàng" />
+                        <b-form-group label="Mã số thuế" :state="state('taxCode')">
+                            <b-form-input v-model.trim="form.taxCode" placeholder="Nhập MST khách hàng" :state="state('taxCode')" />
+                            <b-form-invalid-feedback :state="state('taxCode')">{{ errors.taxCode }}</b-form-invalid-feedback>
                         </b-form-group>
                     </b-col>
 
                     <b-col md="12">
-                        <b-form-group label="Tên khách hàng / Tên Công ty đối tác">
-                            <b-form-input v-model="form.companyName" required placeholder="Nhập tên đầy đủ của khách hàng" />
+                        <b-form-group label="Tên khách hàng / Tên Công ty đối tác" :state="state('companyName')">
+                            <b-form-input v-model.trim="form.companyName" required placeholder="Nhập tên đầy đủ của khách hàng" :state="state('companyName')" />
+                            <b-form-invalid-feedback :state="state('companyName')">{{ errors.companyName }}</b-form-invalid-feedback>
                         </b-form-group>
                     </b-col>
 
@@ -139,8 +142,9 @@
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
-                        <b-form-group label="Số điện thoại">
-                            <b-form-input v-model="form.phone" />
+                        <b-form-group label="Số điện thoại" :state="state('phone')">
+                            <b-form-input v-model.trim="form.phone" :state="state('phone')" />
+                            <b-form-invalid-feedback :state="state('phone')">{{ errors.phone }}</b-form-invalid-feedback>
                         </b-form-group>
                     </b-col>
 
@@ -151,8 +155,9 @@
                     </b-col>
 
                     <b-col md="6">
-                        <b-form-group label="Email nhận hóa đơn">
-                            <b-form-input v-model="form.email" type="email" />
+                        <b-form-group label="Email nhận hóa đơn" :state="state('email')">
+                            <b-form-input v-model.trim="form.email" type="email" :state="state('email')" />
+                            <b-form-invalid-feedback :state="state('email')">{{ errors.email }}</b-form-invalid-feedback>
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
@@ -190,6 +195,7 @@
 <script>
 import axios from "@/plugins/axios";
 import { pageFrom, pageItems, pageTo, pageTotal } from "@/utils/pagination";
+import { email, firstError, hasErrors, phone, required, taxCode } from "@/utils/validators";
 import PaginationBar from "@/views/components/pagination_bar.vue";
 
 export default {
@@ -223,6 +229,7 @@ export default {
                 { key: "option", label: "Thao tác", tdClass: "text-center" },
             ],
             form: this.initForm(),
+            errors: {},
         };
     },
     mounted() {
@@ -296,28 +303,34 @@ export default {
         },
         openCreate() {
             this.form = this.initForm();
+            this.errors = {};
             this.$refs.customerModal.show();
         },
         openEdit(item) {
             this.form = { ...item };
+            this.errors = {};
             this.$refs.customerModal.show();
         },
+        state(field) {
+            return this.errors[field] ? false : null;
+        },
+        validateForm() {
+            this.errors = {
+                code: required(this.form.code, "Vui lòng nhập mã khách hàng"),
+                companyName: required(this.form.companyName, "Vui lòng nhập tên khách hàng"),
+                taxCode: taxCode(this.form.taxCode),
+                email: email(this.form.email),
+                phone: phone(this.form.phone),
+            };
+            Object.keys(this.errors).forEach((key) => {
+                if (!this.errors[key]) delete this.errors[key];
+            });
+            return !hasErrors(this.errors);
+        },
         async saveData() {
-            if (!this.form.companyName || !this.form.code) {
-                return this.$bvToast.toast("Mã và Tên khách hàng là bắt buộc", { variant: "warning" });
+            if (!this.validateForm()) {
+                return this.$bvToast.toast(firstError(Object.values(this.errors)) || "Vui lòng kiểm tra lại thông tin", { variant: "warning" });
             }
-			
-			if(this.form.email){
-				const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-				if(!emailRegex.test(this.form.email)){
-					return this.$bvToast.toast("Email không hợp lệ", {
-						variant: "danger",
-						title: "Lỗi nhập liệu"
-					})
-				}
-
-			}
-			
             this.isSaving = true;
             try {
                 await axios.post("/categories/customer/save", this.form);

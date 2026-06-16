@@ -41,6 +41,31 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
             Pageable pageable
     );
 
+    interface InvoiceReportSummary {
+        Long getInvoiceCount();
+        Double getTotalBeforeTax();
+        Double getTotalVat();
+        Double getTotalAmount();
+    }
+
+    @Query("SELECT COUNT(i) AS invoiceCount, " +
+            "COALESCE(SUM(i.total), 0.0) AS totalBeforeTax, " +
+            "COALESCE(SUM(i.vatAmount), 0.0) AS totalVat, " +
+            "COALESCE(SUM(i.amount), 0.0) AS totalAmount " +
+            "FROM InvoiceEntity i JOIN FormInvoiceEntity f ON i.formId = f.id " +
+            "WHERE (:companyId IS NULL OR i.companyId = :companyId) " +
+            "AND (:category IS NULL OR f.category = :category) " +
+            "AND (:status IS NULL OR i.status = :status) " +
+            "AND (:fromDate IS NULL OR i.dateExport >= :fromDate) " +
+            "AND (:toDate IS NULL OR i.dateExport <= :toDate)")
+    InvoiceReportSummary summarizeReportInvoices(
+            @Param("companyId") Long companyId,
+            @Param("category") Integer category,
+            @Param("status") Short status,
+            @Param("fromDate") java.time.LocalDate fromDate,
+            @Param("toDate") java.time.LocalDate toDate
+    );
+
     // Dashboard statistics queries
     @Query("SELECT COUNT(i) FROM InvoiceEntity i WHERE i.companyId = :companyId " +
             "AND i.status IN :statuses " +

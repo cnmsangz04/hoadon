@@ -18,20 +18,26 @@
         <b-card-body>
           <b-row>
             <b-col cols="12" md="8">
-              <b-form-group label="Máy chủ SMTP" label-class="font-weight-bold">
+              <b-form-group label="Máy chủ SMTP" label-class="font-weight-bold" :state="state('host')">
                 <b-form-input
-                  v-model="form.host"
+                  v-model.trim="form.host"
                   placeholder="smtp.gmail.com"
+                  :state="state('host')"
                 />
+                <b-form-invalid-feedback :state="state('host')">{{ errors.host }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
             <b-col cols="12" md="4">
-              <b-form-group label="Cổng (Port)" label-class="font-weight-bold">
+              <b-form-group label="Cổng (Port)" label-class="font-weight-bold" :state="state('port')">
                 <b-form-input
                   v-model.number="form.port"
                   type="number"
+                  min="1"
+                  max="65535"
                   placeholder="587"
+                  :state="state('port')"
                 />
+                <b-form-invalid-feedback :state="state('port')">{{ errors.port }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
           </b-row>
@@ -53,16 +59,18 @@
         <b-card-body>
           <b-row>
             <b-col cols="12" md="6">
-              <b-form-group label="Tên đăng nhập (Email SMTP)" label-class="font-weight-bold">
+              <b-form-group label="Tên đăng nhập (Email SMTP)" label-class="font-weight-bold" :state="state('username')">
                 <b-form-input
-                  v-model="form.username"
+                  v-model.trim="form.username"
                   type="email"
                   placeholder="Nhập email dùng để đăng nhập SMTP"
+                  :state="state('username')"
                 />
+                <b-form-invalid-feedback :state="state('username')">{{ errors.username }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
             <b-col cols="12" md="6">
-              <b-form-group label-class="font-weight-bold">
+              <b-form-group label-class="font-weight-bold" :state="state('password')">
                 <template #label>
                   Mật khẩu ứng dụng
                   <a
@@ -80,6 +88,7 @@
                     :type="showPw ? 'text' : 'password'"
                     placeholder="Nhập App Password"
                     autocomplete="new-password"
+                    :state="state('password')"
                   />
                   <b-input-group-append>
                     <b-button variant="outline-secondary" @click="showPw = !showPw" tabindex="-1">
@@ -87,6 +96,7 @@
                     </b-button>
                   </b-input-group-append>
                 </b-input-group>
+                <b-form-invalid-feedback :state="state('password')">{{ errors.password }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
           </b-row>
@@ -101,20 +111,24 @@
         <b-card-body>
           <b-row>
             <b-col cols="12" md="6">
-              <b-form-group label="Tên người gửi" label-class="font-weight-bold">
+              <b-form-group label="Tên người gửi" label-class="font-weight-bold" :state="state('fromName')">
                 <b-form-input
-                  v-model="form.fromName"
+                  v-model.trim="form.fromName"
                   placeholder="Nhập tên hiển thị trong trường From của email gửi đi"
+                  :state="state('fromName')"
                 />
+                <b-form-invalid-feedback :state="state('fromName')">{{ errors.fromName }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
             <b-col cols="12" md="6">
-              <b-form-group label="Địa chỉ email gửi (From)" label-class="font-weight-bold">
+              <b-form-group label="Địa chỉ email gửi (From)" label-class="font-weight-bold" :state="state('fromEmail')">
                 <b-form-input
-                  v-model="form.fromEmail"
+                  v-model.trim="form.fromEmail"
                   type="email"
                   placeholder="Nhập email hiển thị trong trường From của email gửi đi"
+                  :state="state('fromEmail')"
                 />
+                <b-form-invalid-feedback :state="state('fromEmail')">{{ errors.fromEmail }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
           </b-row>
@@ -153,13 +167,15 @@
       @ok.prevent="sendTest"
       centered
     >
-      <b-form-group label="Gửi đến địa chỉ email" label-class="font-weight-bold">
+      <b-form-group label="Gửi đến địa chỉ email" label-class="font-weight-bold" :state="state('testEmail')">
         <b-form-input
-          v-model="testEmail"
+          v-model.trim="testEmail"
           type="email"
           placeholder="example@gmail.com"
+          :state="state('testEmail')"
           @keyup.enter="sendTest"
         />
+        <b-form-invalid-feedback :state="state('testEmail')">{{ errors.testEmail }}</b-form-invalid-feedback>
       </b-form-group>
       <p class="text-muted small mb-0">
         <i class="fas fa-info-circle mr-1"></i>
@@ -171,6 +187,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { email, firstError, hasErrors, numberRange, required } from '@/utils/validators'
 
 export default {
   name: 'EmailMailServer',
@@ -196,6 +213,7 @@ export default {
       showTestModal: false,
       testEmail:     '',
       testing:       false,
+      errors:        {},
     }
   },
   mounted() {
@@ -224,13 +242,53 @@ export default {
       this.hasSaved = !!mail?.id
     },
 
-    async save() {
-      if (!this.form.host || !this.form.username) {
-        this.$bvToast.toast('Vui lòng nhập máy chủ và tên đăng nhập', { title: 'Lỗi', variant: 'danger', solid: true })
-        return
+    state(field) {
+      return this.errors[field] ? false : null
+    },
+
+    validateSave() {
+      this.errors = {
+        ...this.errors,
+        host: required(this.form.host, 'Vui lòng nhập máy chủ SMTP'),
+        port: firstError([
+          required(this.form.port, 'Vui lòng nhập cổng SMTP'),
+          numberRange(this.form.port, 1, 65535, 'Cổng SMTP phải trong khoảng 1-65535'),
+        ]),
+        username: firstError([
+          required(this.form.username, 'Vui lòng nhập email đăng nhập SMTP'),
+          email(this.form.username),
+        ]),
+        password: !this.hasSaved ? required(this.form.password, 'Vui lòng nhập mật khẩu ứng dụng') : null,
+        fromName: required(this.form.fromName, 'Vui lòng nhập tên người gửi'),
+        fromEmail: firstError([
+          required(this.form.fromEmail, 'Vui lòng nhập email người gửi'),
+          email(this.form.fromEmail),
+        ]),
+        testEmail: this.errors.testEmail || null,
       }
-      if (!this.hasSaved && (!this.form.password || this.form.password.startsWith('•'))) {
-        this.$bvToast.toast('Vui lòng nhập mật khẩu ứng dụng', { title: 'Lỗi', variant: 'danger', solid: true })
+      Object.keys(this.errors).forEach(key => {
+        if (!this.errors[key]) delete this.errors[key]
+      })
+      return !['host', 'port', 'username', 'password', 'fromName', 'fromEmail'].some(key => this.errors[key])
+    },
+
+    validateTest() {
+      this.errors = {
+        ...this.errors,
+        testEmail: firstError([
+          required(this.testEmail, 'Vui lòng nhập email nhận thử'),
+          email(this.testEmail),
+        ]),
+      }
+      Object.keys(this.errors).forEach(key => {
+        if (!this.errors[key]) delete this.errors[key]
+      })
+      return !this.errors.testEmail
+    },
+
+    async save() {
+      if (!this.validateSave()) {
+        this.$bvToast.toast(firstError(Object.values(this.errors)) || 'Vui lòng kiểm tra lại cấu hình', { title: 'Lỗi', variant: 'danger', solid: true })
         return
       }
       this.saving = true
@@ -248,8 +306,8 @@ export default {
     },
 
     async sendTest() {
-      if (!this.testEmail || !this.testEmail.includes('@')) {
-        this.$bvToast.toast('Vui lòng nhập địa chỉ email hợp lệ', { title: 'Lỗi', variant: 'danger', solid: true })
+      if (!this.validateTest()) {
+        this.$bvToast.toast(this.errors.testEmail || 'Vui lòng nhập địa chỉ email hợp lệ', { title: 'Lỗi', variant: 'danger', solid: true })
         return
       }
       this.testing = true
@@ -268,4 +326,3 @@ export default {
   },
 }
 </script>
-

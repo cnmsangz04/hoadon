@@ -184,10 +184,10 @@
               size="sm"
               class="mr-2"
             >
-              <b-dropdown-item :href="'/v1/invoices/' + (iframe.lookup_code || '') + '/download-pdf'">
+              <b-dropdown-item :href="invoicePublicUrl(iframe.lookup_code, '/download-pdf')">
                 <i class="fas fa-file-pdf"></i> Download PDF
               </b-dropdown-item>
-              <b-dropdown-item :href="'/v1/invoices/' + (iframe.lookup_code || '') + '/download-xml'">
+              <b-dropdown-item :href="invoicePublicUrl(iframe.lookup_code, '/download-xml')">
                 <i class="fas fa-file-code"></i> Download XML
               </b-dropdown-item>
             </b-dropdown>
@@ -307,6 +307,7 @@ export default {
       isBusy: false,
       usersMap: {},
       refreshKey: 0,
+      sellerTaxcode: '',
       // iframe state for viewing invoice
       iframe: {
         src: null,
@@ -373,7 +374,10 @@ export default {
       historyForId: null,
     }
   },
-  created () { this.fetchList() },
+  created () {
+    this.ensureSellerTaxcode()
+    this.fetchList()
+  },
   beforeDestroy () {
     // Clear all pending poll timers
     try {
@@ -384,6 +388,37 @@ export default {
   },
   methods: {
     closeModal(id) { this.$root.$emit('bv::hide::modal', id) },
+
+    appSellerTaxcode () {
+      const company = this.$app?.info?.company || {}
+      return (company.taxcode || company.taxCode || '').toString().trim()
+    },
+
+    async ensureSellerTaxcode () {
+      const fromApp = this.appSellerTaxcode()
+      if (fromApp) {
+        this.sellerTaxcode = fromApp
+        return this.sellerTaxcode
+      }
+      if (this.sellerTaxcode) return this.sellerTaxcode
+      try {
+        const { data } = await axios.post('/setting/profile/get', null, { meta: { suppressGlobalErrorToast: true } })
+        this.sellerTaxcode = (data?.taxCode || data?.taxcode || '').toString().trim()
+      } catch (e) {}
+      return this.sellerTaxcode
+    },
+
+    invoicePublicPath (lookupCode, action) {
+      const code = encodeURIComponent(lookupCode || '')
+      const taxcode = (this.sellerTaxcode || this.appSellerTaxcode() || '').toString().trim()
+      const query = taxcode ? `?taxcode=${encodeURIComponent(taxcode)}` : ''
+      return `/invoices/${code}${action}${query}`
+    },
+
+    invoicePublicUrl (lookupCode, action) {
+      const base = (axios.defaults?.baseURL || '/v1').replace(/\/$/, '')
+      return `${base}${this.invoicePublicPath(lookupCode, action)}`
+    },
 
     // Chuyển datepicker value về yyyy-MM-dd để backend parse LocalDate ổn định
     formatDateParam (d) {
@@ -574,32 +609,36 @@ export default {
         this.$bvToast && this.$bvToast.toast(msg, { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 4000 })
       } finally { this.isBusy = false }
     },
-    viewInvoice (item) {
+    async viewInvoice (item) {
       const lookupCode = item.lookupCode || item.orderCode || item.lookup_code || null
       if (!lookupCode) return false
+      await this.ensureSellerTaxcode()
+      if (!this.sellerTaxcode && !this.appSellerTaxcode()) {
+        this.$bvToast && this.$bvToast.toast('Không xác định được mã số thuế bên bán', { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 3000 })
+        return false
+      }
       this.iframe.lookup_code = lookupCode
-      this.iframe.src = `/v1/invoices/${lookupCode}/view`
+      this.iframe.src = this.invoicePublicUrl(lookupCode, '/view')
       this.$root.$emit('bv::show::modal', 'modalVatInvoice')
       return false
     },
-    downloadXml (item) {
+    async downloadXml (item) {
       const lookupCode = item?.lookupCode || item?.orderCode || item?.lookup_code
       if (!lookupCode) {
         this.$bvToast && this.$bvToast.toast('Không có mã tra cứu hóa đơn', { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 3000 })
         return
       }
-      // axios plugin typically has baseURL = '/v1'
-      const base = axios.defaults?.baseURL || ''
-      window.open(`${base}/invoices/${lookupCode}/download-xml`, '_blank')
+      await this.ensureSellerTaxcode()
+      window.open(this.invoicePublicUrl(lookupCode, '/download-xml'), '_blank')
     },
-    downloadPdf (item) {
+    async downloadPdf (item) {
       const lookupCode = item?.lookupCode || item?.orderCode || item?.lookup_code
       if (!lookupCode) {
         this.$bvToast && this.$bvToast.toast('Không có mã tra cứu hóa đơn', { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 3000 })
         return
       }
-      const base = axios.defaults?.baseURL || ''
-      window.open(`${base}/invoices/${lookupCode}/download-pdf`, '_blank')
+      await this.ensureSellerTaxcode()
+      window.open(this.invoicePublicUrl(lookupCode, '/download-pdf'), '_blank')
     },
 
     print (lookupCode) {

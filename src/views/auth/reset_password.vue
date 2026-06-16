@@ -17,18 +17,19 @@
           </div>
 
           <b-form @submit.prevent="submit">
-            <b-form-group label="Mật khẩu mới">
+            <b-form-group label="Mật khẩu mới" :state="state('password')">
               <div class="input-with-icon">
                 <i class="bi bi-lock"></i>
-                <b-form-input v-model="password" :type="show ? 'text' : 'password'" required placeholder="Mật khẩu mới"></b-form-input>
+                <b-form-input v-model="password" :type="show ? 'text' : 'password'" :state="state('password')" required placeholder="Mật khẩu mới"></b-form-input>
                </div>
+              <b-form-invalid-feedback :state="state('password')">{{ errors.password }}</b-form-invalid-feedback>
             </b-form-group>
-            <b-form-group label="Nhập lại mật khẩu mới">
+            <b-form-group label="Nhập lại mật khẩu mới" :state="state('confirm')">
               <div class="input-with-icon">
                 <i class="bi bi-lock"></i>
-                <b-form-input v-model="confirm" :type="show ? 'text' : 'password'" required placeholder="Nhập lại mật khẩu"></b-form-input>
+                <b-form-input v-model="confirm" :type="show ? 'text' : 'password'" :state="state('confirm')" required placeholder="Nhập lại mật khẩu"></b-form-input>
               </div>
-              <small v-if="password && confirm && password !== confirm" class="text-danger">Mật khẩu không khớp</small>
+              <b-form-invalid-feedback :state="state('confirm')">{{ errors.confirm }}</b-form-invalid-feedback>
             </b-form-group>
             <div class="d-flex justify-content-between mb-3">
               <b-form-checkbox v-model="show">Hiển thị mật khẩu</b-form-checkbox>
@@ -51,6 +52,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { firstError, hasErrors, minLength, required } from '@/utils/validators'
 
 export default {
   data() {
@@ -59,16 +61,36 @@ export default {
       confirm: '',
       show: false,
       loading: false,
-      token: this.$route.params.token || ''
+      token: this.$route.params.token || '',
+      errors: {},
     }
   },
   methods: {
+    state(field) {
+      return this.errors[field] ? false : null
+    },
+    validate() {
+      this.errors = {
+        password: firstError([
+          required(this.password, 'Vui lòng nhập mật khẩu mới'),
+          minLength(this.password, 8, 'Mật khẩu phải có ít nhất 8 ký tự'),
+        ]),
+        confirm: firstError([
+          required(this.confirm, 'Vui lòng nhập lại mật khẩu'),
+          this.password && this.confirm && this.password !== this.confirm ? 'Mật khẩu không khớp' : null,
+        ]),
+      }
+      Object.keys(this.errors).forEach(key => {
+        if (!this.errors[key]) delete this.errors[key]
+      })
+      return !hasErrors(this.errors)
+    },
     async submit() {
       if (!this.token) {
         try { this.$toastr.error('Thiếu hoặc token không hợp lệ') } catch(_) {}
         return
       }
-      if (!this.password || this.password !== this.confirm) return
+      if (!this.validate()) return
       this.loading = true
       try {
         await axios.post('/auth/reset-password', { token: this.token, password: this.password }, {

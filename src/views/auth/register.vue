@@ -17,37 +17,42 @@
           </div>
 
           <b-form @submit.prevent="submit">
-            <b-form-group label="Tên công ty">
+            <b-form-group label="Tên công ty" :state="state('companyName')">
               <div class="input-with-icon">
-                <b-form-input v-model.trim="form.companyName" required placeholder="Nhập tên công ty" />
+                <b-form-input v-model.trim="form.companyName" :state="state('companyName')" required placeholder="Nhập tên công ty" />
               </div>
+              <b-form-invalid-feedback :state="state('companyName')">{{ errors.companyName }}</b-form-invalid-feedback>
             </b-form-group>
 
-            <b-form-group label="Mã số thuế">
+            <b-form-group label="Mã số thuế" :state="state('taxcode')">
               <div class="input-with-icon">
-                <b-form-input v-model.trim="form.taxcode" required placeholder="Nhập mã số thuế" />
+                <b-form-input v-model.trim="form.taxcode" :state="state('taxcode')" required placeholder="Nhập mã số thuế" />
               </div>
+              <b-form-invalid-feedback :state="state('taxcode')">{{ errors.taxcode }}</b-form-invalid-feedback>
             </b-form-group>
 
-            <b-form-group label="Địa chỉ">
+            <b-form-group label="Địa chỉ" :state="state('address')">
               <div class="input-with-icon">
-                <b-form-input v-model.trim="form.address" required placeholder="Nhập địa chỉ công ty" />
+                <b-form-input v-model.trim="form.address" :state="state('address')" required placeholder="Nhập địa chỉ công ty" />
               </div>
+              <b-form-invalid-feedback :state="state('address')">{{ errors.address }}</b-form-invalid-feedback>
             </b-form-group>
 
             <b-form-row>
               <b-col md="6">
-                <b-form-group label="Email">
+                <b-form-group label="Email" :state="state('email')">
                   <div class="input-with-icon">
-                    <b-form-input v-model.trim="form.email" type="email" required placeholder="Email công ty" />
+                    <b-form-input v-model.trim="form.email" type="email" :state="state('email')" required placeholder="Email công ty" />
                   </div>
+                  <b-form-invalid-feedback :state="state('email')">{{ errors.email }}</b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
               <b-col md="6">
-                <b-form-group label="Điện thoại">
+                <b-form-group label="Điện thoại" :state="state('phone')">
                   <div class="input-with-icon">
-                    <b-form-input v-model.trim="form.phone" placeholder="Số điện thoại" />
+                    <b-form-input v-model.trim="form.phone" :state="state('phone')" placeholder="Số điện thoại" />
                   </div>
+                  <b-form-invalid-feedback :state="state('phone')">{{ errors.phone }}</b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-form-row>
@@ -75,6 +80,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { email, firstError, hasErrors, phone, required, taxCode } from '@/utils/validators'
 
 export default {
   name: 'AuthRegister',
@@ -89,6 +95,7 @@ export default {
         phone: '',
         contactName: '',
       },
+      errors: {},
     }
   },
   computed: {
@@ -100,8 +107,30 @@ export default {
     },
   },
   methods: {
+    state(field) {
+      return this.errors[field] ? false : null
+    },
+    validate() {
+      this.errors = {
+        companyName: required(this.form.companyName, 'Vui lòng nhập tên công ty'),
+        taxcode: firstError([
+          required(this.form.taxcode, 'Vui lòng nhập mã số thuế'),
+          taxCode(this.form.taxcode),
+        ]),
+        address: required(this.form.address, 'Vui lòng nhập địa chỉ công ty'),
+        email: firstError([
+          required(this.form.email, 'Vui lòng nhập email'),
+          email(this.form.email),
+        ]),
+        phone: phone(this.form.phone),
+      }
+      Object.keys(this.errors).forEach(key => {
+        if (!this.errors[key]) delete this.errors[key]
+      })
+      return !hasErrors(this.errors)
+    },
     async submit() {
-      if (!this.canSubmit) return
+      if (!this.validate()) return
       this.loading = true
       try {
         const res = await axios.post('/auth/register', { ...this.form }, {

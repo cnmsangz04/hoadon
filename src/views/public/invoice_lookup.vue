@@ -20,24 +20,28 @@
           </div>
 
         <b-form @submit.prevent="lookup">
-          <b-form-group label="Mã tra cứu" label-for="lookup-code">
+          <b-form-group label="Mã tra cứu" label-for="lookup-code" :state="state('code')">
             <b-form-input
               id="lookup-code"
               v-model.trim="form.code"
               autocomplete="off"
               placeholder="Ví dụ: 8D7F2A..."
               :disabled="loading"
+              :state="state('code')"
             />
+            <b-form-invalid-feedback :state="state('code')">{{ errors.code }}</b-form-invalid-feedback>
           </b-form-group>
 
-          <b-form-group label="Mã số thuế bên bán" label-for="lookup-taxcode">
+          <b-form-group label="Mã số thuế bên bán" label-for="lookup-taxcode" :state="state('taxcode')">
             <b-form-input
               id="lookup-taxcode"
               v-model.trim="form.taxcode"
               autocomplete="off"
               placeholder="Nhập MST công ty phát hành"
               :disabled="loading"
+              :state="state('taxcode')"
             />
+            <b-form-invalid-feedback :state="state('taxcode')">{{ errors.taxcode }}</b-form-invalid-feedback>
           </b-form-group>
 
           <b-alert v-if="error" show variant="danger" class="mb-3">{{ error }}</b-alert>
@@ -99,6 +103,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { firstError, hasErrors, required, taxCode } from '@/utils/validators'
 
 export default {
   name: 'PublicInvoiceLookup',
@@ -111,6 +116,7 @@ export default {
         code: '',
         taxcode: '',
       },
+      errors: {},
     }
   },
   computed: {
@@ -126,11 +132,27 @@ export default {
     if (this.form.code && this.form.taxcode) this.lookup()
   },
   methods: {
+    state(field) {
+      return this.errors[field] ? false : null
+    },
+    validate() {
+      this.errors = {
+        code: required(this.form.code, 'Vui lòng nhập mã tra cứu'),
+        taxcode: firstError([
+          required(this.form.taxcode, 'Vui lòng nhập mã số thuế bên bán'),
+          taxCode(this.form.taxcode),
+        ]),
+      }
+      Object.keys(this.errors).forEach(key => {
+        if (!this.errors[key]) delete this.errors[key]
+      })
+      return !hasErrors(this.errors)
+    },
     async lookup() {
       this.error = ''
       this.result = null
-      if (!this.form.code || !this.form.taxcode) {
-        this.error = 'Vui lòng nhập mã tra cứu và mã số thuế bên bán'
+      if (!this.validate()) {
+        this.error = firstError(Object.values(this.errors)) || 'Vui lòng kiểm tra lại thông tin tra cứu'
         return
       }
       this.loading = true

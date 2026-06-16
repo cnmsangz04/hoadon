@@ -170,22 +170,26 @@
             <b-form>
                 <b-row>
                     <b-col md="4">
-                        <b-form-group label="Mã sản phẩm">
+                        <b-form-group label="Mã sản phẩm" :state="state('code')">
                             <b-form-input
-                                v-model="form.code"
+                                v-model.trim="form.code"
                                 placeholder="Ví dụ: SP001"
                                 :disabled="!!form.id"
+                                :state="state('code')"
                                 required
                             />
+                            <b-form-invalid-feedback :state="state('code')">{{ errors.code }}</b-form-invalid-feedback>
                         </b-form-group>
                     </b-col>
                     <b-col md="8">
-                        <b-form-group label="Tên sản phẩm">
+                        <b-form-group label="Tên sản phẩm" :state="state('name')">
                             <b-form-input
-                                v-model="form.name"
+                                v-model.trim="form.name"
                                 placeholder="Nhập tên sản phẩm"
+                                :state="state('name')"
                                 required
                             />
+                            <b-form-invalid-feedback :state="state('name')">{{ errors.name }}</b-form-invalid-feedback>
                         </b-form-group>
                     </b-col>
 
@@ -210,11 +214,14 @@
                         </b-form-group>
                     </b-col>
                     <b-col md="4">
-                        <b-form-group label="Đơn giá">
+                        <b-form-group label="Đơn giá" :state="state('price')">
                             <b-form-input
                                 type="number"
                                 v-model.number="form.price"
+                                min="0"
+                                :state="state('price')"
                             />
+                            <b-form-invalid-feedback :state="state('price')">{{ errors.price }}</b-form-invalid-feedback>
                         </b-form-group>
                     </b-col>
                     <b-col md="4">
@@ -256,6 +263,7 @@
 <script>
 import axios from "@/plugins/axios";
 import { pageFrom, pageItems, pageTo, pageTotal } from "@/utils/pagination";
+import { firstError, hasErrors, numberRange, required } from "@/utils/validators";
 import PaginationBar from "@/views/components/pagination_bar.vue";
 
 export default {
@@ -310,6 +318,7 @@ export default {
                 description: "",
                 status: 1,
             },
+            errors: {},
         };
     },
     mounted() {
@@ -426,6 +435,7 @@ export default {
                 description: "",
                 status: 1,
             };
+            this.errors = {};
             // Không cần gán companyId vì phía backend tự lấy
             this.$refs.productModal.show();
         },
@@ -433,13 +443,33 @@ export default {
         // Mở Modal Cập nhật
         openEdit(item) {
             this.form = { ...item };
+            this.errors = {};
             this.$refs.productModal.show();
+        },
+
+        state(field) {
+            return this.errors[field] ? false : null;
+        },
+
+        validateForm() {
+            this.errors = {
+                code: required(this.form.code, "Vui lòng nhập mã sản phẩm"),
+                name: required(this.form.name, "Vui lòng nhập tên sản phẩm"),
+                price: firstError([
+                    required(this.form.price, "Vui lòng nhập đơn giá"),
+                    numberRange(this.form.price, 0, null, "Đơn giá không được âm"),
+                ]),
+            };
+            Object.keys(this.errors).forEach((key) => {
+                if (!this.errors[key]) delete this.errors[key];
+            });
+            return !hasErrors(this.errors);
         },
 
         // Lưu dữ liệu
         async saveData() {
-            if (!this.form.code || !this.form.name) {
-                this.$bvToast.toast("Mã và Tên không được để trống", {
+            if (!this.validateForm()) {
+                this.$bvToast.toast(firstError(Object.values(this.errors)) || "Vui lòng kiểm tra lại thông tin", {
                     variant: "warning",
                 });
                 return;

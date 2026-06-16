@@ -17,18 +17,20 @@
           </div>
 
           <b-form @submit.prevent="submit">
-            <b-form-group label="Tài khoản">
+            <b-form-group label="Tài khoản" :state="state('username')">
               <div class="input-with-icon">
                 <i class="bi bi-person"></i>
-                <b-form-input v-model.trim="username" required placeholder="Nhập tài khoản"></b-form-input>
+                <b-form-input v-model.trim="username" :state="state('username')" required placeholder="Nhập tài khoản"></b-form-input>
               </div>
+              <b-form-invalid-feedback :state="state('username')">{{ errors.username }}</b-form-invalid-feedback>
             </b-form-group>
 
-            <b-form-group label="Email tài khoản">
+            <b-form-group label="Email tài khoản" :state="state('companyEmail')">
               <div class="input-with-icon">
                 <i class="bi bi-envelope"></i>
-                <b-form-input v-model.trim="companyEmail" type="email" required placeholder="Nhập email tài khoản"></b-form-input>
+                <b-form-input v-model.trim="companyEmail" type="email" :state="state('companyEmail')" required placeholder="Nhập email tài khoản"></b-form-input>
               </div>
+              <b-form-invalid-feedback :state="state('companyEmail')">{{ errors.companyEmail }}</b-form-invalid-feedback>
             </b-form-group>
 
             <b-button type="submit" block variant="primary" class="submit-btn"
@@ -54,6 +56,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { email, firstError, hasErrors, required } from '@/utils/validators'
 
 export default {
   data() {
@@ -63,12 +66,29 @@ export default {
       loading: false,
       resending: false,
       lastRequestId: null,
-      canResend: false
+      canResend: false,
+      errors: {},
     }
   },
   methods: {
+    state(field) {
+      return this.errors[field] ? false : null
+    },
+    validate() {
+      this.errors = {
+        username: required(this.username, 'Vui lòng nhập tài khoản'),
+        companyEmail: firstError([
+          required(this.companyEmail, 'Vui lòng nhập email tài khoản'),
+          email(this.companyEmail),
+        ]),
+      }
+      Object.keys(this.errors).forEach(key => {
+        if (!this.errors[key]) delete this.errors[key]
+      })
+      return !hasErrors(this.errors)
+    },
     async submit() {
-      if (!this.username || !this.companyEmail) return
+      if (!this.validate()) return
       this.loading = true
       try {
         const res = await axios.post('/auth/forgot', {

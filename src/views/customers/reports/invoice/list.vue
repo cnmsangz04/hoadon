@@ -66,7 +66,7 @@
               :max="filters.toDate || undefined"
               size="sm"
               locale="vi"
-              :disabled="true"
+              :disabled="filters.periodType !== 'none'"
               placeholder="Từ ngày"
               :date-format-options="{ day: '2-digit', month: '2-digit', year: 'numeric' }"
             />
@@ -79,7 +79,7 @@
               :min="filters.fromDate || undefined"
               size="sm"
               locale="vi"
-              :disabled="true"
+              :disabled="filters.periodType !== 'none'"
               placeholder="Đến ngày"
               :date-format-options="{ day: '2-digit', month: '2-digit', year: 'numeric' }"
             />
@@ -102,6 +102,33 @@
         </b-col>
       </b-row>
     </b-card>
+
+    <b-row class="mb-3 report-summary">
+      <b-col md="3" sm="6" class="mb-2">
+        <div class="summary-tile summary-count">
+          <div class="summary-label">Số hóa đơn</div>
+          <div class="summary-value">{{ formatNumber(summary.invoiceCount) }}</div>
+        </div>
+      </b-col>
+      <b-col md="3" sm="6" class="mb-2">
+        <div class="summary-tile summary-goods">
+          <div class="summary-label">Tổng tiền hàng</div>
+          <div class="summary-value">{{ formatNumber(summary.totalBeforeTax) }}</div>
+        </div>
+      </b-col>
+      <b-col md="3" sm="6" class="mb-2">
+        <div class="summary-tile summary-tax">
+          <div class="summary-label">Tổng tiền thuế</div>
+          <div class="summary-value">{{ formatNumber(summary.totalVat) }}</div>
+        </div>
+      </b-col>
+      <b-col md="3" sm="6" class="mb-2">
+        <div class="summary-tile summary-total">
+          <div class="summary-label">Tổng thanh toán</div>
+          <div class="summary-value">{{ formatNumber(summary.totalAmount) }}</div>
+        </div>
+      </b-col>
+    </b-row>
 
     <!-- Bảng báo cáo hóa đơn -->
     <b-card class="shadow-sm">
@@ -194,6 +221,12 @@ export default {
         total: 0,
         from: 0,
         to: 0
+      },
+      summary: {
+        invoiceCount: 0,
+        totalBeforeTax: 0,
+        totalVat: 0,
+        totalAmount: 0
       },
       pageSizes: [10, 20, 50, 100],
       filters: {
@@ -333,6 +366,14 @@ export default {
       }
       return params
     },
+    normalizeSummary (summary) {
+      return {
+        invoiceCount: Number(summary?.invoiceCount || 0) || 0,
+        totalBeforeTax: Number(summary?.totalBeforeTax || 0) || 0,
+        totalVat: Number(summary?.totalVat || 0) || 0,
+        totalAmount: Number(summary?.totalAmount || 0) || 0
+      }
+    },
     normalizePageResponse (raw) {
       const list = { ...this.list }
       if (raw && Array.isArray(raw.items)) {
@@ -363,6 +404,7 @@ export default {
         const params = this.buildQueryParams()
         const { data } = await axios.get('/reports/invoices', { params })
         this.list = this.normalizePageResponse(data)
+        this.summary = this.normalizeSummary(data?.summary)
       } catch (e) {
         this.$bvToast && this.$bvToast.toast('Không thể tải dữ liệu báo cáo hóa đơn', { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 4000 })
       } finally {
@@ -474,4 +516,37 @@ export default {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+
+.summary-tile {
+  min-height: 86px;
+  border: 1px solid #e5e7eb;
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: #fff;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.summary-label {
+  color: #6c757d;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.summary-value {
+  color: #1f2937;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+
+.summary-count { border-left-color: #2563eb; }
+.summary-goods { border-left-color: #059669; }
+.summary-tax { border-left-color: #d97706; }
+.summary-total { border-left-color: #7c3aed; }
 </style>
