@@ -50,6 +50,7 @@ public class MailJobController extends BaseController {
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.status(403).build();
         }
+        permission("mail-job-list");
 
         int pageIndex = Math.max(page - 1, 0);
         int pageSize = Math.max(1, Math.min(size, 100));
@@ -78,6 +79,7 @@ public class MailJobController extends BaseController {
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.status(403).build();
         }
+        permission("mail-job-retry");
 
         MailJobEntity oldJob = mailJobRepository.findById(id).orElse(null);
         if (oldJob == null || oldJob.getCompanyId() == null || !oldJob.getCompanyId().equals(user.getCompanyId())) {

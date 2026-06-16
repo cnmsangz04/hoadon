@@ -76,6 +76,13 @@
       meta: { requiresAdmin: true, title: "Trạng thái email gửi hóa đơn" },
     },
     {
+      path: "telegram/config",
+      name: "admin-telegram-config",
+      component: () =>
+        import("../../views/administrators/telegram/config.vue"),
+      meta: { requiresAdmin: true, title: "Cấu hình Telegram" },
+    },
+    {
       path: "sessions/list",
       name: "admin-sessions",
       component: () =>

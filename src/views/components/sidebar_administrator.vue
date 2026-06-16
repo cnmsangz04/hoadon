@@ -76,6 +76,7 @@ export default {
         { title: 'Thuế suất', icon: 'fas fa-percent', to: '/administrator/vat-rate/list' },
         { title: 'Email template', icon: 'fas fa-envelope', to: '/administrator/email-template/list' },
         { title: 'Trạng thái email', icon: 'fas fa-history', to: '/administrator/email/mail-history' },
+        { title: 'Telegram', icon: 'fab fa-telegram-plane', to: '/administrator/telegram/config' },
         { title: 'Phiên đăng nhập', icon: 'fas fa-desktop', to: '/administrator/sessions/list' },
         {
           title: 'Phân quyền',

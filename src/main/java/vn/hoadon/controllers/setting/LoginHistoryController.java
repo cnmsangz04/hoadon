@@ -104,6 +104,7 @@ public class LoginHistoryController extends BaseController {
         if (actor == null || actor.getRole() == null || actor.getRole() >= 2) {
             throw new AccessDeniedException("Bạn không có quyền xem lịch sử đăng nhập");
         }
+        permission("setting-login-history");
         return actor;
     }
 

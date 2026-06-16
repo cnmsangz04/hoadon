@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.services.TelegramDailyInvoiceReportService;
 import vn.hoadon.services.TelegramNotificationService;
 
@@ -15,7 +16,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/v1/administrator/telegram-report")
-public class TelegramReportAdminController {
+public class TelegramReportAdminController extends BaseController {
+
+    private static final String PERMISSION_KEY = "telegram-config-manage";
 
     private final TelegramDailyInvoiceReportService reportService;
     private final TelegramNotificationService telegramNotificationService;
@@ -29,9 +32,10 @@ public class TelegramReportAdminController {
     @PostMapping("/send")
     public ResponseEntity<?> send(@RequestParam(name = "date", required = false)
                                   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        permission(PERMISSION_KEY);
         if (!telegramNotificationService.isConfigured()) {
             return ResponseEntity.badRequest().body(Map.of(
-                    "message", "Chưa bật TELEGRAM_ENABLED hoặc thiếu TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID"
+                    "message", "Chưa bật cấu hình Telegram hoặc thiếu Bot Token/Group Chat ID"
             ));
         }
         LocalDate reportDate = date != null ? date : LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).minusDays(1);

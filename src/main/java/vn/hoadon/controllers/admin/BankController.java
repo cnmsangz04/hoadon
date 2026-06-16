@@ -28,6 +28,7 @@ public class BankController extends BaseController {
             @RequestBody BankFilterDTO filter,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        permission("bank-list");
 
         Pageable pageable = PageRequest.of(
                 page,
@@ -72,6 +73,7 @@ public class BankController extends BaseController {
 
     @GetMapping("/all")
     public Map<String, Object> listAll(@RequestParam(required = false) Integer status) {
+        permission("bank-list");
         Map<String, Object> res = new HashMap<>();
         res.put("data", bankService.list(status));
         return res;
@@ -79,11 +81,13 @@ public class BankController extends BaseController {
 
     @GetMapping("/{abbreviation}")
     public BankEntity getByAbbreviation(@PathVariable String abbreviation) {
+        permission("bank-list");
         return bankService.findByAbbreviation(abbreviation).orElse(null);
     }
 
     @PostMapping("/save")
     public ResponseEntity<?> save(@RequestBody BankEntity bank) {
+        permission("bank-save");
         try {
 			/*
 			 * if (bank.getId() == null &&

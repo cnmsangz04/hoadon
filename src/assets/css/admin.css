@@ -297,10 +297,405 @@ body.nav-sm #app .main-container > .sidebar .menu-item i {
   font-weight: 700;
 }
 
+#app .modal-dialog {
+  margin-top: 1.75rem;
+  margin-bottom: 1.75rem;
+}
+
+#app .modal-content {
+  border: 1px solid var(--ui-border-soft);
+  border-radius: 10px;
+  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+#app .modal-header {
+  align-items: center;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-bottom: 1px solid var(--ui-border-soft);
+  padding: 14px 18px;
+}
+
+#app .modal-header .close {
+  align-items: center;
+  border-radius: 999px;
+  color: #64748b;
+  display: inline-flex;
+  font-size: 22px;
+  height: 32px;
+  justify-content: center;
+  margin: -4px -6px -4px auto;
+  opacity: 1;
+  padding: 0;
+  width: 32px;
+}
+
+#app .modal-header .close:hover {
+  background: #eef2f7;
+  color: #334155;
+}
+
 #app .modal-body,
 #app .modal-footer,
 #app .modal-header {
   font-size: 13px;
+}
+
+#app .modal-body {
+  background: #fff;
+  padding: 18px;
+}
+
+#app .modal-body .form-group {
+  margin-bottom: 16px;
+}
+
+#app .modal-body .form-group:last-child {
+  margin-bottom: 0;
+}
+
+#app .modal-body .form-row {
+  margin-left: -6px;
+  margin-right: -6px;
+}
+
+#app .modal-body .form-row > .col,
+#app .modal-body .form-row > [class*="col-"] {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+#app .modal-body .form-control,
+#app .modal-body .custom-select,
+#app .modal-body .vs__dropdown-toggle {
+  background-color: #fff;
+}
+
+#app .modal-body .form-control::placeholder {
+  color: #94a3b8;
+}
+
+#app .modal-footer {
+  align-items: center;
+  background: #f8fafc;
+  border-top: 1px solid var(--ui-border-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 12px 18px;
+}
+
+#app .modal-footer > * {
+  margin: 0;
+}
+
+#app .modal-footer .btn,
+#app .modal-body form > .text-right:last-child .btn,
+#app .modal-body .modal-actions .btn,
+#app .modal-body .form-actions .btn,
+#app .modal-body .member-modal-actions .btn {
+  min-width: 78px;
+}
+
+#app .modal-body form > .text-right:last-child,
+#app .modal-body .modal-actions,
+#app .modal-body .form-actions,
+#app .modal-body .member-modal-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+#app .modal-body .text-right .btn + .btn,
+#app .modal-body .d-flex .btn + .btn,
+#app .modal-footer .btn + .btn {
+  margin-left: 0;
+}
+
+#app .modal-body .input-group > .input-group-append > .btn,
+#app .modal-body .input-group > .input-group-prepend > .btn {
+  min-width: auto;
+}
+
+/* BootstrapVue teleports modals to body, so modal standards must also be global. */
+body .modal-dialog {
+  margin-top: 1.75rem;
+  margin-bottom: 1.75rem;
+}
+
+body .modal-content {
+  border: 1px solid var(--ui-border-soft);
+  border-radius: 10px;
+  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+body .modal-header {
+  align-items: center;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-bottom: 1px solid var(--ui-border-soft);
+  font-size: 13px;
+  padding: 14px 18px;
+}
+
+body .modal-title {
+  color: var(--ui-text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+body .modal-header .close {
+  align-items: center;
+  border-radius: 999px;
+  color: #64748b;
+  display: inline-flex;
+  font-size: 22px;
+  height: 32px;
+  justify-content: center;
+  margin: -4px -6px -4px auto;
+  opacity: 1;
+  padding: 0;
+  width: 32px;
+}
+
+body .modal-header .close:hover {
+  background: #eef2f7;
+  color: #334155;
+}
+
+body .modal-body {
+  background: #fff;
+  color: var(--ui-text);
+  font-size: 13px;
+  padding: 18px;
+}
+
+body .modal-body .form-group {
+  margin-bottom: 16px;
+}
+
+body .modal-body .form-group:last-child {
+  margin-bottom: 0;
+}
+
+body .modal-body .form-row {
+  margin-left: -6px;
+  margin-right: -6px;
+}
+
+body .modal-body .form-row > .col,
+body .modal-body .form-row > [class*="col-"] {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+body .modal-body label,
+body .modal-body .form-label,
+body .modal-body .col-form-label {
+  color: #334155;
+  font-size: 13px !important;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+body .modal-body .form-control,
+body .modal-body .custom-select,
+body .modal-body .custom-file-label,
+body .modal-body .input-group-text {
+  min-height: var(--ui-control-height);
+  height: var(--ui-control-height);
+  border-color: var(--ui-border);
+  border-radius: var(--ui-radius);
+  color: var(--ui-text);
+  font-size: 13px !important;
+  line-height: 1.35;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+body .modal-body textarea.form-control {
+  height: auto;
+  min-height: 72px;
+}
+
+body .modal-body .form-control:focus,
+body .modal-body .custom-select:focus,
+body .modal-body .custom-file-input:focus ~ .custom-file-label {
+  border-color: #7aa7f7;
+  box-shadow: var(--ui-focus);
+}
+
+body .modal-body .form-control::placeholder {
+  color: #94a3b8;
+}
+
+body .modal-body .vs__dropdown-toggle {
+  min-height: var(--ui-control-height);
+  border-color: var(--ui-border);
+  border-radius: var(--ui-radius);
+  padding: 0 6px;
+}
+
+body .modal-body .vs__selected,
+body .modal-body .vs__search,
+body .modal-body .vs__dropdown-option {
+  color: var(--ui-text);
+  font-size: 13px !important;
+}
+
+body .modal .btn {
+  min-height: var(--ui-control-height);
+  border-radius: var(--ui-radius);
+  font-size: 13px !important;
+  font-weight: 600;
+  line-height: 1.25;
+  padding: 7px 12px;
+}
+
+body .modal .btn-sm {
+  min-height: var(--ui-control-height-sm);
+  font-size: 13px !important;
+  padding: 6px 10px;
+}
+
+body .modal .btn-link,
+body .modal .dropdown-toggle.btn-link {
+  min-height: var(--ui-control-height-sm);
+  color: #2563eb;
+  font-weight: 600;
+  padding: 5px 8px;
+}
+
+body .modal .badge {
+  border-radius: 999px;
+  font-size: 12px !important;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 5px 9px;
+}
+
+body .modal-footer {
+  align-items: center;
+  background: #f8fafc;
+  border-top: 1px solid var(--ui-border-soft);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 13px;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 12px 18px;
+}
+
+body .modal-footer > * {
+  margin: 0;
+}
+
+body .modal-footer .btn,
+body .modal-body form > .text-right:last-child .btn,
+body .modal-body .modal-actions .btn,
+body .modal-body .form-actions .btn,
+body .modal-body .member-modal-actions .btn {
+  min-width: 78px;
+}
+
+body .modal-body form > .text-right:last-child,
+body .modal-body .modal-actions,
+body .modal-body .form-actions,
+body .modal-body .member-modal-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+body .modal-body .text-right .btn + .btn,
+body .modal-body .d-flex .btn + .btn,
+body .modal-footer .btn + .btn {
+  margin-left: 0;
+}
+
+body .modal-body .input-group > .input-group-append > .btn,
+body .modal-body .input-group > .input-group-prepend > .btn {
+  min-width: auto;
+}
+
+body .role-modal-content {
+  border-radius: 10px;
+}
+
+body .role-modal-body {
+  max-height: 72vh;
+  overflow: auto;
+}
+
+body .role-modal-body .section-card {
+  border: 1px solid var(--ui-border-soft);
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+body .role-modal-body .section-card .card-body {
+  padding: 14px;
+}
+
+body .role-modal-body .perm-group {
+  border: 1px solid var(--ui-border-soft);
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+body .role-modal-body .perm-group .card-body {
+  padding: 12px;
+}
+
+body .role-modal-body .perm-group-header {
+  border-bottom: 1px dashed var(--ui-border-soft);
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+body .role-modal-body .perm-row {
+  align-items: center;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 9px 10px;
+}
+
+body .role-modal-body .perm-row + .perm-row {
+  margin-top: 8px;
+}
+
+body .role-modal-body .perm-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+body .role-modal-body .perm-name {
+  flex: 1 1 100%;
+  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+body .role-modal-body .perm-code {
+  color: var(--ui-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+body .role-modal-body .perm-actions {
+  flex: 0 0 auto;
 }
 
 #app .page-link {

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.MailJobEntity;
 import vn.hoadon.entity.MailTemplateEntity;
@@ -33,7 +34,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/v1/administrator/mail-jobs")
-public class MailJobAdminController {
+public class MailJobAdminController extends BaseController {
 
     @Autowired private MailJobRepository mailJobRepository;
     @Autowired private MailTemplateRepository mailTemplateRepository;
@@ -46,6 +47,7 @@ public class MailJobAdminController {
                                   @RequestParam(name = "status", required = false) String status,
                                   @RequestParam(name = "page", defaultValue = "1") int page,
                                   @RequestParam(name = "size", defaultValue = "10") int size) {
+        permission("admin-mail-job-list");
         int pageIndex = Math.max(page - 1, 0);
         int pageSize = Math.max(1, Math.min(size, 100));
         Pageable pageable = PageRequest.of(pageIndex, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -69,6 +71,7 @@ public class MailJobAdminController {
 
     @PostMapping("/{id}/retry")
     public ResponseEntity<?> retry(@PathVariable("id") Long id) {
+        permission("admin-mail-job-retry");
         MailJobEntity oldJob = mailJobRepository.findById(id).orElse(null);
         if (oldJob == null) {
             return ResponseEntity.status(404).body(Map.of("message", "Không tìm thấy lịch sử gửi mail"));

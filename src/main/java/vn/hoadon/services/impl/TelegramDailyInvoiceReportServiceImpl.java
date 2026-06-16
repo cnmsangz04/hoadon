@@ -1,11 +1,12 @@
 package vn.hoadon.services.impl;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import vn.hoadon.entity.CompanyEntity;
+import vn.hoadon.entity.TelegramConfigEntity;
 import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.InvoiceRepository;
+import vn.hoadon.repositories.TelegramConfigRepository;
 import vn.hoadon.services.TelegramDailyInvoiceReportService;
 import vn.hoadon.services.TelegramNotificationService;
 
@@ -28,16 +29,16 @@ public class TelegramDailyInvoiceReportServiceImpl implements TelegramDailyInvoi
     private final InvoiceRepository invoiceRepository;
     private final CompanyRepository companyRepository;
     private final TelegramNotificationService telegramNotificationService;
-
-    @Value("${telegram.time-zone:Asia/Ho_Chi_Minh}")
-    private String timeZone;
+    private final TelegramConfigRepository telegramConfigRepository;
 
     public TelegramDailyInvoiceReportServiceImpl(InvoiceRepository invoiceRepository,
                                                  CompanyRepository companyRepository,
-                                                 TelegramNotificationService telegramNotificationService) {
+                                                 TelegramNotificationService telegramNotificationService,
+                                                 TelegramConfigRepository telegramConfigRepository) {
         this.invoiceRepository = invoiceRepository;
         this.companyRepository = companyRepository;
         this.telegramNotificationService = telegramNotificationService;
+        this.telegramConfigRepository = telegramConfigRepository;
     }
 
     @Override
@@ -49,7 +50,7 @@ public class TelegramDailyInvoiceReportServiceImpl implements TelegramDailyInvoi
 
         String title = "<b>Báo cáo hóa đơn ngày " + escape(reportDate.format(DATE_FORMAT)) + "</b>";
         if (counts == null || counts.isEmpty()) {
-            return title + "\nKhông phát sinh hóa đơn đã ký, đã gửi thuế hoặc không đủ điều kiện cấp mã.";
+            return title + "\nKhông có hóa đơn cần kiểm tra.";
         }
 
         Map<Integer, Map<Short, Long>> byCompany = new LinkedHashMap<>();
@@ -94,15 +95,32 @@ public class TelegramDailyInvoiceReportServiceImpl implements TelegramDailyInvoi
 
     @Override
     public void sendYesterdayReport() {
-        ZoneId zoneId = ZoneId.of(timeZone == null || timeZone.isBlank() ? "Asia/Ho_Chi_Minh" : timeZone);
-        sendReport(LocalDate.now(zoneId).minusDays(1));
+        sendReport(LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).minusDays(1));
     }
 
-    @Scheduled(cron = "${telegram.daily-cron:0 0 1 * * *}", zone = "${telegram.time-zone:Asia/Ho_Chi_Minh}")
+    @Scheduled(cron = "0 * * * * *", zone = "Asia/Ho_Chi_Minh")
     public void scheduledDailyReport() {
-        if (telegramNotificationService.isConfigured()) {
-            sendYesterdayReport();
+        TelegramConfigEntity config = telegramConfigRepository.findTopByOrderByIdDesc().orElse(null);
+        if (!isDue(config)) return;
+        LocalDate reportDate = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).minusDays(1);
+        sendReport(reportDate);
+        config.setLastReportDate(reportDate);
+        config.setLastSentAt(LocalDateTime.now());
+        telegramConfigRepository.save(config);
+    }
+
+    private boolean isDue(TelegramConfigEntity config) {
+        if (config == null || !Boolean.TRUE.equals(config.getEnabled()) || !telegramNotificationService.isConfigured()) {
+            return false;
         }
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        int hour = config.getDailyHour() != null ? config.getDailyHour() : 1;
+        int minute = config.getDailyMinute() != null ? config.getDailyMinute() : 0;
+        if (now.getHour() != hour || now.getMinute() != minute) {
+            return false;
+        }
+        LocalDate reportDate = now.toLocalDate().minusDays(1);
+        return config.getLastReportDate() == null || !config.getLastReportDate().equals(reportDate);
     }
 
     private String escape(String value) {

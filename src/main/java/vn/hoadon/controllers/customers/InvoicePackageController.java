@@ -31,11 +31,13 @@ public class InvoicePackageController extends BaseController {
 
     @GetMapping
     public ResponseEntity<List<InvoicePackageResponseDTO>> activePackages() {
+        permission("invoice-package-purchase");
         return ResponseEntity.ok(service.listActivePackages());
     }
 
     @PostMapping("/purchase")
     public ResponseEntity<?> purchase(@RequestBody InvoicePackagePurchaseRequestDTO dto) {
+        permission("invoice-package-purchase");
         UserEntity user = currentUser();
         InvoicePackagePurchaseDTO result = service.purchase(
                 dto != null ? dto.getPackageId() : null,
@@ -56,6 +58,7 @@ public class InvoicePackageController extends BaseController {
 
     @PostMapping("/purchases/{id}/retry-payment")
     public ResponseEntity<?> retryPayment(@PathVariable Long id) {
+        permission("invoice-package-purchase");
         InvoicePackagePurchaseDTO result = service.retryPayment(id, currentUser());
         boolean momoPending = isMomoPayment(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
         boolean vnpayPending = "VNPAY".equals(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
@@ -105,6 +108,7 @@ public class InvoicePackageController extends BaseController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+        permission("invoice-package-purchase");
         UserEntity user = currentUser();
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.badRequest().build();
@@ -115,6 +119,7 @@ public class InvoicePackageController extends BaseController {
 
     @GetMapping("/purchases/{id}")
     public ResponseEntity<InvoicePackagePurchaseDTO> getMyPurchase(@PathVariable Long id) {
+        permission("invoice-package-purchase");
         return ResponseEntity.ok(service.getMyPurchase(id, currentUser()));
     }
 

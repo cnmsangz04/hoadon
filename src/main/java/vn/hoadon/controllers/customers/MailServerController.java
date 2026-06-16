@@ -28,6 +28,7 @@ public class MailServerController extends BaseController {
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.status(401).body(Map.of("message", "Chưa đăng nhập"));
         }
+        permission("mail-server-manage");
         Optional<MailServerEntity> opt = mailServerRepository
                 .findFirstByCompanyIdAndStatusOrderByIdDesc(user.getCompanyId().intValue(), (short) 1);
 
@@ -45,6 +46,7 @@ public class MailServerController extends BaseController {
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.status(401).body(Map.of("message", "Chưa đăng nhập"));
         }
+        permission("mail-server-manage");
 
         int companyId = user.getCompanyId().intValue();
 
@@ -88,6 +90,7 @@ public class MailServerController extends BaseController {
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.status(401).body(Map.of("message", "Chưa đăng nhập"));
         }
+        permission("mail-server-manage");
 
         Optional<MailServerEntity> opt = mailServerRepository
                 .findFirstByCompanyIdAndStatusOrderByIdDesc(user.getCompanyId().intValue(), (short) 1);

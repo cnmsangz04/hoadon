@@ -105,6 +105,7 @@ public class IpSecurityController extends BaseController {
         if (actor.getCompanyId() == null) {
             throw new AccessDeniedException("Không xác định được công ty hiện tại");
         }
+        permission("setting-security-ip");
         return actor;
     }
 

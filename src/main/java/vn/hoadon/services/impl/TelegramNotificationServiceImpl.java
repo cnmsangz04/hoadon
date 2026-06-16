@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import vn.hoadon.entity.TelegramConfigEntity;
+import vn.hoadon.repositories.TelegramConfigRepository;
 import vn.hoadon.services.TelegramNotificationService;
+import vn.hoadon.util.AesEncryptor;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -22,18 +24,15 @@ public class TelegramNotificationServiceImpl implements TelegramNotificationServ
 
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
+    private final TelegramConfigRepository telegramConfigRepository;
+    private final AesEncryptor aesEncryptor;
 
-    @Value("${telegram.enabled:false}")
-    private boolean enabled;
-
-    @Value("${telegram.bot-token:}")
-    private String botToken;
-
-    @Value("${telegram.chat-id:}")
-    private String chatId;
-
-    public TelegramNotificationServiceImpl(ObjectMapper objectMapper) {
+    public TelegramNotificationServiceImpl(ObjectMapper objectMapper,
+                                           TelegramConfigRepository telegramConfigRepository,
+                                           AesEncryptor aesEncryptor) {
         this.objectMapper = objectMapper;
+        this.telegramConfigRepository = telegramConfigRepository;
+        this.aesEncryptor = aesEncryptor;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -41,26 +40,28 @@ public class TelegramNotificationServiceImpl implements TelegramNotificationServ
 
     @Override
     public boolean isConfigured() {
-        return enabled
-                && botToken != null && !botToken.isBlank()
-                && chatId != null && !chatId.isBlank();
+        return telegramConfigRepository.findTopByOrderByIdDesc()
+                .map(this::isUsable)
+                .orElse(false);
     }
 
     @Override
     public void sendMessage(String text) {
-        if (!isConfigured()) {
-            log.info("[Telegram] Notification skipped because telegram.enabled/token/chat-id is not configured");
+        TelegramConfigEntity config = telegramConfigRepository.findTopByOrderByIdDesc().orElse(null);
+        if (!isUsable(config)) {
+            log.info("[Telegram] Notification skipped because telegram config is not enabled or incomplete");
             return;
         }
         try {
+            String token = aesEncryptor.decrypt(config.getBotToken());
             String body = objectMapper.writeValueAsString(Map.of(
-                    "chat_id", chatId.trim(),
+                    "chat_id", config.getChatId().trim(),
                     "text", text,
                     "parse_mode", "HTML",
                     "disable_web_page_preview", true
             ));
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.telegram.org/bot" + botToken.trim() + "/sendMessage"))
+                    .uri(URI.create("https://api.telegram.org/bot" + token.trim() + "/sendMessage"))
                     .timeout(Duration.ofSeconds(20))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(body))
@@ -75,5 +76,12 @@ public class TelegramNotificationServiceImpl implements TelegramNotificationServ
             log.warn("[Telegram] Failed to send notification: {}", ex.getMessage());
             throw new RuntimeException("Không thể gửi thông báo Telegram", ex);
         }
+    }
+
+    private boolean isUsable(TelegramConfigEntity config) {
+        return config != null
+                && Boolean.TRUE.equals(config.getEnabled())
+                && config.getBotToken() != null && !config.getBotToken().isBlank()
+                && config.getChatId() != null && !config.getChatId().isBlank();
     }
 }
