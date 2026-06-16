@@ -24,9 +24,11 @@
 
       <!-- Chuông thông báo theo mẫu -->
       <li v-if="!isCompanyPending" class="nav-item bell-notify pl-0 pr-1">
-        <a href="javascript:void(0)" class="info-number circle-icon-top position-relative" v-b-toggle.sidebar-right>
-          <i class="far fa-bell text-danger"></i>
-          <span v-if="list.length > 0" class="badge badge-danger badge-pill notification-badge">{{ list.length > 9 ? '9+' : list.length }}</span>
+        <a href="javascript:void(0)" class="info-number circle-icon-top position-relative" v-b-toggle.sidebar-right @click="markNotificationsRead">
+          <i :class="unreadNotificationCount > 0 ? 'far fa-bell text-danger' : 'far fa-bell text-muted'"></i>
+          <span v-if="unreadNotificationCount > 0" class="badge badge-danger badge-pill notification-badge">
+            {{ unreadNotificationCount > 9 ? '9+' : unreadNotificationCount }}
+          </span>
         </a>
       </li>
 
@@ -39,9 +41,6 @@
         <b-dropdown-item v-if="!isCompanyPending" to="/setting">
           <i class="fas fa-user"></i> Tài khoản
         </b-dropdown-item>
-        <b-dropdown-item v-if="!isCompanyPending" to="/help-support">
-          <i class="fas fa-life-ring"></i> Hỗ trợ
-        </b-dropdown-item>
         <b-dropdown-item v-if="!isCompanyPending && showAdminLink" to="/auth/login-admin">
           <i class="fas fa-shield-alt"></i> Quản trị
         </b-dropdown-item>
@@ -51,7 +50,15 @@
       </b-dropdown>
     </nav>
 
-    <b-sidebar v-if="!isCompanyPending" id="sidebar-right" title="Thông báo" right shadow>
+    <b-sidebar
+      v-if="!isCompanyPending"
+      id="sidebar-right"
+      title="Thông báo"
+      right
+      shadow
+      @shown="handleNotificationsShown"
+      @hidden="handleNotificationsHidden"
+    >
       <ul class="list-unstyled p-2">
         <b-media tag="li" v-for="item in list" :key="item.id" class="mb-2">
           <template #aside>
@@ -128,6 +135,8 @@ export default {
       },
       pollingInterval: null,
       lastNotificationCount: 0,
+      notificationsOpen: false,
+      readNotificationKeys: [],
       limitReminder: {
         show: false,
         threshold: 0,
@@ -166,6 +175,9 @@ export default {
     isCompanyPending() {
       const status = this.$app?.info?.company?.status ?? localStorage.getItem('company-status')
       return String(status) === '2'
+    },
+    unreadNotificationCount() {
+      return this.list.filter(item => !this.isNotificationRead(item)).length
     }
   },
   created() {
@@ -222,6 +234,8 @@ export default {
       }
     } catch {}
 
+    this.loadNotificationReadState()
+
     // Lấy thông báo gần đây (tối đa 10) từ lịch sử theo điều kiện yêu cầu
     if (!this.isCompanyPending) this.fetchNotifications()
 
@@ -239,6 +253,11 @@ export default {
           })
       }
     } catch {}
+  },
+  watch: {
+    '$route.path'() {
+      document.body.classList.remove('show-sidebar')
+    }
   },
   mounted() {
     // Đảm bảo đã gọi /auth/info để có role/company dù JWT thiếu role; cập nhật đúng $app toàn cục
@@ -264,6 +283,7 @@ export default {
             this.list = []
             this.stopPolling()
           } else {
+            this.loadNotificationReadState()
             this.fetchNotifications()
             this.startPolling()
             this.checkInvoiceLimitReminder({ oncePerLogin: true })
@@ -290,15 +310,109 @@ export default {
       const n = (name || '').trim()
       return n ? n.charAt(0).toUpperCase() : '?'
     },
-    reloadData() {
-      this.reloading = true;
-      setTimeout(() => { this.reloading = false }, 2000);
-      if (!this.isCompanyPending) this.fetchNotifications()
-      this.checkInvoiceLimitReminder({ oncePerLogin: true })
+    async reloadData() {
+      if (this.reloading) return
+      this.reloading = true
+      const startedAt = Date.now()
+      let refreshedCurrentPage = false
+      try {
+        refreshedCurrentPage = await this.refreshCurrentPage()
+        if (!refreshedCurrentPage) this.forceCurrentRouteRefresh()
+
+        const jobs = []
+        if (!this.isCompanyPending) jobs.push(this.fetchNotifications())
+        jobs.push(this.checkInvoiceLimitReminder({ oncePerLogin: true }))
+        await Promise.allSettled(jobs)
+      } catch (error) {
+        console.debug('Reload current page failed:', error)
+        try { this.$toastr && this.$toastr.error('Không thể làm mới dữ liệu') } catch {}
+      } finally {
+        const elapsed = Date.now() - startedAt
+        if (elapsed < 350) await this.delay(350 - elapsed)
+        this.reloading = false
+      }
+    },
+    delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms))
+    },
+    forceCurrentRouteRefresh() {
+      try {
+        window.dispatchEvent(new CustomEvent('app-force-route-refresh', {
+          detail: { path: this.$route?.fullPath || window.location.pathname }
+        }))
+      } catch {}
+    },
+    async refreshCurrentPage() {
+      const parent = this.$parent
+      const roots = []
+      const pageView = this.normalizeComponentRef(parent?.$refs?.pageView)
+      if (pageView) roots.push(pageView)
+      if (parent && Array.isArray(parent.$children)) {
+        roots.push(...parent.$children.filter(child => child && child !== this))
+      }
+
+      const seen = new Set()
+      for (const root of roots) {
+        if (await this.refreshComponent(root, seen)) return true
+      }
+      return false
+    },
+    normalizeComponentRef(ref) {
+      return Array.isArray(ref) ? ref[0] : ref
+    },
+    async refreshComponent(component, seen) {
+      if (!component || seen.has(component)) return false
+      seen.add(component)
+
+      const methodNames = [
+        'reload',
+        'refresh',
+        'refreshPage',
+        'loadStatistics',
+        'loadData',
+        'fetchList',
+        'fetchData',
+        'loadList',
+        'getData',
+        'getList',
+        'importData',
+        'onRefresh'
+      ]
+      for (const name of methodNames) {
+        if (typeof component[name] === 'function') {
+          await component[name]()
+          return true
+        }
+      }
+
+      const refs = component.$refs || {}
+      for (const key of Object.keys(refs)) {
+        const values = Array.isArray(refs[key]) ? refs[key] : [refs[key]]
+        for (const ref of values) {
+          if (ref && !seen.has(ref) && typeof ref.refresh === 'function') {
+            seen.add(ref)
+            await ref.refresh()
+            return true
+          }
+        }
+      }
+
+      const children = component.$children || []
+      for (const child of children) {
+        if (await this.refreshComponent(child, seen)) return true
+      }
+      return false
     },
     menuToggle() {
-      document.body.classList.toggle('nav-sm');
-      document.body.classList.toggle('nav-md');
+      const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches
+      if (isMobile) {
+        document.body.classList.remove('nav-sm', 'nav-md')
+        document.body.classList.toggle('show-sidebar')
+        return
+      }
+      document.body.classList.toggle('nav-sm')
+      document.body.classList.remove('show-sidebar')
+      document.body.classList.toggle('nav-md', !document.body.classList.contains('nav-sm'))
     },
     logout() {
       const currentPath = window.location.pathname;
@@ -351,8 +465,9 @@ export default {
           const uname = r.username ?? r.userName ?? r.user_name ?? r.user ?? ''
           const uid = r.userId ?? r.user_id
           const hasUser = uid != null && String(uid).trim() !== '' && Number(uid) > 0
+          const id = r.id ?? r._id ?? r.uuid ?? [created || '', String(title).trim(), uid ?? 'system'].join(':')
           return {
-            id: r.id ?? r._id ?? r.uuid ?? Math.random().toString(36).slice(2),
+            id,
             title: String(title).trim(),
             description: r.description ?? r.detail ?? '',
             username: hasUser ? (String(uname || '').trim() || 'Hệ thống') : 'Hệ thống',
@@ -360,6 +475,7 @@ export default {
             avatar: r.avatar ?? null,
           }
         })
+        if (this.notificationsOpen) this.markNotificationsRead()
 
         // Kiểm tra có thông báo mới không (so sánh số lượng hoặc ID)
         if (oldList.length > 0 && this.list.length > oldList.length) {
@@ -382,6 +498,63 @@ export default {
         console.debug('Fetch notifications failed:', e)
         this.list = []
       }
+    },
+    resolveNotificationReadKey() {
+      let tokenHash = ''
+      try {
+        const path = window.location?.pathname || ''
+        const isAdmin = /administrator|admin/.test(path)
+        const primaryKey = isAdmin ? 'token-admin' : 'token'
+        const altKey = isAdmin ? 'token' : 'token-admin'
+        const token = localStorage.getItem(primaryKey) || localStorage.getItem(altKey) || ''
+        if (token) {
+          let hash = 0
+          for (let i = 0; i < token.length; i += 1) {
+            hash = ((hash * 31) + token.charCodeAt(i)) >>> 0
+          }
+          tokenHash = hash.toString(36)
+        }
+      } catch {}
+      const context = this.isCustomerContext() ? 'customer' : 'admin'
+      const account = tokenHash || this.app.auth.username || this.$app?.info?.user?.username || 'anonymous'
+      return `notification-read:${context}:${account}`
+    },
+    normalizeNotificationKey(item) {
+      if (!item) return ''
+      const raw = item.id ?? [item.created_at || '', item.title || '', item.username || ''].join(':')
+      return String(raw || '').trim()
+    },
+    loadNotificationReadState() {
+      try {
+        const raw = localStorage.getItem(this.resolveNotificationReadKey())
+        const parsed = raw ? JSON.parse(raw) : []
+        this.readNotificationKeys = Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : []
+      } catch {
+        this.readNotificationKeys = []
+      }
+    },
+    saveNotificationReadState(keys) {
+      const unique = Array.from(new Set((keys || []).map(String).filter(Boolean))).slice(-200)
+      this.readNotificationKeys = unique
+      try {
+        localStorage.setItem(this.resolveNotificationReadKey(), JSON.stringify(unique))
+      } catch {}
+    },
+    isNotificationRead(item) {
+      const key = this.normalizeNotificationKey(item)
+      return key ? this.readNotificationKeys.includes(key) : false
+    },
+    markNotificationsRead() {
+      const currentKeys = this.list.map(item => this.normalizeNotificationKey(item)).filter(Boolean)
+      if (currentKeys.length === 0) return
+      this.saveNotificationReadState([...(this.readNotificationKeys || []), ...currentKeys])
+    },
+    handleNotificationsShown() {
+      this.notificationsOpen = true
+      this.markNotificationsRead()
+    },
+    handleNotificationsHidden() {
+      this.notificationsOpen = false
     },
     startPolling() {
       if (this.isCompanyPending) return

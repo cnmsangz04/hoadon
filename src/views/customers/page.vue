@@ -9,7 +9,7 @@
 
       <!-- Nội dung chính -->
       <div class="content">
-        <router-view />
+        <router-view ref="pageView" :key="routeRefreshKey + ':' + $route.fullPath" />
       </div>
     </div>
 
@@ -30,7 +30,13 @@ export default {
     Sidebar,
     Footer
   },
+  data () {
+    return {
+      routeRefreshKey: 0
+    }
+  },
   mounted () {
+    window.addEventListener('app-force-route-refresh', this.forceRouteRefresh)
     window.$crisp = [];
     window.CRISP_WEBSITE_ID = 'b7a71c3f-2527-40e3-a16d-6b1913b4dedc';
     if (!document.getElementById('crisp-sdk')) {
@@ -39,6 +45,14 @@ export default {
       script.src = 'https://client.crisp.chat/l.js';
       script.async = true;
       document.head.appendChild(script);
+    }
+  },
+  beforeDestroy () {
+    window.removeEventListener('app-force-route-refresh', this.forceRouteRefresh)
+  },
+  methods: {
+    forceRouteRefresh () {
+      this.routeRefreshKey += 1
     }
   }
 }

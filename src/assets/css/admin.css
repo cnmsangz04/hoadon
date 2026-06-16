@@ -31,6 +31,85 @@ body {
   background: var(--ui-bg);
 }
 
+#app .main-container > .sidebar {
+  transition: width 0.18s ease, flex-basis 0.18s ease, transform 0.18s ease;
+}
+
+body.nav-sm #app .main-container > .sidebar {
+  width: 72px;
+  flex: 0 0 72px;
+}
+
+body.nav-sm #app .main-container > .sidebar .sidebar-inner {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+body.nav-sm #app .main-container > .sidebar .brand {
+  margin-bottom: 10px;
+}
+
+body.nav-sm #app .main-container > .sidebar .logo {
+  max-width: 44px;
+}
+
+body.nav-sm #app .main-container > .sidebar .search,
+body.nav-sm #app .main-container > .sidebar .pending-company,
+body.nav-sm #app .main-container > .sidebar .sidebar-footer,
+body.nav-sm #app .main-container > .sidebar .menu-item .label,
+body.nav-sm #app .main-container > .sidebar .menu-item .chev,
+body.nav-sm #app .main-container > .sidebar .sub {
+  display: none !important;
+}
+
+body.nav-sm #app .main-container > .sidebar .menu-item {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+body.nav-sm #app .main-container > .sidebar .menu-item i {
+  width: auto;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  #app .main-container {
+    display: block;
+  }
+
+  #app .main-container > .sidebar {
+    position: fixed;
+    z-index: 1040;
+    top: 56px;
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    height: calc(100vh - 56px);
+    transform: translateX(-100%);
+  }
+
+  body.show-sidebar #app .main-container > .sidebar {
+    transform: translateX(0);
+  }
+
+  body.nav-sm #app .main-container > .sidebar {
+    width: 260px;
+    flex-basis: 260px;
+  }
+
+  body.nav-sm #app .main-container > .sidebar .search,
+  body.nav-sm #app .main-container > .sidebar .pending-company,
+  body.nav-sm #app .main-container > .sidebar .sidebar-footer {
+    display: block !important;
+  }
+
+  body.nav-sm #app .main-container > .sidebar .menu-item .label,
+  body.nav-sm #app .main-container > .sidebar .menu-item .chev {
+    display: inline-block !important;
+  }
+}
+
 #app h1,
 #app h2,
 #app h3,

@@ -134,7 +134,11 @@ export default {
       },
       paymentMethodOptions: [
         { value: null, text: 'Tất cả' },
-        { value: 'MOMO', text: 'MoMo' },
+        { value: 'MOMO', text: 'MoMo (tất cả)' },
+        { value: 'MOMO_WALLET', text: 'MoMo ví điện tử' },
+        { value: 'MOMO_ATM', text: 'MoMo ATM nội địa' },
+        { value: 'MOMO_CREDIT', text: 'MoMo thẻ quốc tế' },
+        { value: 'MOMO_PAY_LATER', text: 'MoMo trả sau' },
         { value: 'VNPAY', text: 'VNPAY' },
       ],
       stats: {

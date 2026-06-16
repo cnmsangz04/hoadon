@@ -10,7 +10,7 @@
       <!-- Nội dung chính -->
       <div class="content">
         <div class="page-inner">
-          <router-view />
+          <router-view ref="pageView" :key="routeRefreshKey + ':' + $route.fullPath" />
         </div>
       </div>
     </div>
@@ -32,6 +32,22 @@ export default {
         ComponentHeader,
         ComponentSidebarAdmin,
 		ComponentFooter,
+    },
+    data() {
+        return {
+            routeRefreshKey: 0
+        }
+    },
+    mounted() {
+        window.addEventListener('app-force-route-refresh', this.forceRouteRefresh)
+    },
+    beforeDestroy() {
+        window.removeEventListener('app-force-route-refresh', this.forceRouteRefresh)
+    },
+    methods: {
+        forceRouteRefresh() {
+            this.routeRefreshKey += 1
+        }
     }
 }
 </script>

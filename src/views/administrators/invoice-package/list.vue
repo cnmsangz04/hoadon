@@ -294,7 +294,11 @@ export default {
       ],
       paymentMethodOptions: [
         { value: null, text: 'Tất cả thanh toán' },
-        { value: 'MOMO', text: 'MoMo' },
+        { value: 'MOMO', text: 'MoMo (tất cả)' },
+        { value: 'MOMO_WALLET', text: 'MoMo ví điện tử' },
+        { value: 'MOMO_ATM', text: 'MoMo ATM nội địa' },
+        { value: 'MOMO_CREDIT', text: 'MoMo thẻ quốc tế' },
+        { value: 'MOMO_PAY_LATER', text: 'MoMo trả sau' },
         { value: 'VNPAY', text: 'VNPAY' },
       ],
       packageFields: [
@@ -485,7 +489,8 @@ export default {
     },
     paymentMethodText(method) {
       const normalized = String(method || '').toUpperCase()
-      if (normalized === 'MOMO' || normalized === 'MOMO_WALLET') return 'MoMo'
+      if (normalized === 'MOMO') return 'MoMo'
+      if (normalized === 'MOMO_WALLET') return 'MoMo ví điện tử'
       if (normalized === 'MOMO_PAY_LATER') return 'MoMo trả sau'
       if (normalized === 'MOMO_ATM') return 'MoMo ATM nội địa'
       if (normalized === 'MOMO_CREDIT') return 'MoMo thẻ quốc tế'

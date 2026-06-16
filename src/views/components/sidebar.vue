@@ -14,7 +14,6 @@
 
       <div v-else class="search">
         <input v-model="search" type="search" placeholder="Tìm kiếm..." aria-label="Tìm kiếm menu" />
-        <i class="fas fa-search"></i>
       </div>
 
       <!-- Trình đơn -->

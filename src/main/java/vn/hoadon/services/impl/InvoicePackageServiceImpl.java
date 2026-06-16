@@ -554,6 +554,7 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
         CompanyEntity company = companyRepository.findById(purchase.getCompanyId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty của giao dịch MoMo"));
         validateMomoCallback(purchase, payload);
+        applyMomoPayType(purchase, payload);
 
         if (momoPaymentService.isSuccessResult(payload)) {
             String transId = momoPaymentService.value(payload, "transId");
@@ -583,6 +584,33 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
         if (actualAmount != expectedAmount) {
             throw new IllegalArgumentException("Số tiền MoMo không khớp giao dịch");
         }
+    }
+
+    private void applyMomoPayType(InvoicePackagePurchaseEntity purchase, Map<String, ?> payload) {
+        String currentMethod = purchase.getPaymentMethod() != null
+                ? purchase.getPaymentMethod().trim().toUpperCase(Locale.ROOT)
+                : "";
+        if (!"MOMO".equals(currentMethod)) {
+            return;
+        }
+
+        String actualMethod = momoPaymentMethodFromPayType(momoPaymentService.value(payload, "payType"));
+        if (actualMethod != null) {
+            purchase.setPaymentMethod(actualMethod);
+        }
+    }
+
+    private String momoPaymentMethodFromPayType(String payType) {
+        String normalized = payType != null
+                ? payType.trim().toLowerCase(Locale.ROOT).replace("-", "_")
+                : "";
+        return switch (normalized) {
+            case "credit" -> "MOMO_CREDIT";
+            case "napas" -> "MOMO_ATM";
+            case "qr", "webapp", "web_app", "app", "miniapp", "mini_app", "aio_qr", "banktransfer_qr" -> "MOMO_WALLET";
+            case "vts", "paylater", "pay_later" -> "MOMO_PAY_LATER";
+            default -> null;
+        };
     }
 
     private InvoicePackagePurchaseDTO completeSuccessfulPurchase(InvoicePackagePurchaseEntity purchase,
@@ -867,11 +895,6 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
                     String method = filter.getPaymentMethod().trim().toUpperCase(Locale.ROOT);
                     if ("MOMO".equals(method)) {
                         predicates.add(cb.like(root.get("paymentMethod"), "MOMO%"));
-                    } else if ("MOMO_WALLET".equals(method)) {
-                        predicates.add(cb.or(
-                                cb.equal(root.get("paymentMethod"), "MOMO"),
-                                cb.equal(root.get("paymentMethod"), "MOMO_WALLET")
-                        ));
                     } else {
                         predicates.add(cb.equal(root.get("paymentMethod"), method));
                     }
@@ -1156,7 +1179,7 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
     private String momoPaymentLabel(String paymentMethod) {
         String method = paymentMethod != null ? paymentMethod.trim().toUpperCase(Locale.ROOT) : "";
         return switch (method) {
-            case "MOMO_WALLET" -> "Ví MoMo";
+            case "MOMO_WALLET" -> "MoMo ví điện tử";
             case "MOMO_ATM" -> "MoMo ATM nội địa";
             case "MOMO_CREDIT" -> "MoMo thẻ quốc tế";
             case "MOMO_PAY_LATER" -> "MoMo trả sau";

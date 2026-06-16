@@ -53,6 +53,12 @@
               <b-link class="ml-1" :to="{ name: 'auth-register' }" @click.prevent="$router.push({ name: 'auth-register' })">Đăng ký</b-link>
             </div>
 
+            <div class="text-center mb-3">
+              <b-link :to="{ name: 'login_admin' }" @click.prevent="$router.push({ name: 'login_admin' })">
+                Đăng nhập quản trị
+              </b-link>
+            </div>
+
             <b-button type="submit" block variant="primary"
               class="submit-btn"
               :disabled="loading || !username || !password">

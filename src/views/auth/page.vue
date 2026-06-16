@@ -1,5 +1,5 @@
 <template>
-  <div class="auth-page container mt-5">
+  <div class="auth-shell">
     <router-view />
   </div>
 </template>
@@ -11,5 +11,8 @@ export default {
 </script>
 
 <style scoped>
-.auth-page { max-width: 960px; }
+.auth-shell {
+  min-height: 100vh;
+  overflow: hidden;
+}
 </style>

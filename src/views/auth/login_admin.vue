@@ -47,6 +47,12 @@
               <b-form-checkbox v-model="remember">Ghi nhớ đăng nhập</b-form-checkbox>
             </div>
 
+            <div class="text-center mb-3">
+              <b-link :to="{ name: 'login' }" @click.prevent="$router.push({ name: 'login' })">
+                Quay về đăng nhập người dùng
+              </b-link>
+            </div>
+
             <b-button type="submit" block variant="primary"
               class="submit-btn"
               :disabled="loading || !username || !password">
