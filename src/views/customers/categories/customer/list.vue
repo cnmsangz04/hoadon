@@ -189,6 +189,7 @@
 
 <script>
 import axios from "@/plugins/axios";
+import { pageFrom, pageItems, pageTo, pageTotal } from "@/utils/pagination";
 import PaginationBar from "@/views/components/pagination_bar.vue";
 
 export default {
@@ -266,10 +267,10 @@ export default {
                     },
                 });
                 const d = res.data;
-                this.list.data = d.content || d.data || [];
-                this.list.total = d.totalElements || d.total || 0;
-                this.list.from = d.from || 0;
-                this.list.to = d.to || 0;
+                this.list.data = pageItems(d);
+                this.list.total = pageTotal(d);
+                this.list.from = pageFrom(d, this.list.current_page, this.list.per_page);
+                this.list.to = pageTo(d, this.list.data.length, this.list.current_page, this.list.per_page);
             } catch (error) {
                 this.$bvToast.toast("Lỗi tải danh sách khách hàng", { variant: "danger" });
             } finally {

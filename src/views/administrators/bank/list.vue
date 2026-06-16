@@ -138,6 +138,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { pageFrom, pageItems, pageTo, pageTotal } from '@/utils/pagination'
 import PaginationBar from '@/views/components/pagination_bar.vue'
 
 export default {
@@ -204,13 +205,13 @@ export default {
         const d = res.data;
         
         //	Cập nhật dữ liệu vào bảng
-		this.list.data = d.content || d.data || [];
-		this.list.total = d.totalElements || d.total || 0;
-        
+			this.list.data = pageItems(d);
+			this.list.total = pageTotal(d);
+
         // Tính toán hiển thị "Từ ... đến ..."
-		this.list.from = Number(d.from ?? ((this.list.total === 0) ? 0 : ((this.list.current_page - 1) * this.list.per_page + 1)))
-		const numberOfElements = Array.isArray(this.list.data) ? this.list.data.length : 0
-		this.list.to = Number(d.to ?? ((this.list.total === 0) ? 0 : (this.list.from + numberOfElements - 1)))
+			this.list.from = pageFrom(d, this.list.current_page, this.list.per_page)
+			const numberOfElements = Array.isArray(this.list.data) ? this.list.data.length : 0
+			this.list.to = pageTo(d, numberOfElements, this.list.current_page, this.list.per_page)
 
       } catch (error) {
         console.error("Lỗi tải dữ liệu:", error);

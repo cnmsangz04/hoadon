@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.dto.invoicepackage.InvoicePackagePurchaseDTO;
+import vn.hoadon.dto.invoicepackage.InvoicePackagePurchaseFilterDTO;
 import vn.hoadon.dto.invoicepackage.InvoicePackagePurchaseRequestDTO;
 import vn.hoadon.dto.invoicepackage.InvoicePackageResponseDTO;
 import vn.hoadon.entity.UserEntity;
@@ -18,6 +19,7 @@ import vn.hoadon.services.InvoicePackageService;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -40,7 +42,7 @@ public class InvoicePackageController extends BaseController {
                 dto != null ? dto.getPaymentMethod() : null,
                 user
         );
-        boolean momoPending = "MOMO".equals(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
+        boolean momoPending = isMomoPayment(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
         boolean vnpayPending = "VNPAY".equals(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
         return ResponseEntity.ok(Map.of(
                 "message", momoPending
@@ -55,7 +57,7 @@ public class InvoicePackageController extends BaseController {
     @PostMapping("/purchases/{id}/retry-payment")
     public ResponseEntity<?> retryPayment(@PathVariable Long id) {
         InvoicePackagePurchaseDTO result = service.retryPayment(id, currentUser());
-        boolean momoPending = "MOMO".equals(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
+        boolean momoPending = isMomoPayment(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
         boolean vnpayPending = "VNPAY".equals(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
         return ResponseEntity.ok(Map.of(
                 "message", momoPending
@@ -99,6 +101,7 @@ public class InvoicePackageController extends BaseController {
 
     @GetMapping("/my-purchases")
     public ResponseEntity<Page<InvoicePackagePurchaseDTO>> myPurchases(
+            @ModelAttribute InvoicePackagePurchaseFilterDTO filter,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
@@ -107,11 +110,15 @@ public class InvoicePackageController extends BaseController {
             return ResponseEntity.badRequest().build();
         }
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return ResponseEntity.ok(service.listMyPurchases(user.getCompanyId(), pageable));
+        return ResponseEntity.ok(service.listMyPurchases(user.getCompanyId(), filter, pageable));
     }
 
     @GetMapping("/purchases/{id}")
     public ResponseEntity<InvoicePackagePurchaseDTO> getMyPurchase(@PathVariable Long id) {
         return ResponseEntity.ok(service.getMyPurchase(id, currentUser()));
+    }
+
+    private boolean isMomoPayment(String paymentMethod) {
+        return paymentMethod != null && paymentMethod.trim().toUpperCase(Locale.ROOT).startsWith("MOMO");
     }
 }

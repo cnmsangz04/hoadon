@@ -134,6 +134,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { pageItems, pageTotal } from '@/utils/pagination'
 import PaginationBar from '@/views/components/pagination_bar.vue'
 
 export default {
@@ -180,8 +181,8 @@ export default {
           params: { page: this.page - 1, size: this.size },
           meta: { suppressGlobalErrorToast: true },
         })
-        this.items = data?.content || []
-        this.totalRows = data?.totalElements || 0
+        this.items = pageItems(data)
+        this.totalRows = pageTotal(data)
       } catch (e) {
         const msg = e?.response?.data?.message || 'Không thể tải danh sách đăng ký'
         this.$toastr && this.$toastr.error(msg)

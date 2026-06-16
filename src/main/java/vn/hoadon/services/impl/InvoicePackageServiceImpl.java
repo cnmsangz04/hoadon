@@ -153,7 +153,7 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
         PurchaseContext context = preparePurchase(packageId, paymentMethod, user);
         InvoicePackagePurchaseEntity purchase = newPurchase(context.invoicePackage(), context.company(), context.user(), context.method());
 
-        if ("MOMO".equals(context.method())) {
+        if (isMomoPaymentMethod(context.method())) {
             return createMomoPurchase(purchase, context.company());
         }
         if ("VNPAY".equals(context.method())) {
@@ -204,25 +204,26 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
         String method = purchase.getPaymentMethod() != null
                 ? purchase.getPaymentMethod().trim().toUpperCase(Locale.ROOT)
                 : "";
-        if (!"MOMO".equals(method) && !"VNPAY".equals(method)) {
+        method = normalizePaymentMethod(method);
+        if (!isMomoPaymentMethod(method) && !"VNPAY".equals(method)) {
             throw new IllegalArgumentException("Phương thức thanh toán không hỗ trợ thanh toán lại");
         }
-        purchase.setPaymentMethod(method);
-
         CompanyEntity company = companyRepository.findById(purchase.getCompanyId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty"));
-        if ("MOMO".equals(method)) {
+
+        InvoicePackagePurchaseEntity retryPurchase = retryPurchaseFrom(purchase, method);
+        if (isMomoPaymentMethod(method)) {
             return createMomoCheckout(
-                    purchase,
+                    retryPurchase,
                     company,
-                    "Đang chờ thanh toán lại MoMo",
-                    "Đã tạo lại giao dịch MoMo, chờ khách hàng thanh toán"
+                    "Đang chờ thanh toán lại " + momoPaymentLabel(method) + " từ giao dịch #" + purchase.getId(),
+                    "Đã tạo lại giao dịch " + momoPaymentLabel(method) + ", chờ khách hàng thanh toán"
             );
         }
         return createVnpayCheckout(
-                purchase,
+                retryPurchase,
                 company,
-                "Đang chờ thanh toán lại VNPAY",
+                "Đang chờ thanh toán lại VNPAY từ giao dịch #" + purchase.getId(),
                 "Đã tạo lại giao dịch VNPAY, chờ khách hàng thanh toán"
         );
     }
@@ -328,12 +329,29 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
         return purchase;
     }
 
+    private InvoicePackagePurchaseEntity retryPurchaseFrom(InvoicePackagePurchaseEntity source, String method) {
+        InvoicePackagePurchaseEntity purchase = new InvoicePackagePurchaseEntity();
+        purchase.setPackageId(source.getPackageId());
+        purchase.setPackageName(source.getPackageName());
+        purchase.setCompanyId(source.getCompanyId());
+        purchase.setCompanyName(source.getCompanyName());
+        purchase.setCompanyTaxcode(source.getCompanyTaxcode());
+        purchase.setBuyerName(source.getBuyerName());
+        purchase.setBuyerEmail(source.getBuyerEmail());
+        purchase.setBuyerPhone(source.getBuyerPhone());
+        purchase.setInvoiceQuantity(source.getInvoiceQuantity());
+        purchase.setUnitPrice(money(source.getUnitPrice()));
+        purchase.setTotalPrice(money(source.getTotalPrice()));
+        purchase.setPaymentMethod(method);
+        return purchase;
+    }
+
     private InvoicePackagePurchaseDTO createMomoPurchase(InvoicePackagePurchaseEntity purchase, CompanyEntity company) {
         return createMomoCheckout(
                 purchase,
                 company,
-                "Đang chờ thanh toán MoMo",
-                "Đã tạo giao dịch MoMo, chờ khách hàng thanh toán"
+                "Đang chờ thanh toán " + momoPaymentLabel(purchase.getPaymentMethod()),
+                "Đã tạo giao dịch " + momoPaymentLabel(purchase.getPaymentMethod()) + ", chờ khách hàng thanh toán"
         );
     }
 
@@ -359,14 +377,16 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
                             "Thanh toán gói hóa đơn " + nullToBlank(purchase.getPackageName()),
                             buildMomoExtraData(purchase),
                             null,
-                            null
+                            null,
+                            momoRequestType(purchase.getPaymentMethod()),
+                            momoUserInfo(purchase, purchase.getPaymentMethod())
                     )
             );
         } catch (IllegalStateException e) {
             throw new IllegalArgumentException(e.getMessage(), e);
         }
 
-        purchase.setNote("Đã tạo giao dịch MoMo: " + nullToBlank(momoResponse.message()));
+        purchase.setNote("Đã tạo giao dịch " + momoPaymentLabel(purchase.getPaymentMethod()) + ": " + nullToBlank(momoResponse.message()));
         purchase = purchaseRepository.save(purchase);
 
         InvoicePackagePurchaseDTO dto = dtoWithInvoiceState(purchase, company);
@@ -728,8 +748,10 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
     }
 
     @Override
-    public Page<InvoicePackagePurchaseDTO> listMyPurchases(Long companyId, Pageable pageable) {
-        return purchaseRepository.findByCompanyId(companyId, pageable).map(this::toPurchaseDto);
+    public Page<InvoicePackagePurchaseDTO> listMyPurchases(Long companyId, InvoicePackagePurchaseFilterDTO filter, Pageable pageable) {
+        InvoicePackagePurchaseFilterDTO normalized = filter != null ? filter : new InvoicePackagePurchaseFilterDTO();
+        normalized.setCompanyId(companyId);
+        return purchaseRepository.findAll(purchaseSpec(normalized, false), pageable).map(this::toPurchaseDto);
     }
 
     @Override
@@ -803,7 +825,7 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
                 row.getCell(6).setCellStyle(moneyStyle);
                 row.createCell(7).setCellValue(toDouble(purchase.getTotalPrice()));
                 row.getCell(7).setCellStyle(moneyStyle);
-                row.createCell(8).setCellValue(nullToBlank(purchase.getPaymentMethod()));
+                row.createCell(8).setCellValue(paymentMethodLabel(purchase.getPaymentMethod()));
                 row.createCell(9).setCellValue("SUCCESS".equals(purchase.getPaymentStatus()) ? "Thành công" : nullToBlank(purchase.getPaymentStatus()));
                 row.createCell(10).setCellValue(purchase.getPaidAt() != null ? purchase.getPaidAt().format(formatter) : "");
             }
@@ -842,7 +864,17 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
                     predicates.add(cb.equal(root.get("companyId"), filter.getCompanyId()));
                 }
                 if (filter.getPaymentMethod() != null && !filter.getPaymentMethod().isBlank()) {
-                    predicates.add(cb.equal(root.get("paymentMethod"), filter.getPaymentMethod().trim().toUpperCase(Locale.ROOT)));
+                    String method = filter.getPaymentMethod().trim().toUpperCase(Locale.ROOT);
+                    if ("MOMO".equals(method)) {
+                        predicates.add(cb.like(root.get("paymentMethod"), "MOMO%"));
+                    } else if ("MOMO_WALLET".equals(method)) {
+                        predicates.add(cb.or(
+                                cb.equal(root.get("paymentMethod"), "MOMO"),
+                                cb.equal(root.get("paymentMethod"), "MOMO_WALLET")
+                        ));
+                    } else {
+                        predicates.add(cb.equal(root.get("paymentMethod"), method));
+                    }
                 }
                 if (filter.getPaymentStatus() != null && !filter.getPaymentStatus().isBlank()) {
                     predicates.add(cb.equal(root.get("paymentStatus"), filter.getPaymentStatus().trim().toUpperCase(Locale.ROOT)));
@@ -1095,10 +1127,77 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
 
     private String normalizePaymentMethod(String paymentMethod) {
         String method = paymentMethod != null ? paymentMethod.trim().toUpperCase(Locale.ROOT) : "";
-        if (!"MOMO".equals(method) && !"VNPAY".equals(method)) {
+        if (!isMomoPaymentMethod(method) && !"VNPAY".equals(method)) {
             return "MOMO";
         }
         return method;
+    }
+
+    private boolean isMomoPaymentMethod(String method) {
+        String normalized = method != null ? method.trim().toUpperCase(Locale.ROOT) : "";
+        return "MOMO".equals(normalized)
+                || "MOMO_WALLET".equals(normalized)
+                || "MOMO_ATM".equals(normalized)
+                || "MOMO_CREDIT".equals(normalized)
+                || "MOMO_PAY_LATER".equals(normalized);
+    }
+
+    private String momoRequestType(String paymentMethod) {
+        String method = paymentMethod != null ? paymentMethod.trim().toUpperCase(Locale.ROOT) : "";
+        return switch (method) {
+            case "MOMO_WALLET" -> "captureWallet";
+            case "MOMO_ATM" -> "payWithATM";
+            case "MOMO_CREDIT" -> "payWithCC";
+            case "MOMO_PAY_LATER" -> "payWithVTS";
+            default -> "payWithMethod";
+        };
+    }
+
+    private String momoPaymentLabel(String paymentMethod) {
+        String method = paymentMethod != null ? paymentMethod.trim().toUpperCase(Locale.ROOT) : "";
+        return switch (method) {
+            case "MOMO_WALLET" -> "Ví MoMo";
+            case "MOMO_ATM" -> "MoMo ATM nội địa";
+            case "MOMO_CREDIT" -> "MoMo thẻ quốc tế";
+            case "MOMO_PAY_LATER" -> "MoMo trả sau";
+            default -> "MoMo";
+        };
+    }
+
+    private String paymentMethodLabel(String paymentMethod) {
+        String method = paymentMethod != null ? paymentMethod.trim().toUpperCase(Locale.ROOT) : "";
+        if ("VNPAY".equals(method)) {
+            return "VNPAY";
+        }
+        if (isMomoPaymentMethod(method)) {
+            return momoPaymentLabel(method);
+        }
+        return nullToBlank(paymentMethod);
+    }
+
+    private Map<String, Object> momoUserInfo(InvoicePackagePurchaseEntity purchase, String paymentMethod) {
+        String method = paymentMethod != null ? paymentMethod.trim().toUpperCase(Locale.ROOT) : "";
+        if ("MOMO_ATM".equals(method)) {
+            return Map.of();
+        }
+
+        Map<String, Object> userInfo = new LinkedHashMap<>();
+        String name = firstNotBlank(purchase.getBuyerName(), purchase.getCompanyName());
+        String phone = firstNotBlank(purchase.getBuyerPhone());
+        String email = firstNotBlank(purchase.getBuyerEmail());
+        if ("MOMO_CREDIT".equals(method) && email == null) {
+            throw new IllegalArgumentException("Thanh toán MoMo thẻ quốc tế cần email người mua");
+        }
+        if (name != null) {
+            userInfo.put("name", name);
+        }
+        if (phone != null) {
+            userInfo.put("phoneNumber", phone);
+        }
+        if (email != null) {
+            userInfo.put("email", email);
+        }
+        return userInfo;
     }
 
     private String fakePaymentCode(String method) {

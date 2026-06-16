@@ -160,6 +160,7 @@
 
 <script>
 import axios from "axios";
+import { pageItems, pageNumber, pageSize, pageTotal } from "@/utils/pagination";
 import PaginationBar from "@/views/components/pagination_bar.vue";
 
 export default {
@@ -257,18 +258,12 @@ export default {
                 const responseData = res.data;
 
                 // 1. Gán danh sách bản ghi
-                this.list.data = responseData.content || [];
+                this.list.data = pageItems(responseData);
 
-                // 2. Gán thông tin phân trang từ object "page" trong JSON
-                if (responseData.page) {
-                    this.list.total = responseData.page.totalElements || 0;
-                    // API trả về page number bắt đầu từ 0, ta cộng 1 để khớp với UI
-                    this.list.current_page = (responseData.page.number || 0) + 1;
-                    this.list.per_page = responseData.page.size || this.list.per_page;
-                } else {
-                    // Dự phòng nếu API không trả về object page (trường hợp lỗi hoặc rỗng)
-                    this.list.total = 0;
-                }
+                // 2. Gán thông tin phân trang, hỗ trợ cả Page dạng mới { content, page }
+                this.list.total = pageTotal(responseData);
+                this.list.current_page = pageNumber(responseData, this.list.current_page);
+                this.list.per_page = pageSize(responseData, this.list.per_page);
 
                 // 3. Tính toán From - To để hiển thị
                 const numberOfElements = this.list.data.length;

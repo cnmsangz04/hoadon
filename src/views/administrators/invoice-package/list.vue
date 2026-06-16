@@ -158,7 +158,7 @@
             </template>
 
             <template #cell(paymentMethod)="{ item }">
-              <b-badge variant="info">{{ item.paymentMethod || '—' }}</b-badge>
+              <b-badge variant="info">{{ paymentMethodText(item.paymentMethod) }}</b-badge>
             </template>
 
             <template #cell(paymentStatus)="{ item }">
@@ -245,6 +245,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { pageItems, pageTotal } from '@/utils/pagination'
 import PaginationBar from '@/views/components/pagination_bar.vue'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
@@ -293,7 +294,7 @@ export default {
       ],
       paymentMethodOptions: [
         { value: null, text: 'Tất cả thanh toán' },
-        { value: 'MOMO', text: 'Momo' },
+        { value: 'MOMO', text: 'MoMo' },
         { value: 'VNPAY', text: 'VNPAY' },
       ],
       packageFields: [
@@ -347,8 +348,8 @@ export default {
           params: { page, size: this.packageList.per_page },
           meta: { suppressGlobalErrorToast: true },
         })
-        this.packages = data.content || []
-        this.packageList.total = data.totalElements || 0
+        this.packages = pageItems(data)
+        this.packageList.total = pageTotal(data)
       } catch (err) {
         this.packages = []
         this.packageList.total = 0
@@ -422,8 +423,8 @@ export default {
           params: { page, size: this.purchaseList.per_page },
           meta: { suppressGlobalErrorToast: true },
         })
-        this.purchases = data.content || []
-        this.purchaseList.total = data.totalElements || 0
+        this.purchases = pageItems(data)
+        this.purchaseList.total = pageTotal(data)
       } catch (err) {
         this.purchases = []
         this.purchaseList.total = 0
@@ -481,6 +482,15 @@ export default {
     },
     formatNumber(value) {
       return new Intl.NumberFormat('vi-VN').format(Number(value || 0))
+    },
+    paymentMethodText(method) {
+      const normalized = String(method || '').toUpperCase()
+      if (normalized === 'MOMO' || normalized === 'MOMO_WALLET') return 'MoMo'
+      if (normalized === 'MOMO_PAY_LATER') return 'MoMo trả sau'
+      if (normalized === 'MOMO_ATM') return 'MoMo ATM nội địa'
+      if (normalized === 'MOMO_CREDIT') return 'MoMo thẻ quốc tế'
+      if (normalized === 'VNPAY') return 'VNPAY'
+      return method || '—'
     },
     formatDateTime(value) {
       if (!value) return '—'

@@ -134,7 +134,7 @@ export default {
       },
       paymentMethodOptions: [
         { value: null, text: 'Tất cả' },
-        { value: 'MOMO', text: 'Momo' },
+        { value: 'MOMO', text: 'MoMo' },
         { value: 'VNPAY', text: 'VNPAY' },
       ],
       stats: {

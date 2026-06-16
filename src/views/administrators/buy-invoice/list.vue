@@ -247,6 +247,7 @@
 
 <script>
 import axios from "@/plugins/axios";
+import { pageItems, pageTotal } from "@/utils/pagination";
 import PaginationBar from "@/views/components/pagination_bar.vue";
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
@@ -361,8 +362,8 @@ export default {
           { params: { page, size: this.list.per_page } }
         );
         const data = res.data;
-        this.list.total = data.totalElements;
-        const rawItems = Array.isArray(data.content) ? data.content : [];
+        this.list.total = pageTotal(data);
+        const rawItems = pageItems(data);
         // Chuẩn hóa item và tin vào companyName backend trả về
         this.items = rawItems.map(item => ({
           ...item,
@@ -403,8 +404,8 @@ export default {
           { params: { page, size: this.historyList.per_page } }
         );
         const data = res.data || {};
-        this.histories = Array.isArray(data.content) ? data.content : [];
-        this.historyList.total = data.totalElements || 0;
+        this.histories = pageItems(data);
+        this.historyList.total = pageTotal(data);
       } catch (e) {
         console.error(e);
         this.histories = [];

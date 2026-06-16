@@ -268,6 +268,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { pageFrom, pageItems, pageLast, pageNumber, pageSize, pageTo, pageTotal } from '@/utils/pagination'
 import PaginationBar from '@/views/components/pagination_bar.vue'
 import { parseJwt } from '@/utils/jwt'
 
@@ -523,14 +524,14 @@ export default {
         const res = await axios.post('/setting/members/list', null, { params })
         const d = res?.data || {}
         // Chuẩn hóa key dữ liệu để phòng trường hợp lệch
-        this.list.data = Array.isArray(d.data) ? d.data : (Array.isArray(d.content) ? d.content : [])
-        this.list.total = Number(d.total ?? d.totalElements ?? 0)
-        this.list.per_page = Number(d.per_page ?? this.list.per_page)
-        this.list.current_page = Number(d.current_page ?? (Number(params.page) + 1))
-        this.list.last_page = Number(d.last_page ?? Math.max(1, Math.ceil(this.list.total / this.list.per_page)))
-        this.list.from = Number(d.from ?? ((this.list.total === 0) ? 0 : ((this.list.current_page - 1) * this.list.per_page + 1)))
+        this.list.data = pageItems(d)
+        this.list.total = pageTotal(d)
+        this.list.per_page = pageSize(d, this.list.per_page)
+        this.list.current_page = pageNumber(d, Number(params.page) + 1)
+        this.list.last_page = pageLast(d, this.list.per_page)
+        this.list.from = pageFrom(d, this.list.current_page, this.list.per_page)
         const numberOfElements = Array.isArray(this.list.data) ? this.list.data.length : 0
-        this.list.to = Number(d.to ?? ((this.list.total === 0) ? 0 : (this.list.from + numberOfElements - 1)))
+        this.list.to = pageTo(d, numberOfElements, this.list.current_page, this.list.per_page)
 
         // Cập nhật query string
         if (this.$route) {

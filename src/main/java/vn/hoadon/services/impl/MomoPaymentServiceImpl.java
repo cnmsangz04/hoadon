@@ -23,7 +23,7 @@ import java.util.Map;
 @Service
 public class MomoPaymentServiceImpl implements MomoPaymentService {
 
-    private static final String REQUEST_TYPE = "captureWallet";
+    private static final String DEFAULT_REQUEST_TYPE = "payWithMethod";
     private static final String CREATE_PATH = "/v2/gateway/api/create";
 
     private final MomoProperties properties;
@@ -51,6 +51,7 @@ public class MomoPaymentServiceImpl implements MomoPaymentService {
                 trimTrailingSlash(backendUrl) + "/v1/invoice-packages/momo/ipn");
         String extraData = request.extraData() != null ? request.extraData() : "";
         String orderInfo = request.orderInfo() != null ? request.orderInfo() : "";
+        String requestType = firstNotBlank(request.requestType(), DEFAULT_REQUEST_TYPE);
 
         String rawSignature = "accessKey=" + properties.getAccessKey()
                 + "&amount=" + request.amount()
@@ -61,11 +62,11 @@ public class MomoPaymentServiceImpl implements MomoPaymentService {
                 + "&partnerCode=" + properties.getPartnerCode()
                 + "&redirectUrl=" + redirectUrl
                 + "&requestId=" + request.requestId()
-                + "&requestType=" + REQUEST_TYPE;
+                + "&requestType=" + requestType;
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("partnerCode", properties.getPartnerCode());
-        body.put("requestType", REQUEST_TYPE);
+        body.put("requestType", requestType);
         body.put("ipnUrl", ipnUrl);
         body.put("redirectUrl", redirectUrl);
         body.put("orderId", request.orderId());
@@ -75,6 +76,9 @@ public class MomoPaymentServiceImpl implements MomoPaymentService {
         body.put("extraData", extraData);
         body.put("signature", hmacSha256(rawSignature));
         body.put("lang", firstNotBlank(properties.getLang(), "vi"));
+        if (request.userInfo() != null && !request.userInfo().isEmpty()) {
+            body.put("userInfo", request.userInfo());
+        }
 
         try {
             HttpRequest httpRequest = HttpRequest.newBuilder()

@@ -165,6 +165,7 @@
 
 <script>
 import axios from "@/plugins/axios";
+import { pageItems, pageTotal } from "@/utils/pagination";
 import draggable from "vuedraggable";
 import PaginationBar from "@/views/components/pagination_bar.vue";
 
@@ -215,10 +216,10 @@ export default {
         );
         const [tableRes, orderRes] = await Promise.all([tableReq, orderReq]);
 
-        this.items = tableRes.data.content || [];
-        this.list.total = tableRes.data.totalElements || 0;
+        this.items = pageItems(tableRes.data);
+        this.list.total = pageTotal(tableRes.data);
 
-        const all = orderRes.data.content || [];
+        const all = pageItems(orderRes.data);
         this.orderedItems = [...all].sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
         this.dirtyOrder = false;
       } catch (e) {

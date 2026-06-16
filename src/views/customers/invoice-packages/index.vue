@@ -62,6 +62,44 @@
         </b-button>
       </div>
 
+      <div class="purchase-filter mb-3">
+        <b-row>
+          <b-col lg="2" md="6" class="mb-2">
+            <label class="filter-label">Từ khóa</label>
+            <b-form-input
+              v-model.trim="purchaseFilter.keyword"
+              placeholder="Gói hoặc mã giao dịch"
+              @keyup.enter="applyPurchaseFilter"
+            />
+          </b-col>
+          <b-col lg="2" md="6" class="mb-2">
+            <label class="filter-label">Thanh toán</label>
+            <b-form-select v-model="purchaseFilter.paymentMethod" :options="purchasePaymentMethodOptions" />
+          </b-col>
+          <b-col lg="2" md="6" class="mb-2">
+            <label class="filter-label">Trạng thái</label>
+            <b-form-select v-model="purchaseFilter.paymentStatus" :options="purchaseStatusOptions" />
+          </b-col>
+          <b-col lg="2" md="6" class="mb-2">
+            <label class="filter-label">Từ ngày</label>
+            <b-form-input v-model="purchaseFilter.fromDate" type="date" :max="purchaseFilter.toDate || undefined" />
+          </b-col>
+          <b-col lg="2" md="6" class="mb-2">
+            <label class="filter-label">Đến ngày</label>
+            <b-form-input v-model="purchaseFilter.toDate" type="date" :min="purchaseFilter.fromDate || undefined" />
+          </b-col>
+          <b-col lg="2" md="6" class="mb-2 filter-actions">
+            <b-button size="sm" variant="primary" @click="applyPurchaseFilter">
+              <i class="fas fa-search mr-1"></i>
+              Lọc
+            </b-button>
+            <b-button size="sm" variant="outline-secondary" @click="resetPurchaseFilter">
+              Xóa
+            </b-button>
+          </b-col>
+        </b-row>
+      </div>
+
       <b-table
         class="invoice-package-purchases-table"
         bordered
@@ -88,7 +126,7 @@
           <span class="font-weight-bold">{{ formatCurrency(item.totalPrice) }}</span>
         </template>
         <template #cell(paymentMethod)="{ item }">
-          <b-badge variant="info">{{ item.paymentMethod }}</b-badge>
+          <b-badge variant="info">{{ paymentMethodText(item.paymentMethod) }}</b-badge>
         </template>
         <template #cell(paymentStatus)="{ item }">
           <b-badge :variant="paymentStatusVariant(item.paymentStatus)">
@@ -212,6 +250,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { pageItems, pageTotal } from '@/utils/pagination'
 import PaginationBar from '@/views/components/pagination_bar.vue'
 
 export default {
@@ -236,7 +275,7 @@ export default {
         {
           value: 'MOMO',
           label: 'MoMo',
-          description: 'Ví điện tử sandbox',
+          description: 'Chọn Ví, ATM hoặc thẻ trên cổng MoMo',
           icon: 'fas fa-wallet',
         },
         {
@@ -245,6 +284,24 @@ export default {
           description: 'ATM, QR hoặc thẻ test',
           icon: 'fas fa-credit-card',
         },
+      ],
+      purchaseFilter: {
+        keyword: '',
+        paymentMethod: null,
+        paymentStatus: null,
+        fromDate: '',
+        toDate: '',
+      },
+      purchasePaymentMethodOptions: [
+        { value: null, text: 'Tất cả' },
+        { value: 'MOMO', text: 'MoMo' },
+        { value: 'VNPAY', text: 'VNPAY' },
+      ],
+      purchaseStatusOptions: [
+        { value: null, text: 'Tất cả' },
+        { value: 'PENDING', text: 'Chờ thanh toán' },
+        { value: 'SUCCESS', text: 'Thành công' },
+        { value: 'FAILED', text: 'Thất bại' },
       ],
       purchaseList: {
         current_page: 1,
@@ -270,13 +327,13 @@ export default {
       return String(status) === '2'
     },
     paymentButtonText() {
-      if (this.paymentMethod === 'MOMO') return 'Thanh toán MoMo'
+      if (this.isMomoMethod(this.paymentMethod)) return `Thanh toán ${this.paymentMethodText(this.paymentMethod)}`
       if (this.paymentMethod === 'VNPAY') return 'Thanh toán VNPAY'
       return 'Thanh toán giả lập'
     },
     paymentHelpText() {
-      const gateway = this.paymentMethod === 'VNPAY' ? 'VNPAY' : 'MoMo'
-      return `Cổng ${gateway}.`
+      if (this.paymentMethod === 'VNPAY') return 'Cổng VNPAY.'
+      return `Cổng ${this.paymentMethodText(this.paymentMethod)}.`
     },
   },
   mounted() {
@@ -312,17 +369,49 @@ export default {
       try {
         const page = this.purchaseList.current_page - 1
         const { data } = await axios.get('/invoice-packages/my-purchases', {
-          params: { page, size: this.purchaseList.per_page },
+          params: {
+            page,
+            size: this.purchaseList.per_page,
+            ...this.normalizedPurchaseFilter(),
+          },
           meta: { suppressGlobalErrorToast: true },
         })
-        this.purchases = data.content || []
-        this.purchaseList.total = data.totalElements || 0
+        this.purchases = pageItems(data)
+        this.purchaseList.total = pageTotal(data)
       } catch {
         this.purchases = []
         this.purchaseList.total = 0
       } finally {
         this.loadingPurchases = false
       }
+    },
+    applyPurchaseFilter() {
+      if (this.purchaseFilter.fromDate && this.purchaseFilter.toDate && this.purchaseFilter.fromDate > this.purchaseFilter.toDate) {
+        this.$toastr && this.$toastr.error('Ngày bắt đầu không được lớn hơn ngày kết thúc')
+        return
+      }
+      this.purchaseList.current_page = 1
+      this.loadPurchases()
+    },
+    resetPurchaseFilter() {
+      this.purchaseFilter = {
+        keyword: '',
+        paymentMethod: null,
+        paymentStatus: null,
+        fromDate: '',
+        toDate: '',
+      }
+      this.applyPurchaseFilter()
+    },
+    normalizedPurchaseFilter() {
+      const params = {}
+      const keyword = String(this.purchaseFilter.keyword || '').trim()
+      if (keyword) params.keyword = keyword
+      if (this.purchaseFilter.paymentMethod) params.paymentMethod = this.purchaseFilter.paymentMethod
+      if (this.purchaseFilter.paymentStatus) params.paymentStatus = this.purchaseFilter.paymentStatus
+      if (this.purchaseFilter.fromDate) params.fromDate = this.purchaseFilter.fromDate
+      if (this.purchaseFilter.toDate) params.toDate = this.purchaseFilter.toDate
+      return params
     },
     onPurchasePageChange(page) {
       this.purchaseList.current_page = Number(page) || 1
@@ -404,7 +493,7 @@ export default {
       }
 
       const checkoutWindow = window.open(purchase.payUrl, '_blank', 'noopener')
-      const gateway = purchase.paymentMethod || fallbackMethod || 'thanh toán'
+      const gateway = this.paymentMethodText(purchase.paymentMethod || fallbackMethod)
       if (checkoutWindow) {
         this.$toastr && this.$toastr.info(data?.message || `Đã mở cổng thanh toán ${gateway}`)
       } else {
@@ -421,7 +510,7 @@ export default {
       if (!purchase.payUrl) return false
 
       const checkoutWindow = window.open(purchase.payUrl, '_blank', 'noopener')
-      const gateway = purchase.paymentMethod || fallbackMethod || 'thanh toán'
+      const gateway = this.paymentMethodText(purchase.paymentMethod || fallbackMethod)
       if (checkoutWindow) {
         this.$toastr && this.$toastr.info(data?.message || `Đã mở cổng thanh toán ${gateway}`)
       } else {
@@ -516,6 +605,18 @@ export default {
     openCheckoutUrl() {
       if (!this.paymentCheckoutUrl) return
       window.open(this.paymentCheckoutUrl, '_blank', 'noopener')
+    },
+    isMomoMethod(method) {
+      return String(method || '').toUpperCase().startsWith('MOMO')
+    },
+    paymentMethodText(method) {
+      const normalized = String(method || '').toUpperCase()
+      if (normalized === 'MOMO' || normalized === 'MOMO_WALLET') return 'MoMo'
+      if (normalized === 'MOMO_PAY_LATER') return 'MoMo trả sau'
+      if (normalized === 'MOMO_ATM') return 'MoMo ATM nội địa'
+      if (normalized === 'MOMO_CREDIT') return 'MoMo thẻ quốc tế'
+      if (normalized === 'VNPAY') return 'VNPAY'
+      return method || 'thanh toán'
     },
     canRetryPayment(item) {
       const status = item?.paymentStatus ? String(item.paymentStatus).toUpperCase() : ''
@@ -886,6 +987,31 @@ export default {
   background: #f7f9fc;
 }
 
+.purchase-filter {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.filter-label {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.filter-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.filter-actions .btn {
+  min-height: 31px;
+}
+
 .invoice-packages-page::v-deep .table-responsive {
   overflow-x: hidden;
 }
@@ -929,6 +1055,14 @@ export default {
 
   .payment-method-grid {
     grid-template-columns: 1fr;
+  }
+
+  .filter-actions {
+    align-items: stretch;
+  }
+
+  .filter-actions .btn {
+    flex: 1;
   }
 
   .payment-submit {

@@ -175,6 +175,7 @@
 
 <script>
 import axios from "@/plugins/axios";
+import { pageItems, pageTotal } from "@/utils/pagination";
 import PaginationBar from "@/views/components/pagination_bar.vue";
 
 export default {
@@ -274,8 +275,8 @@ export default {
             }
           }
         );
-        this.items = res.data.content || [];
-        this.list.total = res.data.totalElements || 0;
+        this.items = pageItems(res.data);
+        this.list.total = pageTotal(res.data);
       } finally {
         this.isBusy = false;
       }

@@ -38,7 +38,7 @@ public interface InvoicePackageService {
 
     Page<InvoicePackagePurchaseDTO> listPurchases(InvoicePackagePurchaseFilterDTO filter, Pageable pageable);
 
-    Page<InvoicePackagePurchaseDTO> listMyPurchases(Long companyId, Pageable pageable);
+    Page<InvoicePackagePurchaseDTO> listMyPurchases(Long companyId, InvoicePackagePurchaseFilterDTO filter, Pageable pageable);
 
     InvoicePackageStatisticsDTO statistics(InvoicePackagePurchaseFilterDTO filter);
 

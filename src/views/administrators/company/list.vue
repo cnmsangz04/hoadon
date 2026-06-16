@@ -216,6 +216,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { pageItems, pageNumber, pageTotal } from '@/utils/pagination'
 import PaginationBar from '@/views/components/pagination_bar.vue'
 
 export default {
@@ -281,9 +282,9 @@ export default {
         params: { page: ctx.currentPage - 1, size: this.list.per_page },
       }).then(res => {
         this.isBusy = false
-        this.list.total = res.data.totalElements
-        this.list.current_page = res.data.number + 1
-        return res.data.content || []
+        this.list.total = pageTotal(res.data)
+        this.list.current_page = pageNumber(res.data, ctx.currentPage)
+        return pageItems(res.data)
       }).catch(err => {
         this.isBusy = false
         const message = err.response?.data?.message || 'Không thể tải danh sách công ty'

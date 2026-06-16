@@ -21,7 +21,9 @@ public interface MomoPaymentService {
             String orderInfo,
             String extraData,
             String redirectUrl,
-            String ipnUrl
+            String ipnUrl,
+            String requestType,
+            Map<String, Object> userInfo
     ) {}
 
     record CreatePaymentResponse(
