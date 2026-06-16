@@ -75,7 +75,8 @@ export default {
         { title: 'Cơ quan thuế', icon: 'fas fa-landmark', to: '/administrator/tax-authority/list' },
         { title: 'Thuế suất', icon: 'fas fa-percent', to: '/administrator/vat-rate/list' },
         { title: 'Email template', icon: 'fas fa-envelope', to: '/administrator/email-template/list' },
-        { title: 'Lịch sử gửi mail', icon: 'fas fa-history', to: '/administrator/email/mail-history' },
+        { title: 'Trạng thái email', icon: 'fas fa-history', to: '/administrator/email/mail-history' },
+        { title: 'Phiên đăng nhập', icon: 'fas fa-desktop', to: '/administrator/sessions/list' },
         {
           title: 'Phân quyền',
           icon: 'fas fa-user-shield',

@@ -17,12 +17,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.repositories.CompanyRepository;
+import vn.hoadon.repositories.LoginSessionRepository;
 import vn.hoadon.services.UserService;
 
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -34,11 +36,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final UserService userService;
     private final CompanyRepository companyRepository;
+    private final LoginSessionRepository loginSessionRepository;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, UserService userService, CompanyRepository companyRepository) {
+    public JwtAuthenticationFilter(
+            JwtUtil jwtUtil,
+            UserService userService,
+            CompanyRepository companyRepository,
+            LoginSessionRepository loginSessionRepository) {
         this.jwtUtil = jwtUtil;
         this.userService = userService;
         this.companyRepository = companyRepository;
+        this.loginSessionRepository = loginSessionRepository;
     }
 
     @Override
@@ -94,6 +102,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 log.warn("Company is pending activation, blocked API access: user={}, uri={}", username, uri);
                 forbidden(response, "COMPANY_PENDING_ACTIVATION", "C\u00f4ng ty ch\u01b0a \u0111\u01b0\u1ee3c k\u00edch ho\u1ea1t");
                 return;
+            }
+
+            String sessionId = jwtUtil.getSessionId(token);
+            if (StringUtils.hasText(sessionId)) {
+                var sessionOpt = loginSessionRepository.findBySessionId(sessionId);
+                if (sessionOpt.isEmpty()) {
+                    unauthorized(response, "SESSION_NOT_FOUND", "Phi\u00ean \u0111\u0103ng nh\u1eadp kh\u00f4ng t\u1ed3n t\u1ea1i");
+                    return;
+                }
+                var session = sessionOpt.get();
+                if (session.getUserId() == null || !session.getUserId().equals(user.getId())) {
+                    unauthorized(response, "SESSION_USER_MISMATCH", "Phi\u00ean \u0111\u0103ng nh\u1eadp kh\u00f4ng kh\u1edbp ng\u01b0\u1eddi d\u00f9ng");
+                    return;
+                }
+                if (session.getRevokedAt() != null) {
+                    unauthorized(response, "SESSION_REVOKED", "Phi\u00ean \u0111\u0103ng nh\u1eadp \u0111\u00e3 b\u1ecb \u0111\u0103ng xu\u1ea5t");
+                    return;
+                }
+                if (session.getExpiresAt() != null && session.getExpiresAt().isBefore(LocalDateTime.now())) {
+                    unauthorized(response, "SESSION_EXPIRED", "Phi\u00ean \u0111\u0103ng nh\u1eadp \u0111\u00e3 h\u1ebft h\u1ea1n");
+                    return;
+                }
+                session.setLastSeenAt(LocalDateTime.now());
+                loginSessionRepository.save(session);
             }
 
             List<SimpleGrantedAuthority> authorities = mapAuthorities(user.getRole());

@@ -1,7 +1,7 @@
 <template>
   <div class="container-fluid py-3 mail-history">
     <div class="d-flex align-items-center justify-content-between mb-3">
-      <h4 class="mb-0 font-weight-bold">Lịch sử gửi mail</h4>
+      <h4 class="mb-0 font-weight-bold">Trạng thái email gửi hóa đơn</h4>
       <b-button size="sm" variant="outline-primary" @click="reload">
         <i class="fas fa-sync-alt mr-1"></i>
         Làm mới

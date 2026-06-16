@@ -7,6 +7,9 @@
           <img class="logo" :src="require('@/assets/images/logo/logo-hoadon.png')" alt="logo" />
           <h2>Hóa đơn điện tử</h2>
           <p class="text-muted">Quản lý hóa đơn nhanh chóng, an toàn và hiệu quả.</p>
+          <router-link class="brand-action" :to="{ name: 'PublicInvoiceLookup' }">
+            Tra cứu hóa đơn
+          </router-link>
         </div>
       </div>
 
@@ -167,6 +170,23 @@ export default {
 .brand-logo, .logo { width: 72px; height: 72px; object-fit: contain; margin-bottom: 10px; }
 .brand-inner h2 { margin: 0 0 6px; font-weight: 600; }
 .brand-inner p { margin: 0; color: #6c757d; }
+.brand-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 18px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: #eef3ff;
+  color: #3b66f0;
+  font-weight: 600;
+  text-decoration: none;
+}
+.brand-action:hover {
+  background: #e2eaff;
+  color: #244cd7;
+  text-decoration: none;
+}
 
 /* Thẻ */
 .auth-card {

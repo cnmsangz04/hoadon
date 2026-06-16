@@ -17,6 +17,7 @@ public class HistoryDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String username;
+    private Boolean read;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -46,4 +47,6 @@ public class HistoryDto {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
+    public Boolean getRead() { return read; }
+    public void setRead(Boolean read) { this.read = read; }
 }

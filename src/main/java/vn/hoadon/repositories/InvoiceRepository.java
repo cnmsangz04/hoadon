@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.hoadon.entity.InvoiceEntity;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
 
     @Query("SELECT i FROM InvoiceEntity i WHERE (:companyId IS NULL OR i.companyId = :companyId) AND (:q IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.code) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.lookupCode) LIKE LOWER(CONCAT('%', :q, '%'))) AND (:status IS NULL OR i.status = :status)")
@@ -57,5 +60,23 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
             @Param("statuses") java.util.List<Short> statuses,
             @Param("startDate") java.time.LocalDate startDate,
             @Param("endDate") java.time.LocalDate endDate
+    );
+
+    interface InvoiceStatusCount {
+        Integer getCompanyId();
+        Short getStatus();
+        Long getTotal();
+    }
+
+    @Query("SELECT i.companyId AS companyId, i.status AS status, COUNT(i) AS total " +
+            "FROM InvoiceEntity i " +
+            "WHERE i.status IN :statuses " +
+            "AND i.updatedAt >= :fromTime " +
+            "AND i.updatedAt < :toTime " +
+            "GROUP BY i.companyId, i.status")
+    List<InvoiceStatusCount> countStatusByUpdatedAtBetween(
+            @Param("statuses") List<Short> statuses,
+            @Param("fromTime") LocalDateTime fromTime,
+            @Param("toTime") LocalDateTime toTime
     );
 }

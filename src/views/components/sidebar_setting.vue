@@ -70,7 +70,8 @@ export default {
       menu: [
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
         { title: 'Tài khoản', icon: 'fas fa-user-cog', to: '/setting/account/list' },
-        { title: 'Hồ sơ', icon: 'fas fa-id-card', to: '/setting/profile/list' }
+        { title: 'Hồ sơ', icon: 'fas fa-id-card', to: '/setting/profile/list' },
+        { title: 'Phiên đăng nhập', icon: 'fas fa-desktop', to: '/setting/sessions/list' }
       ]
     };
   },

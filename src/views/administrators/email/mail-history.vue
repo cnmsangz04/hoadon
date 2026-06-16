@@ -1,7 +1,7 @@
 <template>
   <div class="container-fluid py-3 mail-history">
     <div class="d-flex align-items-center justify-content-between mb-3">
-      <h4 class="mb-0 font-weight-bold">Lịch sử gửi mail</h4>
+      <h4 class="mb-0 font-weight-bold">Trạng thái email gửi hóa đơn</h4>
       <b-button size="sm" variant="outline-primary" @click="reload">
         <i class="fas fa-sync-alt mr-1"></i>
         Làm mới
@@ -95,6 +95,11 @@
             <b-dropdown-item href="#" @click.prevent="showDetail(item)">
               Chi tiết
             </b-dropdown-item>
+            <b-dropdown-item href="#" :disabled="retryingId === item.id" @click.prevent="retryMail(item)">
+              <b-spinner v-if="retryingId === item.id" small class="mr-1"></b-spinner>
+              <i v-else class="fas fa-redo mr-1"></i>
+              Gửi lại
+            </b-dropdown-item>
           </b-dropdown>
         </template>
       </b-table>
@@ -139,6 +144,7 @@ export default {
   data() {
     return {
       isBusy: false,
+      retryingId: null,
       selected: {},
       filters: {
         keyword: '',
@@ -226,6 +232,17 @@ export default {
       this.selected = item || {}
       this.$refs.detailModal.show()
     },
+    async retryMail(item) {
+      if (!item?.id || this.retryingId) return
+      this.retryingId = item.id
+      try {
+        const { data } = await axios.post(`/administrator/mail-jobs/${item.id}/retry`)
+        this.toastSuccess(data?.message || 'Đã đưa email vào hàng đợi gửi lại')
+        this.fetchList()
+      } finally {
+        this.retryingId = null
+      }
+    },
     mailTypeText(key) {
       if (key === 'ISSUE_INVOICE_MAIL') return 'Thông báo phát hành hóa đơn'
       if (key === 'ACCOUNT_INFO_MAIL') return 'Gửi thông tin tài khoản'
@@ -267,6 +284,12 @@ export default {
       } catch {
         return String(value)
       }
+    },
+    toastSuccess(message) {
+      try {
+        if (this.$toastr) this.$toastr.success(message)
+        else if (window.toastr) window.toastr.success(message)
+      } catch {}
     },
   },
 }

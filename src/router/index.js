@@ -15,6 +15,12 @@ const router = new VueRouter({
 	mode: 'history',
 	routes: [
 		{
+			path: '/lookup-invoice',
+			name: 'PublicInvoiceLookup',
+			component: () => import('@/views/public/invoice_lookup.vue'),
+			meta: { public: true, title: 'Tra cứu hóa đơn' }
+		},
+		{
 			path: '/',
 			component: () => import('@/views/customers/page.vue'),
 			meta: { requiresUser: true },
@@ -147,7 +153,7 @@ const router = new VueRouter({
 					path: '/email/mail-history',
 					name: 'EmailMailHistory',
 					component: () => import('@/views/customers/email/mail-history.vue'),
-					meta: { requiresUser: true, title: 'Lịch sử gửi mail' }
+					meta: { requiresUser: true, title: 'Trạng thái email gửi hóa đơn' }
 				}
 			]
 		},

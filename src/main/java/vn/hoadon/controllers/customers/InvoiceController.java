@@ -1736,11 +1736,12 @@ public class InvoiceController extends BaseController {
             String taxCode = (String) customerMap.getOrDefault("tax_code", "");
 
             // Fetch company details for template variables
-            String companyName = "", hotline = "", comEmail = "", website = "";
+            String companyName = "", hotline = "", comEmail = "", website = "", sellerTaxcode = "";
             if (companyId != null) {
                 CompanyEntity company = companyRepository.findById(companyId).orElse(null);
                 if (company != null) {
                     if (company.getName() != null)          companyName = company.getName();
+                    if (company.getTaxcode() != null)       sellerTaxcode = company.getTaxcode();
                     if (company.getHotline() != null)       hotline     = company.getHotline();
                     if (company.getInvoiceEmail() != null)  comEmail    = company.getInvoiceEmail();
                     else if (company.getEmail() != null)    comEmail    = company.getEmail();
@@ -1750,7 +1751,7 @@ public class InvoiceController extends BaseController {
 
             // Lookup link uses lookupCode if available
             String lookupCode = inv.getLookupCode() != null ? inv.getLookupCode() : String.valueOf(inv.getId());
-            String lookupLink = "/v1/invoices/" + lookupCode + "/lookup";
+            String lookupLink = buildPublicLookupLink(lookupCode, sellerTaxcode);
 
             java.util.Map<String, String> vars = new java.util.HashMap<>();
             vars.put("SO_HOA_DON",   inv.getNo() != null ? String.valueOf(inv.getNo()) : "");
@@ -1833,6 +1834,20 @@ public class InvoiceController extends BaseController {
     }
 
     private String safeStr(Object o) { return o == null ? "" : String.valueOf(o); }
+
+    private String buildPublicLookupLink(String lookupCode, String sellerTaxcode) {
+        String code = encodeQuery(lookupCode);
+        String taxcode = encodeQuery(sellerTaxcode);
+        if (taxcode.isBlank()) {
+            return "/lookup-invoice?code=" + code;
+        }
+        return "/lookup-invoice?code=" + code + "&taxcode=" + taxcode;
+    }
+
+    private String encodeQuery(String value) {
+        if (value == null) return "";
+        return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8);
+    }
 
     @GetMapping("/{id}/history")
     public ResponseEntity<?> history(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
@@ -1933,11 +1948,12 @@ public class InvoiceController extends BaseController {
             String html = buildEmailHtml(inv, formSerial, pdfLink, xmlLink, name);
 
             // Fetch company info for template variables
-            String companyName = "", hotline = "", comEmail = "", website = "";
+            String companyName = "", hotline = "", comEmail = "", website = "", sellerTaxcode = "";
             try {
                 vn.hoadon.entity.CompanyEntity company = companyRepository.findById(uCompany).orElse(null);
                 if (company != null) {
                     if (company.getName() != null)           companyName = company.getName();
+                    if (company.getTaxcode() != null)        sellerTaxcode = company.getTaxcode();
                     if (company.getHotline() != null)        hotline     = company.getHotline();
                     if (company.getInvoiceEmail() != null)   comEmail    = company.getInvoiceEmail();
                     else if (company.getEmail() != null)     comEmail    = company.getEmail();
@@ -1965,7 +1981,7 @@ public class InvoiceController extends BaseController {
             vars.put("SO_HOA_DON",  inv.getNo() != null ? String.valueOf(inv.getNo()) : "");
             vars.put("CUS_NAME",    name.trim());
             vars.put("CUS_TAXCODE", taxCode);
-            vars.put("LOOKUP_LINK", "/v1/invoices/" + lookupCode + "/lookup");
+            vars.put("LOOKUP_LINK", buildPublicLookupLink(lookupCode, sellerTaxcode));
             vars.put("LOOKUP_CODE", lookupCode);
             vars.put("COM_NAME",    companyName);
             vars.put("COM_HOTLINE", hotline);

@@ -41,6 +41,9 @@
         <b-dropdown-item v-if="!isCompanyPending" to="/setting">
           <i class="fas fa-user"></i> Tài khoản
         </b-dropdown-item>
+        <b-dropdown-item v-if="!isCompanyPending" :to="sessionRoute">
+          <i class="fas fa-desktop"></i> Phiên đăng nhập
+        </b-dropdown-item>
         <b-dropdown-item v-if="!isCompanyPending && showAdminLink" to="/auth/login-admin">
           <i class="fas fa-shield-alt"></i> Quản trị
         </b-dropdown-item>
@@ -178,6 +181,9 @@ export default {
     },
     unreadNotificationCount() {
       return this.list.filter(item => !this.isNotificationRead(item)).length
+    },
+    sessionRoute() {
+      return this.isCustomerContext() ? '/setting/sessions/list' : '/administrator/sessions/list'
     }
   },
   created() {
@@ -473,8 +479,16 @@ export default {
             username: hasUser ? (String(uname || '').trim() || 'Hệ thống') : 'Hệ thống',
             created_at: created,
             avatar: r.avatar ?? null,
+            read: r.read === true || r.isRead === true,
           }
         })
+        const serverReadKeys = this.list
+          .filter(item => item.read)
+          .map(item => this.normalizeNotificationKey(item))
+          .filter(Boolean)
+        if (serverReadKeys.length > 0) {
+          this.saveNotificationReadState([...(this.readNotificationKeys || []), ...serverReadKeys])
+        }
         if (this.notificationsOpen) this.markNotificationsRead()
 
         // Kiểm tra có thông báo mới không (so sánh số lượng hoặc ID)
@@ -542,12 +556,20 @@ export default {
     },
     isNotificationRead(item) {
       const key = this.normalizeNotificationKey(item)
-      return key ? this.readNotificationKeys.includes(key) : false
+      return item?.read === true || (key ? this.readNotificationKeys.includes(key) : false)
     },
     markNotificationsRead() {
       const currentKeys = this.list.map(item => this.normalizeNotificationKey(item)).filter(Boolean)
       if (currentKeys.length === 0) return
+      this.list = this.list.map(item => ({ ...item, read: true }))
       this.saveNotificationReadState([...(this.readNotificationKeys || []), ...currentKeys])
+      const ids = this.list
+        .map(item => Number(item.id))
+        .filter(id => Number.isFinite(id) && id > 0)
+      if (ids.length > 0) {
+        axios.post('/history/notifications/read', { ids }, { meta: { suppressGlobalErrorToast: true } })
+          .catch(() => {})
+      }
     },
     handleNotificationsShown() {
       this.notificationsOpen = true

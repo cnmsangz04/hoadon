@@ -15,7 +15,7 @@ function isAdminContext() {
 }
 
 // Các endpoint không bao giờ gửi kèm token (route xác thực công khai)
-const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password']
+const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password', '/public/']
 
 axios.interceptors.request.use(config => {
   try {

@@ -20,6 +20,12 @@ export default {
 	  meta: { requiresUser: true, title: 'Hồ sơ' }
 	},
 	{
+	  path: 'sessions/list',
+	  name: 'setting-sessions',
+	  component: () => import('../../views/settings/sessions/list.vue'),
+	  meta: { requiresUser: true, title: 'Phiên đăng nhập' }
+	},
+	{
 	  path: 'member/list',
 	  name: 'setting-member',
 	  component: () => import('../../views/settings/member/list.vue'),

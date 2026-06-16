@@ -73,7 +73,14 @@
       name: "admin-email-mail-history",
       component: () =>
         import("../../views/administrators/email/mail-history.vue"),
-      meta: { requiresAdmin: true, title: "Lịch sử gửi mail" },
+      meta: { requiresAdmin: true, title: "Trạng thái email gửi hóa đơn" },
+    },
+    {
+      path: "sessions/list",
+      name: "admin-sessions",
+      component: () =>
+        import("../../views/settings/sessions/list.vue"),
+      meta: { requiresAdmin: true, title: "Phiên đăng nhập" },
     },
     {
       path: "form-invoice/list",

@@ -23,8 +23,9 @@ public class SecurityConfig {
     public JwtAuthenticationFilter jwtAuthenticationFilter(
             JwtUtil jwtUtil,
             vn.hoadon.services.UserService userService,
-            vn.hoadon.repositories.CompanyRepository companyRepository) {
-        return new JwtAuthenticationFilter(jwtUtil, userService, companyRepository);
+            vn.hoadon.repositories.CompanyRepository companyRepository,
+            vn.hoadon.repositories.LoginSessionRepository loginSessionRepository) {
+        return new JwtAuthenticationFilter(jwtUtil, userService, companyRepository, loginSessionRepository);
     }
 
     @Bean
@@ -43,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/uploads/**",
                                 "/v1/auth/**",
+                                "/v1/public/**",
                                 "/v1/file/**",
                                 "/h2-console/**"
                         ).permitAll()

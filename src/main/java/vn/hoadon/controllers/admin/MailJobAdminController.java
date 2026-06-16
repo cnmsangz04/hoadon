@@ -1,21 +1,26 @@
 package vn.hoadon.controllers.admin;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.MailJobEntity;
 import vn.hoadon.entity.MailTemplateEntity;
+import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.MailJobRepository;
 import vn.hoadon.repositories.MailTemplateRepository;
+import vn.hoadon.services.MailQueueService;
 import vn.hoadon.util.SystemMail;
 
 import java.time.Instant;
@@ -33,6 +38,8 @@ public class MailJobAdminController {
     @Autowired private MailJobRepository mailJobRepository;
     @Autowired private MailTemplateRepository mailTemplateRepository;
     @Autowired private CompanyRepository companyRepository;
+    @Autowired private MailQueueService mailQueueService;
+    @Autowired private ObjectMapper objectMapper;
 
     @GetMapping
     public ResponseEntity<?> list(@RequestParam(name = "q", required = false) String q,
@@ -58,6 +65,29 @@ public class MailJobAdminController {
         resp.put("total", result.getTotalElements());
         resp.put("last_page", result.getTotalPages());
         return ResponseEntity.ok(resp);
+    }
+
+    @PostMapping("/{id}/retry")
+    public ResponseEntity<?> retry(@PathVariable("id") Long id) {
+        MailJobEntity oldJob = mailJobRepository.findById(id).orElse(null);
+        if (oldJob == null) {
+            return ResponseEntity.status(404).body(Map.of("message", "Không tìm thấy lịch sử gửi mail"));
+        }
+        if (oldJob.getPayload() == null || oldJob.getPayload().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Không có dữ liệu email để gửi lại"));
+        }
+        try {
+            MailJobMessage message = objectMapper.readValue(oldJob.getPayload(), MailJobMessage.class);
+            if (message.getCompanyId() == null) message.setCompanyId(oldJob.getCompanyId());
+            if (message.getInvoiceId() == null) message.setInvoiceId(oldJob.getInvoiceId());
+            if (message.getTemplateKey() == null) message.setTemplateKey(oldJob.getTemplateKey());
+            if (message.getToEmail() == null) message.setToEmail(oldJob.getToEmail());
+            if (message.getToName() == null) message.setToName(oldJob.getToName());
+            mailQueueService.enqueue(message);
+            return ResponseEntity.ok(Map.of("message", "Đã đưa email vào hàng đợi gửi lại"));
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).body(Map.of("message", "Không thể gửi lại email: " + ex.getMessage()));
+        }
     }
 
     private Map<String, Object> toRow(MailJobEntity job) {

@@ -14,12 +14,14 @@ import vn.hoadon.dto.auth.AuthRequest;
 import vn.hoadon.dto.auth.AuthResponse;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.CompanyRegistrationRequestEntity;
+import vn.hoadon.entity.LoginSessionEntity;
 import vn.hoadon.entity.LoginHistoryEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.CompanyRegistrationRequestRepository;
 import vn.hoadon.repositories.LoginHistoryRepository;
+import vn.hoadon.repositories.LoginSessionRepository;
 import vn.hoadon.repositories.UserRepository;
 import vn.hoadon.security.JwtUtil;
 import vn.hoadon.services.CompanyIpSecurityService;
@@ -45,6 +47,7 @@ public class Auth {
     @Autowired private CompanyRegistrationRequestRepository companyRegistrationRequestRepository;
     @Autowired private MailQueueService mailQueueService;
     @Autowired private LoginHistoryRepository loginHistoryRepository;
+    @Autowired private LoginSessionRepository loginSessionRepository;
     @Autowired private CompanyIpSecurityService companyIpSecurityService;
 
     @Value("${app.frontend-url:http://localhost:8080}")
@@ -75,7 +78,11 @@ public class Auth {
             return ResponseEntity.status(403).body("IP đăng nhập chưa được phép truy cập");
         }
 
-        String token = jwtUtil.generateToken(user);
+        String sessionId = UUID.randomUUID().toString().replaceAll("-", "");
+        LoginSessionEntity session = createSession(user, httpReq, ipAddress, "USER", sessionId);
+        String token = jwtUtil.generateToken(user, sessionId);
+        session.setExpiresAt(jwtUtil.getExpiration(token));
+        loginSessionRepository.save(session);
         recordLogin(user, httpReq, ipAddress, "USER");
         return ResponseEntity.ok(new AuthResponse(token, "Bearer", user.getId(), user.getRole()));
     }
@@ -116,7 +123,11 @@ public class Auth {
             return ResponseEntity.status(403).body("IP đăng nhập chưa được phép truy cập");
         }
 
-        String token = jwtUtil.generateToken(user);
+        String sessionId = UUID.randomUUID().toString().replaceAll("-", "");
+        LoginSessionEntity session = createSession(user, httpReq, ipAddress, "ADMIN", sessionId);
+        String token = jwtUtil.generateToken(user, sessionId);
+        session.setExpiresAt(jwtUtil.getExpiration(token));
+        loginSessionRepository.save(session);
         recordLogin(user, httpReq, ipAddress, "ADMIN");
         return ResponseEntity.ok(new AuthResponse(token, "Bearer", user.getId(), user.getRole()));
     }
@@ -334,6 +345,25 @@ public class Auth {
         } catch (Exception ignored) {
             // Không để lỗi ghi lịch sử làm gián đoạn đăng nhập.
         }
+    }
+
+    private LoginSessionEntity createSession(
+            UserEntity user,
+            HttpServletRequest request,
+            String ipAddress,
+            String loginType,
+            String sessionId) {
+        LoginSessionEntity session = new LoginSessionEntity();
+        session.setSessionId(sessionId);
+        session.setUserId(user.getId());
+        session.setCompanyId(user.getCompanyId());
+        session.setUsername(user.getUsername());
+        session.setLoginType(loginType);
+        session.setIpAddress(ipAddress);
+        session.setUserAgent(request != null ? request.getHeader("User-Agent") : null);
+        session.setIssuedAt(LocalDateTime.now());
+        session.setLastSeenAt(LocalDateTime.now());
+        return loginSessionRepository.save(session);
     }
 
     public static class ForgotRequest {
