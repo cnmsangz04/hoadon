@@ -1,2 +1,0 @@
-"use strict";(self["webpackChunkhoadon_vue"]=self["webpackChunkhoadon_vue"]||[]).push([[673],{8673:(e,s,n)=>{n.r(s),n.d(s,{default:()=>l});var t=function(){var e=this,s=e._self._c;return s("div",{staticClass:"access-control"},[s("router-view")],1)},a=[];const c={name:"AccessControlIndex"},o=c;var r=n(1656),u=(0,r.A)(o,t,a,!1,null,"8af010f0",null);const l=u.exports}}]);
-//# sourceMappingURL=673.38216297.js.map
