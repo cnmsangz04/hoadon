@@ -109,7 +109,7 @@ public class ReportController extends BaseController {
             Long formId = inv.getFormId() != null ? inv.getFormId().longValue() : null;
             if (formId != null) {
                 FormInvoiceEntity form = formCache.computeIfAbsent(formId, id -> formInvoiceRepository.findById(id).orElse(null));
-                if (form != null) {
+                if (form != null && form.getCompanyId() != null && form.getCompanyId().equals(companyId)) {
                     row.put("formCode", form.getFormCode());
                     row.put("serial", form.getSerial());
                 }
@@ -226,7 +226,7 @@ public class ReportController extends BaseController {
                 Long formId = inv.getFormId() != null ? inv.getFormId().longValue() : null;
                 if (formId != null) {
                     FormInvoiceEntity form = formCache.computeIfAbsent(formId, id -> formInvoiceRepository.findById(id).orElse(null));
-                    if (form != null) {
+                    if (form != null && form.getCompanyId() != null && form.getCompanyId().equals(companyId)) {
                         formCode = safe(form.getFormCode());
                         serial = safe(form.getSerial());
                     }

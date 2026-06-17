@@ -59,32 +59,32 @@
 
 
 <script>
-import { parseJwt } from '@/utils/jwt'
 export default {
   name: "sidebar_setting",
 
   data() {
     return {
       openIndex: null,
-      // Menu cơ bản chưa có Thành viên; sẽ thêm Thành viên có điều kiện trong created()
+      // Menu luôn hiển thị; quyền thao tác được backend kiểm tra theo từng API.
       menu: [
         { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
         { title: 'Tài khoản', icon: 'fas fa-user-cog', to: '/setting/account/list' },
         { title: 'Hồ sơ', icon: 'fas fa-id-card', to: '/setting/profile/list' },
-        { title: 'Phiên đăng nhập', icon: 'fas fa-desktop', to: '/setting/sessions/list' }
+        { title: 'Phiên đăng nhập', icon: 'fas fa-desktop', to: '/setting/sessions/list' },
+        { title: 'Thành viên', icon: 'fas fa-users', to: '/setting/member/list' },
+        {
+          title: 'Bảo mật',
+          icon: 'fas fa-shield-alt',
+          children: [
+            { title: 'Bảo mật bằng IP', to: '/setting/security/ip' }
+          ]
+        },
+        { title: 'Lịch sử đăng nhập', icon: 'fas fa-history', to: '/setting/login-history/list' }
       ]
     };
   },
 
   computed: {
-    canSeeMember() {
-      try {
-        const token = localStorage.getItem('token') || localStorage.getItem('token-admin')
-        const payload = parseJwt(token)
-        const roleNum = payload && typeof payload.role !== 'undefined' ? Number(payload.role) : NaN
-        return roleNum === 0 || roleNum === 1
-      } catch { return false }
-    },
     logoSrc() {
       try {
         const logo = this.$app?.info?.company?.logo
@@ -100,21 +100,6 @@ export default {
         this.$forceUpdate()
       },
       deep: true
-    }
-  },
-
-  created() {
-    // Thêm menu Thành viên nếu được phép
-    if (this.canSeeMember) {
-      this.menu.push({ title: 'Thành viên', icon: 'fas fa-users', to: '/setting/member/list' })
-      this.menu.push({
-        title: 'Bảo mật',
-        icon: 'fas fa-shield-alt',
-        children: [
-          { title: 'Bảo mật bằng IP', to: '/setting/security/ip' }
-        ]
-      })
-      this.menu.push({ title: 'Lịch sử đăng nhập', icon: 'fas fa-history', to: '/setting/login-history/list' })
     }
   },
 
@@ -146,6 +131,8 @@ export default {
 <style scoped>
 .sidebar {
   width: 260px;
+  min-width: 260px;
+  flex: 0 0 260px;
   background: linear-gradient(180deg, #0f1724 0%, #0b2238 100%);
   color: #e6eef8;
   height: 100vh;
@@ -160,9 +147,22 @@ export default {
 .sidebar-inner { padding: 18px 14px; height: 100%; display: flex; flex-direction: column; }
 .brand { text-align: center; margin-bottom: 12px; }
 .logo { max-width: 160px; margin: auto; display: block; }
-.menu { flex: 1; overflow: auto; }
+.menu {
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-right: -6px;
+}
 .menu ul { padding: 0; margin: 0; list-style: none; }
-.menu-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; color: #dbeefd; border-radius: 6px; text-decoration: none; }
+.menu-item { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 12px; color: #dbeefd; border-radius: 6px; text-decoration: none; }
+.menu-item .label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .menu-item:hover { background: rgba(255,255,255,0.03); color: #fff; }
 .menu-item i { width: 18px; text-align: center; }
 .menu li.active > .menu-item { background: rgba(255,255,255,0.08); color: #fff; }

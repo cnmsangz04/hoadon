@@ -427,8 +427,8 @@ export default {
       errors: {},
       // Theo dõi key lỗi đã hiển thị để tránh toast trùng
       shownErrorKeys: new Set(),
-      prepare: { formId: null, formCode: null, serial: null, haveCode: null, registerId: null, registerEffectiveDate: null },
-      formInvoices: { name: null, form_code: null, serial: null, have_code: null },
+      prepare: { formId: null, formName: null, formCode: null, serial: null, haveCode: null, registerId: null, registerEffectiveDate: null },
+      formInvoices: { form_id: null, name: null, form_code: null, serial: null, have_code: null },
       companies: { name: null, taxcode: null, address: null },
       loadingCustomers: false,
       customerOptions: [],
@@ -495,7 +495,6 @@ export default {
         { value: 2, text: 'Chuyển khoản' },
         { value: 3, text: 'Tiền mặt/Chuyển khoản' }
       ],
-      company_id: null,
       editId: null,
       loadedInvoice: null,
       referenceInvoice: null,
@@ -632,42 +631,35 @@ export default {
         const { data: prep } = await axios.get('/invoices/prepare')
         this.prepare = { ...this.prepare, ...prep }
 
-        const { data: profile } = await axios.post('/setting/profile/get')
+        const { data: authInfo } = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
+        const company = authInfo?.company || {}
         this.companies = {
-          name: profile.companyName || null,
-          taxcode: profile.taxCode || null,
-          address: profile.companyAddress || null
+          name: company.name || null,
+          taxcode: company.taxcode || company.taxCode || null,
+          address: company.address || null
         }
-        // detect company_id
-        this.detectCompanyId(profile, prep)
+        this.formInvoices.form_id = this.prepare.formId || null
+        this.formInvoices.name = this.prepare.formName || 'Hóa đơn GTGT'
+        this.formInvoices.form_code = this.prepare.formCode || null
+        this.formInvoices.serial = this.prepare.serial || null
+        this.formInvoices.have_code = this.prepare.haveCode
 
-        const { data: formList } = await axios.get('/form-invoices', { params: { category: 1, status: 1, size: 1, page: 1 } })
-        const item = (formList && formList.items && formList.items[0]) || null
-        if (!item) {
-          throw new Error('Chưa có mẫu hóa đơn GTGT được kích hoạt')
-        }
-        this.formInvoices.name = item.name || null
-        this.formInvoices.form_code = this.prepare.formCode || item.formCode || null
-        this.formInvoices.serial = this.prepare.serial || item.serial || null
-        this.formInvoices.have_code = this.prepare.haveCode != null ? this.prepare.haveCode : item.haveCode
-
-        // customers by company_id
+        // Tải khách hàng theo công ty hiện tại từ backend
         await this.refreshCustomers()
 
-        // products
-        this.loadingProduct = true
-        const { data: productsPage } = await axios.post('/categories/product/list', {}, { params: { page: 0, size: 200 } })
-        this.app.product = (productsPage && productsPage.data) ? productsPage.data : []
-        this.loadingProduct = false
+        // Tải sản phẩm để gợi ý, thiếu quyền danh mục vẫn cho phép lập hóa đơn
+        await this.refreshProducts()
 
-        // VAT rates
-        const { data: vatRates } = await axios.get('/categories/product/vat-rates')
-        this.app.optionVatRates = Array.isArray(vatRates) ? vatRates : []
+        // Tải thuế suất VAT, lỗi tải dữ liệu phụ không chặn form lập hóa đơn
+        await this.refreshVatRates()
       } catch (e) {
         const msg = e && e.response && e.response.data && e.response.data.message
           ? e.response.data.message
           : 'Không đủ điều kiện để lập hóa đơn'
         this.error = msg
+        if (e && e.response && e.response.status === 403) {
+          return false
+        }
         this.toastError(msg, 'checkPrerequisites')
         this.$router.replace({ name: 'CustomerVatInvoiceList' })
         return false
@@ -676,20 +668,15 @@ export default {
       }
       return true
     },
-    detectCompanyId (profile, prep) {
-      // auto detect company_id based on user context
-      // priority: profile.companyId -> prepare.companyId -> null
-      const fromProfile = profile && (profile.companyId || profile.company_id)
-      const fromPrep = prep && (prep.companyId || prep.company_id)
-      this.company_id = fromProfile || fromPrep || null
-    },
     async refreshCustomers () {
       this.loadingCustomers = true
       try {
-        const payload = this.company_id ? { company_id: this.company_id } : {}
-        const { data: customersPage } = await axios.post('/categories/customer/list', payload, { params: { page: 0, size: 100 } })
+        const { data: customersPage } = await axios.post('/categories/customer/list', {}, {
+          params: { page: 0, size: 100 },
+          meta: { suppressGlobalErrorToast: true }
+        })
         const customers = customersPage && customersPage.data ? customersPage.data : []
-        // store full customers for later lookup
+        // Lưu dữ liệu khách hàng đầy đủ để tự điền thông tin khi chọn mã
         this.customersRaw = customers
         // Định dạng cho v-select: mảng đối tượng có giá trị và chữ hiển thị.
         const opts = customers.map(c => ({
@@ -697,8 +684,35 @@ export default {
           text: `${c.code} - ${(c.companyName || c.buyerName || '')}`.trim()
         }))
         this.customerOptions = opts
+      } catch (e) {
+        this.customersRaw = []
+        this.customerOptions = []
       } finally {
         this.loadingCustomers = false
+      }
+    },
+    async refreshProducts () {
+      this.loadingProduct = true
+      try {
+        const { data: productsPage } = await axios.post('/categories/product/list', {}, {
+          params: { page: 0, size: 200 },
+          meta: { suppressGlobalErrorToast: true }
+        })
+        this.app.product = productsPage && productsPage.data ? productsPage.data : []
+      } catch (e) {
+        this.app.product = []
+      } finally {
+        this.loadingProduct = false
+      }
+    },
+    async refreshVatRates () {
+      try {
+        const { data: vatRates } = await axios.get('/categories/product/vat-rates', {
+          meta: { suppressGlobalErrorToast: true }
+        })
+        this.app.optionVatRates = Array.isArray(vatRates) ? vatRates : []
+      } catch (e) {
+        this.app.optionVatRates = []
       }
     },
     // populate customer fields when selecting a customer code
@@ -1204,7 +1218,7 @@ export default {
 .form-label {
   font-size: 11.5px;
   color: #6b7280;
-  margin-bottom: 4px !important;
+  margin-bottom: var(--ui-label-gap) !important;
 }
 
 /* Compact inputs with nicer focus */

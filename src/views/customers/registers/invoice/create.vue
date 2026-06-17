@@ -202,37 +202,45 @@
       <!-- 5. Danh sách chứng thư số sử dụng -->
       <b-row class="pt-2 pb-2">
         <b-col cols="12">
-          <label class="font-weight-bold">5. Danh sách chứng thư số sử dụng</label>
-          <b-button type="button" variant="link" class="text-decoration-none float-right" @click="showSignatureModal(false)">
-            <i class="fas fa-plus"></i> Thêm chữ ký số
-          </b-button>
-          <div>
-            <b-table-simple bordered show-empty empty-text="Không có dữ liệu">
+          <div class="signature-section-heading">
+            <label class="font-weight-bold">5. Danh sách chứng thư số sử dụng</label>
+            <b-button type="button" variant="link" class="signature-add-btn" @click="showSignatureModal(false)">
+              <i class="fas fa-plus mr-1"></i> Thêm chữ ký số
+            </b-button>
+          </div>
+          <div class="signature-table-wrap">
+            <b-table-simple class="signature-table" bordered small show-empty empty-text="Không có dữ liệu">
               <b-thead>
                 <b-tr>
-                  <b-th style="width: 5%" rowspan="2" class="text-center align-middle">STT</b-th>
-                  <b-th style="width: 20%" rowspan="2" class="text-center align-middle">Tên tổ chức cơ quan chứng thực/cấp/công nhận chữ ký số, chữ ký điện tử</b-th>
-                  <b-th rowspan="2" class="text-center align-middle">Số sê-ri chứng thư</b-th>
-                  <b-th style="width: 20%" colspan="2" class="text-center align-middle">Thời gian sử dụng chứng thư số</b-th>
-                  <b-th style="width: 15%" rowspan="2" class="text-center align-middle">Hình thức đăng ký (Thêm mới, gia hạn, ngừng sử dụng)</b-th>
-                  <b-th style="width: 100px" rowspan="2" class="text-center align-middle">Thao tác</b-th>
+                  <b-th rowspan="2" class="text-center align-middle signature-col-index">STT</b-th>
+                  <b-th rowspan="2" class="text-center align-middle signature-col-org">Tên tổ chức cơ quan chứng thực/cấp/công nhận chữ ký số, chữ ký điện tử</b-th>
+                  <b-th rowspan="2" class="text-center align-middle signature-col-serial">Số sê-ri chứng thư</b-th>
+                  <b-th colspan="2" class="text-center align-middle signature-col-period">Thời gian sử dụng chứng thư số</b-th>
+                  <b-th rowspan="2" class="text-center align-middle signature-col-method">Hình thức đăng ký (Thêm mới, gia hạn, ngừng sử dụng)</b-th>
+                  <b-th rowspan="2" class="text-center align-middle signature-col-actions">Thao tác</b-th>
                 </b-tr>
                 <b-tr>
-                  <b-th class="text-center align-middle">Từ ngày</b-th>
-                  <b-th class="text-center align-middle">Đến ngày</b-th>
+                  <b-th class="text-center align-middle signature-col-date">Từ ngày</b-th>
+                  <b-th class="text-center align-middle signature-col-date">Đến ngày</b-th>
                 </b-tr>
               </b-thead>
               <b-tbody>
                 <b-tr v-for="(value, index) in frmData.digital_certificates" :key="index">
                   <b-td class="text-center">{{ index + 1 }}</b-td>
-                  <b-td>{{ value.orgName }}</b-td>
-                  <b-td>{{ value.serialNo }}</b-td>
+                  <b-td class="signature-text-cell">{{ value.orgName }}</b-td>
+                  <b-td class="signature-text-cell">{{ value.serialNo }}</b-td>
                   <b-td class="text-center">{{ formatDate(value.signFromDate) }}</b-td>
                   <b-td class="text-center">{{ formatDate(value.signToDate) }}</b-td>
                   <b-td class="text-center">{{ getNameRegMethod(value.sigRegMethod) }}</b-td>
                   <b-td class="text-center">
-                    <button type="button" @click="showSignatureModal(index)" class="btn btn-custom"><i class="far fa-edit"></i></button>
-                    <button type="button" @click="onDeleteSignature(index)" class="btn btn-custom"><i class="far fa-trash-alt"></i></button>
+                    <div class="signature-table-actions">
+                      <b-button type="button" variant="link" size="sm" title="Cập nhật" aria-label="Cập nhật chữ ký số" @click="showSignatureModal(index)">
+                        <i class="far fa-edit"></i>
+                      </b-button>
+                      <b-button type="button" variant="link" size="sm" title="Xóa" aria-label="Xóa chữ ký số" @click="onDeleteSignature(index)">
+                        <i class="far fa-trash-alt"></i>
+                      </b-button>
+                    </div>
                   </b-td>
                 </b-tr>
                 <b-tr v-if="!frmData.digital_certificates || frmData.digital_certificates.length < 1">
@@ -305,15 +313,15 @@
               <b-spinner small type="grow"></b-spinner>
               Đang lưu...
             </b-button>
-            <!-- Chỉ hiển thị Gửi CQT nếu status = 1 -->
-            <b-button type="button" size="sm" class="ml-2" @click="sendData" v-if="frmData.action === 'update' && Number(frmData.status) === 1">Gửi CQT</b-button>
+            <!-- Cho phép gửi lại nếu tờ khai đã ký nhưng chưa được chấp nhận -->
+            <b-button type="button" size="sm" class="ml-2" @click="sendData" v-if="canSendToTaxAuthority">Gửi CQT</b-button>
           </div>
         </div>
       </div>
     </b-card>
 
     <!-- Hộp thoại chữ ký số -->
-    <b-modal ref="modalSignature" no-close-on-esc no-close-on-backdrop hide-header-close header-bg-variant="light" @hidden="onSignatureModalHidden">
+    <b-modal ref="modalSignature" size="lg" no-close-on-esc no-close-on-backdrop hide-header-close @hidden="onSignatureModalHidden">
       <template #modal-title>
         <div class="modal-title">{{ signatureModal.index !== false ? 'Cập nhật chữ ký số' : 'Thêm chữ ký số' }}</div>
       </template>
@@ -337,13 +345,13 @@
         <b-row>
           <b-col cols="12" md="6">
             <b-form-group label="Thời gian từ ngày" label-for="signFromDate" :state="signatureState('signFromDate')">
-              <b-form-datepicker id="signFromDate" class="mb-2" size="sm" v-model="signatureModal.signFromDate" :date-format-options="dateFmt" locale="vi" :state="signatureState('signFromDate')" />
+              <b-form-datepicker id="signFromDate" size="sm" v-model="signatureModal.signFromDate" :date-format-options="dateFmt" locale="vi" :state="signatureState('signFromDate')" />
               <b-form-invalid-feedback :state="signatureState('signFromDate')">{{ signatureErrors.signFromDate }}</b-form-invalid-feedback>
             </b-form-group>
           </b-col>
           <b-col cols="12" md="6">
             <b-form-group label="Thời gian đến ngày" label-for="signToDate" :state="signatureState('signToDate')">
-              <b-form-datepicker id="signToDate" class="mb-2" size="sm" v-model="signatureModal.signToDate" :date-format-options="dateFmt" locale="vi" :state="signatureState('signToDate')" />
+              <b-form-datepicker id="signToDate" size="sm" v-model="signatureModal.signToDate" :date-format-options="dateFmt" locale="vi" :state="signatureState('signToDate')" />
               <b-form-invalid-feedback :state="signatureState('signToDate')">{{ signatureErrors.signToDate }}</b-form-invalid-feedback>
             </b-form-group>
           </b-col>
@@ -357,11 +365,9 @@
         </b-row>
       </b-form>
       <template #modal-footer>
-        <div class="w-100">
-          <div class="float-right">
-            <b-button size="sm" variant="light" @click="closeSignatureModal">Hủy</b-button>
-            <b-button type="button" size="sm" class="btn btn-default" @click="onSubmitSignature">{{ signatureModal.index !== false ? 'Cập nhật' : 'Thêm' }}</b-button>
-          </div>
+        <div class="modal-footer-actions">
+          <b-button size="sm" variant="light" @click="closeSignatureModal">Hủy</b-button>
+          <b-button type="button" size="sm" variant="primary" @click="onSubmitSignature">{{ signatureModal.index !== false ? 'Cập nhật' : 'Thêm' }}</b-button>
         </div>
       </template>
     </b-modal>
@@ -373,6 +379,7 @@ import axios from '@/plugins/axios'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import { firstError, hasErrors, required } from '@/utils/validators'
+import { toastError, toastSuccess, toastWarning } from '@/utils/toast'
 
 export default {
   name: 'RegisterInvoiceCreate',
@@ -444,6 +451,9 @@ export default {
     },
     formErrorList() {
       return Object.values(this.errors || {}).filter(Boolean)
+    },
+    canSendToTaxAuthority() {
+      return this.frmData.action === 'update' && [1, 3, 4, 5].includes(Number(this.frmData.status))
     }
   },
   created() {
@@ -608,15 +618,15 @@ export default {
       try {
         const { data } = await axios.get(`/register-invoices/${id}`)
         this.applyDetail(data)
-        // also refresh prefill to show company/legal info from current user company
+        // Tải lại dữ liệu gợi ý để hiển thị thông tin pháp lý của công ty hiện tại
         await this.loadPrefill()
       } catch (e) {
-        // handle
+        // Lỗi đã được handler toàn cục xử lý
       } finally {
         this.btnLoading = false
       }
     },
-    // --- Normalizers to align backend -> UI values ---
+    // Chuẩn hóa dữ liệu backend về dạng giao diện đang dùng
     normalizeArray(raw, mapDict) {
       let arr = []
       if (Array.isArray(raw)) arr = raw
@@ -910,18 +920,18 @@ export default {
           if (!notifiedReceive && (status === 3 || status === 4)) {
             notifiedReceive = true
             if (status === 4) {
-              this.$bvToast && this.$bvToast.toast('Cơ quan thuế đã tiếp nhận tờ khai', { title: 'Thông báo', variant: 'success', solid: true, autoHideDelay: 4000 })
+              toastSuccess('Cơ quan thuế đã tiếp nhận tờ khai')
             } else {
-              this.$bvToast && this.$bvToast.toast('Cơ quan thuế không tiếp nhận tờ khai', { title: 'Thông báo', variant: 'warning', solid: true, autoHideDelay: 4000 })
+              toastWarning('Cơ quan thuế không tiếp nhận tờ khai', `register-receive-${id}`)
             }
           }
           // Accept stage (103)
           if (!notifiedAccept && (status === 5 || status === 6)) {
             notifiedAccept = true
             if (status === 6) {
-              this.$bvToast && this.$bvToast.toast('Cơ quan thuế đã chấp nhận tờ khai', { title: 'Thông báo', variant: 'success', solid: true, autoHideDelay: 4000 })
+              toastSuccess('Cơ quan thuế đã chấp nhận tờ khai')
             } else {
-              this.$bvToast && this.$bvToast.toast('Cơ quan thuế không chấp nhận tờ khai', { title: 'Thông báo', variant: 'danger', solid: true, autoHideDelay: 4000 })
+              toastError('Cơ quan thuế không chấp nhận tờ khai', `register-accept-${id}`)
             }
           }
           // Cập nhật UI detail
@@ -990,7 +1000,7 @@ export default {
         this.frmData.signed_xml = data?.signedXml || data?.signed_xml || this.frmData.signed_xml
         this.frmData.date_sign = data?.signDate || data?.sign_date || new Date().toISOString()
         this.frmData.signature = data?.signatureInfo ? { name: data.signatureInfo } : (data?.signature_info ? { name: data.signature_info } : this.frmData.signature)
-        // After signing successfully, move status to 1 so UI shows "Gửi CQT" and hides "Cập nhật"
+        // Sau khi ký số thành công, chuyển trạng thái để hiện "Gửi CQT" và ẩn "Cập nhật"
         this.frmData.status = 1
       } catch (e) {
       } finally {
@@ -1011,7 +1021,7 @@ export default {
       this.$refs.modalSignature.hide()
     },
     onSignatureModalHidden() {
-      // cleanup if needed
+      // Chưa cần dọn dữ liệu khi đóng hộp thoại
     },
     onSubmitSignature() {
       if (!this.validateSignatureForm()) {
@@ -1044,7 +1054,7 @@ export default {
       return '—'
     },
     mockDetail(id) {
-      // no longer used; data comes from backend
+      // Không còn dùng dữ liệu giả, dữ liệu được lấy từ backend
       return { id }
     },
   }
@@ -1052,11 +1062,110 @@ export default {
 </script>
 
 <style scoped>
-/* Ensure plain text blocks align visually */
+/* Căn chỉnh các dòng văn bản chỉ đọc */
 .form-control-plaintext {
   padding-left: 0;
   margin-bottom: 0.25rem;
 }
 .v-select { width: 100%; }
 .register-invoice-create .b-form-datepicker { width: 100%; }
+
+.signature-section-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.signature-section-heading label {
+  margin-bottom: 0;
+}
+
+.signature-add-btn {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.signature-table-wrap {
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+#app .register-invoice-create .signature-table {
+  margin-bottom: 0;
+  min-width: 900px;
+  table-layout: fixed;
+}
+
+#app .register-invoice-create .signature-table th,
+#app .register-invoice-create .signature-table td {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: break-word;
+}
+
+#app .register-invoice-create .signature-table th {
+  line-height: 1.35;
+  padding: 10px 8px;
+}
+
+.signature-col-index {
+  width: 54px;
+}
+
+.signature-col-org {
+  width: 255px;
+}
+
+.signature-col-serial {
+  width: 165px;
+}
+
+.signature-col-period {
+  width: 220px;
+}
+
+.signature-col-date {
+  width: 110px;
+}
+
+.signature-col-method {
+  width: 160px;
+}
+
+.signature-col-actions {
+  width: 86px;
+}
+
+.signature-text-cell {
+  min-width: 0;
+}
+
+.signature-table-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: 2px;
+  justify-content: center;
+}
+
+#app .register-invoice-create .signature-table-actions .btn {
+  min-width: 32px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+@media (max-width: 576px) {
+  .signature-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .signature-add-btn {
+    text-align: left;
+  }
+}
 </style>

@@ -1,6 +1,11 @@
 import toastr from 'toastr'
 
-// Set toàn cục để theo dõi các khóa lỗi đã hiển thị trong vòng đời app
+toastr.options = {
+  ...(toastr.options || {}),
+  preventDuplicates: true
+}
+
+// Set toàn cục để theo dõi các khóa lỗi đang hiển thị
 const shown = new Set()
 
 export function toastError(message, key) {
@@ -8,6 +13,7 @@ export function toastError(message, key) {
   if (shown.has(k)) return
   shown.add(k)
   toastr.error(message, 'Lỗi')
+  setTimeout(() => shown.delete(k), 3500)
 }
 
 export function toastWarning(message, key) {
@@ -15,6 +21,7 @@ export function toastWarning(message, key) {
   if (shown.has(k)) return
   shown.add(k)
   toastr.warning(message, 'Cảnh báo')
+  setTimeout(() => shown.delete(k), 3500)
 }
 
 export function toastSuccess(message) {

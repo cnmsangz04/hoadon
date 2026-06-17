@@ -54,7 +54,7 @@ public class VnpayPaymentServiceImpl implements VnpayPaymentService {
         params.put("vnp_CurrCode", CURRENCY);
         params.put("vnp_IpAddr", normalizeIpAddress(request.ipAddress()));
         params.put("vnp_Locale", firstNotBlank(properties.getLocale(), "vn"));
-        params.put("vnp_OrderInfo", firstNotBlank(request.orderInfo(), "Thanh toan hoa don"));
+        params.put("vnp_OrderInfo", firstNotBlank(request.orderInfo(), "Thanh toán hóa đơn"));
         params.put("vnp_OrderType", firstNotBlank(properties.getOrderType(), "other"));
         params.put("vnp_ReturnUrl", returnUrl);
         params.put("vnp_TxnRef", request.txnRef());

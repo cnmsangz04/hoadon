@@ -75,7 +75,7 @@ export default {
         { title: 'Cơ quan thuế', icon: 'fas fa-landmark', to: '/administrator/tax-authority/list' },
         { title: 'Thuế suất', icon: 'fas fa-percent', to: '/administrator/vat-rate/list' },
         { title: 'Email template', icon: 'fas fa-envelope', to: '/administrator/email-template/list' },
-        { title: 'Trạng thái email', icon: 'fas fa-history', to: '/administrator/email/mail-history' },
+        { title: 'Lịch sử gửi mail', icon: 'fas fa-history', to: '/administrator/email/mail-history' },
         { title: 'Telegram', icon: 'fab fa-telegram-plane', to: '/administrator/telegram/config' },
         { title: 'Phiên đăng nhập', icon: 'fas fa-desktop', to: '/administrator/sessions/list' },
         {
@@ -144,6 +144,8 @@ export default {
 <style scoped>
 .sidebar {
   width: 260px;
+  min-width: 260px;
+  flex: 0 0 260px;
   background: linear-gradient(180deg, #0f1724 0%, #0b2238 100%);
   color: #e6eef8;
   height: 100vh;
@@ -175,7 +177,10 @@ export default {
 
 .menu {
   flex: 1;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-right: -6px;
 }
 
 .menu ul {
@@ -188,10 +193,19 @@ export default {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
   padding: 10px 12px;
   color: #dbeefd;
   border-radius: 6px;
   text-decoration: none;
+}
+
+.menu-item .label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .menu-item:hover {

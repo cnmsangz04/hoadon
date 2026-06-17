@@ -15,22 +15,47 @@
     </div>
 
     <b-card class="mb-3 shadow-sm">
-      <b-row>
-        <b-col cols="8">
+      <b-row class="align-items-end">
+        <b-col lg="4" md="6" class="mb-2">
+          <label class="filter-label">Từ khóa</label>
           <b-input-group>
             <b-input-group-prepend is-text>
               <i class="fas fa-search text-muted"></i>
             </b-input-group-prepend>
             <b-form-input
-              v-model="keyword"
+              v-model.trim="filters.keyword"
               placeholder="Tìm theo tên / hiển thị"
               @keyup.enter="onFilter"
             />
           </b-input-group>
         </b-col>
-        <b-col cols="4" class="text-right">
-          <b-button size="sm" variant="primary" @click="onFilter">
-            Tìm kiếm
+        <b-col lg="3" md="6" class="mb-2">
+          <label class="filter-label">Nhóm quyền</label>
+          <b-form-select
+            v-model="filters.categoryId"
+            :options="filterCategoryOptions"
+          />
+        </b-col>
+        <b-col lg="2" md="4" class="mb-2">
+          <label class="filter-label">Level</label>
+          <b-form-select
+            v-model="filters.level"
+            :options="levelFilterOptions"
+          />
+        </b-col>
+        <b-col lg="2" md="4" class="mb-2">
+          <label class="filter-label">Trạng thái</label>
+          <b-form-select
+            v-model="filters.status"
+            :options="statusFilterOptions"
+          />
+        </b-col>
+        <b-col lg="1" md="4" class="mb-2 text-right">
+          <b-button size="sm" variant="primary" class="filter-action" @click="onFilter">
+            Lọc
+          </b-button>
+          <b-button size="sm" variant="light" class="filter-action mt-1" @click="resetFilter">
+            Xóa
           </b-button>
         </b-col>
       </b-row>
@@ -123,32 +148,44 @@
       :title="form.id ? 'Cập nhật quyền' : 'Thêm quyền'"
       hide-footer
     >
-      <b-form @submit.prevent="savePermission">
-        <b-form-group label="Tên quyền">
-          <b-form-input v-model="form.name" required />
+      <b-form novalidate @submit.prevent="savePermission">
+        <b-form-group label="Tên quyền" :state="state('name')">
+          <b-form-input v-model.trim="form.name" required :state="state('name')" />
+          <b-form-invalid-feedback :state="state('name')">
+            {{ invalidFeedback('name') }}
+          </b-form-invalid-feedback>
         </b-form-group>
 
-        <b-form-group label="Tên hiển thị">
-          <b-form-input v-model="form.displayName" required />
+        <b-form-group label="Tên hiển thị" :state="state('displayName')">
+          <b-form-input v-model.trim="form.displayName" required :state="state('displayName')" />
+          <b-form-invalid-feedback :state="state('displayName')">
+            {{ invalidFeedback('displayName') }}
+          </b-form-invalid-feedback>
         </b-form-group>
 
-        <b-form-group label="Level">
+        <b-form-group label="Level" :state="state('level')">
           <b-form-input
             type="number"
             min="0"
             max="2"
             v-model.number="form.level"
+            :state="state('level')"
           />
-          <small v-if="!validLevel" class="text-danger">Level phải từ 0 đến 2</small>
+          <b-form-invalid-feedback :state="state('level')">
+            {{ invalidFeedback('level') }}
+          </b-form-invalid-feedback>
         </b-form-group>
 
-        <b-form-group label="Nhóm quyền">
+        <b-form-group label="Nhóm quyền" :state="state('category')">
           <b-form-select
             v-model="form.category"
             :options="categoryOptions"
             required
+            :state="state('category')"
           />
-          <small v-if="!form.category" class="text-danger">Vui lòng chọn nhóm</small>
+          <b-form-invalid-feedback :state="state('category')">
+            {{ invalidFeedback('category') }}
+          </b-form-invalid-feedback>
         </b-form-group>
 
         <b-form-group label="Mô tả">
@@ -163,7 +200,7 @@
         </b-form-group>
 
         <div class="text-right">
-          <b-button type="submit" :disabled="!canSubmit" variant="primary">Lưu</b-button>
+          <b-button type="submit" variant="primary">Lưu</b-button>
           <b-button variant="secondary" @click="$refs.permissionModal.hide()">
             Hủy
           </b-button>
@@ -183,7 +220,12 @@ export default {
   components: { PaginationBar },
   data() {
     return {
-      keyword: "",
+      filters: {
+        keyword: "",
+        categoryId: null,
+        level: null,
+        status: null
+      },
       items: [],
       categories: [],
       isBusy: false,
@@ -198,7 +240,19 @@ export default {
         description: "",
         status: 1
       },
+      errors: {},
       statusOptions: [
+        { value: 1, text: "Hiển thị" },
+        { value: 0, text: "Ẩn" }
+      ],
+      levelFilterOptions: [
+        { value: null, text: "Tất cả" },
+        { value: 0, text: "Level 0" },
+        { value: 1, text: "Level 1" },
+        { value: 2, text: "Level 2" }
+      ],
+      statusFilterOptions: [
+        { value: null, text: "Tất cả" },
         { value: 1, text: "Hiển thị" },
         { value: 0, text: "Ẩn" }
       ],
@@ -220,6 +274,12 @@ export default {
       return this.categories
         .filter(c => c.status === 1)
         .map(c => ({ value: c.id, text: c.name }));
+    },
+    filterCategoryOptions() {
+      return [
+        { value: null, text: "Tất cả" },
+        ...this.categories.map(c => ({ value: c.id, text: c.name }))
+      ];
     },
     categoryById() {
       const map = {};
@@ -269,7 +329,10 @@ export default {
           null,
           {
             params: {
-              keyword: this.keyword,
+              keyword: this.filters.keyword || undefined,
+              categoryId: this.filters.categoryId ?? undefined,
+              level: this.filters.level ?? undefined,
+              status: this.filters.status ?? undefined,
               page,
               size: this.list.per_page
             }
@@ -299,6 +362,15 @@ export default {
       this.list.current_page = 1;
       this.loadData();
     },
+    resetFilter() {
+      this.filters = {
+        keyword: "",
+        categoryId: null,
+        level: null,
+        status: null
+      };
+      this.onFilter();
+    },
     onPageChange(page) {
       this.list.current_page = page;
       this.loadData();
@@ -309,6 +381,7 @@ export default {
       this.loadData();
     },
     showModal() {
+      this.errors = {};
       this.form = {
         id: null,
         name: "",
@@ -321,6 +394,7 @@ export default {
       this.$refs.permissionModal.show();
     },
     editPermission(p) {
+      this.errors = {};
       this.form = {
         id: p.id,
         name: p.name,
@@ -333,7 +407,7 @@ export default {
       this.$refs.permissionModal.show();
     },
     async savePermission() {
-      if (!this.canSubmit) return;
+      if (!this.validateForm()) return;
       try {
         await axios.post(
           "/administrator/permissions/saveOrUpdate",
@@ -347,6 +421,30 @@ export default {
         // Interceptor Axios đã hiển thị toast lỗi
         console.error(e);
       }
+    },
+    validateForm() {
+      const errors = {};
+      if (!String(this.form.name || "").trim()) {
+        errors.name = ["Vui lòng nhập tên quyền"];
+      }
+      if (!String(this.form.displayName || "").trim()) {
+        errors.displayName = ["Vui lòng nhập tên hiển thị"];
+      }
+      if (!this.validLevel) {
+        errors.level = ["Level phải từ 0 đến 2"];
+      }
+      if (!this.form.category) {
+        errors.category = ["Vui lòng chọn nhóm quyền"];
+      }
+      this.errors = errors;
+      return Object.keys(errors).length === 0;
+    },
+    state(field) {
+      return Object.prototype.hasOwnProperty.call(this.errors, field) ? false : null;
+    },
+    invalidFeedback(field) {
+      const value = this.errors[field];
+      return Array.isArray(value) ? value.join(" ") : (value || "");
     },
     async hidePermission(p) {
       try {
@@ -383,6 +481,16 @@ export default {
 .permissions .table-hover tbody tr:hover { background-color: #fafbfd; }
 .permissions .btn-outline-primary { border-color: #dfe7ff; }
 .permissions .btn-outline-primary:hover { background: #eef3ff; }
+.permissions .filter-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+.permissions .filter-action {
+  width: 100%;
+}
 
 .permissions .table thead th { background: #f7f9fc; border-bottom: 1px solid #ecf0f6; color: #4a5568; font-weight: 700; }
 </style>

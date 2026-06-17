@@ -115,22 +115,31 @@
             <div v-if="fetchingDetail" class="text-center py-4">
                 <b-spinner variant="primary"></b-spinner>
             </div>
-            <b-form @submit.prevent="saveItem" v-else>
+            <b-form novalidate @submit.prevent="saveItem" v-else>
                 <b-row>
                     <b-col md="6">
-                        <b-form-group label="Mã CQT (*)">
-                            <b-form-input v-model="form.code" required placeholder="Nhập mã số..." />
+                        <b-form-group label="Mã CQT (*)" :state="state('code')">
+                            <b-form-input v-model.trim="form.code" required placeholder="Nhập mã số..." :state="state('code')" />
+                            <b-form-invalid-feedback :state="state('code')">
+                                {{ invalidFeedback('code') }}
+                            </b-form-invalid-feedback>
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
-                        <b-form-group label="Tỉnh/Thành phố">
-                            <b-form-input v-model="form.provinceName" placeholder="VD: Hà Nội" />
+                        <b-form-group label="Tỉnh/Thành phố" :state="state('provinceName')">
+                            <b-form-input v-model.trim="form.provinceName" placeholder="VD: Hà Nội" :state="state('provinceName')" />
+                            <b-form-invalid-feedback :state="state('provinceName')">
+                                {{ invalidFeedback('provinceName') }}
+                            </b-form-invalid-feedback>
                         </b-form-group>
                     </b-col>
                 </b-row>
 
-                <b-form-group label="Tên Cơ quan thuế (*)">
-                    <b-form-input v-model="form.name" required placeholder="VD: Chi cục thuế Quận Cầu Giấy" />
+                <b-form-group label="Tên Cơ quan thuế (*)" :state="state('name')">
+                    <b-form-input v-model.trim="form.name" required placeholder="VD: Chi cục thuế Quận Cầu Giấy" :state="state('name')" />
+                    <b-form-invalid-feedback :state="state('name')">
+                        {{ invalidFeedback('name') }}
+                    </b-form-invalid-feedback>
                 </b-form-group>
 
                 <b-form-group label="Cơ quan quản lý (Cấp cha)">
@@ -213,7 +222,8 @@ export default {
                 provinceName: "",
                 parentId: null,
                 status: 1
-            }
+            },
+            errors: {}
         };
     },
     computed: {
@@ -323,6 +333,7 @@ export default {
         // --- CRUD ACTIONS ---
         async openModal(item) {
             this.loadParents(); // Refresh lại dropdown cha
+            this.errors = {};
 
             if (item) {
                 // Edit Mode
@@ -362,6 +373,7 @@ export default {
         },
 
         async saveItem() {
+            if (!this.validateForm()) return;
             this.processing = true;
             try {
                 const payload = { ...this.form };
@@ -382,6 +394,32 @@ export default {
             }
         },
 
+        validateForm() {
+            const errors = {};
+            if (!String(this.form.code || "").trim()) {
+                errors.code = ["Vui lòng nhập mã CQT"];
+            } else if (!/^[A-Za-z0-9._-]{2,30}$/.test(String(this.form.code).trim())) {
+                errors.code = ["Mã CQT chỉ gồm chữ, số, dấu chấm, gạch ngang hoặc gạch dưới"];
+            }
+            if (!String(this.form.name || "").trim()) {
+                errors.name = ["Vui lòng nhập tên cơ quan thuế"];
+            }
+            if (String(this.form.provinceName || "").trim().length > 100) {
+                errors.provinceName = ["Tỉnh/Thành phố không được vượt quá 100 ký tự"];
+            }
+            this.errors = errors;
+            return Object.keys(errors).length === 0;
+        },
+
+        state(field) {
+            return Object.prototype.hasOwnProperty.call(this.errors, field) ? false : null;
+        },
+
+        invalidFeedback(field) {
+            const value = this.errors[field];
+            return Array.isArray(value) ? value.join(" ") : (value || "");
+        },
+
         deleteItem(item) {
             this.$bvModal.msgBoxConfirm(`Bạn có chắc muốn xóa "${item.name}"?`, {
                 title: "Xác nhận xóa",
@@ -399,7 +437,7 @@ export default {
                         this.loadData();
                         this.loadParents();
                     } catch (e) {
-                        // error handled
+                        // Lỗi đã được xử lý ở tầng gọi API
                     }
                 }
             });
@@ -414,7 +452,7 @@ export default {
 </script>
 
 <style scoped>
-/* Main Styles */
+/* Kiểu giao diện chính */
 .tax-authorities .card.shadow-sm {
     border-radius: 10px;
     border: none;

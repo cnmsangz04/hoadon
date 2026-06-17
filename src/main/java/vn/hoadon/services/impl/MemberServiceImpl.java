@@ -30,6 +30,12 @@ import java.util.Optional;
 @Service
 public class MemberServiceImpl implements MemberService {
 
+    private static final Long ROOT_COMPANY_ID = 1L;
+    private static final String ACCOUNT_INFO_MAIL_TEMPLATE = "ACCOUNT_INFO_MAIL";
+    private static final String ADMIN_SCOPE_ROOT = "ROOT";
+    private static final String ADMIN_SCOPE_ROOT_COMPANY = "ROOT_COMPANY";
+    private static final String ADMIN_SCOPE_COMPANY = "COMPANY";
+
     @Autowired
     private UserRepository userRepository;
 
@@ -76,7 +82,7 @@ public class MemberServiceImpl implements MemberService {
                 ));
             }
 
-            // Drop roleId filter tied to workRole
+            // Bỏ bộ lọc roleId gắn với workRole.
             if (role != null) {
                 preds.add(cb.equal(root.get("role"), role));
             }
@@ -103,13 +109,13 @@ public class MemberServiceImpl implements MemberService {
         Long actorCompanyId = actor != null ? actor.getCompanyId() : null;
         boolean isRoot = actorRole != null && actorRole == 0;
 
-        // Determine target companyId: only root can set arbitrary companyId; admin/user defaults to actor company
+        // Xác định companyId mục tiêu: root có thể truyền rõ công ty, nếu không thì dùng công ty hiện tại.
         Long companyId = incoming.getCompanyId();
-        if (!isRoot) {
+        if (!isRoot || companyId == null) {
             companyId = actorCompanyId;
         }
 
-        // Validate role changes (if provided)
+        // Kiểm tra thay đổi vai trò nếu payload có gửi.
         Integer role = incoming.getRole();
         if (role != null && role == 0) {
             throw new IllegalArgumentException("Không được gán role root");
@@ -136,22 +142,13 @@ public class MemberServiceImpl implements MemberService {
             user = new UserEntity();
             user.setCreatedAt(now);
             
-            // Store plain text password for encoding
+            // Mã hóa mật khẩu đăng nhập người dùng.
             String plainPassword = incoming.getPassword() != null ? incoming.getPassword() : "ChangeMe123";
             user.setPassword(passwordEncoder.encode(plainPassword));
             
-            // Admin password on create if provided
-            if (incoming.getAdminPassword() != null) {
-                String ap = incoming.getAdminPassword();
-                if (ap.isBlank()) {
-                    user.setAdminPassword(null);
-                } else {
-                    user.setAdminPassword(passwordEncoder.encode(ap));
-                }
-            }
             // Các trường bắt buộc khi tạo mới
             user.setCompanyId(companyId);
-            // Set username - nếu có truyền thì dùng, nếu không thì tạo tạm
+            // Nếu có username thì dùng, nếu không thì tạo tạm.
             if (incoming.getUsername() != null && !incoming.getUsername().isBlank()) {
                 user.setUsername(incoming.getUsername());
             } else {
@@ -163,22 +160,13 @@ public class MemberServiceImpl implements MemberService {
         } else {
             user = userRepository.findById(incoming.getId())
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            ensureCanManageTarget(actor, user, false);
 
             // Chỉ cập nhật mật khẩu nếu có truyền
             if (incoming.getPassword() != null && !incoming.getPassword().isBlank()) {
                 user.setPassword(passwordEncoder.encode(incoming.getPassword()));
             }
-            // Admin password on update if provided
-            if (incoming.getAdminPassword() != null) {
-                String ap = incoming.getAdminPassword();
-                if (ap.isBlank()) {
-                    user.setAdminPassword(null);
-                } else {
-                    user.setAdminPassword(passwordEncoder.encode(ap));
-                }
-            }
-
-            // Cập nhật companyId only when explicitly provided by root; avoid nulling accidentally
+            // Root chỉ đổi companyId khi payload gửi rõ companyId.
             if (isRoot && incoming.getCompanyId() != null) {
                 user.setCompanyId(incoming.getCompanyId());
             }
@@ -203,7 +191,7 @@ public class MemberServiceImpl implements MemberService {
             }
         }
 
-        // Common optional fields: update only when provided
+        // Các trường tùy chọn chỉ cập nhật khi payload có gửi.
         if (incoming.getName() != null) {
             user.setName(incoming.getName());
         }
@@ -217,6 +205,7 @@ public class MemberServiceImpl implements MemberService {
             user.setAvatar(incoming.getAvatar());
         }
 
+        normalizeAdminAccess(user, incoming.getAdminPassword());
         user.setUpdatedAt(now);
 
         // Lưu user trước
@@ -229,11 +218,26 @@ public class MemberServiceImpl implements MemberService {
             user = userRepository.save(user);
         }
 
-        // Save per-user overrides if any
+        // Lưu quyền riêng của từng user nếu có.
         if (incoming.getUserPermissions() != null) {
+            if (actor != null && actor.getId() != null && actor.getId().equals(user.getId())) {
+                throw new IllegalArgumentException("Không được tự phân quyền cho tài khoản đang đăng nhập");
+            }
+            Integer targetRole = user.getRole();
+            boolean targetRootCompanyAdmin = user.isRootCompanyAdmin();
+            if (Integer.valueOf(1).equals(targetRole) && !targetRootCompanyAdmin) {
+                throw new IllegalArgumentException("Chỉ phân quyền quản trị cho tài khoản Admin thuộc công ty root");
+            }
             for (var up : incoming.getUserPermissions()) {
                 PermissionEntity p = permissionRepository.findById(up.getPermissionId())
                         .orElseThrow(() -> new IllegalArgumentException("Permission not found"));
+                int level = p.getLevel() != null ? p.getLevel() : 0;
+                if (targetRootCompanyAdmin && level == 0) {
+                    continue;
+                }
+                if (Integer.valueOf(2).equals(targetRole) && level != 0) {
+                    continue;
+                }
                 UserPermissionEntity upe =
                         userPermissionRepository.findByUserIdAndPermissionId(user.getId(), p.getId());
                 if (upe == null) {
@@ -249,11 +253,47 @@ public class MemberServiceImpl implements MemberService {
         return user;
     }
 
+    private void normalizeAdminAccess(UserEntity user, String rawAdminPassword) {
+        if (user == null) return;
+
+        Integer role = user.getRole();
+        Long companyId = user.getCompanyId();
+        boolean isRoot = Integer.valueOf(0).equals(role);
+        boolean isAdmin = Integer.valueOf(1).equals(role);
+        boolean isRootCompanyAdmin = isAdmin && ROOT_COMPANY_ID.equals(companyId);
+
+        if (isRoot) {
+            user.setAdminScope(ADMIN_SCOPE_ROOT);
+            if (rawAdminPassword != null) {
+                user.setAdminPassword(rawAdminPassword.isBlank() ? null : passwordEncoder.encode(rawAdminPassword));
+            }
+            return;
+        }
+
+        if (!isAdmin) {
+            user.setAdminScope(null);
+            user.setAdminPassword(null);
+            return;
+        }
+
+        user.setAdminScope(isRootCompanyAdmin ? ADMIN_SCOPE_ROOT_COMPANY : ADMIN_SCOPE_COMPANY);
+        if (!isRootCompanyAdmin) {
+            user.setAdminPassword(null);
+            return;
+        }
+
+        if (rawAdminPassword != null) {
+            user.setAdminPassword(rawAdminPassword.isBlank() ? null : passwordEncoder.encode(rawAdminPassword));
+        }
+    }
+
     @Override
     @Transactional
     public void setLock(Long id, boolean lock) {
+        UserEntity actor = currentActor();
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        ensureCanManageTarget(actor, user, false);
         user.setStatus((byte) (lock ? 0 : 1));
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
@@ -270,7 +310,8 @@ public class MemberServiceImpl implements MemberService {
         boolean isAdmin = actorRole != null && actorRole == 1;
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        // Admin can reset only for self or non-admins
+        ensureCanManageTarget(actor, user, true);
+        // Admin chỉ được reset mật khẩu của chính mình hoặc nhân viên.
         if (isAdmin) {
             boolean isSelf = actor != null && actor.getId().equals(id);
             boolean targetIsAdmin = user.getRole() != null && user.getRole() == 1;
@@ -288,8 +329,10 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional
     public void removeFromCompany(Long id) {
+        UserEntity actor = currentActor();
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        ensureCanManageTarget(actor, user, false);
         user.setCompanyId(null);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
@@ -298,8 +341,10 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional
     public void delete(Long id) {
+        UserEntity actor = currentActor();
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        ensureCanManageTarget(actor, user, false);
         user.setDeletedAt(LocalDateTime.now());
         user.setStatus((byte) 0);
         user.setCompanyId(null);
@@ -310,20 +355,29 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public UserEntity getById(Long id) {
-        return userRepository.findById(id).orElse(null);
+        UserEntity actor = currentActor();
+        UserEntity user = userRepository.findById(id).orElse(null);
+        if (user == null) return null;
+        ensureCanManageTarget(actor, user, true);
+        return user;
     }
 
     @Override
     @Transactional
     public String sendCredentials(Long id) {
+        UserEntity actor = currentActor();
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        ensureCanManageTarget(actor, user, false);
+
+        String toEmail = user.getEmail();
+        if (toEmail == null || toEmail.isBlank()) {
+            throw new IllegalArgumentException("Thành viên chưa có email nhận thông tin đăng nhập");
+        }
+
         CompanyEntity company = null;
         if (user.getCompanyId() != null) {
             company = companyRepository.findById(user.getCompanyId()).orElse(null);
-        }
-        if (company == null || company.getEmail() == null || company.getEmail().isBlank()) {
-            throw new IllegalArgumentException("Công ty chưa có email nhận thông tin đăng nhập");
         }
 
         // Luôn reset lại mật khẩu mới mỗi lần gửi thông tin
@@ -332,21 +386,24 @@ public class MemberServiceImpl implements MemberService {
         user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        enqueueAccountInfoMail(user, company, newPassword);
+        enqueueAccountInfoMail(user, company, toEmail, newPassword);
 
         userRepository.save(user);
         
         return newPassword;
     }
 
-    private void enqueueAccountInfoMail(UserEntity user, CompanyEntity company, String rawPassword) {
-        if (user == null || company == null || company.getEmail() == null || company.getEmail().isBlank()) return;
+    private void enqueueAccountInfoMail(UserEntity user, CompanyEntity company, String toEmail, String rawPassword) {
+        if (user == null || toEmail == null || toEmail.isBlank()) return;
+
+        String memberName = firstNotBlank(user.getName(), user.getUsername(), toEmail);
+        String companyName = company != null ? firstNotBlank(company.getName(), company.getContactName(), "") : "";
 
         Map<String, String> vars = new HashMap<>();
-        vars.put("SUBJECT", "Gửi thông tin tài khoản");
-        vars.put("NAME", company.getName() != null && !company.getName().isBlank() ? company.getName() : user.getUsername());
+        vars.put("SUBJECT", "Thông tin đăng nhập tài khoản");
+        vars.put("NAME", memberName);
         vars.put("CUS_NAME", vars.get("NAME"));
-        vars.put("COMPANY", company != null && company.getName() != null ? company.getName() : "");
+        vars.put("COMPANY", companyName);
         vars.put("CUS_COM_NAME", vars.get("COMPANY"));
         vars.put("COM_NAME", resolveLoginMailSenderCompanyName());
         vars.put("LINK", "http://localhost:8080/login");
@@ -354,12 +411,22 @@ public class MemberServiceImpl implements MemberService {
         vars.put("PASSWORD", rawPassword != null ? rawPassword : "");
 
         MailJobMessage msg = new MailJobMessage();
-        msg.setTemplateKey("LOGIN_INFO_MAIL");
+        msg.setTemplateKey(ACCOUNT_INFO_MAIL_TEMPLATE);
         msg.setCompanyId(user.getCompanyId());
-        msg.setToEmail(company.getEmail().trim());
+        msg.setToEmail(toEmail.trim());
         msg.setToName(vars.get("NAME"));
         msg.setVariables(vars);
         mailQueueService.enqueue(msg);
+    }
+
+    private String firstNotBlank(String... values) {
+        if (values == null) return "";
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return "";
     }
 
     private String resolveLoginMailSenderCompanyName() {
@@ -367,5 +434,40 @@ public class MemberServiceImpl implements MemberService {
                 .map(CompanyEntity::getName)
                 .filter(name -> name != null && !name.isBlank())
                 .orElse("");
+    }
+
+    private UserEntity currentActor() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null && auth.getPrincipal() instanceof UserEntity)
+                ? (UserEntity) auth.getPrincipal()
+                : null;
+    }
+
+    private void ensureCanManageTarget(UserEntity actor, UserEntity target, boolean allowSelf) {
+        if (actor == null || target == null) {
+            throw new IllegalArgumentException("Không xác định được người thao tác");
+        }
+        Integer actorRole = actor.getRole();
+        if (actorRole != null && actorRole == 0) {
+            return;
+        }
+        if (allowSelf && actor.getId() != null && actor.getId().equals(target.getId())) {
+            return;
+        }
+        if (actor.getCompanyId() == null || target.getCompanyId() == null
+                || !actor.getCompanyId().equals(target.getCompanyId())) {
+            throw new IllegalArgumentException("Không được thao tác thành viên của công ty khác");
+        }
+        if (target.getRole() != null && target.getRole() == 0) {
+            throw new IllegalArgumentException("Không được thao tác tài khoản root");
+        }
+        boolean isSelf = actor.getId() != null && actor.getId().equals(target.getId());
+        Integer targetRole = target.getRole();
+        if (Integer.valueOf(1).equals(actorRole) && Integer.valueOf(1).equals(targetRole) && !isSelf) {
+            throw new IllegalArgumentException("Admin không được thao tác tài khoản Admin khác");
+        }
+        if (Integer.valueOf(2).equals(actorRole) && !Integer.valueOf(2).equals(targetRole)) {
+            throw new IllegalArgumentException("Nhân viên chỉ được thao tác tài khoản nhân viên cùng công ty");
+        }
     }
 }

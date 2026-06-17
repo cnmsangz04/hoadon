@@ -10,7 +10,7 @@
           <i class="fas fa-sync-alt"></i>
           Làm mới
         </b-button>
-        <b-button size="sm" variant="success" @click="openCreate">
+        <b-button v-if="canSaveMembers" size="sm" variant="success" @click="openCreate">
           <i class="fas fa-user-plus"></i>
           Thêm thành viên
         </b-button>
@@ -57,7 +57,7 @@
         small
         show-empty
         :items="list.data"
-        :fields="fields"
+        :fields="tableFields"
         :busy="isBusy"
         empty-text="Không có dữ liệu"
       >
@@ -92,11 +92,11 @@
         </template>
 
         <template #cell(option)="{ item }">
-          <b-dropdown v-if="canOperateOn(item)" size="sm" right variant="link" toggle-class="text-decoration-none" no-caret boundary="window">
+          <b-dropdown v-if="canShowActionMenu(item)" size="sm" right variant="link" toggle-class="text-decoration-none" no-caret boundary="window">
             <template #button-content>
               <i class="fas fa-ellipsis-h"></i>
             </template>
-            <b-dropdown-item class="text-center" href="#" @click.prevent="openEdit(item)">Cập nhật</b-dropdown-item>
+            <b-dropdown-item v-if="canEditMember(item)" class="text-center" href="#" @click.prevent="openEdit(item)">Cập nhật</b-dropdown-item>
             <b-dropdown-item v-if="canEditPermissions(item)" class="text-center" href="#" @click.prevent="openPermission(item)">Phân quyền</b-dropdown-item>
             <b-dropdown-item v-if="canSendInfo(item)" class="text-center" href="#" @click.prevent="sendInfo(item)">Gửi thông tin</b-dropdown-item>
             <b-dropdown-item v-if="canToggleLock(item)" class="text-center" href="#" @click.prevent="toggleLock(item)">
@@ -127,58 +127,94 @@
     </b-card>
 
     <!-- Hộp thoại tạo/cập nhật thành viên -->
-    <b-modal ref="memberModal" :title="form.id ? 'Cập nhật thành viên' : 'Thêm thành viên'" hide-footer>
-      <b-form @submit.prevent="saveMember">
+    <b-modal ref="memberModal" :title="form.id ? 'Cập nhật thành viên' : 'Thêm thành viên'" hide-footer @hidden="clearMemberErrors">
+      <b-form novalidate @submit.prevent="saveMember">
         <!-- Hiển thị thông tin cho thành viên mới -->
-        <b-form-group label="Họ và tên">
-          <b-form-input v-model.trim="form.fullName" required />
+        <b-form-group label="Họ và tên" :state="memberState('fullName')">
+          <b-form-input v-model.trim="form.fullName" required :state="memberState('fullName')" />
+          <b-form-invalid-feedback :state="memberState('fullName')">
+            {{ memberFeedback('fullName') }}
+          </b-form-invalid-feedback>
         </b-form-group>
-        <b-form-group label="Điện thoại">
-          <b-form-input v-model.trim="form.phone" />
+        <b-form-group label="Điện thoại" :state="memberState('phone')">
+          <b-form-input v-model.trim="form.phone" type="tel" :state="memberState('phone')" />
+          <b-form-invalid-feedback :state="memberState('phone')">
+            {{ memberFeedback('phone') }}
+          </b-form-invalid-feedback>
         </b-form-group>
-        <b-form-group label="Email">
-          <b-form-input v-model.trim="form.email" type="email" />
+        <b-form-group label="Email" :state="memberState('email')">
+          <b-form-input v-model.trim="form.email" type="email" :state="memberState('email')" />
+          <b-form-invalid-feedback :state="memberState('email')">
+            {{ memberFeedback('email') }}
+          </b-form-invalid-feedback>
         </b-form-group>
         <b-form-row>
           <b-col md="6">
-            <b-form-group label="Mật khẩu" :state="passwordState">
+            <b-form-group label="Mật khẩu" :state="memberState('password') !== null ? memberState('password') : passwordState">
               <b-input-group>
-                <b-form-input v-model="form.password" type="password" :required="!form.id" />
+                <b-form-input
+                  v-model="form.password"
+                  type="password"
+                  :required="!form.id"
+                  :state="memberState('password') !== null ? memberState('password') : passwordState"
+                />
                 <b-input-group-append>
                   <b-button size="sm" variant="outline-secondary" @click="onGeneratePassword">Tạo</b-button>
                 </b-input-group-append>
               </b-input-group>
+              <b-form-invalid-feedback :state="memberState('password') !== null ? memberState('password') : passwordState">
+                {{ memberFeedback('password') || 'Mật khẩu tối thiểu 8 ký tự' }}
+              </b-form-invalid-feedback>
             </b-form-group>
           </b-col>
           <b-col md="6">
-            <b-form-group label="Nhập lại mật khẩu" :state="passwordState">
-              <b-form-input v-model="form.passwordConfirm" type="password" :required="!form.id" />
-              <small v-if="passwordState === false" class="text-danger">Mật khẩu không khớp</small>
+            <b-form-group label="Nhập lại mật khẩu" :state="memberState('passwordConfirm') !== null ? memberState('passwordConfirm') : passwordState">
+              <b-form-input
+                v-model="form.passwordConfirm"
+                type="password"
+                :required="!form.id"
+                :state="memberState('passwordConfirm') !== null ? memberState('passwordConfirm') : passwordState"
+              />
+              <b-form-invalid-feedback :state="memberState('passwordConfirm') !== null ? memberState('passwordConfirm') : passwordState">
+                {{ memberFeedback('passwordConfirm') || 'Mật khẩu không khớp' }}
+              </b-form-invalid-feedback>
             </b-form-group>
           </b-col>
         </b-form-row>
 
-        <!-- Ch? root: d?t quy?n Admin -->
-        <b-form-group v-if="isRoot && !isEditingRootTarget" label="Đặt user này là Admin">
+        <!-- Chỉ root được đặt vai trò Admin -->
+        <b-form-group v-if="canAssignAdminRole && !isEditingRootTarget" label="Đặt user này là Admin">
           <b-form-checkbox v-model="form.isAdmin">Đặt làm Admin</b-form-checkbox>
         </b-form-group>
 
-        <b-form-row v-if="form.isAdmin">
+        <b-form-row v-if="showAdminPasswordFields">
           <b-col md="6">
-            <b-form-group label="Mật khẩu quản trị" :state="adminPasswordState">
+            <b-form-group label="Mật khẩu quản trị" :state="memberState('adminPassword') !== null ? memberState('adminPassword') : adminPasswordState">
               <b-input-group>
-                <b-form-input v-model.trim="form.adminPassword" type="password" />
+                <b-form-input
+                  v-model.trim="form.adminPassword"
+                  type="password"
+                  :state="memberState('adminPassword') !== null ? memberState('adminPassword') : adminPasswordState"
+                />
                 <b-input-group-append>
                   <b-button size="sm" variant="outline-secondary" @click="onGenerateAdminPassword">Tạo</b-button>
                 </b-input-group-append>
               </b-input-group>
-              <small v-if="adminPasswordState === false" class="text-danger">Mật khẩu quản trị tối thiểu 8 ký tự</small>
+              <b-form-invalid-feedback :state="memberState('adminPassword') !== null ? memberState('adminPassword') : adminPasswordState">
+                {{ memberFeedback('adminPassword') || 'Mật khẩu quản trị tối thiểu 8 ký tự' }}
+              </b-form-invalid-feedback>
             </b-form-group>
           </b-col>
           <b-col md="6">
-            <b-form-group label="Nhập lại mật khẩu quản trị" :state="adminPasswordState">
-              <b-form-input v-model.trim="form.adminPasswordConfirm" type="password" />
-              <small v-if="adminPasswordState === false" class="text-danger">Mật khẩu quản trị không khớp</small>
+            <b-form-group label="Nhập lại mật khẩu quản trị" :state="memberState('adminPasswordConfirm') !== null ? memberState('adminPasswordConfirm') : adminPasswordState">
+              <b-form-input
+                v-model.trim="form.adminPasswordConfirm"
+                type="password"
+                :state="memberState('adminPasswordConfirm') !== null ? memberState('adminPasswordConfirm') : adminPasswordState"
+              />
+              <b-form-invalid-feedback :state="memberState('adminPasswordConfirm') !== null ? memberState('adminPasswordConfirm') : adminPasswordState">
+                {{ memberFeedback('adminPasswordConfirm') || 'Mật khẩu quản trị không khớp' }}
+              </b-form-invalid-feedback>
             </b-form-group>
           </b-col>
         </b-form-row>
@@ -198,70 +234,101 @@
     <b-modal
       ref="permissionModal"
       title="Phân quyền thành viên"
-      hide-footer
       size="xl"
       content-class="role-modal-content"
       header-class="role-modal-header"
       body-class="role-modal-body"
+      footer-class="role-modal-footer"
     >
-      <div>
-        <b-form @submit.prevent="savePermissions">
-          <b-card class="section-card mb-3">
-            <b-row>
-              <b-col cols="8" class="d-flex align-items-center">
-                <div>
-                  <div class="text-muted small">Thành viên</div>
-                  <div class="font-weight-bold">{{ permForm.name || permForm.username }}</div>
-                </div>
-              </b-col>
-              <b-col cols="4" class="d-flex align-items-end">
-                <div class="ml-auto">
-                  <b-button size="sm" class="mr-2" variant="outline-secondary" @click="permSelectAll(true)">Chọn tất cả</b-button>
-                  <b-button size="sm" variant="outline-secondary" @click="permSelectAll(false)">Bỏ chọn</b-button>
-                </div>
-              </b-col>
-            </b-row>
-          </b-card>
-
-          <b-card class="section-card">
-            <div class="d-flex align-items-center mb-2">
-              <h6 class="mb-0 mr-2"><i class="fas fa-key mr-1"></i> Phân quyền</h6>
-              <b-badge variant="light" class="text-muted">Tích chọn để bật quyền</b-badge>
-            </div>
-            <b-row>
-              <b-col v-for="group in permGroupedPermissions" :key="group.categoryName" cols="12" md="6" lg="4" class="mb-3">
-                <b-card class="perm-group h-100">
-                  <div class="d-flex align-items-center mb-2 perm-group-header">
-                    <strong>{{ group.categoryName }}</strong>
-                    <b-button size="sm" class="ml-auto" variant="link" @click="togglePermGroup(group)">{{ group._allSelected ? 'Bỏ chọn nhóm' : 'Chọn nhóm' }}</b-button>
-                  </div>
-                  <div>
-                    <div v-for="perm in group.items" :key="perm.id" class="perm-row mb-2">
-                      <div class="perm-info">
-                        <div class="perm-name">{{ perm.displayName || perm.name || ('#' + perm.id) }}</div>
-                        <div class="perm-code">{{ perm.code || perm.key }}</div>
-                        <b-badge variant="light">Level {{ perm.level }}</b-badge>
-                      </div>
-                      <div class="perm-actions d-flex align-items-center">
-                        <b-form-checkbox
-                          :checked="getPermEffectiveChecked(perm.id)"
-                          switch
-                          @change="onPermCheckboxChange(perm.id, $event)"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </b-card>
-              </b-col>
-            </b-row>
-          </b-card>
-
-          <div class="text-right mt-3">
-            <b-button type="submit" :disabled="!canSavePermissions" variant="primary">Lưu</b-button>
-            <b-button variant="secondary" @click="$refs.permissionModal.hide()">Đóng</b-button>
+      <div class="role-modal-shell">
+        <div class="role-user-panel">
+          <div class="role-user-avatar">
+            <i class="fas fa-user-shield"></i>
           </div>
-        </b-form>
+          <div class="role-user-copy">
+            <div class="role-user-label">Thành viên</div>
+            <div class="role-user-name">{{ permForm.name || permForm.username || '—' }}</div>
+            <div class="role-user-meta">
+              <span><i class="fas fa-user mr-1"></i>{{ permForm.username || '—' }}</span>
+              <span><i class="fas fa-id-badge mr-1"></i>{{ roleCodeToText({ role: permForm.role }) }}</span>
+              <span>
+                <i class="fas fa-circle mr-1"></i>
+                {{ Number(permForm.status) === 1 ? 'Đang hoạt động' : 'Đang khóa' }}
+              </span>
+            </div>
+          </div>
+          <div class="role-user-summary">
+            <strong>{{ permSelectedCount }}</strong>
+            <span>/ {{ permVisiblePermissions.length }} quyền bật</span>
+          </div>
+        </div>
+
+        <div class="role-toolbar">
+          <div>
+            <h6><i class="fas fa-key mr-1"></i> Danh sách quyền</h6>
+            <p>{{ permHelpText }}</p>
+          </div>
+          <div class="role-toolbar-actions">
+            <b-button size="sm" variant="outline-primary" @click="permSelectAll(true)">
+              <i class="fas fa-check-double mr-1"></i>
+              Chọn tất cả
+            </b-button>
+            <b-button size="sm" variant="outline-secondary" @click="permSelectAll(false)">
+              Bỏ chọn
+            </b-button>
+          </div>
+        </div>
+
+        <div v-if="!permGroupedPermissions.length" class="role-empty">
+          <i class="fas fa-key"></i>
+          <span>Không có quyền phù hợp để hiển thị</span>
+        </div>
+
+        <div v-else class="role-permission-grid">
+          <section v-for="group in permGroupedPermissions" :key="group.categoryName" class="perm-group">
+            <div class="perm-group-header">
+              <div>
+                <strong>{{ group.categoryName }}</strong>
+                <span>{{ permGroupSelectedCount(group) }}/{{ group.items.length }} quyền bật</span>
+              </div>
+              <b-button size="sm" variant="link" @click="togglePermGroup(group)">
+                {{ group._allSelected ? 'Bỏ chọn nhóm' : 'Chọn nhóm' }}
+              </b-button>
+            </div>
+            <div class="perm-group-items">
+              <div
+                v-for="perm in group.items"
+                :key="perm.id"
+                class="perm-row"
+                :class="{ active: getPermEffectiveChecked(perm.id) }"
+              >
+                <div class="perm-info">
+                  <div class="perm-name">{{ perm.displayName || perm.name || ('#' + perm.id) }}</div>
+                  <div class="perm-code">{{ perm.code || perm.key || '—' }}</div>
+                  <b-badge variant="light">Cấp {{ perm.level }}</b-badge>
+                </div>
+                <div class="perm-actions">
+                  <b-form-checkbox
+                    :checked="getPermEffectiveChecked(perm.id)"
+                    switch
+                    @change="onPermCheckboxChange(perm.id, $event)"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
+
+      <template #modal-footer>
+        <div class="role-modal-footer-inner">
+          <b-button variant="light" @click="$refs.permissionModal.hide()">Đóng</b-button>
+          <b-button :disabled="!canSavePermissions" variant="primary" @click="savePermissions">
+            <i class="fas fa-save mr-1"></i>
+            Lưu phân quyền
+          </b-button>
+        </div>
+      </template>
     </b-modal>
   </div>
 </template>
@@ -271,6 +338,7 @@ import axios from '@/plugins/axios'
 import { pageFrom, pageItems, pageLast, pageNumber, pageSize, pageTo, pageTotal } from '@/utils/pagination'
 import PaginationBar from '@/views/components/pagination_bar.vue'
 import { parseJwt } from '@/utils/jwt'
+import { email, phone, required } from '@/utils/validators'
 
 export default {
   name: 'SettingsMemberList',
@@ -292,6 +360,11 @@ export default {
       },
       categories: [],
       allPermissions: [],
+      abilities: {
+        canList: false,
+        canSave: false,
+        canManage: false
+      },
       pageSizes: [10, 20, 50, 100],
       filters: { keyword: '', userRole: null, status: null },
       statusOptions: [
@@ -309,6 +382,7 @@ export default {
       ],
       form: {
         id: null,
+        companyId: null,
         username: '',
         fullName: '',
         phone: '',
@@ -319,7 +393,8 @@ export default {
         adminPassword: '',
         adminPasswordConfirm: ''
       },
-      permForm: { userId: null, username: '', name: '', role: null, status: null, email: '', phone: '' },
+      memberErrors: {},
+      permForm: { userId: null, companyId: null, username: '', name: '', role: null, status: null, email: '', phone: '', adminScope: '' },
       permOverrides: {}
     }
   },
@@ -360,6 +435,35 @@ export default {
       } catch { return undefined }
     },
     isRoot() { return this.currentRole === 0 },
+    canListMembers() {
+      return this.abilities.canList || this.isRoot
+    },
+    canSaveMembers() {
+      return this.abilities.canSave || this.isRoot
+    },
+    canManageMembers() {
+      return this.abilities.canManage || this.isRoot
+    },
+    tableFields() {
+      if (this.canSaveMembers || this.canManageMembers) return this.fields
+      return this.fields.filter(field => field.key !== 'option')
+    },
+    formCompanyId() {
+      const cid = this.form.companyId ?? this.currentCompanyId
+      const n = Number(cid)
+      return Number.isFinite(n) ? n : undefined
+    },
+    canAssignAdminRole() {
+      return this.isRoot
+    },
+    isEditingSelfTarget() {
+      if (!this.form.id) return false
+      const meId = this.currentUserId
+      return meId != null && Number(meId) === Number(this.form.id)
+    },
+    showAdminPasswordFields() {
+      return this.form.isAdmin && this.formCompanyId === 1 && !this.isEditingRootTarget && (this.canAssignAdminRole || this.isEditingSelfTarget)
+    },
     passwordState() {
       const pwd = this.form.password || ''
       const confirm = this.form.passwordConfirm || ''
@@ -376,8 +480,8 @@ export default {
       return null
     },
     adminPasswordState() {
-      // Chỉ validate khi isAdmin được chọn và có trường được nhập
-      if (!this.form.isAdmin) return null
+      // Chỉ validate khi trường mật khẩu quản trị đang hiển thị.
+      if (!this.showAdminPasswordFields) return null
       const ap = this.form.adminPassword || ''
       const apc = this.form.adminPasswordConfirm || ''
       if (ap.length === 0 && apc.length === 0) return null
@@ -393,9 +497,8 @@ export default {
       const passOkUpdate = this.form.id ? (!hasPwd ? true : (minLenOk && matchOk)) : true
       const passOk = passOkCreate && passOkUpdate
       const adminPwdProvided = (this.form.adminPassword?.length || 0) > 0 || (this.form.adminPasswordConfirm?.length || 0) > 0
-      const adminPwdOk = !this.form.isAdmin ? true : (!adminPwdProvided ? true : (this.adminPasswordState === true))
-      const hasUsername = !this.form.id || (!!this.form.username && this.form.username.trim().length > 0)
-      return hasUsername && !!this.form.fullName && passOk && adminPwdOk
+      const adminPwdOk = !this.showAdminPasswordFields ? true : (!adminPwdProvided ? true : (this.adminPasswordState === true))
+      return !!this.form.fullName && passOk && adminPwdOk
     },
     isEditingRootTarget() {
       if (!this.form.id) return false
@@ -419,12 +522,29 @@ export default {
     permVisiblePermissions() {
       // Cơ bản: chỉ lấy trạng thái active hoặc không chỉ định
       let perms = (this.allPermissions || []).filter(p => Number(p.status) === 1 || p.status == null)
-      // Quy tắc nghiệp vụ: khi sửa nhân viên role === 2, chỉ hiển thị quyền level === 0
       const targetRole = Number(this.permForm?.role)
+      const targetCompanyId = Number(this.permForm?.companyId)
+      if (targetRole === 1 && targetCompanyId === 1) {
+        return perms.filter(p => Number(p.level) !== 0)
+      }
+      if (targetRole === 1 && targetCompanyId !== 1) {
+        return []
+      }
       if (targetRole === 2) {
         perms = perms.filter(p => Number(p.level) === 0)
       }
       return perms
+    },
+    permHelpText() {
+      const targetRole = Number(this.permForm?.role)
+      const targetCompanyId = Number(this.permForm?.companyId)
+      if (targetRole === 1 && targetCompanyId === 1) {
+        return 'Tài khoản quản trị đã có toàn bộ quyền user cấp 0; chỉ cấu hình quyền quản trị.'
+      }
+      if (targetRole === 2) {
+        return 'Tích chọn những quyền cấp 0 mà nhân viên được sử dụng trong hệ thống.'
+      }
+      return 'Không có quyền phù hợp để cấu hình cho tài khoản này.'
     },
     permGroupedPermissions() {
       const groups = {}
@@ -458,6 +578,9 @@ export default {
       }
       return res
     },
+    permSelectedCount() {
+      return this.permVisiblePermissions.filter(p => this.getPermEffectiveChecked(Number(p.id))).length
+    },
     canSavePermissions() {
       return Number.isFinite(Number(this.permForm.userId))
     }
@@ -470,11 +593,37 @@ export default {
     if (Number.isFinite(qp) && qp > 0) this.list.current_page = qp
     if (Number.isFinite(qs) && qs > 0) this.list.per_page = qs
 
-    this.loadCategories()
-    await this.loadAllPermissions()
+    await this.loadAbilities()
+    if (this.canSaveMembers) {
+      await Promise.all([this.loadCategories(), this.loadAllPermissions()])
+    }
     await this.loadData()
   },
   methods: {
+    async loadAbilities() {
+      try {
+        const { data } = await axios.get('/setting/members/abilities', {
+          meta: { suppressGlobalErrorToast: true }
+        })
+        this.abilities = {
+          canList: data?.canList === true,
+          canSave: data?.canSave === true,
+          canManage: data?.canManage === true
+        }
+      } catch {
+        this.abilities = { canList: false, canSave: false, canManage: false }
+      }
+    },
+    resolveItemCompanyId(item) {
+      const cid = item?.companyId ?? item?.company_id ?? item?.user?.companyId ?? item?.user?.company_id ?? this.currentCompanyId
+      const n = Number(cid)
+      return Number.isFinite(n) ? n : undefined
+    },
+    isRootCompanyAdminAccount(item) {
+      const role = Number(item?.role ?? item?.user?.role)
+      const companyId = this.resolveItemCompanyId(item)
+      return role === 1 && companyId === 1
+    },
     roleCodeToText(item) {
       let code = item?.user?.role
       if (code === undefined) code = item?.role
@@ -490,7 +639,7 @@ export default {
     },
     async loadAllPermissions() {
       try {
-        const res = await axios.post('/administrator/permissions/list', null, { params: { page: 0, size: 2000 } })
+        const res = await axios.get('/setting/members/permission-catalog')
         const data = res?.data
         this.allPermissions = Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : [])
       } catch {
@@ -499,9 +648,9 @@ export default {
     },
     async loadCategories() {
       try {
-        const res = await axios.post('/administrator/permission-categories/list', null, { params: { page: 0, size: 200 } })
+        const res = await axios.get('/setting/members/permission-categories')
         // Phía backend đã sắp xếp theo orderIndex (sothutu), nhưng vẫn thêm lớp bảo vệ
-        const cats = res.data?.content || []
+        const cats = Array.isArray(res.data) ? res.data : (res.data?.content || [])
         this.categories = cats.sort((a, b) => {
           const aOrder = Number(a.orderIndex ?? a.sothutu ?? 999)
           const bOrder = Number(b.orderIndex ?? b.sothutu ?? 999)
@@ -517,7 +666,6 @@ export default {
           keyword: this.filters.keyword || undefined,
           role: this.filters.userRole ?? undefined,
           status: this.filters.status,
-          // Bỏ companyId; backend tự detect từ user đã xác thực
           page: pageZero,
           size: this.list.per_page
         }
@@ -546,7 +694,9 @@ export default {
     onPageSizeChange(s) { this.list.per_page = Number(s || this.list.per_page); this.list.current_page = 1; this.loadData() },
     reload() { this.applyFilters() },
     openCreate() {
-      this.form = { id: null, username: '', fullName: '', phone: '', email: '', password: '', passwordConfirm: '', isAdmin: false, adminPassword: '', adminPasswordConfirm: '' }
+      if (!this.canSaveMembers) return
+      this.clearMemberErrors()
+      this.form = { id: null, companyId: this.currentCompanyId || 1, username: '', fullName: '', phone: '', email: '', password: '', passwordConfirm: '', isAdmin: false, adminPassword: '', adminPasswordConfirm: '' }
       this.$refs.memberModal.show()
     },
     canOperateOn(item) {
@@ -561,7 +711,21 @@ export default {
         // Admin chỉ thao tác trên chính mình, không thao tác admin khác
         return meId != null && targetId != null && Number(meId) === Number(targetId)
       }
+      if (meRole === 2 && targetRole !== 2) {
+        // Nhân viên được cấp quyền thành viên chỉ thao tác trên nhóm nhân viên cùng công ty.
+        return false
+      }
       return true
+    },
+    canShowActionMenu(item) {
+      return this.canEditMember(item) ||
+        this.canEditPermissions(item) ||
+        this.canSendInfo(item) ||
+        this.canToggleLock(item) ||
+        this.canResetPassword(item)
+    },
+    canEditMember(item) {
+      return this.canSaveMembers && this.canOperateOn(item)
     },
     async loadUserPermissionOverrides(userId) {
       try {
@@ -577,8 +741,11 @@ export default {
       } catch { this.permOverrides = {} }
     },
     openEdit(item) {
+      if (!this.canEditMember(item)) return
+      this.clearMemberErrors()
       this.form = {
         id: item.id,
+        companyId: this.resolveItemCompanyId(item),
         username: item.username || item.user?.username || '',
         fullName: item.name || item.fullName,
         phone: item.phone || '',
@@ -592,15 +759,64 @@ export default {
       if (isTargetRoot) { this.form.isAdmin = false }
       this.$refs.memberModal.show()
     },
+    clearMemberErrors() {
+      this.memberErrors = {}
+    },
+    memberState(field) {
+      return Object.prototype.hasOwnProperty.call(this.memberErrors, field) ? false : null
+    },
+    memberFeedback(field) {
+      const value = this.memberErrors[field]
+      return Array.isArray(value) ? value.join(' ') : (value || '')
+    },
+    validateMemberForm() {
+      const errors = {}
+      const fullNameError = required(this.form.fullName, 'Vui lòng nhập họ và tên')
+      if (fullNameError) errors.fullName = [fullNameError]
+
+      const phoneError = phone(this.form.phone)
+      if (phoneError) errors.phone = [phoneError]
+
+      const emailError = email(this.form.email)
+      if (emailError) errors.email = [emailError]
+
+      const password = this.form.password || ''
+      const passwordConfirm = this.form.passwordConfirm || ''
+      if (!this.form.id && !password) {
+        errors.password = ['Vui lòng nhập mật khẩu']
+      } else if (password && password.length < 8) {
+        errors.password = ['Mật khẩu tối thiểu 8 ký tự']
+      }
+      if ((!this.form.id || password || passwordConfirm) && password !== passwordConfirm) {
+        errors.passwordConfirm = ['Mật khẩu không khớp']
+      }
+
+      if (this.showAdminPasswordFields) {
+        const adminPassword = this.form.adminPassword || ''
+        const adminPasswordConfirm = this.form.adminPasswordConfirm || ''
+        if ((adminPassword || adminPasswordConfirm) && adminPassword.length < 8) {
+          errors.adminPassword = ['Mật khẩu quản trị tối thiểu 8 ký tự']
+        }
+        if ((adminPassword || adminPasswordConfirm) && adminPassword !== adminPasswordConfirm) {
+          errors.adminPasswordConfirm = ['Mật khẩu quản trị không khớp']
+        }
+      }
+
+      this.memberErrors = errors
+      return Object.keys(errors).length === 0
+    },
     openPermission(item) {
+      if (!this.canEditPermissions(item)) return
       this.permForm = {
         userId: Number(item.id ?? item.user?.id),
+        companyId: this.resolveItemCompanyId(item),
         username: item.username || item.user?.username || '',
         name: item.name || item.user?.name || '',
         role: Number(item.role ?? item.user?.role),
         status: Number(item.status ?? item.user?.status),
         email: item.email || item.user?.email || '',
-        phone: item.phone || item.user?.phone || ''
+        phone: item.phone || item.user?.phone || '',
+        adminScope: item.adminScope || item.admin_scope || item.user?.adminScope || item.user?.admin_scope || ''
       }
       this.loadUserPermissionOverrides(this.permForm.userId).then(() => {
         this.$refs.permissionModal.show()
@@ -624,13 +840,16 @@ export default {
         this.$set(this.permOverrides, Number(p.id), allSelected ? 0 : 1)
       }
     },
+    permGroupSelectedCount(group) {
+      return (group.items || []).filter(p => this.getPermEffectiveChecked(Number(p.id))).length
+    },
     permSelectAll(flag) { 
       for (const p of this.permVisiblePermissions) {
         this.$set(this.permOverrides, Number(p.id), flag ? 1 : 0)
       }
     },
     async savePermissions() {
-      if (!this.canSavePermissions) return
+      if (!this.canSavePermissions || !this.canSaveMembers) return
       if (!this.permForm.username) {
         const src = this.list.data.find(x => Number(x.id ?? x.user?.id) === Number(this.permForm.userId))
         if (src) this.permForm.username = src.username || src.user?.username || ''
@@ -652,12 +871,14 @@ export default {
       this.loadData()
     },
     async saveMember() {
-      if (!this.canSubmitForm) return
+      if (!this.canSaveMembers) return
+      if (!this.validateMemberForm()) return
       if (this.form.id) {
         const target = this.list.data.find(x => x.id === this.form.id)
         const targetRole = Number(target?.role ?? target?.user?.role)
         const meRole = this.currentRole
-        if (meRole === 1 && (targetRole === 0 || targetRole === 1)) {
+        const isSelf = this.currentUserId != null && Number(this.currentUserId) === Number(this.form.id)
+        if (meRole === 1 && (targetRole === 0 || targetRole === 1) && !isSelf) {
           window.alert('Bạn không có quyền chỉnh cập nhật tài khoản Root/Admin')
           return
         }
@@ -667,12 +888,12 @@ export default {
       const payload = {
         id: this.form.id || undefined,
         username: this.form.username || undefined,
-        name: this.form.fullName,
-        phone: this.form.phone || undefined,
-        email: this.form.email || undefined,
+        name: (this.form.fullName || '').trim(),
+        phone: (this.form.phone || '').trim() || undefined,
+        email: (this.form.email || '').trim() || undefined,
         password: this.form.password ? this.form.password : (this.form.id ? undefined : this.form.password),
         role: rolePayload,
-        adminPassword: (this.form.isAdmin && this.form.adminPassword) ? this.form.adminPassword : undefined
+        adminPassword: (this.showAdminPasswordFields && this.form.adminPassword) ? this.form.adminPassword : undefined
       }
       await axios.post('/setting/members/saveOrUpdate', payload)
       this.$toastr.success(this.form.id ? 'Cập nhật thành viên thành công' : 'Thêm thành viên thành công')
@@ -680,11 +901,13 @@ export default {
       this.loadData()
     },
     async toggleLock(item) {
+      if (!this.canToggleLock(item)) return
       await axios.post(`/setting/members/${item.id}/lock`, null, { params: { lock: Number(item.status) === 1 ? 1 : 0 } })
       this.$toastr.success(Number(item.status) === 1 ? 'Đã khóa tài khoản' : 'Đã mở khóa tài khoản')
       this.loadData()
     },
     async resetPassword(item) {
+      if (!this.canResetPassword(item)) return
       await axios.post(`/setting/members/${item.id}/reset-password`)
       this.$toastr.success('Đã reset mật khẩu thành công. Mật khẩu mới đã được gửi qua email.')
       this.loadData()
@@ -709,20 +932,17 @@ export default {
       return result.join('')
     },
     canEditPermissions(item) {
-      const meRole = Number(this.currentRole)
+      if (!this.canSaveMembers) return false
       const targetRole = Number(item?.role ?? item?.user?.role)
       const meId = this.currentUserId
       const targetId = Number(item?.id ?? item?.user?.id)
       if (targetRole === 0) return false
-      if (meRole === 0) return true
-      if (meRole === 1) {
-        // Admin không thể sửa quyền của chính mình và admin khác
-        if (meId != null && targetId != null && Number(meId) === Number(targetId)) return false
-        return targetRole !== 1
-      }
-      return false
+      if (targetRole === 1 && !this.isRootCompanyAdminAccount(item)) return false
+      if (meId != null && targetId != null && Number(meId) === Number(targetId)) return false
+      return this.canOperateOn(item)
     },
     canToggleLock(item) {
+      if (!this.canManageMembers || !this.canOperateOn(item)) return false
       const meRole = Number(this.currentRole)
       const meId = this.currentUserId
       const targetId = Number(item?.id ?? item?.user?.id)
@@ -731,6 +951,7 @@ export default {
       return true
     },
     canResetPassword(item) {
+      if (!this.canManageMembers || !this.canOperateOn(item)) return false
       const meRole = Number(this.currentRole)
       const meId = this.currentUserId
       const targetId = Number(item?.id ?? item?.user?.id)
@@ -754,6 +975,7 @@ export default {
       } catch { return 'Khác' }
     },
     async sendInfo(item) {
+      if (!this.canSendInfo(item)) return
       try {
         await axios.post(`/setting/members/${item.id}/send-credentials`)
         this.$toastr.success('Đã gửi thông tin tài khoản tới email thành viên')
@@ -762,6 +984,7 @@ export default {
       }
     },
     canSendInfo(item) {
+      if (!this.canManageMembers || !this.canOperateOn(item)) return false
       // Chỉ gửi khi thành viên có email
       const email = item.email || item.user?.email
       return !!email
@@ -787,21 +1010,6 @@ export default {
 .admin-type-card .desc { font-size: 12px; color: #64748b; margin-top: 2px; }
 .admin-type-card:hover { border-color: #c7d2fe; background: #f8fafc; }
 .admin-type-card.active { border-color: #3b82f6; background: #eff6ff; box-shadow: 0 0 0 2px rgba(59,130,246,.15); }
-.perm-grid { display: grid; grid-template-columns: 1fr; grid-row-gap: 10px; }
-.perm-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid #eef2f7; border-radius: 8px; }
-.perm-info { display: flex; align-items: center; gap: 10px; }
-.perm-name { font-weight: 600; }
-.perm-code { font-size: 12px; color: #6b7280; }
-.perm-group { border-top: 1px dashed #eee; padding-top: 8px; margin-top: 8px; }
-.perm-group-header { display: flex; align-items: center; margin-bottom: 6px; }
-.perm-group-items { display: flex; flex-direction: column; gap: 10px; }
-/* Tái dùng kiểu hộp thoại role cho hộp thoại phân quyền */
-.members .role-modal-content { border-radius: 14px; overflow: hidden; border: 1px solid #eef0f6; box-shadow: 0 10px 30px rgba(18, 38, 63, 0.08); }
-.members .role-modal-header { background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%); border-bottom: 1px solid #ecf0f6; }
-.members .role-modal-body { background: #ffffff; max-height: 72vh; overflow: auto; padding-bottom: 8px; }
-.members .section-card { border: 1px solid #e8e8e8; border-radius: 12px; padding: 12px 14px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
-.members .perm-group { border: 1px solid #e8e8e8; border-radius: 12px; }
-.members .perm-group-header { border-bottom: 1px dashed #ecf0f6; padding-bottom: 6px; margin-bottom: 8px; }
 .member-modal-actions {
   display: flex;
   justify-content: flex-end;

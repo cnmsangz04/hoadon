@@ -113,7 +113,7 @@ export default {
           icon: 'fas fa-envelope',
           children: [
             { title: 'Máy chủ gửi mail', icon: 'fas fa-server', to: '/email/mail-server' },
-            { title: 'Trạng thái email', icon: 'fas fa-history', to: '/email/mail-history' },
+            { title: 'Lịch sử gửi mail', icon: 'fas fa-history', to: '/email/mail-history' },
           ],
         },
         { title: 'Cài đặt', icon: 'fas fa-cog', to: '/setting' },

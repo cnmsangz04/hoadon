@@ -33,7 +33,7 @@ public class InvoiceImportController extends BaseController {
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "size", defaultValue = "10") int size
     ) {
-        permission("invoice-list");
+        permission("invoice-list|invoice-save");
         int pageIndex = Math.max(page - 1, 0);
         Pageable pageable = PageRequest.of(pageIndex, Math.max(size, 1));
         Page<InvoiceImportDTO> result = service.list(user, pageable);

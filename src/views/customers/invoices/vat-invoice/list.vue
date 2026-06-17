@@ -128,7 +128,9 @@
             <b-dropdown-item class="text-center" href="#" @click.prevent="viewInvoice(item)">Xem</b-dropdown-item>
 
             <b-dropdown-item v-if="Number(item.status) === 0" class="text-center" href="#" @click.prevent="signInvoice(item)">Ký số</b-dropdown-item>
-            <b-dropdown-item v-if="Number(item.status) === 1" class="text-center" href="#" @click.prevent="sendToCqt(item)">Gửi CQT</b-dropdown-item>
+            <b-dropdown-item v-if="canSendToCqt(item)" class="text-center" href="#" @click.prevent="sendToCqt(item)">
+              {{ Number(item.status) === 2 ? 'Gửi lại CQT' : 'Gửi CQT' }}
+            </b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) === 3" class="text-center" href="#" @click.prevent="sendMail(item)">Gửi mail</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) > 1" class="text-center" href="#" @click.prevent="viewHistory(item)">Lịch sử truyền nhận</b-dropdown-item>
 
@@ -159,41 +161,36 @@
       id="modalVatInvoice"
       size="lg"
       :no-close-on-esc="false"
-      :hide-header="true"
-      body-class="p-0"
+      title="Xem hóa đơn"
+      body-class="invoice-preview-body"
     >
       <iframe
         id="viewVatInv"
+        class="invoice-preview-frame"
         :src="iframe.src"
-        scrolling="no"
-        frameborder="0"
-        width="100%"
         onload="((obj) => {try{obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';}catch(e){obj.style.height = 0;}})(this)"
       ></iframe>
       <template #modal-footer>
-        <div class="d-flex align-items-center w-100 justify-content-between">
-          <div>
-            <b-button variant="light" size="sm" @click="closeModal('modalVatInvoice')">Đóng</b-button>
-          </div>
-          <div class="d-flex align-items-center">
+        <div class="modal-footer-spread">
+          <b-button variant="light" size="sm" @click="closeModal('modalVatInvoice')">Đóng</b-button>
+          <div class="modal-footer-actions">
             <b-dropdown
               id="ddown-right-vat"
-              text="Tải mẫu"
+              text="Tải xuống"
               extra-toggle-classes="nav-link-custom"
               variant="success"
               size="sm"
-              class="mr-2"
             >
               <b-dropdown-item :href="invoicePublicUrl(iframe.lookup_code, '/download-pdf')">
-                <i class="fas fa-file-pdf"></i> Download PDF
+                <i class="fas fa-file-pdf mr-1"></i> Tải PDF
               </b-dropdown-item>
               <b-dropdown-item :href="invoicePublicUrl(iframe.lookup_code, '/download-xml')">
-                <i class="fas fa-file-code"></i> Download XML
+                <i class="fas fa-file-code mr-1"></i> Tải XML
               </b-dropdown-item>
             </b-dropdown>
-            
+
             <b-button variant="info" size="sm" @click="print(iframe.lookup_code)">
-              <i class="fas fa-print"></i> In hóa đơn
+              <i class="fas fa-print mr-1"></i> In hóa đơn
             </b-button>
           </div>
         </div>
@@ -203,14 +200,14 @@
     <!-- Hộp thoại lịch sử -->
     <b-modal ref="historyModal" size="lg" title="Lịch sử truyền nhận" hide-header-close>
       <div>
-        <b-table-simple bordered small responsive show-empty :busy="historyBusy" empty-text="Không có dữ liệu">
+        <b-table-simple class="modal-history-table" bordered small responsive show-empty :busy="historyBusy" empty-text="Không có dữ liệu">
           <b-thead>
             <b-tr>
-              <b-th class="text-center" style="width:60px">STT</b-th>
-              <b-th style="width:150px">Tiêu đề</b-th>
+              <b-th class="text-center modal-history-col-index">STT</b-th>
+              <b-th class="modal-history-col-title">Tiêu đề</b-th>
               <b-th>Mô tả</b-th>
-              <b-th style="width:100px">Người thao tác</b-th>
-              <b-th style="width:110px">Ngày thực hiện</b-th>
+              <b-th class="modal-history-col-user">Người thao tác</b-th>
+              <b-th class="modal-history-col-date">Ngày thực hiện</b-th>
             </b-tr>
           </b-thead>
           <b-tbody>
@@ -228,7 +225,9 @@
         </b-table-simple>
       </div>
       <template #modal-footer>
-        <b-button size="sm" variant="light" @click="$refs.historyModal.hide()">Đóng</b-button>
+        <div class="modal-footer-actions">
+          <b-button size="sm" variant="light" @click="$refs.historyModal.hide()">Đóng</b-button>
+        </div>
       </template>
     </b-modal>
 
@@ -402,8 +401,9 @@ export default {
       }
       if (this.sellerTaxcode) return this.sellerTaxcode
       try {
-        const { data } = await axios.post('/setting/profile/get', null, { meta: { suppressGlobalErrorToast: true } })
-        this.sellerTaxcode = (data?.taxCode || data?.taxcode || '').toString().trim()
+        const { data } = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
+        const company = data?.company || {}
+        this.sellerTaxcode = (company.taxcode || company.taxCode || '').toString().trim()
       } catch (e) {}
       return this.sellerTaxcode
     },
@@ -496,10 +496,10 @@ export default {
         const to = from + (items.length ? (items.length - 1) : 0)
         this.list.from = from
         this.list.to = to
-        // bump key to force table refresh
+        // Đổi key để bảng render lại
         this.refreshKey++
       } catch (e) {
-        // silent
+        // Giữ danh sách hiện tại nếu tải dữ liệu mới thất bại
       } finally {
         this.isBusy = false
       }
@@ -545,6 +545,10 @@ export default {
       if (v === 5) return 'primary'
       if (v === 6) return 'danger'
       return 'secondary'
+    },
+    canSendToCqt (item) {
+      const status = Number(item?.status)
+      return status === 1 || status === 2
     },
     relationColumnText (item) {
       const type = Number(item?.invoiceType || 0)
@@ -710,12 +714,15 @@ export default {
       try {
         const id = item && (item.id || item.ID || item.Id)
         if (!id) return
+        const isResend = Number(item?.status) === 2
         let ok = true
         if (typeof window.$?.confirm === 'function') {
           ok = await new Promise(resolve => {
             window.$.confirm({
-              title: 'Xác nhận gửi hóa đơn',
-              content: 'Xác nhận gửi hóa đơn lên Cơ quan thuế',
+              title: isResend ? 'Xác nhận gửi lại hóa đơn' : 'Xác nhận gửi hóa đơn',
+              content: isResend
+                ? 'Hóa đơn đang ở trạng thái Đã gửi thuế. Xác nhận gửi lại hóa đơn lên Cơ quan thuế?'
+                : 'Xác nhận gửi hóa đơn lên Cơ quan thuế',
               theme: 'bootstrap',
               type: 'blue',
               icon: 'fas fa-paper-plane',
@@ -727,21 +734,21 @@ export default {
               escapeKey: 'cancel',
               buttons: {
                 cancel: { text: 'Hủy', btnClass: 'btn-light', action: function(){ resolve(false) } },
-                ok: { text: 'Gửi', btnClass: 'btn-primary', action: function(){ resolve(true) } }
+                ok: { text: isResend ? 'Gửi lại' : 'Gửi', btnClass: 'btn-primary', action: function(){ resolve(true) } }
               }
             })
           })
         } else {
-          ok = window.confirm('Xác nhận gửi hóa đơn lên Cơ quan thuế?')
+          ok = window.confirm(isResend ? 'Xác nhận gửi lại hóa đơn lên Cơ quan thuế?' : 'Xác nhận gửi hóa đơn lên Cơ quan thuế?')
         }
         if (!ok) return
         this.isBusy = true
-        await axios.post(`/invoices/${id}/send-to-cqt`, null, { successMessage: 'Đã gửi hóa đơn lên Cơ quan thuế' })
+        await axios.post(`/invoices/${id}/send-to-cqt`, null, { successMessage: isResend ? 'Đã gửi lại hóa đơn lên Cơ quan thuế' : 'Đã gửi hóa đơn lên Cơ quan thuế' })
         await this.fetchList()
-        // Poll history for async CQT response and show toast with history title
+        // Theo dõi lịch sử để thông báo kết quả xử lý bất đồng bộ từ CQT
         this.pollHistoryAndNotify(id)
       } catch (e) {
-        // handled globally by axios interceptor
+        // Lỗi đã được interceptor axios xử lý
       } finally {
         this.isBusy = false
       }
@@ -802,7 +809,7 @@ export default {
         this.closeModal('modalSendEmail')
       } catch (e) {
         this.mail.loading = false
-        // error toasts handled globally
+        // Lỗi đã được toast toàn cục hiển thị
       }
     },
     isValidEmail (email) {
@@ -816,16 +823,16 @@ export default {
         const idx = this.list.data.findIndex(x => Number(x.id) === id)
         if (idx >= 0) {
           const current = this.list.data[idx]
-          // Preserve existing fields, update status and any extras (e.g., codeCqt)
+          // Giữ các trường hiện có, cập nhật trạng thái và dữ liệu bổ sung nếu có
           const updated = { ...current, status: Number(status), ...extras }
           this.$set(this.list.data, idx, updated)
-          // bump key to force table refresh
+          // Đổi key để bảng render lại
           this.refreshKey++
         }
       } catch {}
     },
 
-    // --- Polling helpers to notify after history saved by backend ---
+    // Theo dõi lịch sử để thông báo sau khi backend lưu kết quả
     async pollHistoryAndNotify (invoiceId) {
       if (!invoiceId && invoiceId !== 0) return
       if (!this._pollTimers || typeof this._pollTimers !== 'object') this._pollTimers = {}
@@ -847,7 +854,7 @@ export default {
             const title = outcome.title || 'Kết quả từ CQT'
             const desc = outcome.description || ''
             if (type === 202) {
-              // Accepted cấp mã => status 3 and codeCqt may be present
+              // CQT cấp mã thành công, có thể kèm mã trả về
               toastSuccess(desc ? `${title}: ${desc}` : title)
               const code = desc || null
               this._updateLocalStatus(invoiceId, 3, code ? { codeCqt: code } : {})
@@ -856,16 +863,16 @@ export default {
               const m = xml.match(/<LTBao>\s*(\d+)\s*<\/LTBao>/i)
               const lt = m ? m[1] : null
               if (lt === '2') {
-                // Accepted for 203 => status 3
+                // CQT chấp nhận sau thông điệp 203
                 toastSuccess(title)
                 this._updateLocalStatus(invoiceId, 3)
               } else {
-                // Rejected => status 7
+                // CQT từ chối
                 toastWarning(title)
                 this._updateLocalStatus(invoiceId, 7)
               }
             }
-            // Sync with backend to get any other fields updated
+            // Đồng bộ lại dữ liệu mới nhất từ backend
             await this.fetchList()
             try { clearTimeout(this._pollTimers[key]) } catch {}
             delete this._pollTimers[key]

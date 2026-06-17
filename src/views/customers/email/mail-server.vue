@@ -221,22 +221,22 @@ export default {
   },
   methods: {
     async load() {
-      // Tải hồ sơ công ty và mail-server song song
-      const [mailRes, profileRes] = await Promise.allSettled([
+      // Tải thông tin công ty và mail-server song song
+      const [mailRes, infoRes] = await Promise.allSettled([
         axios.get('/mail-servers'),
-        axios.post('/setting/profile/get'),
+        axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } }),
       ])
 
       const mail    = mailRes.status    === 'fulfilled' ? mailRes.value.data    : null
-      const profile = profileRes.status === 'fulfilled' ? profileRes.value.data : null
+      const company = infoRes.status === 'fulfilled' ? infoRes.value.data?.company : null
 
       this.form = {
         host:       mail?.host       || 'smtp.gmail.com',
         port:       mail?.port       || 587,
         username:   mail?.username   || '',
         password:   mail?.password   || '',
-        fromName:   mail?.fromName   || profile?.companyName  || '',
-        fromEmail:  mail?.fromEmail  || profile?.invoiceEmail || profile?.contactMail || '',
+        fromName:   mail?.fromName   || company?.name  || '',
+        fromEmail:  mail?.fromEmail  || company?.invoiceEmail || company?.contactMail || company?.email || '',
         encryption: mail?.encryption != null ? mail.encryption : 1,
       }
       this.hasSaved = !!mail?.id

@@ -697,8 +697,8 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
     }
 
     private String buildAsciiOrderInfo(InvoicePackagePurchaseEntity purchase) {
-        String raw = "Thanh toan goi hoa don " + nullToBlank(purchase.getPackageName())
-                + " ma " + nullToBlank(purchase.getPaymentCode());
+        String raw = "Thanh toán gói hóa đơn " + nullToBlank(purchase.getPackageName())
+                + " mã " + nullToBlank(purchase.getPaymentCode());
         String normalized = Normalizer.normalize(raw, Normalizer.Form.NFD);
         return DIACRITICS.matcher(normalized)
                 .replaceAll("")

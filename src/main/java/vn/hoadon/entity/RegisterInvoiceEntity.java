@@ -83,10 +83,10 @@ public class RegisterInvoiceEntity {
     @Column(name = "status", nullable = false)
     private Integer status = 0;
 
-    @Column(name = "response_receive_file", length = 255)
+    @Column(name = "response_receive_file", columnDefinition = "NVARCHAR(MAX)")
     private String responseReceiveFile;
 
-    @Column(name = "response_accept_file", length = 255)
+    @Column(name = "response_accept_file", columnDefinition = "NVARCHAR(MAX)")
     private String responseAcceptFile;
 
     // Audit

@@ -126,6 +126,8 @@ public class InvoiceController extends BaseController {
 
     @GetMapping("/prepare")
     public ResponseEntity<?> prepare(@AuthenticationPrincipal UserEntity user) {
+        permission("invoice-save");
+
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Không xác định được công ty/người dùng"));
         }
@@ -159,6 +161,7 @@ public class InvoiceController extends BaseController {
         // OK
         PrepareDTO dto = new PrepareDTO();
         dto.formId = activeVatForm.getId();
+        dto.formName = activeVatForm.getName();
         dto.formCode = activeVatForm.getFormCode();
         dto.serial = activeVatForm.getSerial();
         dto.haveCode = activeVatForm.getHaveCode();
@@ -284,6 +287,7 @@ public class InvoiceController extends BaseController {
 
     @PostMapping("/{id}/clone")
     public ResponseEntity<?> clone(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
+        permission("invoice-save");
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Vui lòng xác định công ty/người dùng"));
         }
@@ -332,10 +336,13 @@ public class InvoiceController extends BaseController {
     @GetMapping("/{id}")
     public ResponseEntity<?> get(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
         if (id == null) return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu ID hóa đơn"));
+        if (user == null || user.getCompanyId() == null) {
+            return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền xem hóa đơn"));
+        }
         java.util.Optional<vn.hoadon.entity.InvoiceEntity> opt = invoiceRepository.findById(id);
         vn.hoadon.entity.InvoiceEntity inv = opt.orElse(null);
         if (inv == null) return ResponseEntity.badRequest().body(new ErrorDTO("Không tìm thấy hóa đơn"));
-        if (user != null && user.getCompanyId() != null && inv.getCompanyId() != null && !user.getCompanyId().equals(inv.getCompanyId().longValue())) {
+        if (inv.getCompanyId() == null || !user.getCompanyId().equals(inv.getCompanyId().longValue())) {
             return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền xem hóa đơn của công ty khác"));
         }
         // Tạo phản hồi với các khối JSON đã parse
@@ -361,7 +368,7 @@ public class InvoiceController extends BaseController {
         resp.put("vatRateOther", inv.getVatRateOther());
         if (inv.getFormId() != null) {
             FormInvoiceEntity form = formInvoiceRepository.findById(inv.getFormId().longValue()).orElse(null);
-            if (form != null) {
+            if (form != null && form.getCompanyId() != null && form.getCompanyId().equals(user.getCompanyId())) {
                 resp.put("formCode", form.getFormCode());
                 resp.put("serial", form.getSerial());
             }
@@ -442,7 +449,8 @@ public class InvoiceController extends BaseController {
         dto.put("customerName", extractCustomerName(inv.getCustomer()));
         if (inv.getFormId() != null) {
             FormInvoiceEntity form = formInvoiceRepository.findById(inv.getFormId().longValue()).orElse(null);
-            if (form != null) {
+            Long invCompanyId = inv.getCompanyId() != null ? inv.getCompanyId().longValue() : null;
+            if (form != null && form.getCompanyId() != null && form.getCompanyId().equals(invCompanyId)) {
                 dto.put("formCode", form.getFormCode());
                 dto.put("serial", form.getSerial());
             }
@@ -524,7 +532,7 @@ public class InvoiceController extends BaseController {
         }
     }
     public static class ErrorDTO { public String message; public ErrorDTO(String m){ this.message = m; } }
-    public static class PrepareDTO { public Long formId; public String formCode; public String serial; public Integer haveCode; public Long registerId; public String registerEffectiveDate; public Long companyId; }
+    public static class PrepareDTO { public Long formId; public String formName; public String formCode; public String serial; public Integer haveCode; public Long registerId; public String registerEffectiveDate; public Long companyId; }
 
     // Incoming request from Vue create form
     public static class CreateRequest {
@@ -760,21 +768,22 @@ public class InvoiceController extends BaseController {
     @PostMapping("/{id}/sign")
     @Transactional
     public ResponseEntity<?> sign(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
+        permission("invoice-save");
         if (id == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu ID hóa đơn"));
+        }
+        if (user == null || user.getCompanyId() == null) {
+            return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền ký số hóa đơn"));
         }
         Optional<InvoiceEntity> optInv = invoiceRepository.findById(id);
         InvoiceEntity inv = optInv.orElse(null);
         if (inv == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Không tìm thấy hóa đơn"));
         }
-        // Permission: if user provided, ensure same company
-        if (user != null && user.getCompanyId() != null && inv.getCompanyId() != null) {
-            Long uCompany = user.getCompanyId();
-            Long iCompany = inv.getCompanyId().longValue();
-            if (!uCompany.equals(iCompany)) {
-                return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền ký số hóa đơn của công ty khác"));
-            }
+        Long uCompany = user.getCompanyId();
+        Long iCompany = inv.getCompanyId() != null ? inv.getCompanyId().longValue() : null;
+        if (iCompany == null || !uCompany.equals(iCompany)) {
+            return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền ký số hóa đơn của công ty khác"));
         }
         // 1) Ensure there is an active invoice_numbers row for this form_id; create if missing
         Long companyId = inv.getCompanyId() != null ? inv.getCompanyId().longValue() : (user != null ? user.getCompanyId() : null);
@@ -784,6 +793,13 @@ public class InvoiceController extends BaseController {
         Long formId = inv.getFormId() != null ? inv.getFormId().longValue() : null;
         if (formId == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu mẫu hóa đơn (form_id)"));
+        }
+        FormInvoiceEntity form = null;
+        try {
+            form = formInvoiceRepository.findById(formId).orElse(null);
+        } catch (Exception ignore) {}
+        if (form == null || form.getCompanyId() == null || !companyId.equals(form.getCompanyId())) {
+            return ResponseEntity.status(403).body(new ErrorDTO("Mẫu hóa đơn không thuộc công ty hiện tại"));
         }
         
         // Check buy_invoices: must have active record with available invoices
@@ -841,10 +857,6 @@ public class InvoiceController extends BaseController {
         inv.setUpdatedAt(java.time.LocalDateTime.now());
         invoiceRepository.save(inv);
         // 3. Tạo XML với thông tin công ty và ngân hàng, dùng mẫu hiện tại
-        FormInvoiceEntity form = null;
-        try {
-            form = formInvoiceRepository.findById(formId).orElse(null);
-        } catch (Exception ignore) {}
         CompanyEntity company = null; CompanyBankEntity bank = null;
         if (form != null && form.getCompanyId() != null) {
             company = companyRepository.findById(form.getCompanyId()).orElse(null);
@@ -1467,6 +1479,7 @@ public class InvoiceController extends BaseController {
     @PostMapping("/{id}/send-to-cqt")
     @Transactional
     public ResponseEntity<?> sendToCqt(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
+        permission("invoice-save");
         if (id == null) return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu ID hóa đơn"));
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Không xác định được người dùng/công ty"));
@@ -1910,6 +1923,10 @@ public class InvoiceController extends BaseController {
         Optional<InvoiceEntity> opt = invoiceRepository.findById(id);
         InvoiceEntity inv = opt.orElse(null);
         if (inv == null) return ResponseEntity.status(404).body(new ErrorDTO("Không tìm thấy hóa đơn"));
+        Long invCompany = inv.getCompanyId() != null ? inv.getCompanyId().longValue() : null;
+        if (invCompany == null || !user.getCompanyId().equals(invCompany)) {
+            return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền xem lịch sử hóa đơn của công ty khác"));
+        }
         
         // Dùng HistoryService để truy vấn hiệu quả
         if (historyService == null) {

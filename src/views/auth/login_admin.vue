@@ -100,11 +100,18 @@ export default {
         if (!token) throw new Error('Không tìm thấy token!')
         localStorage.setItem('token-admin', token)
         const payloadJwt = parseJwt(token)
-        const role = payloadJwt?.role
-        const isAdmin = role === 0 || role === 1 || parseInt(role, 10) === 0 || parseInt(role, 10) === 1
-        if (!isAdmin) {
+        const role = Number(payloadJwt?.role)
+        const companyId = Number(payloadJwt?.companyId ?? payloadJwt?.company_id)
+        const rootCompanyClaim = payloadJwt?.rootCompanyAdmin ?? payloadJwt?.root_company_admin ?? payloadJwt?.isRootCompanyAdmin
+        const isRoot = role === 0
+        const isRootCompanyAdmin = role === 1 && (
+          rootCompanyClaim === true ||
+          rootCompanyClaim === 'true' ||
+          companyId === 1
+        )
+        if (!isRoot && !isRootCompanyAdmin) {
           localStorage.removeItem('token-admin')
-          throw new Error('Tài khoản không có quyền Admin')
+          throw new Error('Tài khoản không có quyền vào khu Quản trị')
         }
         if (this.remember) localStorage.setItem('last-admin-account', this.username)
         // Lấy thông tin app ngay cho ngữ cảnh admin

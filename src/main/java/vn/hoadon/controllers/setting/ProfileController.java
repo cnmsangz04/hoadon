@@ -19,6 +19,7 @@ import vn.hoadon.util.UploadPath;
 import java.util.*;
 import java.io.IOException;
 import java.nio.file.*;
+import java.time.LocalDate;
 import java.util.UUID;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,6 +36,9 @@ public class ProfileController extends BaseController {
     private final BankService bankService;
     private final CompanyBankRepository companyBankRepository;
 
+    private static final String EMAIL_REGEX = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$";
+    private static final String PHONE_REGEX = "^(0\\d{9,10}|\\+?\\d{9,15})$";
+
     public ProfileController(
             CompanyRepository companyRepository,
             LegalRepresentativeRepository legalRepresentativeRepository,
@@ -47,6 +51,84 @@ public class ProfileController extends BaseController {
         this.taxAuthorityService = taxAuthorityService;
         this.bankService = bankService;
         this.companyBankRepository = companyBankRepository;
+    }
+
+    private String trim(Object value) {
+        return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    private void addRequired(Map<String, List<String>> errors, String field, String value, String label) {
+        if (value == null || value.isBlank()) {
+            errors.put(field, Collections.singletonList("Vui lòng nhập " + label));
+        }
+    }
+
+    private ResponseEntity<?> validationError(Map<String, List<String>> errors) {
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("errors", errors);
+        return ResponseEntity.status(422).body(resp);
+    }
+
+    private boolean isValidEmail(String value) {
+        return value != null && value.matches(EMAIL_REGEX);
+    }
+
+    private boolean isValidPhone(String value) {
+        if (value == null) return false;
+        String normalized = value.replaceAll("[\\s().-]", "");
+        return normalized.matches(PHONE_REGEX);
+    }
+
+    private boolean isValidCitizenIdent(String value) {
+        return value == null || value.isBlank() || value.matches("^(\\d{9}|\\d{12})$");
+    }
+
+    private boolean isValidPassport(String value) {
+        return value == null || value.isBlank() || value.matches("^[A-Za-z0-9]{6,20}$");
+    }
+
+    private boolean isValidWebsite(String value) {
+        if (value == null || value.isBlank() || value.matches(".*\\s+.*")) return false;
+        String normalized = value.matches("(?i)^https?://.*") ? value : "https://" + value;
+        try {
+            java.net.URI uri = java.net.URI.create(normalized);
+            String host = uri.getHost();
+            return host != null && host.contains(".");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean isValidBankNo(String value) {
+        return value != null && value.matches("^[0-9A-Za-z.-]{4,32}$");
+    }
+
+    private boolean isAllowedImageFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) return true;
+        String name = Optional.ofNullable(file.getOriginalFilename()).orElse("").toLowerCase(Locale.ROOT);
+        return name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg");
+    }
+
+    private LocalDate parseProfileDate(Object value) {
+        String text = trim(value);
+        if (text.length() >= 10) {
+            text = text.substring(0, 10);
+        }
+        try {
+            return LocalDate.parse(text);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Integer parseInteger(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number n) return n.intValue();
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // Cung cấp dữ liệu tùy chọn: ngân hàng và cơ quan thuế (tỉnh/thành)
@@ -179,10 +261,27 @@ public class ProfileController extends BaseController {
         if (!companyOpt.isPresent()) {
             return ResponseEntity.notFound().build();
         }
+        String cleanCompanyName = trim(companyName);
+        String cleanCompanyAddress = trim(companyAddress);
+        String cleanCompanyBusiness = trim(companyBusiness);
+        Map<String, List<String>> errors = new HashMap<>();
+        addRequired(errors, "companyName", cleanCompanyName, "tên đơn vị");
+        addRequired(errors, "companyAddress", cleanCompanyAddress, "địa chỉ");
+        addRequired(errors, "companyBusiness", cleanCompanyBusiness, "ngành nghề");
+        if (!isAllowedImageFile(logo)) {
+            errors.put("logo", Collections.singletonList("Logo chỉ hỗ trợ PNG, JPG hoặc JPEG"));
+        }
+        if (!isAllowedImageFile(favicon)) {
+            errors.put("favicon", Collections.singletonList("Favicon chỉ hỗ trợ PNG, JPG hoặc JPEG"));
+        }
+        if (!errors.isEmpty()) {
+            return validationError(errors);
+        }
+
         vn.hoadon.entity.CompanyEntity company = companyOpt.get();
-        if (companyName != null) company.setName(companyName);
-        if (companyAddress != null) company.setAddress(companyAddress);
-        if (companyBusiness != null) company.setBusiness(companyBusiness);
+        company.setName(cleanCompanyName);
+        company.setAddress(cleanCompanyAddress);
+        company.setBusiness(cleanCompanyBusiness);
         
         // Lưu logo
         if (logo != null && !logo.isEmpty()) {
@@ -232,21 +331,50 @@ public class ProfileController extends BaseController {
         if (companyId == null) {
             return ResponseEntity.status(403).body("Không xác định được công ty từ người dùng hiện tại");
         }
+        String representName = trim(body.get("representName"));
+        String representPhone = trim(body.get("representPhone"));
+        String representCitizenIdent = trim(body.get("representCitizenIdent"));
+        String representPassPort = trim(body.get("representPassPort"));
+        String representMail = trim(body.get("representMail"));
+        Integer representGender = parseInteger(body.get("representGender"));
+        LocalDate representDateBirth = parseProfileDate(body.get("representDateBirth"));
+
+        Map<String, List<String>> errors = new HashMap<>();
+        addRequired(errors, "representName", representName, "họ và tên");
+        addRequired(errors, "representPhone", representPhone, "số điện thoại");
+        if (!errors.containsKey("representPhone") && !isValidPhone(representPhone)) {
+            errors.put("representPhone", Collections.singletonList("Số điện thoại không hợp lệ"));
+        }
+        if (!isValidCitizenIdent(representCitizenIdent)) {
+            errors.put("representCitizenIdent", Collections.singletonList("Căn cước công dân phải gồm 9 hoặc 12 chữ số"));
+        }
+        if (!isValidPassport(representPassPort)) {
+            errors.put("representPassPort", Collections.singletonList("Số hộ chiếu chỉ gồm chữ và số, từ 6 đến 20 ký tự"));
+        }
+        if (representDateBirth == null || representDateBirth.isBefore(LocalDate.of(1900, 1, 1)) || representDateBirth.isAfter(LocalDate.now())) {
+            errors.put("manualDate", Collections.singletonList("Ngày sinh không hợp lệ"));
+        }
+        if (representGender == null || (representGender != 0 && representGender != 1)) {
+            errors.put("representGender", Collections.singletonList("Vui lòng chọn giới tính"));
+        }
+        addRequired(errors, "representMail", representMail, "email");
+        if (!errors.containsKey("representMail") && !isValidEmail(representMail)) {
+            errors.put("representMail", Collections.singletonList("Email không hợp lệ"));
+        }
+        if (!errors.isEmpty()) {
+            return validationError(errors);
+        }
+
         vn.hoadon.entity.LegalRepresentativeEntity rep = legalRepresentativeRepository.findByCompanyId(companyId)
                 .orElseGet(vn.hoadon.entity.LegalRepresentativeEntity::new);
         rep.setCompanyId(companyId);
-        rep.setFullname((String) body.getOrDefault("representName", null));
-        rep.setGender((Integer) body.getOrDefault("representGender", null));
-        Object date = body.get("representDateBirth");
-        if (date instanceof String) {
-            try {
-                rep.setDateOfBirth(java.time.LocalDate.parse((String) date));
-            } catch (Exception ignored) {}
-        }
-        rep.setCitizenId((String) body.getOrDefault("representCitizenIdent", null));
-        rep.setPassportNo((String) body.getOrDefault("representPassPort", null));
-        rep.setPhone((String) body.getOrDefault("representPhone", null));
-        rep.setEmail((String) body.getOrDefault("representMail", null));
+        rep.setFullname(representName);
+        rep.setGender(representGender);
+        rep.setDateOfBirth(representDateBirth);
+        rep.setCitizenId(representCitizenIdent.isBlank() ? null : representCitizenIdent);
+        rep.setPassportNo(representPassPort.isBlank() ? null : representPassPort);
+        rep.setPhone(representPhone);
+        rep.setEmail(representMail);
         legalRepresentativeRepository.save(rep);
         return ResponseEntity.ok().build();
     }
@@ -266,11 +394,37 @@ public class ProfileController extends BaseController {
         if (!companyOpt.isPresent()) {
             return ResponseEntity.notFound().build();
         }
+        String invoiceEmail = trim(body.get("invoiceEmail"));
+        String invoicePhone = trim(body.get("invoicePhone"));
+        String invoiceFax = trim(body.get("invoiceFax"));
+        String invoiceWebsite = trim(body.get("invoiceWebsite"));
+
+        Map<String, List<String>> errors = new HashMap<>();
+        addRequired(errors, "invoiceEmail", invoiceEmail, "email");
+        if (!errors.containsKey("invoiceEmail") && !isValidEmail(invoiceEmail)) {
+            errors.put("invoiceEmail", Collections.singletonList("Email không hợp lệ"));
+        }
+        addRequired(errors, "invoicePhone", invoicePhone, "số điện thoại");
+        if (!errors.containsKey("invoicePhone") && !isValidPhone(invoicePhone)) {
+            errors.put("invoicePhone", Collections.singletonList("Số điện thoại không hợp lệ"));
+        }
+        addRequired(errors, "invoiceFax", invoiceFax, "số fax");
+        if (!errors.containsKey("invoiceFax") && !invoiceFax.matches("^[0-9+().\\-\\s]{6,20}$")) {
+            errors.put("invoiceFax", Collections.singletonList("Số fax không hợp lệ"));
+        }
+        addRequired(errors, "invoiceWebsite", invoiceWebsite, "website");
+        if (!errors.containsKey("invoiceWebsite") && !isValidWebsite(invoiceWebsite)) {
+            errors.put("invoiceWebsite", Collections.singletonList("Website không hợp lệ"));
+        }
+        if (!errors.isEmpty()) {
+            return validationError(errors);
+        }
+
         vn.hoadon.entity.CompanyEntity company = companyOpt.get();
-        if (body.containsKey("invoiceEmail")) company.setInvoiceEmail(body.get("invoiceEmail"));
-        if (body.containsKey("invoicePhone")) company.setInvoicePhone(body.get("invoicePhone"));
-        if (body.containsKey("invoiceFax")) company.setInvoiceFax(body.get("invoiceFax"));
-        if (body.containsKey("invoiceWebsite")) company.setInvoiceWebsite(body.get("invoiceWebsite"));
+        company.setInvoiceEmail(invoiceEmail);
+        company.setInvoicePhone(invoicePhone);
+        company.setInvoiceFax(invoiceFax);
+        company.setInvoiceWebsite(invoiceWebsite);
         companyRepository.save(company);
         return ResponseEntity.ok().build();
     }
@@ -299,28 +453,21 @@ public class ProfileController extends BaseController {
 
         Map<String, List<String>> errors = new HashMap<>();
 
-        // Validate cơ bảns according to field expectations
+        // Validate các trường liên hệ bắt buộc.
         if (contactName == null || contactName.isEmpty()) {
             errors.put("contactName", Collections.singletonList("Vui lòng nhập họ và tên"));
         }
 
         if (contactMail == null || contactMail.isEmpty()) {
             errors.put("contactMail", Collections.singletonList("Vui lòng nhập email"));
-        } else {
-            // mẫu email rất đơn giản
-            String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
-            if (!contactMail.matches(emailRegex)) {
-                errors.put("contactMail", Collections.singletonList("Email không hợp lệ"));
-            }
+        } else if (!isValidEmail(contactMail)) {
+            errors.put("contactMail", Collections.singletonList("Email không hợp lệ"));
         }
 
         if (contactPhone == null || contactPhone.isEmpty()) {
             errors.put("contactPhone", Collections.singletonList("Vui lòng nhập số điện thoại"));
-        } else {
-            String phoneRegex = "^[0-9+()\\-\\s]{6,20}$"; // chữ số, khoảng trắng, +, -, (), độ dài 6-20
-            if (!contactPhone.matches(phoneRegex)) {
-                errors.put("contactPhone", Collections.singletonList("Số điện thoại không hợp lệ"));
-            }
+        } else if (!isValidPhone(contactPhone)) {
+            errors.put("contactPhone", Collections.singletonList("Số điện thoại không hợp lệ"));
         }
 
         if (contactAddress == null || contactAddress.isEmpty()) {
@@ -359,10 +506,27 @@ public class ProfileController extends BaseController {
         }
         vn.hoadon.entity.CompanyEntity company = companyOpt.get();
 
-        String bankAbbreviation = body.get("bankName"); // giá trị rút gọn từ v-select
-        String bankNo = body.get("bankNo");
-        String bankAddress = body.get("bankAddress");
-        String bankBrand = body.get("bankBrand");
+        String bankAbbreviation = trim(body.get("bankName")); // giá trị rút gọn từ v-select
+        String bankNo = trim(body.get("bankNo"));
+        String bankAddress = trim(body.get("bankAddress"));
+        String bankBrand = trim(body.get("bankBrand"));
+
+        Map<String, List<String>> errors = new HashMap<>();
+        addRequired(errors, "bankNo", bankNo, "số tài khoản ngân hàng");
+        if (!errors.containsKey("bankNo") && !isValidBankNo(bankNo)) {
+            errors.put("bankNo", Collections.singletonList("Số tài khoản ngân hàng không hợp lệ"));
+        }
+        if (bankAbbreviation.isBlank()) {
+            errors.put("bankName", Collections.singletonList("Vui lòng chọn tên ngân hàng"));
+        } else if (bankService.findByAbbreviation(bankAbbreviation).isEmpty()) {
+            errors.put("bankName", Collections.singletonList("Ngân hàng không hợp lệ"));
+        }
+        if (bankBrand.length() > 255) {
+            errors.put("bankBrand", Collections.singletonList("Chi nhánh không được vượt quá 255 ký tự"));
+        }
+        if (!errors.isEmpty()) {
+            return validationError(errors);
+        }
 
         // Tìm ngân hàng công ty đầu tiên hiện có hoặc tạo mới
         List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
@@ -372,14 +536,10 @@ public class ProfileController extends BaseController {
         if (bankAbbreviation != null && !bankAbbreviation.isBlank()) {
             Optional<BankEntity> bankOpt = bankService.findByAbbreviation(bankAbbreviation);
             bankOpt.ifPresent(bank -> cb.setBankName(bank.getName()));
-            if (!bankOpt.isPresent()) {
-                // Dự phòng: lưu đúng giá trị được truyền
-                cb.setBankName(bankAbbreviation);
-            }
         }
-        if (bankNo != null) cb.setAccountNumber(bankNo);
-        if (bankAddress != null) cb.setBankAddress(bankAddress);
-        if (bankBrand != null) cb.setBankBrand(bankBrand);
+        cb.setAccountNumber(bankNo);
+        cb.setBankAddress(bankAddress.isBlank() ? null : bankAddress);
+        cb.setBankBrand(bankBrand.isBlank() ? null : bankBrand);
 
         companyBankRepository.save(cb);
         return ResponseEntity.ok().build();
@@ -403,6 +563,20 @@ public class ProfileController extends BaseController {
         vn.hoadon.entity.CompanyEntity company = companyOpt.get();
         Integer cityCode = body.get("taxAuthorityCity");
         Integer nameCode = body.get("taxAuthorityName");
+        Map<String, List<String>> errors = new HashMap<>();
+        if (cityCode == null) {
+            errors.put("taxAuthorityCity", Collections.singletonList("Vui lòng chọn cục thuế Tỉnh/Thành"));
+        } else if (taxAuthorityService.findByCode(cityCode).isEmpty()) {
+            errors.put("taxAuthorityCity", Collections.singletonList("Cục thuế Tỉnh/Thành không hợp lệ"));
+        }
+        if (nameCode == null) {
+            errors.put("taxAuthorityName", Collections.singletonList("Vui lòng chọn cơ quan thuế quản lý"));
+        } else if (taxAuthorityService.findByCode(nameCode).isEmpty()) {
+            errors.put("taxAuthorityName", Collections.singletonList("Cơ quan thuế quản lý không hợp lệ"));
+        }
+        if (!errors.isEmpty()) {
+            return validationError(errors);
+        }
         if (cityCode != null) {
             taxAuthorityService.findByCode(cityCode).ifPresent(company::setTaxAuthorityCity);
         }

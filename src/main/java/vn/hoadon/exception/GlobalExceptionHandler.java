@@ -15,7 +15,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
         Map<String, Object> body = new HashMap<>();
-        body.put("message", "Bạn không có quyền thao tác cho hành động này");
+        String message = ex.getMessage();
+        body.put("message", message != null && !message.isBlank() && !"Access Denied".equalsIgnoreCase(message.trim())
+                ? message
+                : "Bạn không có quyền thao tác cho hành động này");
         body.put("error", "forbidden");
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
@@ -36,4 +39,3 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }
-

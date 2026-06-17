@@ -34,11 +34,62 @@ toastr.options = {
   closeButton: true,
   progressBar: true,
   positionClass: 'toast-top-right',
-  timeOut: 3000
+  timeOut: 3000,
+  preventDuplicates: true
 }
 
 Vue.use(BootstrapVue)
 Vue.use(IconsPlugin)
+
+function bvToastContentToText(content) {
+  if (Array.isArray(content)) {
+    return content.map(item => bvToastContentToText(item)).filter(Boolean).join(' ')
+  }
+  if (content && typeof content === 'object') {
+    if (content.text) return content.text
+    if (content.children) return bvToastContentToText(content.children)
+    return content.message || ''
+  }
+  return String(content || '')
+}
+
+function bvToastVariantToType(variant) {
+  switch (variant) {
+    case 'success': return 'success'
+    case 'warning': return 'warning'
+    case 'info': return 'info'
+    default: return 'error'
+  }
+}
+
+function bvToastTitle(type, title) {
+  if (title) return title
+  switch (type) {
+    case 'success': return 'Thành công'
+    case 'warning': return 'Cảnh báo'
+    case 'info': return 'Thông báo'
+    default: return 'Lỗi'
+  }
+}
+
+// Chỉ dùng toastr cho thông báo. Các chỗ cũ còn gọi $bvToast.toast sẽ được chuyển qua toastr.
+Vue.mixin({
+  beforeCreate() {
+    this._bv__toast = {
+      toast(content, options = {}) {
+        const message = bvToastContentToText(content)
+        if (!message) return
+        const type = bvToastVariantToType(options.variant)
+        const title = bvToastTitle(type, options.title)
+        if (toastr && typeof toastr[type] === 'function') {
+          toastr[type](message, title)
+        }
+      },
+      show() {},
+      hide() {}
+    }
+  }
+})
 
 Vue.config.productionTip = false
 

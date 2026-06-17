@@ -153,7 +153,7 @@ const router = new VueRouter({
 					path: '/email/mail-history',
 					name: 'EmailMailHistory',
 					component: () => import('@/views/customers/email/mail-history.vue'),
-					meta: { requiresUser: true, title: 'Trạng thái email gửi hóa đơn' }
+					meta: { requiresUser: true, title: 'Lịch sử gửi mail' }
 				}
 			]
 		},
@@ -177,7 +177,7 @@ router.beforeEach((to, from, next) => {
 	if (needUser && !tokenUser) return next('/auth/login')
 	if (tokenUser && guestUser) return next('/')
 
-	// Hàm hỗ trợ kiểm tra token admin (role 0 Root hoặc role 1 Admin)
+	// Hàm hỗ trợ kiểm tra token admin: Root hoặc Admin thuộc công ty root.
 	function validateAdminToken(rawToken) {
 		if (!rawToken) return { valid: false, reason: 'missing' }
 		let payload
@@ -185,12 +185,18 @@ router.beforeEach((to, from, next) => {
 		const nowSec = Math.floor(Date.now() / 1000)
 		if (payload && typeof payload.exp === 'number' && payload.exp <= nowSec) return { valid: false, reason: 'expired' }
 		const roleNum = payload && typeof payload.role !== 'undefined' ? Number(payload.role) : NaN
+		const companyId = Number(payload?.companyId ?? payload?.company_id)
+		const rootCompanyClaim = payload?.rootCompanyAdmin ?? payload?.root_company_admin ?? payload?.isRootCompanyAdmin
 		const isRoot = !Number.isNaN(roleNum) && roleNum === 0
-		const isAdmin = !Number.isNaN(roleNum) && roleNum === 1
-		return { valid: isRoot || isAdmin, isRoot, isAdmin }
+		const isRootCompanyAdmin = !Number.isNaN(roleNum) && roleNum === 1 && (
+			rootCompanyClaim === true ||
+			rootCompanyClaim === 'true' ||
+			companyId === 1
+		)
+		return { valid: isRoot || isRootCompanyAdmin, isRoot, isRootCompanyAdmin }
 	}
 
-	// Quyền admin: yêu cầu token admin hợp lệ với role 0 (Root) hoặc role 1 (Admin)
+	// Quyền admin: yêu cầu token admin hợp lệ với Root hoặc Admin công ty root
 	if (needAdmin) {
 		const check = validateAdminToken(tokenAdmin)
 		if (!check.valid) {

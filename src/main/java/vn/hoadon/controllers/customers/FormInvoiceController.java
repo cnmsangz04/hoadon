@@ -175,7 +175,7 @@ public class FormInvoiceController extends BaseController {
 
     @GetMapping("/templates/{id}")
     public ResponseEntity<?> getTemplate(@PathVariable Long id) {
-        permission("form-invoice-list");
+        permission("form-invoice-list|form-invoice-save");
         UserEntity user = currentUser();
         if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
         Optional<FormInvoiceEntity> opt = service.findById(id);
@@ -203,7 +203,7 @@ public class FormInvoiceController extends BaseController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> detail(@PathVariable Long id) {
-        permission("form-invoice-list");
+        permission("form-invoice-list|form-invoice-save");
         UserEntity user = currentUser();
         if (user == null || user.getCompanyId() == null) return ResponseEntity.status(403).build();
         Optional<FormInvoiceEntity> opt = service.findById(id);
@@ -636,6 +636,9 @@ public class FormInvoiceController extends BaseController {
 
     @GetMapping("/users/by-ids")
     public List<Map<String, Object>> usersByIds(@RequestParam String ids) {
+        permission("form-invoice-list");
+        UserEntity current = currentUser();
+        if (current == null || current.getCompanyId() == null) return List.of();
         if (ids == null || ids.isBlank()) return List.of();
         List<Long> idList = Arrays.stream(ids.split(","))
                 .map(String::trim)
@@ -644,7 +647,7 @@ public class FormInvoiceController extends BaseController {
                 .toList();
         if (idList.isEmpty()) return List.of();
         List<UserEntity> users = userRepository.findAllById(idList);
-        return users.stream().map(u -> {
+        return users.stream().filter(u -> u != null && Objects.equals(u.getCompanyId(), current.getCompanyId())).map(u -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", u.getId());
             m.put("username", u.getUsername());

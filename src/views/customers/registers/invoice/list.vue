@@ -124,9 +124,9 @@
               <i class="fas fa-ellipsis-h"></i>
             </template>
             <b-dropdown-item class="text-center" href="#" @click.prevent="openEdit(item)">Cập nhật</b-dropdown-item>
-            <b-dropdown-item class="text-center" href="#" @click.prevent="downloadXml(item)">Download XML</b-dropdown-item>
+            <b-dropdown-item class="text-center" href="#" @click.prevent="downloadXml(item)">Tải XML</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) === 0" class="text-center" href="#" @click.prevent="onSignature(item)">Ký số</b-dropdown-item>
-            <b-dropdown-item v-if="Number(item.status) === 1" class="text-center" href="#" @click.prevent="sendToTaxAuthority(item)">Gửi CQT</b-dropdown-item>
+            <b-dropdown-item v-if="canSendToTaxAuthority(item)" class="text-center" href="#" @click.prevent="sendToTaxAuthority(item)">Gửi CQT</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) > 1" class="text-center" href="#" @click.prevent="showHistory(item)">Lịch sử truyền nhận</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) === 0" class="text-center text-danger" href="#" @click.prevent="deleteItem(item)">Xóa tờ khai</b-dropdown-item>
            </b-dropdown>
@@ -153,14 +153,14 @@
     <!-- Hộp thoại lịch sử -->
     <b-modal ref="historyModal" size="lg" title="Lịch sử truyền nhận" hide-header-close>
       <div>
-        <b-table-simple bordered small responsive show-empty :busy="historyBusy" empty-text="Không có dữ liệu">
+        <b-table-simple class="modal-history-table" bordered small responsive show-empty :busy="historyBusy" empty-text="Không có dữ liệu">
           <b-thead>
             <b-tr>
-              <b-th class="text-center" style="width:60px">STT</b-th>
-              <b-th>Tiêu đề</b-th>
+              <b-th class="text-center modal-history-col-index">STT</b-th>
+              <b-th class="modal-history-col-title">Tiêu đề</b-th>
               <b-th>Mô tả</b-th>
-              <b-th style="width:160px">Người thao tác</b-th>
-              <b-th style="width:160px">Ngày thực hiện</b-th>
+              <b-th class="modal-history-col-user">Người thao tác</b-th>
+              <b-th class="modal-history-col-date">Ngày thực hiện</b-th>
             </b-tr>
           </b-thead>
           <b-tbody>
@@ -178,7 +178,9 @@
         </b-table-simple>
       </div>
       <template #modal-footer>
-        <b-button size="sm" variant="light" @click="$refs.historyModal.hide()">Đóng</b-button>
+        <div class="modal-footer-actions">
+          <b-button size="sm" variant="light" @click="$refs.historyModal.hide()">Đóng</b-button>
+        </div>
       </template>
     </b-modal>
   </div>
@@ -187,6 +189,7 @@
 <script>
 import axios from '@/plugins/axios'
 import PaginationBar from '@/views/components/pagination_bar.vue'
+import { toastError, toastSuccess, toastWarning } from '@/utils/toast'
 
 export default {
   name: 'RegisterInvoiceList',
@@ -311,6 +314,9 @@ export default {
       if (n === 1) return 'light' // Đã ký
       return 'secondary' // Khởi tạo hoặc khác
     },
+    canSendToTaxAuthority(item) {
+      return [1, 3, 4, 5].includes(Number(item?.status))
+    },
     mapItem(raw) {
       // Chuyển key camelCase từ backend sang snake_case theo bảng
       if (!raw || typeof raw !== 'object') return raw
@@ -384,7 +390,7 @@ export default {
         }
         this.list = { ...this.list, ...normalized }
       } catch (e) {
-        // leave previous list
+        // Giữ danh sách hiện tại nếu tải dữ liệu mới thất bại
       } finally {
         this.isBusy = false
       }
@@ -401,7 +407,7 @@ export default {
         q.declaration_type = dt
       }
       if (this.filters.status != null) q.status = Number(this.filters.status)
-      // Date filters: backend expects dateFrom/dateTo in YYYY-MM-DD
+      // Bộ lọc ngày gửi lên backend theo định dạng YYYY-MM-DD
       const fmt = (v) => {
         if (!v) return null
         try {
@@ -450,46 +456,32 @@ export default {
     openHistory(item) {
       this.$router.push({ name: 'register-invoice-history', params: { id: item.id } })
     },
-    downloadXml(item) {
+    async downloadXml(item) {
       try {
-        const base = axios.defaults.baseURL || ''
-        const url = `${base}/register-invoices/${item.id}/download-xml`
-        // Dùng fetch để lấy XML và tải xuống với tên file
-        fetch(url, {
-          headers: {
-            'Accept': 'application/xml',
-            'Authorization': (axios.defaults.headers?.Authorization) || ''
-          },
-          credentials: 'include'
-        }).then(async (res) => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          const text = await res.text()
-          const blob = new Blob([text], { type: 'application/xml;charset=utf-8' })
-          const link = document.createElement('a')
-          const fnCompany = (item.company_name || item.companyName || 'to-khai').replace(/[^a-zA-Z0-9-_]+/g, '_')
-          const fnDate = (item.declaration_date || item.declarationDate || '').toString().slice(0, 10)
-          const filename = `to-khai-hddt_${fnCompany}_${fnDate || 'unknown'}.xml`
-          link.href = URL.createObjectURL(blob)
-          link.download = filename
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          URL.revokeObjectURL(link.href)
-        }).catch(() => {
-          // Dự phòng: mở trong tab mới
-          window.open(url, '_blank')
+        const res = await axios.get(`/register-invoices/${item.id}/download-xml`, {
+          responseType: 'text',
+          headers: { Accept: 'application/xml' }
         })
-      } catch {
-        const base = axios.defaults.baseURL || ''
-        const url = `${base}/register-invoices/${item.id}/download-xml`
-        window.open(url, '_blank')
+        const blob = new Blob([res.data], { type: 'application/xml;charset=utf-8' })
+        const link = document.createElement('a')
+        const fnCompany = (item.company_name || item.companyName || 'to-khai').replace(/[^a-zA-Z0-9-_]+/g, '_')
+        const fnDate = (item.declaration_date || item.declarationDate || '').toString().slice(0, 10)
+        const filename = `to-khai-hddt_${fnCompany}_${fnDate || 'unknown'}.xml`
+        link.href = URL.createObjectURL(blob)
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(link.href)
+      } catch (e) {
+        // Lỗi đã được interceptor axios xử lý
       }
     },
     async updateStatus(id, status) {
       try {
         await axios.put(`/register-invoices/${id}/get`, { status })
       } catch (e) {
-        // b? qua; global error handler will show toast
+        // Lỗi đã được handler toàn cục hiển thị
       }
     },
     async deleteItem(item) {
@@ -551,7 +543,7 @@ export default {
         }
         if (!ok) return
         const { data } = await axios.post(`/register-invoices/${id}/sign`, null, { successMessage: 'Đã ký số tờ khai thành công' })
-        // Cập nhật the row item with returned fields
+        // Cập nhật dòng hiện tại bằng dữ liệu trả về
         const signatureName = data?.signatureInfo || data?.signature_info || null
         const signDate = data?.signDate || data?.sign_date || new Date().toISOString()
         const signedXml = data?.signedXml || data?.signed_xml || null
@@ -563,14 +555,14 @@ export default {
           sign_date: signDate,
           signedXml: signedXml,
           signed_xml: signedXml,
-          status: 1 // align with create.vue: after signing, set status = 1 to show "Gửi CQT"
+          status: 1 // Đồng bộ với create.vue: ký xong thì hiện nút "Gửi CQT"
         }
         const idx = this.list.data.findIndex(x => (x.id||x.ID||x.Id) === id)
         if (idx >= 0) this.$set(this.list.data, idx, updated)
-        // Persist status change to 1
+        // Lưu trạng thái đã ký
         await this.updateStatus(id, 1)
       } catch (e) {
-        // b? qua
+        // Lỗi đã được handler toàn cục xử lý
       }
     },
     async sendToTaxAuthority(item) {
@@ -622,7 +614,7 @@ export default {
         const idx = this.list.data.findIndex(x => (x.id||x.ID||x.Id) === id)
         if (idx >= 0) this.$set(this.list.data, idx, { ...this.list.data[idx], ...mapped })
       } catch (e) {
-        // b? qua refresh errors
+        // Bỏ qua lỗi tải lại một dòng
       }
     },
     pollTaxStatusForRow(id) {
@@ -638,21 +630,21 @@ export default {
           if (!notifiedReceive && (status === 3 || status === 4)) {
             notifiedReceive = true
             if (status === 4) {
-              this.$bvToast && this.$bvToast.toast('Cơ quan thuế đã tiếp nhận tờ khai', { title: 'Thông báo', variant: 'success', solid: true, autoHideDelay: 4000 })
+              toastSuccess('Cơ quan thuế đã tiếp nhận tờ khai')
             } else {
-              this.$bvToast && this.$bvToast.toast('Cơ quan thuế không tiếp nhận tờ khai', { title: 'Thông báo', variant: 'warning', solid: true, autoHideDelay: 4000 })
+              toastWarning('Cơ quan thuế không tiếp nhận tờ khai', `register-receive-${id}`)
             }
           }
           // Thông báo giai đoạn chấp nhận (103)
           if (!notifiedAccept && (status === 5 || status === 6)) {
             notifiedAccept = true
             if (status === 6) {
-              this.$bvToast && this.$bvToast.toast('Cơ quan thuế đã chấp nhận tờ khai', { title: 'Thông báo', variant: 'success', solid: true, autoHideDelay: 4000 })
+              toastSuccess('Cơ quan thuế đã chấp nhận tờ khai')
             } else {
-              this.$bvToast && this.$bvToast.toast('Cơ quan thuế không chấp nhận tờ khai', { title: 'Thông báo', variant: 'danger', solid: true, autoHideDelay: 4000 })
+              toastError('Cơ quan thuế không chấp nhận tờ khai', `register-accept-${id}`)
             }
           }
-          // Cập nhật row in list with latest data
+          // Cập nhật dòng trong danh sách bằng dữ liệu mới nhất
           this.refreshRow(id)
           // Dừng khi hoàn tất hoặc hết thời gian chờ
           if ((notifiedReceive && notifiedAccept) || tries >= 10) {

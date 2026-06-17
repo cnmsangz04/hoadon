@@ -12,13 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import vn.hoadon.dto.company.CompanyFilterDTO;
 import vn.hoadon.entity.CompanyEntity;
-import vn.hoadon.entity.PermissionEntity;
 import vn.hoadon.entity.UserEntity;
-import vn.hoadon.entity.UserPermissionEntity;
 import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.repositories.CompanyRepository;
-import vn.hoadon.repositories.PermissionRepository;
-import vn.hoadon.repositories.UserPermissionRepository;
 import vn.hoadon.repositories.UserRepository;
 import vn.hoadon.services.CompanyService;
 import vn.hoadon.services.MailQueueService;
@@ -43,12 +39,6 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private PermissionRepository permissionRepository;
-
-    @Autowired
-    private UserPermissionRepository userPermissionRepository;
 
     @Autowired
     private MailQueueService mailQueueService;
@@ -100,7 +90,7 @@ public class CompanyServiceImpl implements CompanyService {
             }
             CompanyEntity savedCompany = repo.save(company);
 
-            // Auto-create default admin user for the new company
+            // Tự tạo tài khoản quản trị mặc định cho công ty mới.
             createDefaultCompanyAdmin(savedCompany);
 
             return savedCompany;
@@ -156,7 +146,7 @@ public class CompanyServiceImpl implements CompanyService {
         repo.deleteById(id);
     }
 
-    // Create company admin user and assign level=0 permissions.
+    // Tạo tài khoản quản trị công ty.
     private void createDefaultCompanyAdmin(CompanyEntity company) {
         if (company == null || company.getId() == null) return;
 
@@ -164,12 +154,14 @@ public class CompanyServiceImpl implements CompanyService {
             return;
         }
 
-        // Build user entity
+        // Tạo thông tin user.
         UserEntity user = new UserEntity();
         user.setCompanyId(company.getId());
         user.setUsername(generateTemporaryUsername());
         user.setName("Admin");
-        user.setRole(1); // Admin
+        user.setRole(1); // Quản trị
+        user.setAdminScope(Long.valueOf(1L).equals(company.getId()) ? "ROOT_COMPANY" : "COMPANY");
+        user.setAdminPassword(null);
         user.setStatus((byte)1);
         String rawPassword = generateStrongPassword(14);
         user.setPassword(passwordEncoder.encode(rawPassword));
@@ -178,19 +170,6 @@ public class CompanyServiceImpl implements CompanyService {
         savedUser.setUsername(expectedUsername(savedUser.getId()));
         savedUser = userRepository.save(savedUser);
 
-        // Assign all permissions with level=0 and status=1
-        List<PermissionEntity> basePerms = permissionRepository.findByLevelAndStatus(0, (byte)1);
-        if (basePerms != null && !basePerms.isEmpty()) {
-            List<UserPermissionEntity> assigns = new ArrayList<>(basePerms.size());
-            for (PermissionEntity p : basePerms) {
-                UserPermissionEntity up = new UserPermissionEntity();
-                up.setUser(savedUser);
-                up.setPermission(p);
-                up.setAllowed((byte)1);
-                assigns.add(up);
-            }
-            userPermissionRepository.saveAll(assigns);
-        }
     }
 
     private Optional<UserEntity> findCompanyAdmin(Long companyId) {
@@ -222,7 +201,7 @@ public class CompanyServiceImpl implements CompanyService {
     private String generateStrongPassword(int length) {
         String all = LOWER + UPPER + DIGIT + SYM;
         StringBuilder sb = new StringBuilder(length);
-        // ensure at least one from each group
+        // Bảo đảm có ít nhất một ký tự từ mỗi nhóm.
         sb.append(LOWER.charAt(RNG.nextInt(LOWER.length())));
         sb.append(UPPER.charAt(RNG.nextInt(UPPER.length())));
         sb.append(DIGIT.charAt(RNG.nextInt(DIGIT.length())));
@@ -230,7 +209,7 @@ public class CompanyServiceImpl implements CompanyService {
         for (int i = sb.length(); i < length; i++) {
             sb.append(all.charAt(RNG.nextInt(all.length())));
         }
-        // simple shuffle
+        // Xáo trộn đơn giản để mật khẩu khó đoán hơn.
         char[] arr = sb.toString().toCharArray();
         for (int i = arr.length - 1; i > 0; i--) {
             int j = RNG.nextInt(i + 1);
@@ -265,7 +244,7 @@ public class CompanyServiceImpl implements CompanyService {
             throw new IllegalArgumentException("Không tìm thấy tài khoản quản trị cho công ty này");
         }
 
-        // Reset password every time sending
+        // Mỗi lần gửi thông tin sẽ reset mật khẩu đăng nhập.
         String rawPassword = generateStrongPassword(14);
         admin.setPassword(passwordEncoder.encode(rawPassword));
         userRepository.save(admin);

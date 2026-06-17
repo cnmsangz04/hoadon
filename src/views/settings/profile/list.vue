@@ -52,7 +52,7 @@
           </div>
 
           <!-- Chế độ sửa -->
-          <b-form @submit="onSubmitInfo" v-else>
+          <b-form novalidate @submit.prevent="onSubmitInfo" v-else>
             <b-row>
               <b-col cols="12" md="6">
                 <b-form-group
@@ -75,16 +75,19 @@
                   label="Ngành nghề"
                   label-for="business"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('companyBusiness')"
+                  :state="state('companyBusiness')"
                 >
                   <b-form-input
                     id="business"
                     type="text"
                     placeholder="Nhập ngành nghề"
                     required
-                    v-model="frmInfo.companyBusiness"
+                    v-model.trim="frmInfo.companyBusiness"
                     :state="state('companyBusiness')"
                   />
+                  <b-form-invalid-feedback :state="state('companyBusiness')">
+                    {{ invalidFeedback('companyBusiness') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
@@ -95,16 +98,19 @@
                   label="Tên đơn vị"
                   label-for="CompanyName"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('companyName')"
+                  :state="state('companyName')"
                 >
                   <b-form-input
                     id="CompanyName"
                     type="text"
                     placeholder="Nhập tên đơn vị"
                     required
-                    v-model="frmInfo.companyName"
+                    v-model.trim="frmInfo.companyName"
                     :state="state('companyName')"
                   />
+                  <b-form-invalid-feedback :state="state('companyName')">
+                    {{ invalidFeedback('companyName') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
@@ -115,16 +121,19 @@
                   label="Địa chỉ"
                   label-for="CompanyAddress"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('companyAddress')"
+                  :state="state('companyAddress')"
                 >
                   <b-form-input
                     id="CompanyAddress"
                     type="text"
                     placeholder="Nhập địa chỉ đơn vị"
                     required
-                    v-model="frmInfo.companyAddress"
+                    v-model.trim="frmInfo.companyAddress"
                     :state="state('companyAddress')"
                   />
+                  <b-form-invalid-feedback :state="state('companyAddress')">
+                    {{ invalidFeedback('companyAddress') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
@@ -134,8 +143,8 @@
                 <b-form-group
                   label="Logo"
                   label-for="logo"
-                  class="card p-2 text-center border rounded"
-                  :invalid-feedback="invalidFeedback('logo')"
+                  class="profile-upload-field text-center"
+                  :state="state('logo')"
                 >
                   <input
                     type="file"
@@ -155,6 +164,9 @@
                   <p class="font-italic text-success">
                     Kích thước hình tiêu chuẩn 150px x 50px
                   </p>
+                  <b-form-invalid-feedback :state="state('logo')">
+                    {{ invalidFeedback('logo') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
 
@@ -162,8 +174,8 @@
                 <b-form-group
                   label="Favicon"
                   label-for="Favicon"
-                  class="card p-2 text-center border rounded"
-                  :invalid-feedback="invalidFeedback('favicon')"
+                  class="profile-upload-field text-center"
+                  :state="state('favicon')"
                 >
                   <input
                     type="file"
@@ -183,20 +195,23 @@
                   <p class="font-italic text-success">
                     Kích thước hình tiêu chuẩn 50px x 50px
                   </p>
+                  <b-form-invalid-feedback :state="state('favicon')">
+                    {{ invalidFeedback('favicon') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
 
-            <div class="text-right">
+            <div class="profile-form-actions">
               <b-button size="sm" variant="light" @click="closeForm('formInfo')">
                 Hủy
               </b-button>
-              <b-button type="submit" size="sm" class="btn btn-default" v-if="!buttonInfo">
+              <b-button type="submit" size="sm" variant="primary" v-if="!buttonInfo">
                 Cập nhật
               </b-button>
-              <b-button type="button" class="btn btn-default" disabled v-else>
+              <b-button type="button" size="sm" variant="secondary" disabled v-else>
                 <b-spinner small type="grow"></b-spinner>
-                Loading...
+                Đang lưu...
               </b-button>
             </div>
           </b-form>
@@ -248,22 +263,25 @@
           </div>
 
           <!-- Chế độ sửa -->
-          <b-form @submit="onsubmitRepresent" v-else>
+          <b-form novalidate @submit.prevent="onsubmitRepresent" v-else>
             <b-row>
               <b-col cols="12" md="6">
                 <b-form-group
                   label="Họ và Tên"
                   label-for="represent-person"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('representName')"
+                  :state="state('representName')"
                 >
                   <b-form-input
                     id="represent-person"
                     type="text"
                     placeholder="Nhập họ và tên"
-                    v-model="frmRepresent.representName"
+                    v-model.trim="frmRepresent.representName"
                     :state="state('representName')"
                   />
+                  <b-form-invalid-feedback :state="state('representName')">
+                    {{ invalidFeedback('representName') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
 
@@ -272,16 +290,19 @@
                   label="Điện thoại"
                   label-for="represent-phone"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('representPhone')"
+                  :state="state('representPhone')"
                 >
                   <b-form-input
                     id="represent-phone"
-                    type="text"
+                    type="tel"
                     placeholder="Nhập số điện thoại"
                     required
-                    v-model="frmRepresent.representPhone"
+                    v-model.trim="frmRepresent.representPhone"
                     :state="state('representPhone')"
                   />
+                  <b-form-invalid-feedback :state="state('representPhone')">
+                    {{ invalidFeedback('representPhone') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
@@ -291,15 +312,18 @@
                 <b-form-group
                   label="Căn cước công dân"
                   label-for="represent-citizen-ident"
-                  :invalid-feedback="invalidFeedback('representCitizenIdent')"
+                  :state="state('representCitizenIdent')"
                 >
                   <b-form-input
                     id="represent-citizen-ident"
                     type="text"
                     placeholder="Nhập căn cước công dân"
-                    v-model="frmRepresent.representCitizenIdent"
+                    v-model.trim="frmRepresent.representCitizenIdent"
                     :state="state('representCitizenIdent')"
                   />
+                  <b-form-invalid-feedback :state="state('representCitizenIdent')">
+                    {{ invalidFeedback('representCitizenIdent') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
 
@@ -307,15 +331,18 @@
                 <b-form-group
                   label="Số hộ chiếu"
                   label-for="represent-pass-port"
-                  :invalid-feedback="invalidFeedback('representPassPort')"
+                  :state="state('representPassPort')"
                 >
                   <b-form-input
                     id="represent-pass-port"
                     type="text"
                     placeholder="Nhập số hộ chiếu"
-                    v-model="frmRepresent.representPassPort"
+                    v-model.trim="frmRepresent.representPassPort"
                     :state="state('representPassPort')"
                   />
+                  <b-form-invalid-feedback :state="state('representPassPort')">
+                    {{ invalidFeedback('representPassPort') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
@@ -327,6 +354,7 @@
                   label-for="represent-date-birth"
                   label-class="required"
                   breakpoint="md"
+                  :state="state('manualDate')"
                 >
                   <b-input-group class="mb-3">
                     <b-form-input
@@ -368,7 +396,7 @@
                   label="Giới tính"
                   label-for="represent-gender"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('representGender')"
+                  :state="state('representGender')"
                 >
                   <b-form-radio-group
                     id="represent-gender"
@@ -377,6 +405,9 @@
                     name="gender"
                     :state="state('representGender')"
                   />
+                  <b-form-invalid-feedback :state="state('representGender')">
+                    {{ invalidFeedback('representGender') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
@@ -387,30 +418,33 @@
                   label="Email"
                   label-for="represent-email"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('representMail')"
+                  :state="state('representMail')"
                 >
                   <b-form-input
                     id="represent-email"
-                    type="text"
+                    type="email"
                     placeholder="Nhập địa chỉ email"
                     required
-                    v-model="frmRepresent.representMail"
+                    v-model.trim="frmRepresent.representMail"
                     :state="state('representMail')"
                   />
+                  <b-form-invalid-feedback :state="state('representMail')">
+                    {{ invalidFeedback('representMail') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
 
-            <div class="text-right">
+            <div class="profile-form-actions">
               <b-button size="sm" variant="light" @click="closeForm('formRepresent')">
                 Hủy
               </b-button>
-              <b-button type="submit" size="sm" class="btn btn-default" v-if="!buttonRepresent">
+              <b-button type="submit" size="sm" variant="primary" v-if="!buttonRepresent">
                 Cập nhật
               </b-button>
-              <b-button type="button" class="btn btn-default" disabled v-else>
+              <b-button type="button" size="sm" variant="secondary" disabled v-else>
                 <b-spinner small type="grow"></b-spinner>
-                Loading...
+                Đang lưu...
               </b-button>
             </div>
           </b-form>
@@ -458,22 +492,25 @@
           </div>
 
           <!-- Chế độ sửa -->
-          <b-form @submit="onSubmitInfoInvoice" v-else>
+          <b-form novalidate @submit.prevent="onSubmitInfoInvoice" v-else>
             <b-row>
               <b-col cols="12" md="6">
                 <b-form-group
                   label="Email"
                   label-for="invoice-email"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('invoiceEmail')"
+                  :state="state('invoiceEmail')"
                 >
                   <b-form-input
                     id="invoice-email"
                     type="email"
                     placeholder="Nhập địa chỉ email"
-                    v-model="frmDataInvoice.invoiceEmail"
+                    v-model.trim="frmDataInvoice.invoiceEmail"
                     :state="state('invoiceEmail')"
                   />
+                  <b-form-invalid-feedback :state="state('invoiceEmail')">
+                    {{ invalidFeedback('invoiceEmail') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
 
@@ -482,16 +519,19 @@
                   label="Điện thoại"
                   label-for="invoice-phone"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('invoicePhone')"
+                  :state="state('invoicePhone')"
                 >
                   <b-form-input
                     id="invoice-phone"
-                    type="text"
+                    type="tel"
                     placeholder="Nhập số điện thoại"
                     required
-                    v-model="frmDataInvoice.invoicePhone"
+                    v-model.trim="frmDataInvoice.invoicePhone"
                     :state="state('invoicePhone')"
                   />
+                  <b-form-invalid-feedback :state="state('invoicePhone')">
+                    {{ invalidFeedback('invoicePhone') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
@@ -502,16 +542,19 @@
                   label="Fax"
                   label-for="invoice-fax"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('invoiceFax')"
+                  :state="state('invoiceFax')"
                 >
                   <b-form-input
                     id="invoice-fax"
-                    type="text"
+                    type="tel"
                     placeholder="Nhập số fax"
                     required
-                    v-model="frmDataInvoice.invoiceFax"
+                    v-model.trim="frmDataInvoice.invoiceFax"
                     :state="state('invoiceFax')"
                   />
+                  <b-form-invalid-feedback :state="state('invoiceFax')">
+                    {{ invalidFeedback('invoiceFax') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
 
@@ -520,30 +563,33 @@
                   label="Website"
                   label-for="invoice-website"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('invoiceWebsite')"
+                  :state="state('invoiceWebsite')"
                 >
                   <b-form-input
                     id="invoice-website"
-                    type="text"
+                    type="url"
                     placeholder="Nhập địa chỉ website"
                     required
-                    v-model="frmDataInvoice.invoiceWebsite"
+                    v-model.trim="frmDataInvoice.invoiceWebsite"
                     :state="state('invoiceWebsite')"
                   />
+                  <b-form-invalid-feedback :state="state('invoiceWebsite')">
+                    {{ invalidFeedback('invoiceWebsite') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
 
-            <div class="text-right">
+            <div class="profile-form-actions">
               <b-button size="sm" variant="light" @click="closeForm('formInvoice')">
                 Hủy
               </b-button>
-              <b-button type="submit" size="sm" class="btn btn-default" v-if="!buttonInfoInvoice">
+              <b-button type="submit" size="sm" variant="primary" v-if="!buttonInfoInvoice">
                 Cập nhật
               </b-button>
-              <b-button type="button" class="btn btn-default" disabled v-else>
+              <b-button type="button" size="sm" variant="secondary" disabled v-else>
                 <b-spinner small type="grow"></b-spinner>
-                Loading...
+                Đang lưu...
               </b-button>
             </div>
           </b-form>
@@ -592,14 +638,14 @@
           </div>
 
           <!-- Chế độ sửa -->
-          <b-form @submit="onSubmitContact" v-else>
+          <b-form novalidate @submit.prevent="onSubmitContact" v-else>
             <b-row>
               <b-col cols="12" md="6">
                 <b-form-group
                   label="Họ và Tên"
                   label-for="contact-name"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('contactName')"
+                  :state="state('contactName')"
                 >
                   <b-form-input
                     id="contact-name"
@@ -608,6 +654,9 @@
                     v-model.trim="frmDataContact.contactName"
                     :state="state('contactName')"
                   />
+                  <b-form-invalid-feedback :state="state('contactName')">
+                    {{ invalidFeedback('contactName') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
 
@@ -616,7 +665,7 @@
                   label="Email"
                   label-for="contact-email"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('contactMail')"
+                  :state="state('contactMail')"
                 >
                   <b-form-input
                     id="contact-email"
@@ -626,6 +675,9 @@
                     v-model.trim="frmDataContact.contactMail"
                     :state="state('contactMail')"
                   />
+                  <b-form-invalid-feedback :state="state('contactMail')">
+                    {{ invalidFeedback('contactMail') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
@@ -636,16 +688,19 @@
                   label="Điện thoại"
                   label-for="contact-phone"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('contactPhone')"
+                  :state="state('contactPhone')"
                 >
                   <b-form-input
                     id="contact-phone"
-                    type="text"
+                    type="tel"
                     placeholder="Nhập số điện thoại"
                     required
                     v-model.trim="frmDataContact.contactPhone"
                     :state="state('contactPhone')"
                   />
+                  <b-form-invalid-feedback :state="state('contactPhone')">
+                    {{ invalidFeedback('contactPhone') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
 
@@ -654,7 +709,7 @@
                   label="Địa chỉ"
                   label-for="contact-address"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('contactAddress')"
+                  :state="state('contactAddress')"
                 >
                   <b-form-input
                     id="contact-address"
@@ -664,20 +719,23 @@
                     v-model.trim="frmDataContact.contactAddress"
                     :state="state('contactAddress')"
                   />
+                  <b-form-invalid-feedback :state="state('contactAddress')">
+                    {{ invalidFeedback('contactAddress') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
 
-            <div class="text-right">
+            <div class="profile-form-actions">
               <b-button size="sm" variant="light" @click="closeForm('formContact')">
                 Hủy
               </b-button>
-              <b-button type="submit" size="sm" class="btn btn-default" v-if="!buttonContact">
+              <b-button type="submit" size="sm" variant="primary" v-if="!buttonContact">
                 Cập nhật
               </b-button>
-              <b-button type="button" class="btn btn-default" disabled v-else>
+              <b-button type="button" size="sm" variant="secondary" disabled v-else>
                 <b-spinner small type="grow"></b-spinner>
-                Loading...
+                Đang lưu...
               </b-button>
             </div>
           </b-form>
@@ -720,23 +778,26 @@
           </div>
 
           <!-- Chế độ sửa -->
-          <b-form @submit="onSubmitBank" v-else>
+          <b-form novalidate @submit.prevent="onSubmitBank" v-else>
             <b-row>
               <b-col cols="12" md="6">
                 <b-form-group
                   label="Số tài khoản ngân hàng"
                   label-for="bank-no"
                   label-class="required"
-                  :invalid-feedback="invalidFeedback('bankNo')"
+                  :state="state('bankNo')"
                 >
                   <b-form-input
                     id="bank-no"
                     type="text"
                     placeholder="Nhập số tài khoản ngân hàng"
-                    v-model="frmDataBank.bankNo"
+                    v-model.trim="frmDataBank.bankNo"
                     :state="state('bankNo')"
                     required
                   />
+                  <b-form-invalid-feedback :state="state('bankNo')">
+                    {{ invalidFeedback('bankNo') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
@@ -747,6 +808,7 @@
                   label="Tên ngân hàng"
                   label-for="bank-name"
                   label-class="required"
+                  :state="state('bankName')"
                 >
                   <v-select
                     id="bank-name"
@@ -757,7 +819,11 @@
                     :reduce="(bank) => bank.abbreviation"
                     append-to-body
                     :calculate-position="withPopper"
+                    :class="{ 'is-invalid': state('bankName') === false }"
                   />
+                  <b-form-invalid-feedback :state="state('bankName')">
+                    {{ invalidFeedback('bankName') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
 
@@ -765,29 +831,32 @@
                 <b-form-group
                   label="Chi nhánh"
                   label-for="bank-brand"
-                  :invalid-feedback="invalidFeedback('bankBrand')"
+                  :state="state('bankBrand')"
                 >
                   <b-form-input
                     id="bank-brand"
                     type="text"
                     placeholder="Nhập chi nhánh"
-                    v-model="frmDataBank.bankBrand"
+                    v-model.trim="frmDataBank.bankBrand"
                     :state="state('bankBrand')"
                   />
+                  <b-form-invalid-feedback :state="state('bankBrand')">
+                    {{ invalidFeedback('bankBrand') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
 
-            <div class="text-right">
+            <div class="profile-form-actions">
               <b-button size="sm" variant="light" @click="closeForm('formBank')">
                 Hủy
               </b-button>
-              <b-button type="submit" size="sm" class="btn btn-default" v-if="!buttonBank">
+              <b-button type="submit" size="sm" variant="primary" v-if="!buttonBank">
                 Cập nhật
               </b-button>
-              <b-button type="button" class="btn btn-default" disabled v-else>
+              <b-button type="button" size="sm" variant="secondary" disabled v-else>
                 <b-spinner small type="grow"></b-spinner>
-                Loading...
+                Đang lưu...
               </b-button>
             </div>
           </b-form>
@@ -821,13 +890,14 @@
           </div>
 
           <!-- Chế độ sửa -->
-          <b-form @submit="onSubmitTaxAuthority" v-else>
+          <b-form novalidate @submit.prevent="onSubmitTaxAuthority" v-else>
             <b-row>
               <b-col cols="12" md="6">
                 <b-form-group
                   label="Cục thuế Tỉnh/Thành"
                   label-for="authority-city"
                   label-class="required"
+                  :state="state('taxAuthorityCity')"
                 >
                   <v-select
                     id="authority-city"
@@ -839,7 +909,11 @@
                     :reduce="(item) => item.code"
                     append-to-body
                     :calculate-position="withPopper"
+                    :class="{ 'is-invalid': state('taxAuthorityCity') === false }"
                   />
+                  <b-form-invalid-feedback :state="state('taxAuthorityCity')">
+                    {{ invalidFeedback('taxAuthorityCity') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
 
@@ -848,6 +922,7 @@
                   label="Cơ quan thuế quản lý"
                   label-for="authority-name"
                   label-class="required"
+                  :state="state('taxAuthorityName')"
                 >
                   <v-select
                     id="authority-name"
@@ -858,21 +933,25 @@
                     :reduce="(item) => item.code"
                     append-to-body
                     :calculate-position="withPopper"
+                    :class="{ 'is-invalid': state('taxAuthorityName') === false }"
                   />
+                  <b-form-invalid-feedback :state="state('taxAuthorityName')">
+                    {{ invalidFeedback('taxAuthorityName') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-row>
 
-            <div class="text-right">
+            <div class="profile-form-actions">
               <b-button size="sm" variant="light" @click="closeForm('formTaxAuthority')">
                 Hủy
               </b-button>
-              <b-button type="submit" size="sm" class="btn btn-default" v-if="!buttonTaxAuthority">
+              <b-button type="submit" size="sm" variant="primary" v-if="!buttonTaxAuthority">
                 Cập nhật
               </b-button>
-              <b-button type="button" size="sm" class="btn btn-default" disabled v-else>
+              <b-button type="button" size="sm" variant="secondary" disabled v-else>
                 <b-spinner small type="grow"></b-spinner>
-                Loading...
+                Đang lưu...
               </b-button>
             </div>
           </b-form>
@@ -951,18 +1030,26 @@ export default {
 
   mounted() {
     const vm = this;
+    let canImport = true;
 
-    axios.post("/setting/profile/ini").then((response) => {
+    axios.post("/setting/profile/ini", null, { meta: { suppressGlobalErrorToast: true } }).then((response) => {
       vm.options.banks = Array.isArray(response.data.banks)
         ? response.data.banks
         : [];
       vm.options.taxAuthorities = Array.isArray(response.data.taxAuthorities)
         ? response.data.taxAuthorities
         : [];
-    });
-
-    Vue.nextTick(() => {
-      vm.importData();
+    }).catch((e) => {
+      canImport = false;
+      if (e?.response?.status === 403) {
+        vm.$router.replace("/").catch(() => {});
+      }
+    }).finally(() => {
+      if (canImport) {
+        Vue.nextTick(() => {
+          vm.importData();
+        });
+      }
     });
   },
 
@@ -984,6 +1071,7 @@ export default {
 
     // Bật/tắt chỉnh sửa và nạp sẵn dữ liệu form
     editInfo() {
+      this.clearScopedErrors(["companyBusiness", "companyName", "companyAddress", "logo", "favicon"]);
       this.frmInfo.companyName = this.frmData.companyName || "";
       this.frmInfo.companyAddress = this.frmData.companyAddress || "";
       this.frmInfo.companyBusiness = this.frmData.companyBusiness || "";
@@ -993,6 +1081,15 @@ export default {
     },
 
     editRepresent() {
+      this.clearScopedErrors([
+        "representName",
+        "representPhone",
+        "representCitizenIdent",
+        "representPassPort",
+        "manualDate",
+        "representGender",
+        "representMail"
+      ]);
       this.frmRepresent.representName = this.frmData.representName || "";
       this.frmRepresent.representPhone = this.frmData.representPhone || "";
       this.frmRepresent.representCitizenIdent =
@@ -1010,6 +1107,7 @@ export default {
     },
 
     editInfoInvoice() {
+      this.clearScopedErrors(["invoiceEmail", "invoicePhone", "invoiceFax", "invoiceWebsite"]);
       this.frmDataInvoice.invoiceEmail = this.frmData.invoiceEmail || "";
       this.frmDataInvoice.invoicePhone = this.frmData.invoicePhone || "";
       this.frmDataInvoice.invoiceFax = this.frmData.invoiceFax || "";
@@ -1018,13 +1116,7 @@ export default {
     },
 
     editInfoContact() {
-      // Xóa lỗi cũ của các trường liên hệ trước khi mở form
-      const newErrors = { ...this.errors }
-      delete newErrors.contactName
-      delete newErrors.contactMail
-      delete newErrors.contactPhone
-      delete newErrors.contactAddress
-      this.errors = newErrors
+      this.clearScopedErrors(["contactName", "contactMail", "contactPhone", "contactAddress"]);
 
       this.frmDataContact.contactName = this.frmData.contactName || ""
       this.frmDataContact.contactMail = this.frmData.contactMail || ""
@@ -1034,6 +1126,7 @@ export default {
     },
 
     editBank() {
+      this.clearScopedErrors(["bankNo", "bankName", "bankBrand"]);
       this.frmDataBank.bankName = this.frmData.bankAbbreviation || null;
       this.frmDataBank.bankNo = this.frmData.bankNo || null;
       this.frmDataBank.bankAddress = this.frmData.bankAddress || null;
@@ -1045,6 +1138,7 @@ export default {
     },
 
     editTaxAuthority() {
+      this.clearScopedErrors(["taxAuthorityCity", "taxAuthorityName"]);
       this.frmTaxAuthority.taxAuthorityCity = this.frmData.taxAuthorityCity || null;
       this.frmTaxAuthority.taxAuthorityName = this.frmData.taxAuthorityName || null;
       this.formTaxAuthority = true;
@@ -1059,7 +1153,7 @@ export default {
       const parsedCode = parseInt(code, 10) || 0;
       if (parsedCode > 0) {
         axios
-          .post("/setting/profile/get-tax-authority", { parentCode: parsedCode })
+          .post("/setting/profile/get-tax-authority", { parentCode: parsedCode }, { meta: { suppressGlobalErrorToast: true } })
           .then((response) => {
             if (response.data === 0) {
               vm.frmData.taxAuthorityCity = vm.frmTaxAuthority.taxAuthorityCity = null;
@@ -1071,7 +1165,8 @@ export default {
               return;
             }
             vm.options.taxAuthorityNames = response.data;
-          });
+          })
+          .catch(() => {});
       }
       return false;
     },
@@ -1082,25 +1177,30 @@ export default {
         case "formInfo":
           this.formInfo = false;
           this.frmInfo = {};
+          this.clearScopedErrors(["companyBusiness", "companyName", "companyAddress", "logo", "favicon"]);
           break;
         case "formRepresent":
           this.formRepresent = false;
           this.frmRepresent = {};
+          this.clearScopedErrors([
+            "representName",
+            "representPhone",
+            "representCitizenIdent",
+            "representPassPort",
+            "manualDate",
+            "representGender",
+            "representMail"
+          ]);
           break;
         case "formInvoice":
           this.formInvoice = false;
           this.frmDataInvoice = {};
+          this.clearScopedErrors(["invoiceEmail", "invoicePhone", "invoiceFax", "invoiceWebsite"]);
           break;
         case "formContact":
           this.formContact = false
           this.frmDataContact = {}
-          // Xóa lỗi của form liên hệ khi đóng
-          const newErrors2 = { ...this.errors }
-          delete newErrors2.contactName
-          delete newErrors2.contactMail
-          delete newErrors2.contactPhone
-          delete newErrors2.contactAddress
-          this.errors = newErrors2
+          this.clearScopedErrors(["contactName", "contactMail", "contactPhone", "contactAddress"]);
           break;
         case "formBank":
           this.formBank = false;
@@ -1112,6 +1212,7 @@ export default {
             bankNameCustom: null,
             bankSeparatorCharacter: null
           };
+          this.clearScopedErrors(["bankNo", "bankName", "bankBrand"]);
           break;
         case "formTaxAuthority":
           this.formTaxAuthority = false;
@@ -1119,6 +1220,7 @@ export default {
             taxAuthorityCity: null,
             taxAuthorityName: null
           };
+          this.clearScopedErrors(["taxAuthorityCity", "taxAuthorityName"]);
           break;
         default:
       }
@@ -1128,7 +1230,7 @@ export default {
     // Import dữ liệu chính
     importData() {
       axios
-        .post("/setting/profile/get")
+        .post("/setting/profile/get", null, { meta: { suppressGlobalErrorToast: true } })
         .then((response) => {
           this.frmData = response.data || {};
           if (this.frmData.taxAuthorityCity) {
@@ -1140,15 +1242,231 @@ export default {
         });
     },
 
+    trimValue(value) {
+      return value == null ? "" : String(value).trim();
+    },
+
+    isBlank(value) {
+      return this.trimValue(value) === "";
+    },
+
+    setScopedErrors(fields, errors) {
+      const next = { ...this.errors };
+      fields.forEach((field) => delete next[field]);
+      this.errors = { ...next, ...errors };
+      return Object.keys(errors).length === 0;
+    },
+
+    clearScopedErrors(fields) {
+      const next = { ...this.errors };
+      fields.forEach((field) => delete next[field]);
+      this.errors = next;
+    },
+
+    addRequiredError(errors, field, value, label) {
+      if (this.isBlank(value)) {
+        errors[field] = [`Vui lòng nhập ${label}`];
+      }
+    },
+
+    isValidEmail(value) {
+      const email = this.trimValue(value);
+      if (!email) return false;
+      return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+    },
+
+    isValidPhone(value) {
+      const phone = this.trimValue(value).replace(/[\s().-]/g, "");
+      return /^(0\d{9,10}|\+?\d{9,15})$/.test(phone);
+    },
+
+    isValidCitizenIdent(value) {
+      const ident = this.trimValue(value);
+      return ident === "" || /^(\d{9}|\d{12})$/.test(ident);
+    },
+
+    isValidPassport(value) {
+      const passport = this.trimValue(value);
+      return passport === "" || /^[A-Za-z0-9]{6,20}$/.test(passport);
+    },
+
+    isValidWebsite(value) {
+      const website = this.trimValue(value);
+      if (!website || /\s/.test(website)) return false;
+      try {
+        const url = new URL(/^https?:\/\//i.test(website) ? website : `https://${website}`);
+        return !!url.hostname && url.hostname.includes(".");
+      } catch {
+        return false;
+      }
+    },
+
+    isValidBankNo(value) {
+      const bankNo = this.trimValue(value);
+      return /^[0-9A-Za-z.-]{4,32}$/.test(bankNo);
+    },
+
+    isValidImageFile(file) {
+      if (!file) return true;
+      return /\.(png|jpe?g)$/i.test(file.name || "");
+    },
+
+    isValidPastOrTodayDate(value) {
+      if (!value) return false;
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return false;
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return date >= new Date("1900-01-01") && date <= today;
+    },
+
+    parseManualDateValue(value) {
+      const text = this.trimValue(value);
+      const match = text.match(/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/(19\d{2}|20\d{2})$/);
+      if (!match) return null;
+      const day = Number(match[1]);
+      const month = Number(match[2]);
+      const year = Number(match[3]);
+      const parsed = new Date(year, month - 1, day);
+      if (
+        parsed.getFullYear() !== year ||
+        parsed.getMonth() !== month - 1 ||
+        parsed.getDate() !== day
+      ) {
+        return null;
+      }
+      return parsed;
+    },
+
+    validateInfoForm() {
+      const fields = ["companyBusiness", "companyName", "companyAddress", "logo", "favicon"];
+      const errors = {};
+      this.addRequiredError(errors, "companyBusiness", this.frmInfo.companyBusiness, "ngành nghề");
+      this.addRequiredError(errors, "companyName", this.frmInfo.companyName, "tên đơn vị");
+      this.addRequiredError(errors, "companyAddress", this.frmInfo.companyAddress, "địa chỉ");
+      if (!this.isValidImageFile(this.frmInfo.logo)) {
+        errors.logo = ["Logo chỉ hỗ trợ PNG, JPG hoặc JPEG"];
+      }
+      if (!this.isValidImageFile(this.frmInfo.favicon)) {
+        errors.favicon = ["Favicon chỉ hỗ trợ PNG, JPG hoặc JPEG"];
+      }
+      return this.setScopedErrors(fields, errors);
+    },
+
+    validateRepresentForm() {
+      const fields = [
+        "representName",
+        "representPhone",
+        "representCitizenIdent",
+        "representPassPort",
+        "manualDate",
+        "representGender",
+        "representMail"
+      ];
+      const errors = {};
+      this.addRequiredError(errors, "representName", this.frmRepresent.representName, "họ và tên");
+      this.addRequiredError(errors, "representPhone", this.frmRepresent.representPhone, "số điện thoại");
+      if (!errors.representPhone && !this.isValidPhone(this.frmRepresent.representPhone)) {
+        errors.representPhone = ["Số điện thoại không hợp lệ"];
+      }
+      if (!this.isValidCitizenIdent(this.frmRepresent.representCitizenIdent)) {
+        errors.representCitizenIdent = ["Căn cước công dân phải gồm 9 hoặc 12 chữ số"];
+      }
+      if (!this.isValidPassport(this.frmRepresent.representPassPort)) {
+        errors.representPassPort = ["Số hộ chiếu chỉ gồm chữ và số, từ 6 đến 20 ký tự"];
+      }
+      const manualDate = this.parseManualDateValue(this.manualDate);
+      if (!manualDate || !this.isValidPastOrTodayDate(manualDate)) {
+        errors.manualDate = ["Ngày sinh không hợp lệ"];
+      } else {
+        this.frmRepresent.representDateBirth = manualDate;
+      }
+      if (this.frmRepresent.representGender !== 0 && this.frmRepresent.representGender !== 1) {
+        errors.representGender = ["Vui lòng chọn giới tính"];
+      }
+      this.addRequiredError(errors, "representMail", this.frmRepresent.representMail, "email");
+      if (!errors.representMail && !this.isValidEmail(this.frmRepresent.representMail)) {
+        errors.representMail = ["Email không hợp lệ"];
+      }
+      return this.setScopedErrors(fields, errors);
+    },
+
+    validateInvoiceForm() {
+      const fields = ["invoiceEmail", "invoicePhone", "invoiceFax", "invoiceWebsite"];
+      const errors = {};
+      this.addRequiredError(errors, "invoiceEmail", this.frmDataInvoice.invoiceEmail, "email");
+      if (!errors.invoiceEmail && !this.isValidEmail(this.frmDataInvoice.invoiceEmail)) {
+        errors.invoiceEmail = ["Email không hợp lệ"];
+      }
+      this.addRequiredError(errors, "invoicePhone", this.frmDataInvoice.invoicePhone, "số điện thoại");
+      if (!errors.invoicePhone && !this.isValidPhone(this.frmDataInvoice.invoicePhone)) {
+        errors.invoicePhone = ["Số điện thoại không hợp lệ"];
+      }
+      this.addRequiredError(errors, "invoiceFax", this.frmDataInvoice.invoiceFax, "số fax");
+      if (!errors.invoiceFax && !/^[0-9+().\-\s]{6,20}$/.test(this.trimValue(this.frmDataInvoice.invoiceFax))) {
+        errors.invoiceFax = ["Số fax không hợp lệ"];
+      }
+      this.addRequiredError(errors, "invoiceWebsite", this.frmDataInvoice.invoiceWebsite, "website");
+      if (!errors.invoiceWebsite && !this.isValidWebsite(this.frmDataInvoice.invoiceWebsite)) {
+        errors.invoiceWebsite = ["Website không hợp lệ"];
+      }
+      return this.setScopedErrors(fields, errors);
+    },
+
+    validateContactForm() {
+      const fields = ["contactName", "contactMail", "contactPhone", "contactAddress"];
+      const errors = {};
+      this.addRequiredError(errors, "contactName", this.frmDataContact.contactName, "họ và tên");
+      this.addRequiredError(errors, "contactMail", this.frmDataContact.contactMail, "email");
+      if (!errors.contactMail && !this.isValidEmail(this.frmDataContact.contactMail)) {
+        errors.contactMail = ["Email không hợp lệ"];
+      }
+      this.addRequiredError(errors, "contactPhone", this.frmDataContact.contactPhone, "số điện thoại");
+      if (!errors.contactPhone && !this.isValidPhone(this.frmDataContact.contactPhone)) {
+        errors.contactPhone = ["Số điện thoại không hợp lệ"];
+      }
+      this.addRequiredError(errors, "contactAddress", this.frmDataContact.contactAddress, "địa chỉ");
+      return this.setScopedErrors(fields, errors);
+    },
+
+    validateBankForm() {
+      const fields = ["bankNo", "bankName", "bankBrand"];
+      const errors = {};
+      this.addRequiredError(errors, "bankNo", this.frmDataBank.bankNo, "số tài khoản ngân hàng");
+      if (!errors.bankNo && !this.isValidBankNo(this.frmDataBank.bankNo)) {
+        errors.bankNo = ["Số tài khoản ngân hàng không hợp lệ"];
+      }
+      if (this.isBlank(this.frmDataBank.bankName)) {
+        errors.bankName = ["Vui lòng chọn tên ngân hàng"];
+      }
+      if (!this.isBlank(this.frmDataBank.bankBrand) && this.trimValue(this.frmDataBank.bankBrand).length > 255) {
+        errors.bankBrand = ["Chi nhánh không được vượt quá 255 ký tự"];
+      }
+      return this.setScopedErrors(fields, errors);
+    },
+
+    validateTaxAuthorityForm() {
+      const fields = ["taxAuthorityCity", "taxAuthorityName"];
+      const errors = {};
+      if (this.frmTaxAuthority.taxAuthorityCity == null || this.frmTaxAuthority.taxAuthorityCity === "") {
+        errors.taxAuthorityCity = ["Vui lòng chọn cục thuế Tỉnh/Thành"];
+      }
+      if (this.frmTaxAuthority.taxAuthorityName == null || this.frmTaxAuthority.taxAuthorityName === "") {
+        errors.taxAuthorityName = ["Vui lòng chọn cơ quan thuế quản lý"];
+      }
+      return this.setScopedErrors(fields, errors);
+    },
+
     // Hàm xử lý submit
     onSubmitInfo(e) {
       e.preventDefault();
+      if (!this.validateInfoForm()) return;
       this.buttonInfo = true;
 
       const frmData = new FormData();
-      frmData.append("companyName", this.frmInfo.companyName || "");
-      frmData.append("companyAddress", this.frmInfo.companyAddress || "");
-      frmData.append("companyBusiness", this.frmInfo.companyBusiness || "");
+      frmData.append("companyName", this.trimValue(this.frmInfo.companyName));
+      frmData.append("companyAddress", this.trimValue(this.frmInfo.companyAddress));
+      frmData.append("companyBusiness", this.trimValue(this.frmInfo.companyBusiness));
       if (this.frmInfo.logo) frmData.append("logo", this.frmInfo.logo);
       if (this.frmInfo.favicon) frmData.append("favicon", this.frmInfo.favicon);
 
@@ -1183,10 +1501,20 @@ export default {
 
     onsubmitRepresent(e) {
       e.preventDefault();
+      if (!this.validateRepresentForm()) return;
       this.buttonRepresent = true;
+      const payload = {
+        ...this.frmRepresent,
+        representName: this.trimValue(this.frmRepresent.representName),
+        representPhone: this.trimValue(this.frmRepresent.representPhone),
+        representCitizenIdent: this.trimValue(this.frmRepresent.representCitizenIdent),
+        representPassPort: this.trimValue(this.frmRepresent.representPassPort),
+        representMail: this.trimValue(this.frmRepresent.representMail),
+        representDateBirth: moment(this.frmRepresent.representDateBirth).format("YYYY-MM-DD")
+      };
 
       axios
-        .post("/setting/profile/update-represent", this.frmRepresent)
+        .post("/setting/profile/update-represent", payload)
         .then(() => {
           this.buttonRepresent = false;
           this.formRepresent = false;
@@ -1201,10 +1529,17 @@ export default {
 
     onSubmitInfoInvoice(e) {
       e.preventDefault();
+      if (!this.validateInvoiceForm()) return;
       this.buttonInfoInvoice = true;
+      const payload = {
+        invoiceEmail: this.trimValue(this.frmDataInvoice.invoiceEmail),
+        invoicePhone: this.trimValue(this.frmDataInvoice.invoicePhone),
+        invoiceFax: this.trimValue(this.frmDataInvoice.invoiceFax),
+        invoiceWebsite: this.trimValue(this.frmDataInvoice.invoiceWebsite)
+      };
 
       axios
-        .post("/setting/profile/update-info-invoice", this.frmDataInvoice)
+        .post("/setting/profile/update-info-invoice", payload)
         .then(() => {
           this.buttonInfoInvoice = false;
           this.formInvoice = false;
@@ -1219,10 +1554,17 @@ export default {
 
     onSubmitContact(e) {
       e.preventDefault();
+      if (!this.validateContactForm()) return;
       this.buttonContact = true;
+      const payload = {
+        contactName: this.trimValue(this.frmDataContact.contactName),
+        contactMail: this.trimValue(this.frmDataContact.contactMail),
+        contactPhone: this.trimValue(this.frmDataContact.contactPhone),
+        contactAddress: this.trimValue(this.frmDataContact.contactAddress)
+      };
 
       axios
-        .post("/setting/profile/update-contact", this.frmDataContact)
+        .post("/setting/profile/update-contact", payload)
         .then(() => {
           this.buttonContact = false;
           this.formContact = false;
@@ -1237,10 +1579,16 @@ export default {
 
     onSubmitBank(e) {
       e.preventDefault();
+      if (!this.validateBankForm()) return;
       this.buttonBank = true;
+      const payload = {
+        ...this.frmDataBank,
+        bankNo: this.trimValue(this.frmDataBank.bankNo),
+        bankBrand: this.trimValue(this.frmDataBank.bankBrand)
+      };
 
       axios
-        .post("/setting/profile/update-bank", this.frmDataBank)
+        .post("/setting/profile/update-bank", payload)
         .then(() => {
           this.buttonBank = false;
           this.closeForm("formBank");
@@ -1254,6 +1602,7 @@ export default {
 
     onSubmitTaxAuthority(e) {
       e.preventDefault();
+      if (!this.validateTaxAuthorityForm()) return;
       this.buttonTaxAuthority = true;
 
       axios
@@ -1283,7 +1632,8 @@ export default {
       if (!Object.prototype.hasOwnProperty.call(errors, field)) {
         return "";
       }
-      return (errors[field] || []).join("");
+      const value = errors[field] || [];
+      return Array.isArray(value) ? value.join(" ") : String(value);
     },
 
     // Định vị menu xổ xuống của v-select.
@@ -1313,30 +1663,16 @@ export default {
 
     // Xử lý ngày nhập tay và đồng bộ datepicker
     parseManualDate() {
-      const regex =
-        /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/(19\d{2}|20\d{2})$/;
-
       // Reset lỗi trường trước
       const newErrors = { ...this.errors };
       delete newErrors.manualDate;
       this.errors = newErrors;
 
-      if (!regex.test(this.manualDate)) {
+      const parsed = this.parseManualDateValue(this.manualDate);
+      if (!parsed || !this.isValidPastOrTodayDate(parsed)) {
         this.errors = {
           ...this.errors,
           manualDate: ["Ngày không hợp lệ. Vui lòng nhập đúng định dạng dd/mm/yyyy"]
-        };
-        return;
-      }
-
-      const [day, month, year] = this.manualDate.split("/");
-      const iso = `${year}-${month}-${day}`;
-      const parsed = new Date(iso);
-
-      if (isNaN(parsed.getTime())) {
-        this.errors = {
-          ...this.errors,
-          manualDate: ["Ngày không hợp lệ."]
         };
         return;
       }
@@ -1396,7 +1732,58 @@ export default {
   cursor: pointer;
 }
 
+.profile-form-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.profile-form-actions .btn {
+  min-width: 82px;
+}
+
+.profile-form-actions .btn-primary {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.profile-form-actions .btn-secondary {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.profile-upload-field {
+  background: #fff;
+  border: 1px solid #d9e2ef;
+  border-radius: 8px;
+  padding: 12px;
+}
+
 .v-select {
   width: 100%;
+}
+
+::v-deep .v-select.is-invalid .vs__dropdown-toggle {
+  border-color: #dc3545;
+}
+
+::v-deep .v-select.is-invalid .vs__dropdown-toggle:focus-within {
+  box-shadow: 0 0 0 .2rem rgba(220, 53, 69, .25);
+}
+
+@media (max-width: 576px) {
+  .profile-form-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .profile-form-actions .btn {
+    width: 100%;
+  }
 }
 </style>

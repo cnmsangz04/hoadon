@@ -57,20 +57,20 @@
                 </div>
                 <b-button size="sm" variant="light" @click="editForm('name')">Cập nhật</b-button>
               </div>
-              <b-form v-else @submit="nameSubmit" class="form-profile">
-                <b-input-group>
+              <b-form v-else novalidate @submit.prevent="nameSubmit" class="form-profile">
+                <div class="account-inline-form">
                   <b-form-input
-                    v-model="frmInfo.name"
+                    v-model.trim="frmInfo.name"
                     placeholder="Họ và tên"
                     required
                     :state="state('name')"
                   />
-                  <b-input-group-append>
-                    <b-button variant="outline-secondary" @click="closeForm('name')">Hủy</b-button>
-                    <b-button type="submit" class="btn-primary">Lưu</b-button>
-                  </b-input-group-append>
-                </b-input-group>
-                <b-form-invalid-feedback>
+                  <div class="account-inline-actions">
+                    <b-button type="button" variant="outline-secondary" @click="closeForm('name')">Hủy</b-button>
+                    <b-button type="submit" variant="primary">Lưu</b-button>
+                  </div>
+                </div>
+                <b-form-invalid-feedback :state="state('name')">
                   {{ invalidFeedback('name') }}
                 </b-form-invalid-feedback>
               </b-form>
@@ -85,20 +85,21 @@
                 </div>
                 <b-button size="sm" variant="light" @click="editForm('email')">Cập nhật</b-button>
               </div>
-              <b-form v-else @submit="emailSubmit" class="form-profile">
-                <b-input-group>
+              <b-form v-else novalidate @submit.prevent="emailSubmit" class="form-profile">
+                <div class="account-inline-form">
                   <b-form-input
-                    v-model="frmInfo.email"
+                    v-model.trim="frmInfo.email"
+                    type="email"
                     placeholder="Email"
                     required
                     :state="state('email')"
                   />
-                  <b-input-group-append>
-                    <b-button variant="outline-secondary" @click="closeForm('email')">Hủy</b-button>
-                    <b-button type="submit" class="btn-primary">Lưu</b-button>
-                  </b-input-group-append>
-                </b-input-group>
-                <b-form-invalid-feedback>
+                  <div class="account-inline-actions">
+                    <b-button type="button" variant="outline-secondary" @click="closeForm('email')">Hủy</b-button>
+                    <b-button type="submit" variant="primary">Lưu</b-button>
+                  </div>
+                </div>
+                <b-form-invalid-feedback :state="state('email')">
                   {{ invalidFeedback('email') }}
                 </b-form-invalid-feedback>
               </b-form>
@@ -113,20 +114,21 @@
                 </div>
                 <b-button size="sm" variant="light" @click="editForm('phone')">Cập nhật</b-button>
               </div>
-              <b-form v-else @submit="phoneSubmit" class="form-profile">
-                <b-input-group>
+              <b-form v-else novalidate @submit.prevent="phoneSubmit" class="form-profile">
+                <div class="account-inline-form">
                   <b-form-input
-                    v-model="frmInfo.phone"
+                    v-model.trim="frmInfo.phone"
+                    type="tel"
                     placeholder="Số điện thoại"
                     required
                     :state="state('phone')"
                   />
-                  <b-input-group-append>
-                    <b-button variant="outline-secondary" @click="closeForm('phone')">Hủy</b-button>
-                    <b-button type="submit" class="btn-primary">Lưu</b-button>
-                  </b-input-group-append>
-                </b-input-group>
-                <b-form-invalid-feedback>
+                  <div class="account-inline-actions">
+                    <b-button type="button" variant="outline-secondary" @click="closeForm('phone')">Hủy</b-button>
+                    <b-button type="submit" variant="primary">Lưu</b-button>
+                  </div>
+                </div>
+                <b-form-invalid-feedback :state="state('phone')">
                   {{ invalidFeedback('phone') }}
                 </b-form-invalid-feedback>
               </b-form>
@@ -141,27 +143,35 @@
                 </div>
                 <b-button size="sm" variant="light" @click="editForm('password')">Cập nhật</b-button>
               </div>
-              <b-form v-else @submit.prevent="passwordSubmit" class="form-profile">
+              <b-form v-else novalidate @submit.prevent="passwordSubmit" class="form-profile">
                 <b-form-group label="Mật khẩu hiện tại">
                   <b-form-input v-model.trim="frmPassword.current" type="password" required :state="pwdState('current')" />
+                  <b-form-invalid-feedback :state="pwdState('current')">
+                    {{ passwordFeedback('current') }}
+                  </b-form-invalid-feedback>
                 </b-form-group>
                 <b-form-row>
                   <b-col md="6">
                     <b-form-group label="Mật khẩu mới">
                       <b-form-input v-model="frmPassword.new" type="password" required :state="pwdState('new')" />
                       <small class="text-muted">Tối thiểu 8 ký tự</small>
+                      <b-form-invalid-feedback :state="pwdState('new')">
+                        {{ passwordFeedback('new') || 'Mật khẩu mới tối thiểu 8 ký tự' }}
+                      </b-form-invalid-feedback>
                     </b-form-group>
                   </b-col>
                   <b-col md="6">
                     <b-form-group label="Nhập lại mật khẩu mới">
                       <b-form-input v-model="frmPassword.confirm" type="password" required :state="pwdState('confirm')" />
-                      <small v-if="pwdState('confirm') === false" class="text-danger">Mật khẩu không khớp</small>
+                      <b-form-invalid-feedback :state="pwdState('confirm')">
+                        {{ passwordFeedback('confirm') || 'Mật khẩu không khớp' }}
+                      </b-form-invalid-feedback>
                     </b-form-group>
                   </b-col>
                 </b-form-row>
-                <div class="text-right">
-                  <b-button type="submit" class="btn-primary" :disabled="!canSubmitPassword">Đổi mật khẩu</b-button>
-                  <b-button variant="outline-secondary" class="ml-2" @click="closeForm('password')">Hủy</b-button>
+                <div class="account-form-actions">
+                  <b-button type="button" variant="outline-secondary" @click="closeForm('password')">Hủy</b-button>
+                  <b-button type="submit" variant="primary" :disabled="!canSubmitPassword">Đổi mật khẩu</b-button>
                 </div>
               </b-form>
             </div>
@@ -174,7 +184,7 @@
     <b-modal
       ref="profile-photo"
       centered
-      hide-header
+      title="Cập nhật ảnh đại diện"
       size="lg"
       no-close-on-backdrop
       @hidden="onHiddenMol"
@@ -198,8 +208,10 @@
       />
 
       <template #modal-footer>
-        <b-button variant="light" @click="closelModel">Hủy</b-button>
-        <b-button class="btn-primary" v-if="imgLogo" @click="submitModel">Cập nhật</b-button>
+        <div class="modal-footer-actions">
+          <b-button variant="light" @click="closelModel">Hủy</b-button>
+          <b-button variant="primary" v-if="imgLogo" @click="submitModel">Cập nhật</b-button>
+        </div>
       </template>
     </b-modal>
   </div>
@@ -208,6 +220,7 @@
 <script>
 import axios from '@/plugins/axios'
 import { Cropper } from 'vue-advanced-cropper'
+import { email, phone, required } from '@/utils/validators'
 
 export default {
   name: 'YourAccount',
@@ -223,6 +236,7 @@ export default {
       imgLogo: null,
       errors: {},
       showPassword: false,
+      passwordErrors: {},
       frmPassword: { current: '', new: '', confirm: '' }
     }
   },
@@ -263,8 +277,10 @@ export default {
     },
 
     editForm(k) {
+      this.$delete(this.errors, k)
       const key = k.charAt(0).toUpperCase() + k.slice(1)
       if (k === 'password') {
+        this.passwordErrors = {}
         this.showPassword = true
         return
       }
@@ -276,13 +292,34 @@ export default {
       if (k === 'password') {
         this.showPassword = false
         this.frmPassword = { current: '', new: '', confirm: '' }
+        this.passwordErrors = {}
         return
       }
       this[`show${key}`] = false
       this.frmInfo[k] = this.account[k]
+      this.$delete(this.errors, k)
+    },
+
+    validateField(key, value) {
+      let error = null
+      if (key === 'name') {
+        error = required(value, 'Vui lòng nhập họ và tên')
+      } else if (key === 'email') {
+        error = required(value, 'Vui lòng nhập email') || email(value)
+      } else if (key === 'phone') {
+        error = required(value, 'Vui lòng nhập số điện thoại') || phone(value)
+      }
+      if (error) {
+        this.$set(this.errors, key, [error])
+        return false
+      }
+      this.$delete(this.errors, key)
+      return true
     },
 
     submitForm(data, key) {
+      const value = data[key]
+      if (!this.validateField(key, value)) return
       axios.post('/setting/account/update', data, { meta: { suppressGlobalErrorToast: true } }).then(() => {
         Object.assign(this.account, data)
         this.closeForm(key)
@@ -297,17 +334,17 @@ export default {
 
     nameSubmit(e) {
       e.preventDefault()
-      this.submitForm({ name: this.frmInfo.name }, 'name')
+      this.submitForm({ name: (this.frmInfo.name || '').trim() }, 'name')
     },
 
     emailSubmit(e) {
       e.preventDefault()
-      this.submitForm({ email: this.frmInfo.email }, 'email')
+      this.submitForm({ email: (this.frmInfo.email || '').trim() }, 'email')
     },
 
     phoneSubmit(e) {
       e.preventDefault()
-      this.submitForm({ phone: this.frmInfo.phone }, 'phone')
+      this.submitForm({ phone: (this.frmInfo.phone || '').trim() }, 'phone')
     },
 
     showModal() {
@@ -337,7 +374,7 @@ export default {
           .then(async () => {
             this.loadInfo()
             
-            // Also refresh global $app user info so header avatar updates immediately
+            // Làm mới thông tin người dùng toàn cục để ảnh đại diện trên header cập nhật ngay
             try {
               const infoRes = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
               const info = infoRes?.data || {}
@@ -346,7 +383,7 @@ export default {
                 this.$app.info.company = info.company || null
               }
             } catch (error) {
-              console.warn('Failed to refresh global user info after avatar update:', error)
+              console.warn('Không thể làm mới thông tin người dùng sau khi cập nhật ảnh đại diện:', error)
             }
             
             this.closelModel()
@@ -356,11 +393,12 @@ export default {
     },
 
     passwordSubmit() {
-      if (!this.canSubmitPassword) return
+      if (!this.validatePasswordForm()) return
       const payload = { currentPassword: this.frmPassword.current, newPassword: this.frmPassword.new }
       axios.post('/setting/account/change-password', payload, { meta: { suppressGlobalErrorToast: true } })
         .then(() => {
           this.frmPassword = { current: '', new: '', confirm: '' }
+          this.passwordErrors = {}
           this.$toastr && this.$toastr.success('Đã đổi mật khẩu thành công')
         })
         .catch(err => {
@@ -369,14 +407,39 @@ export default {
         })
     },
 
+    validatePasswordForm() {
+      const errors = {}
+      if (!(this.frmPassword.current || '').trim()) {
+        errors.current = ['Vui lòng nhập mật khẩu hiện tại']
+      }
+      if (!this.frmPassword.new) {
+        errors.new = ['Vui lòng nhập mật khẩu mới']
+      } else if (this.frmPassword.new.length < 8) {
+        errors.new = ['Mật khẩu mới tối thiểu 8 ký tự']
+      }
+      if (!this.frmPassword.confirm) {
+        errors.confirm = ['Vui lòng nhập lại mật khẩu mới']
+      } else if (this.frmPassword.new !== this.frmPassword.confirm) {
+        errors.confirm = ['Mật khẩu không khớp']
+      }
+      this.passwordErrors = errors
+      return Object.keys(errors).length === 0
+    },
+
     pwdState(k) {
+      if (this.passwordErrors[k]) return false
       const cur = (this.frmPassword.current || '').trim()
       const npw = this.frmPassword.new || ''
       const cf = this.frmPassword.confirm || ''
-      if (k === 'current') return cur ? null : false
+      if (k === 'current') return cur ? null : null
       if (k === 'new') return npw.length === 0 ? null : (npw.length >= 8)
       if (k === 'confirm') return cf.length === 0 ? null : (npw === cf)
       return null
+    },
+
+    passwordFeedback(k) {
+      const value = this.passwordErrors[k]
+      return Array.isArray(value) ? value.join(', ') : (value || '')
     },
 
     state(f) {
@@ -474,6 +537,26 @@ export default {
   border-radius: 10px;
 }
 
+.account-inline-form {
+  align-items: stretch;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.account-inline-actions,
+.account-form-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.account-inline-actions {
+  flex-wrap: nowrap;
+}
+
 /* Nút */
 .btn-primary {
   background: #2563eb;
@@ -514,7 +597,7 @@ export default {
 .form-profile label {
   font-size: 13px;
   color: #6b7280;
-  margin-bottom: 6px;
+  margin-bottom: var(--ui-label-gap);
 }
 :deep(.form-profile .form-control),
 :deep(.form-profile input.form-control) {
@@ -529,7 +612,16 @@ export default {
 }
 .form-profile small.text-muted { color: #9aa3b2 !important; }
 .form-profile .text-danger { font-size: 12px; }
-.form-profile .btn-primary {
+.form-profile .btn-primary,
+.form-profile .btn-outline-secondary {
+  border-radius: 10px;
+}
+
+.account-inline-actions .btn {
+  min-width: 72px;
+}
+
+.account-form-actions .btn-primary {
   min-width: 160px;
   border-radius: 10px;
 }
@@ -554,6 +646,19 @@ export default {
 
 /* Tinh chỉnh responsive */
 @media (max-width: 576px) {
-  .form-profile .btn-primary { width: 100%; }
+  .account-inline-form {
+    grid-template-columns: 1fr;
+  }
+
+  .account-inline-actions,
+  .account-form-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .account-inline-actions .btn,
+  .account-form-actions .btn {
+    width: 100%;
+  }
 }
 </style>

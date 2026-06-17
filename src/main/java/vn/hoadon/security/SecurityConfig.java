@@ -48,8 +48,6 @@ public class SecurityConfig {
                                 "/v1/file/**",
                                 "/h2-console/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/v1/register-invoices/*/download-xml").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/v1/register-invoices/*/xml").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/invoices/*/view").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/invoices/*/download-pdf").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/invoices/*/download-xml").permitAll()

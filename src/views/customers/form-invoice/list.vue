@@ -133,40 +133,34 @@
       id="modalFormInvoice"
       size="lg"
       :no-close-on-esc="false"
-      :hide-header="true"
-      body-class="p-0"
+      title="Xem mẫu hóa đơn"
+      body-class="invoice-preview-body"
     >
       <iframe
         id="viewInv"
+        class="invoice-preview-frame"
         :src="iframe.src"
-        scrolling="no"
-        frameborder="0"
-        width="100%"
+        :srcdoc="iframe.srcdoc"
         onload="((obj) => {try{obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';}catch(e){obj.style.height = 0;}})(this)"
       ></iframe>
       <template #modal-footer>
-        <div class="d-flex align-items-center w-100 justify-content-between">
-          <div>
-            <b-button variant="light" size="sm" @click="closeModal('modalFormInvoice')">Đóng</b-button>
-          </div>
-          <div class="text-center">
-            <b-nav pills>
-              <b-dropdown
-                id="ddown-right"
-                text="Tải mẫu"
-                extra-toggle-classes="nav-link-custom"
-                center
-                variant="success"
-                size="sm"
-              >
-                <b-dropdown-item :href="'/v1/file/' + iframe.form_id + '/download-pdf'">
-                  Download PDF
-                </b-dropdown-item>
-                <b-dropdown-item :href="'/v1/file/' + iframe.form_id + '/download-xml'">
-                  Download XML
-                </b-dropdown-item>
-              </b-dropdown>
-            </b-nav>
+        <div class="modal-footer-spread">
+          <b-button variant="light" size="sm" @click="closeModal('modalFormInvoice')">Đóng</b-button>
+          <div class="modal-footer-actions">
+            <b-dropdown
+              id="ddown-right"
+              text="Tải xuống"
+              extra-toggle-classes="nav-link-custom"
+              variant="success"
+              size="sm"
+            >
+              <b-dropdown-item href="#" @click.prevent="downloadFormFile('pdf')">
+                <i class="fas fa-file-pdf mr-1"></i> Tải PDF
+              </b-dropdown-item>
+              <b-dropdown-item href="#" @click.prevent="downloadFormFile('xml')">
+                <i class="fas fa-file-code mr-1"></i> Tải XML
+              </b-dropdown-item>
+            </b-dropdown>
           </div>
         </div>
       </template>
@@ -188,6 +182,7 @@ export default {
       // Trạng thái iframe để xem hóa đơn
       iframe: {
         src: null,
+        srcdoc: '',
         form_id: null,
         status: null,
       },
@@ -245,14 +240,51 @@ export default {
         try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) {}
       }
     },
-    btnView(item) {
+    async btnView(item) {
       const formId = item.form_id != null ? item.form_id : (item.id != null ? item.id : null)
       if (!formId) return false
-      this.iframe.form_id = formId
-      // Dùng endpoint không cần xác thực (không cần token)
-      this.iframe.src = `/v1/file/${formId}/view`
-      this.$root.$emit('bv::show::modal', 'modalFormInvoice')
+      try {
+        const { data } = await axios.get(`/form-invoices/${formId}/view`, {
+          responseType: 'text',
+          headers: { Accept: 'text/html' }
+        })
+        this.iframe.form_id = formId
+        this.iframe.src = 'about:blank'
+        this.iframe.srcdoc = data || ''
+        this.$root.$emit('bv::show::modal', 'modalFormInvoice')
+      } catch (e) {
+        this.$bvToast && this.$bvToast.toast('Không thể xem mẫu hóa đơn này', {
+          title: 'Lỗi',
+          variant: 'danger',
+          solid: true,
+          autoHideDelay: 3000
+        })
+      }
       return false
+    },
+
+    async downloadFormFile(type) {
+      const id = this.iframe.form_id
+      if (!id) return
+      const ext = type === 'pdf' ? 'pdf' : 'xml'
+      const mime = type === 'pdf' ? 'application/pdf' : 'application/xml;charset=utf-8'
+      try {
+        const { data } = await axios.get(`/form-invoices/${id}/download-${ext}`, {
+          responseType: 'blob',
+          headers: { Accept: mime }
+        })
+        const blob = data instanceof Blob ? data : new Blob([data], { type: mime })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `mau-hoa-don-${id}.${ext}`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      } catch (e) {
+        // Lỗi đã được interceptor axios xử lý
+      }
     },
 
     async fetchList() {

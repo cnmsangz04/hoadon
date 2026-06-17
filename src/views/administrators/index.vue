@@ -196,7 +196,10 @@ export default {
     },
     async loadCompanies() {
       try {
-        const { data } = await axios.post('/administrator/company/list', {}, { params: { page: 0, size: 5000 } })
+        const { data } = await axios.post('/administrator/company/list', {}, {
+          params: { page: 0, size: 5000 },
+          meta: { suppressGlobalErrorToast: true },
+        })
         this.companyOptions = (data.content || []).map(c => ({
           value: c.id,
           label: c.name || `#${c.id}`,
@@ -296,7 +299,7 @@ export default {
 
 .filter-label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: var(--ui-label-gap);
   font-size: 13px;
   font-weight: 600;
   color: #4a5568;

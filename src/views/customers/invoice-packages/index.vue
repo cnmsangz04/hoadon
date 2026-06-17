@@ -1,8 +1,8 @@
 <template>
-  <div class="invoice-packages-page">
+  <div class="container-fluid py-3 invoice-packages-page">
     <div class="page-head">
       <div>
-        <h3>Gói hóa đơn</h3>
+        <h4>Gói hóa đơn</h4>
         <p>Chọn gói phù hợp để kích hoạt hoặc bổ sung số lượng hóa đơn cho công ty.</p>
       </div>
       <b-button size="sm" variant="outline-primary" @click="reload">
@@ -15,11 +15,17 @@
       Tài khoản công ty đang chờ kích hoạt. Sau khi thanh toán thành công, hệ thống sẽ tự tạo hạn mức hóa đơn và kích hoạt tài khoản.
     </b-alert>
 
-    <div v-if="loadingPackages" class="text-center py-5">
+    <b-card v-if="loadingPackages" class="loading-card text-center shadow-sm">
       <b-spinner label="Đang tải..."></b-spinner>
-    </div>
+      <div class="mt-2 text-muted">Đang tải danh sách gói hóa đơn</div>
+    </b-card>
 
     <div v-else class="package-grid">
+      <b-card v-if="packages.length === 0" class="empty-card text-center shadow-sm">
+        <i class="fas fa-box-open"></i>
+        <div>Chưa có gói hóa đơn đang kích hoạt.</div>
+      </b-card>
+
       <div v-for="item in packages" :key="item.id" class="package-card">
         <div class="package-top">
           <div>
@@ -48,13 +54,9 @@
           Đăng ký ngay
         </b-button>
       </div>
-
-      <b-card v-if="packages.length === 0" class="empty-card text-center">
-        Chưa có gói hóa đơn đang kích hoạt.
-      </b-card>
     </div>
 
-    <b-card class="mt-4 shadow-sm">
+    <b-card class="mt-4 shadow-sm purchase-history-card">
       <div class="d-flex align-items-center justify-content-between mb-3">
         <h5 class="mb-0 font-weight-bold">Lịch sử mua gói</h5>
         <b-button size="sm" variant="outline-secondary" @click="loadPurchases">
@@ -694,9 +696,7 @@ export default {
 
 <style scoped>
 .invoice-packages-page {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
+  font-size: 13px;
 }
 
 .page-head {
@@ -707,11 +707,10 @@ export default {
   margin-bottom: 16px;
 }
 
-.page-head h3 {
+.page-head h4 {
   margin: 0 0 4px;
-  font-size: 1.5rem;
   font-weight: 700;
-  color: #22313f;
+  color: #1f2937;
 }
 
 .page-head p {
@@ -728,9 +727,19 @@ export default {
 .package-card {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 18px;
   background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 18px;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.package-card:hover {
+  border-color: #bfdbfe;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
 }
 
 .package-top {
@@ -742,14 +751,14 @@ export default {
 }
 
 .package-name {
-  font-size: 1.2rem;
+  font-size: 17px;
   font-weight: 700;
   color: #1f2937;
 }
 
 .package-price {
   margin-top: 6px;
-  font-size: 1.45rem;
+  font-size: 20px;
   font-weight: 800;
   color: #16a085;
 }
@@ -757,6 +766,7 @@ export default {
 .package-info {
   display: grid;
   gap: 10px;
+  flex: 1 1 auto;
   margin-bottom: 18px;
 }
 
@@ -780,6 +790,26 @@ export default {
 
 .empty-card {
   grid-column: 1 / -1;
+  color: #64748b;
+  padding: 30px 16px;
+}
+
+.empty-card i {
+  color: #94a3b8;
+  display: block;
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.loading-card {
+  border: 1px solid #e6ebf2;
+  border-radius: 8px;
+  color: #64748b;
+  padding: 32px 16px;
+}
+
+.purchase-history-card {
+  border: 1px solid #e6ebf2;
 }
 
 .payment-summary {
@@ -993,7 +1023,7 @@ export default {
 }
 
 .purchase-filter {
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e6ebf2;
   border-radius: 8px;
   background: #f8fafc;
   padding: 12px;
@@ -1001,7 +1031,7 @@ export default {
 
 .filter-label {
   display: inline-block;
-  margin-bottom: 6px;
+  margin-bottom: var(--ui-label-gap);
   color: #667085;
   font-size: 0.78rem;
   font-weight: 700;

@@ -166,7 +166,7 @@ export default {
 .filter-card { border: 1px solid #e9eef5; }
 .filter-header { font-size: 14px; }
 .font-weight-600 { font-weight: 600; }
-.filter-label { display: inline-block; margin-bottom: 6px; color: #6b7280; font-size: 12px; }
+.filter-label { display: inline-block; margin-bottom: var(--ui-label-gap); color: #6b7280; font-size: 12px; }
 
 /* Kiểu thông báo */
 .notify-alert { border-color: #e9eef5; color: #4b5563; }

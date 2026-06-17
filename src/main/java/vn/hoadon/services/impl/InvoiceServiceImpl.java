@@ -18,6 +18,7 @@ import vn.hoadon.services.InvoiceService;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class InvoiceServiceImpl implements InvoiceService {
@@ -69,7 +70,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             Long formId = inv.getFormId() != null ? inv.getFormId().longValue() : null;
             if (formId != null) {
                 FormInvoiceEntity form = formCache.computeIfAbsent(formId, id -> formInvoiceRepository.findById(id).orElse(null));
-                if (form != null) {
+                if (form != null && Objects.equals(form.getCompanyId(), inv.getCompanyId() != null ? inv.getCompanyId().longValue() : null)) {
                     dto.formCode = form.getFormCode();
                     dto.serial = form.getSerial();
                 }
@@ -85,12 +86,12 @@ public class InvoiceServiceImpl implements InvoiceService {
             Long referenceId = inv.getReferenceId() != null ? inv.getReferenceId().longValue() : null;
             if (referenceId != null) {
                 InvoiceEntity ref = invoiceCache.computeIfAbsent(referenceId, id -> invoiceRepository.findById(id).orElse(null));
-                if (ref != null) {
+                if (ref != null && Objects.equals(inv.getCompanyId(), ref.getCompanyId())) {
                     dto.referenceNo = ref.getNo();
                     Long refFormId = ref.getFormId() != null ? ref.getFormId().longValue() : null;
                     if (refFormId != null) {
                         FormInvoiceEntity refForm = formCache.computeIfAbsent(refFormId, id -> formInvoiceRepository.findById(id).orElse(null));
-                        if (refForm != null) {
+                        if (refForm != null && Objects.equals(refForm.getCompanyId(), inv.getCompanyId() != null ? inv.getCompanyId().longValue() : null)) {
                             dto.referenceFormCode = refForm.getFormCode();
                             dto.referenceSerial = refForm.getSerial();
                         }
@@ -122,6 +123,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     @Transactional
     public InvoiceEntity create(InvoicePayload payload, Long companyId, Long userId) {
+        validateFormForCompany(payload != null ? payload.formId : null, companyId);
         InvoiceEntity original = validateRelatedInvoiceForCreate(payload, companyId);
         InvoiceEntity e = new InvoiceEntity();
         applyPayload(e, payload, companyId, userId, true);
@@ -141,6 +143,11 @@ public class InvoiceServiceImpl implements InvoiceService {
     public InvoiceEntity update(Long id, InvoicePayload payload, Long companyId, Long userId) {
         InvoiceEntity e = invoiceRepository.findById(id).orElse(null);
         if (e == null) return null;
+        if (!sameCompany(e.getCompanyId(), companyId)) {
+            throw new IllegalArgumentException("Hóa đơn không thuộc công ty hiện tại");
+        }
+        validateFormForCompany(payload != null ? payload.formId : null, companyId);
+        validateRelatedInvoiceForCreate(payload, companyId);
         applyPayload(e, payload, companyId, userId, false);
         // Re-assign invoice_number_id if formId changed or missing
         assignInvoiceNumberId(e, companyId, payload);
@@ -159,6 +166,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     public InvoiceEntity clone(Long sourceId, Long companyId, Long userId) {
         InvoiceEntity src = invoiceRepository.findById(sourceId).orElse(null);
         if (src == null) return null;
+        if (!sameCompany(src.getCompanyId(), companyId)) return null;
         InvoiceEntity e = new InvoiceEntity();
         // Copy fields from source but reset identifiers and status/number
         e.setCompanyId(companyId != null ? companyId.intValue() : src.getCompanyId());
@@ -215,6 +223,22 @@ public class InvoiceServiceImpl implements InvoiceService {
                 e.setInvoiceNumberId(selected.getId().intValue());
             }
         }
+    }
+
+    private void validateFormForCompany(Long formId, Long companyId) {
+        if (formId == null) return;
+        FormInvoiceEntity form = formInvoiceRepository.findById(formId).orElse(null);
+        if (form == null) {
+            throw new IllegalArgumentException("Không tìm thấy mẫu hóa đơn");
+        }
+        if (companyId != null && form.getCompanyId() != null && !companyId.equals(form.getCompanyId())) {
+            throw new IllegalArgumentException("Mẫu hóa đơn không thuộc công ty hiện tại");
+        }
+    }
+
+    private boolean sameCompany(Integer entityCompanyId, Long actorCompanyId) {
+        if (entityCompanyId == null || actorCompanyId == null) return false;
+        return actorCompanyId.equals(entityCompanyId.longValue());
     }
 
     private String generateUniqueIdAttr() {

@@ -1,5 +1,5 @@
 <template>
-  <div class="import-page">
+  <div class="container-fluid py-3 import-page">
     <div class="page-head">
       <div>
         <h4>Import hóa đơn</h4>
@@ -10,10 +10,13 @@
       </b-button>
     </div>
 
-    <b-card class="mb-3 import-card">
+    <b-card class="mb-3 import-card shadow-sm">
       <div class="upload-row">
+        <div class="upload-icon">
+          <i class="fas fa-file-excel"></i>
+        </div>
         <div class="upload-main">
-          <label class="upload-label">Upload mẫu Excel import</label>
+          <label class="upload-label">File Excel import</label>
           <b-form-file
             v-model="selectedFile"
             accept=".xlsx,.xls"
@@ -32,7 +35,7 @@
       </div>
     </b-card>
 
-    <b-card class="history-card">
+    <b-card class="history-card shadow-sm">
       <div class="section-head">
         <div>
           <h5>Lịch sử import</h5>
@@ -282,7 +285,7 @@ export default {
 
 <style scoped>
 .import-page {
-  padding: 18px;
+  font-size: 13px;
 }
 
 .page-head,
@@ -300,9 +303,9 @@ export default {
 
 .page-head h4,
 .section-head h5 {
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   color: #1f2937;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .page-head p,
@@ -314,7 +317,21 @@ export default {
 .import-card,
 .history-card {
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e6ebf2;
+}
+
+.upload-icon {
+  align-items: center;
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  color: #15803d;
+  display: inline-flex;
+  flex: 0 0 44px;
+  font-size: 20px;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
 }
 
 .history-card::v-deep .table-responsive {
@@ -351,13 +368,19 @@ export default {
 
 .upload-label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: var(--ui-label-gap);
   color: #344054;
   font-weight: 700;
 }
 
+.upload-hint {
+  color: #64748b;
+  display: block;
+  margin-top: 6px;
+}
+
 .upload-actions {
-  padding-top: 30px;
+  align-self: flex-end;
 }
 
 .section-head {
@@ -375,11 +398,16 @@ export default {
   .page-head,
   .section-head,
   .upload-row {
-    display: block;
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .upload-actions {
-    padding-top: 12px;
+    align-self: stretch;
+  }
+
+  .upload-actions .btn {
+    width: 100%;
   }
 }
 </style>

@@ -73,6 +73,9 @@ public class FileController {
             return ResponseEntity.status(404).contentType(MediaType.TEXT_HTML).body("<html><body>Form không tồn tại</body></html>");
         }
         FormInvoiceEntity e = opt.get();
+        if (!isPublicTemplate(e)) {
+            return ResponseEntity.status(403).contentType(MediaType.TEXT_HTML).body("<html><body>Không có quyền xem mẫu này</body></html>");
+        }
         String xsltValue = e.getFile();
         if (!StringUtils.hasText(xsltValue)) {
             return ResponseEntity.status(404).contentType(MediaType.TEXT_HTML).body("<html><body>Không tìm thấy tệp XSLT của mẫu</body></html>");
@@ -89,7 +92,7 @@ public class FileController {
         CompanyEntity company = null;
         CompanyBankEntity bank = null;
         LegalRepresentativeEntity rep = null;
-        if (e.getCompanyId() != null) {
+        if (includeCompanyData(e) && e.getCompanyId() != null) {
             company = companyRepository.findById(e.getCompanyId()).orElse(null);
             if (company != null) {
                 List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
@@ -98,7 +101,7 @@ public class FileController {
             rep = legalRepresentativeRepository.findByCompanyId(e.getCompanyId()).orElse(null);
         }
         UserEntity user = null;
-        if (e.getUserId() != null) {
+        if (includeCompanyData(e) && e.getUserId() != null) {
             user = userRepository.findById(e.getUserId()).orElse(null);
         }
         String sampleXml = vn.hoadon.util.SampleInvoiceXmlBuilder.build(user, e, company, bank, rep);
@@ -169,9 +172,12 @@ public class FileController {
             return ResponseEntity.status(404).contentType(MediaType.TEXT_PLAIN).body("Form không tồn tại");
         }
         FormInvoiceEntity e = opt.get();
+        if (!isPublicTemplate(e)) {
+            return ResponseEntity.status(403).contentType(MediaType.TEXT_PLAIN).body("Không có quyền tải mẫu này");
+        }
 
         CompanyEntity company = null; CompanyBankEntity bank = null; LegalRepresentativeEntity rep = null; UserEntity user = null;
-        if (e.getCompanyId() != null) {
+        if (includeCompanyData(e) && e.getCompanyId() != null) {
             company = companyRepository.findById(e.getCompanyId()).orElse(null);
             if (company != null) {
                 List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
@@ -179,7 +185,7 @@ public class FileController {
             }
             rep = legalRepresentativeRepository.findByCompanyId(e.getCompanyId()).orElse(null);
         }
-        if (e.getUserId() != null) user = userRepository.findById(e.getUserId()).orElse(null);
+        if (includeCompanyData(e) && e.getUserId() != null) user = userRepository.findById(e.getUserId()).orElse(null);
         String sampleXml = vn.hoadon.util.SampleInvoiceXmlBuilder.build(user, e, company, bank, rep);
 
         HttpHeaders headers = new HttpHeaders();
@@ -194,6 +200,9 @@ public class FileController {
             return ResponseEntity.status(404).contentType(MediaType.TEXT_PLAIN).body("Form không tồn tại");
         }
         FormInvoiceEntity e = opt.get();
+        if (!isPublicTemplate(e)) {
+            return ResponseEntity.status(403).contentType(MediaType.TEXT_PLAIN).body("Không có quyền tải mẫu này");
+        }
         String xsltValue = e.getFile();
         if (!StringUtils.hasText(xsltValue)) {
             return ResponseEntity.status(404).contentType(MediaType.TEXT_PLAIN).body("Không tìm thấy tệp XSLT của mẫu");
@@ -205,7 +214,7 @@ public class FileController {
         }
 
         CompanyEntity company = null; CompanyBankEntity bank = null; LegalRepresentativeEntity rep = null; UserEntity user = null;
-        if (e.getCompanyId() != null) {
+        if (includeCompanyData(e) && e.getCompanyId() != null) {
             company = companyRepository.findById(e.getCompanyId()).orElse(null);
             if (company != null) {
                 List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
@@ -213,7 +222,7 @@ public class FileController {
             }
             rep = legalRepresentativeRepository.findByCompanyId(e.getCompanyId()).orElse(null);
         }
-        if (e.getUserId() != null) user = userRepository.findById(e.getUserId()).orElse(null);
+        if (includeCompanyData(e) && e.getUserId() != null) user = userRepository.findById(e.getUserId()).orElse(null);
         String sampleXml = vn.hoadon.util.SampleInvoiceXmlBuilder.build(user, e, company, bank, rep);
 
         try {
@@ -300,6 +309,9 @@ public class FileController {
             return ResponseEntity.status(404).contentType(MediaType.TEXT_HTML).body("<html><body>Form không tồn tại</body></html>");
         }
         FormInvoiceEntity e = opt.get();
+        if (!isPublicTemplate(e)) {
+            return ResponseEntity.status(403).contentType(MediaType.TEXT_HTML).body("<html><body>Không có quyền xem mẫu này</body></html>");
+        }
         String xsltValue = e.getFile();
         if (!StringUtils.hasText(xsltValue)) {
             return ResponseEntity.status(404).contentType(MediaType.TEXT_HTML).body("<html><body>Không tìm thấy tệp XSLT của mẫu</body></html>");
@@ -311,7 +323,7 @@ public class FileController {
         }
 
         CompanyEntity company = null; CompanyBankEntity bank = null; LegalRepresentativeEntity rep = null; UserEntity user = null;
-        if (e.getCompanyId() != null) {
+        if (includeCompanyData(e) && e.getCompanyId() != null) {
             company = companyRepository.findById(e.getCompanyId()).orElse(null);
             if (company != null) {
                 List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
@@ -319,7 +331,7 @@ public class FileController {
             }
             rep = legalRepresentativeRepository.findByCompanyId(e.getCompanyId()).orElse(null);
         }
-        if (e.getUserId() != null) user = userRepository.findById(e.getUserId()).orElse(null);
+        if (includeCompanyData(e) && e.getUserId() != null) user = userRepository.findById(e.getUserId()).orElse(null);
         String sampleXml = vn.hoadon.util.SampleInvoiceXmlBuilder.build(user, e, company, bank, rep);
 
         try {
@@ -366,6 +378,14 @@ public class FileController {
         if (!s.startsWith("<")) return false;
         // Heuristic check for XSLT markers
         return s.contains("<xsl:stylesheet") || s.contains("xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\"") || s.contains("http://www.w3.org/1999/XSL/Transform");
+    }
+
+    private boolean isPublicTemplate(FormInvoiceEntity form) {
+        return form != null && Integer.valueOf(0).equals(form.getSystem());
+    }
+
+    private boolean includeCompanyData(FormInvoiceEntity form) {
+        return false;
     }
 
     private String sampleQrDataUrl() {

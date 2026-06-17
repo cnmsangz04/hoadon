@@ -327,21 +327,21 @@ export default {
         this.loadData();
     },
     methods: {
-        // 1. Lấy thông tin công ty từ hồ sơ người dùng (phía backend tự xử lý token)
+        // 1. Lấy tên công ty hiện tại từ thông tin đăng nhập
         async loadProfile() {
             try {
-                // Gọi API ProfileController mà bạn đã cung cấp
-                const res = await axios.post("/setting/profile/get");
-                if (res.data) {
-                    // Mapping theo DTO: dto.companyName
-                    this.currentCompanyName =
-                        res.data.companyName || res.data.name || "";
+                const appCompany = this.$app?.info?.company || {};
+                if (appCompany.name) {
+                    this.currentCompanyName = appCompany.name;
+                    return;
                 }
-            } catch (e) {
-                console.error("Lỗi lấy thông tin công ty:", e);
-                this.$bvToast.toast("Không thể lấy thông tin doanh nghiệp", {
-                    variant: "warning",
+                const res = await axios.get("/auth/info", {
+                    meta: { suppressGlobalErrorToast: true },
                 });
+                const company = res.data?.company || {};
+                this.currentCompanyName = company.name || "";
+            } catch (e) {
+                this.currentCompanyName = "";
             }
         },
 
@@ -372,9 +372,8 @@ export default {
                     : 0;
                 this.list.to = pageTo(d, numberOfElements, this.list.current_page, this.list.per_page);
             } catch (e) {
-                this.$bvToast.toast("Lỗi tải danh mục sản phẩm", {
-                    variant: "danger",
-                });
+                if (e?.response?.status === 403) return;
+                this.$toastr && this.$toastr.error(e?.response?.data?.message || "Lỗi tải danh mục sản phẩm", "Lỗi");
             } finally {
                 this.isBusy = false;
             }
@@ -393,7 +392,7 @@ export default {
                 }, {});
             } catch (e) {
                 console.error("Lỗi load thuế:", e);
-                this.$bvToast && this.$bvToast.toast("Không thể tải thuế suất", { variant: "warning" });
+                this.$toastr && this.$toastr.warning("Không thể tải thuế suất", "Cảnh báo");
             }
         },
 
@@ -469,27 +468,22 @@ export default {
         // Lưu dữ liệu
         async saveData() {
             if (!this.validateForm()) {
-                this.$bvToast.toast(firstError(Object.values(this.errors)) || "Vui lòng kiểm tra lại thông tin", {
-                    variant: "warning",
-                });
+                this.$toastr && this.$toastr.warning(firstError(Object.values(this.errors)) || "Vui lòng kiểm tra lại thông tin", "Cảnh báo");
                 return;
             }
             this.isSaving = true;
             try {
                 // Gửi dữ liệu lên Server.
                 // Lưu ý: không gửi companyId; nếu có gửi thì phía backend cũng ghi đè bằng ID của user đang đăng nhập.
-                await axios.post("/categories/product/save", this.form);
-
-                this.$bvToast.toast("Lưu sản phẩm thành công", {
-                    variant: "success",
+                await axios.post("/categories/product/save", this.form, {
+                    meta: { suppressGlobalErrorToast: true },
                 });
+
+                this.$toastr && this.$toastr.success("Lưu sản phẩm thành công", "Thành công");
                 this.$refs.productModal.hide();
                 this.loadData();
             } catch (e) {
-                this.$bvToast.toast(
-                    e.response?.data?.message || "Lỗi khi lưu dữ liệu",
-                    { variant: "danger" }
-                );
+                this.$toastr && this.$toastr.error(e.response?.data?.message || "Lỗi khi lưu dữ liệu", "Lỗi");
             } finally {
                 this.isSaving = false;
             }
@@ -502,15 +496,13 @@ export default {
                 await axios.post("/categories/product/save", {
                     ...item,
                     status: newStatus,
+                }, {
+                    meta: { suppressGlobalErrorToast: true },
                 });
-                this.$bvToast.toast("Cập nhật trạng thái thành công", {
-                    variant: "success",
-                });
+                this.$toastr && this.$toastr.success("Cập nhật trạng thái thành công", "Thành công");
                 this.loadData();
             } catch (e) {
-                this.$bvToast.toast("Không thể thay đổi trạng thái", {
-                    variant: "danger",
-                });
+                this.$toastr && this.$toastr.error("Không thể thay đổi trạng thái", "Lỗi");
             }
         },
     },

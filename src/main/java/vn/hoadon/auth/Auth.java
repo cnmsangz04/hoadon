@@ -102,20 +102,17 @@ public class Auth {
             return ResponseEntity.status(403).body("Account inactive");
         }
 
-        Integer role = user.getRole();
-        boolean isRoot = role != null && role == 0;
-        boolean isSystemAdmin = role != null && role == 1;
-        if (!(isRoot || isSystemAdmin)) {
-            return ResponseEntity.status(403).body("Not an admin account");
+        if (!user.canAccessAdminArea()) {
+            return ResponseEntity.status(403).body("Tài khoản không có quyền vào khu Quản trị");
         }
 
         if (user.getAdminPassword() == null || user.getAdminPassword().isEmpty()) {
-            return ResponseEntity.status(403).body("No admin password set");
+            return ResponseEntity.status(403).body("Tài khoản chưa được cấu hình mật khẩu quản trị");
         }
 
         boolean adminPasswordMatch = passwordEncoder.matches(req.getPassword(), user.getAdminPassword());
         if (!adminPasswordMatch) {
-            return ResponseEntity.status(401).body("Invalid admin credentials");
+            return ResponseEntity.status(401).body("Thông tin đăng nhập quản trị không hợp lệ");
         }
 
         String ipAddress = ClientIpUtil.resolve(httpReq);

@@ -61,7 +61,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
     @Override
     public ResponseEntity<byte[]> template() {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            Sheet sheet = workbook.createSheet("Import hoa don");
+            Sheet sheet = workbook.createSheet("Import hóa đơn");
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);

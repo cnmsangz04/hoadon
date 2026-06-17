@@ -1,7 +1,7 @@
 <template>
   <div class="container-fluid py-3 mail-history">
     <div class="d-flex align-items-center justify-content-between mb-3">
-      <h4 class="mb-0 font-weight-bold">Trạng thái email gửi hóa đơn</h4>
+      <h4 class="mb-0 font-weight-bold">Lịch sử gửi mail</h4>
       <b-button size="sm" variant="outline-primary" @click="reload">
         <i class="fas fa-sync-alt mr-1"></i>
         Làm mới
@@ -115,19 +115,19 @@
     </b-card>
 
     <b-modal ref="detailModal" title="Chi tiết gửi mail" ok-only ok-title="Đóng" size="lg">
-      <b-table-simple small bordered responsive>
+      <b-table-simple class="modal-detail-table" small bordered responsive>
         <b-tbody>
-          <b-tr><b-th style="width: 180px">Company ID</b-th><b-td>{{ selected.companyId || '-' }}</b-td></b-tr>
-          <b-tr><b-th style="width: 180px">Người nhận</b-th><b-td>{{ selected.toName || '-' }}</b-td></b-tr>
-          <b-tr><b-th>Email nhận</b-th><b-td>{{ selected.toEmail || '-' }}</b-td></b-tr>
-          <b-tr><b-th>Tiêu đề</b-th><b-td>{{ selected.subject || '-' }}</b-td></b-tr>
-          <b-tr><b-th>Trạng thái</b-th><b-td>{{ statusText(selected.status) }}</b-td></b-tr>
-          <b-tr><b-th>Hiển thị phía khách</b-th><b-td>{{ selected.showHistory ? 'Có' : 'Không' }}</b-td></b-tr>
-          <b-tr><b-th>Số lần gửi</b-th><b-td>{{ selected.attempts || 0 }}</b-td></b-tr>
-          <b-tr><b-th>Hóa đơn</b-th><b-td>{{ selected.invoiceId || '-' }}</b-td></b-tr>
-          <b-tr><b-th>Ngày tạo</b-th><b-td>{{ formatDateTime(selected.createdAt) }}</b-td></b-tr>
-          <b-tr><b-th>Ngày gửi</b-th><b-td>{{ formatDateTime(selected.sentAt) }}</b-td></b-tr>
-          <b-tr><b-th>Lỗi</b-th><b-td class="text-danger">{{ selected.error || '-' }}</b-td></b-tr>
+          <b-tr><b-th class="modal-detail-label">Mã công ty</b-th><b-td>{{ selected.companyId || '—' }}</b-td></b-tr>
+          <b-tr><b-th class="modal-detail-label">Người nhận</b-th><b-td>{{ selected.toName || '—' }}</b-td></b-tr>
+          <b-tr><b-th class="modal-detail-label">Email nhận</b-th><b-td>{{ selected.toEmail || '—' }}</b-td></b-tr>
+          <b-tr><b-th class="modal-detail-label">Tiêu đề</b-th><b-td>{{ selected.subject || '—' }}</b-td></b-tr>
+          <b-tr><b-th class="modal-detail-label">Trạng thái</b-th><b-td>{{ statusText(selected.status) }}</b-td></b-tr>
+          <b-tr><b-th class="modal-detail-label">Hiển thị phía khách</b-th><b-td>{{ selected.showHistory ? 'Có' : 'Không' }}</b-td></b-tr>
+          <b-tr><b-th class="modal-detail-label">Số lần gửi</b-th><b-td>{{ selected.attempts || 0 }}</b-td></b-tr>
+          <b-tr><b-th class="modal-detail-label">Hóa đơn</b-th><b-td>{{ selected.invoiceId || '—' }}</b-td></b-tr>
+          <b-tr><b-th class="modal-detail-label">Ngày tạo</b-th><b-td>{{ formatDateTime(selected.createdAt) }}</b-td></b-tr>
+          <b-tr><b-th class="modal-detail-label">Ngày gửi</b-th><b-td>{{ formatDateTime(selected.sentAt) }}</b-td></b-tr>
+          <b-tr><b-th class="modal-detail-label">Lỗi</b-th><b-td class="text-danger">{{ selected.error || '—' }}</b-td></b-tr>
         </b-tbody>
       </b-table-simple>
     </b-modal>
@@ -170,7 +170,7 @@ export default {
       },
       fields: [
         { key: 'index', label: '#', thStyle: { width: '44px' }, tdClass: 'text-center text-nowrap' },
-        { key: 'companyName', label: 'Company', thStyle: { width: '130px' } },
+        { key: 'companyName', label: 'Công ty', thStyle: { width: '130px' } },
         { key: 'templateKey', label: 'Loại email', thStyle: { width: '130px' } },
         { key: 'toName', label: 'Người nhận', thStyle: { width: '125px' } },
         { key: 'toEmail', label: 'Email nhận', thStyle: { width: '235px' } },

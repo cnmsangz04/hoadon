@@ -59,7 +59,7 @@
             </b-row>
         </b-card>
 
-        <!-- B?ng -->
+        <!-- Bảng -->
         <b-card class="shadow-sm">
             <b-table
                 bordered
@@ -84,7 +84,7 @@
                 </template>
 
                 <template #cell(photo)="{ item }">
-                    <img v-if="item.photo" :src="item.photo" style="height:36px; border-radius: 4px;" alt="Preview" />
+                    <img v-if="item.photo" :src="item.photo" class="form-preview-img" alt="Ảnh mẫu" />
                     <span v-else class="text-muted">—</span>
                 </template>
 
@@ -209,7 +209,7 @@ export default {
                 }))
                 this.total = data.total || 0
             } catch (e) {
-                // b? qua
+                // Bỏ qua lỗi tải danh sách, trạng thái tải sẽ được tắt ở finally
             } finally { this.isBusy = false }
         },
         getCategoryText(val) {
@@ -263,7 +263,7 @@ export default {
     border: 1px solid #e9ecef;
 }
 
-/* Hover c?a b?ng */
+/* Hover của bảng */
 .form-invoices-admin .table-hover tbody tr:hover {
     background-color: #fafbfd;
 }
@@ -326,7 +326,7 @@ export default {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-/* N?i dung th? */
+/* Nội dung thẻ */
 .card-body {
     padding: 0.75rem 1rem;
 }
@@ -357,8 +357,10 @@ export default {
     text-align: center;
 }
 
-/* Kiểu hình ảnh */
-img {
+.form-preview-img {
+    border-radius: 4px;
+    height: 36px;
     object-fit: cover;
+    width: 48px;
 }
 </style>

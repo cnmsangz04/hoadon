@@ -17,6 +17,19 @@ function isAdminContext() {
 // Các endpoint không bao giờ gửi kèm token (route xác thực công khai)
 const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password', '/public/']
 
+// Chặn overlay dev server cho các lỗi quyền đã được interceptor xử lý bằng toast/redirect.
+try {
+  if (typeof window !== 'undefined' && !window.__axiosAuthRejectHandlerInstalled) {
+    window.__axiosAuthRejectHandlerInstalled = true
+    window.addEventListener('unhandledrejection', event => {
+      const status = event?.reason?.response?.status
+      if (status === 401 || status === 403) {
+        event.preventDefault()
+      }
+    })
+  }
+} catch {}
+
 axios.interceptors.request.use(config => {
   try {
     // Bỏ tiền tố baseURL ở đầu để so sánh theo đường dẫn tương đối
@@ -86,10 +99,12 @@ axios.interceptors.response.use(
     }
 
     if (status === 403) {
-      if (!suppressGlobal) toastError(message || 'Bạn không có quyền thao tác', 'HTTP_403')
-      setTimeout(() => {
-        window.location.href = admin ? '/administrator' : '/'
-      }, 1200)
+      if (!suppressGlobal) {
+        toastError(message || 'Bạn không có quyền thao tác', 'HTTP_403')
+        setTimeout(() => {
+          window.location.href = admin ? '/administrator' : '/'
+        }, 1200)
+      }
       return Promise.reject(err)
     }
 

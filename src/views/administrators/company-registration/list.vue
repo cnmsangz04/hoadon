@@ -39,7 +39,7 @@
         :items="items"
         :fields="fields"
         :busy="loading"
-        responsive
+        responsive="lg"
         bordered
         hover
         small
@@ -90,6 +90,7 @@
 
         <template #cell(option)="data">
           <b-dropdown
+            class="table-action-dropdown"
             right
             size="sm"
             variant="link"
@@ -166,7 +167,7 @@ export default {
         { key: 'status', label: 'Trạng thái', class: 'text-center', thStyle: { width: '120px' } },
         { key: 'createdAt', label: 'Ngày đăng ký', thStyle: { width: '160px' } },
         { key: 'reviewed', label: 'Duyệt bởi', thStyle: { width: '170px' } },
-        { key: 'option', label: '', class: 'text-center', thStyle: { width: '70px' } },
+        { key: 'option', label: 'Chức năng', class: 'text-center table-action-cell', thStyle: { width: '110px', minWidth: '110px' } },
       ],
     }
   },

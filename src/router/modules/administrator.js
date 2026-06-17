@@ -73,7 +73,7 @@
       name: "admin-email-mail-history",
       component: () =>
         import("../../views/administrators/email/mail-history.vue"),
-      meta: { requiresAdmin: true, title: "Trạng thái email gửi hóa đơn" },
+      meta: { requiresAdmin: true, title: "Lịch sử gửi mail" },
     },
     {
       path: "telegram/config",

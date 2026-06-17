@@ -391,7 +391,7 @@ export default {
 .form-row-item { margin-bottom: 12px; }
 
 /* Label và input của form */
-::v-deep .form-group label { font-weight: 600; color: #334155; }
+::v-deep .form-group label { font-weight: 600; color: #334155; margin-bottom: var(--ui-label-gap); }
 ::v-deep .form-group .form-text { font-size: 0.85rem; }
 ::v-deep .form-control { border-color: #e5e7eb; border-radius: 10px; transition: box-shadow .12s ease, border-color .12s ease; }
 ::v-deep .form-control:focus { box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); border-color: #818cf8; }
@@ -399,11 +399,11 @@ export default {
 
 /* Bộ tạo serial */
 .serial-builder { border: 1px dashed #e5e7eb; border-radius: 12px; padding: 12px; background: #fafafa; }
-.serial-full-label { font-weight: 600; color: #6b7280; display: block; margin-bottom: 6px; }
+.serial-full-label { font-weight: 600; color: #6b7280; display: block; margin-bottom: var(--ui-label-gap); }
 .serial-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .serial-item small { display: block; margin-top: 6px; }
-.serial-label { font-weight: 600; color: #374151; margin-bottom: 6px; }
-.serial-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.serial-label { font-weight: 600; color: #374151; margin-bottom: var(--ui-label-gap); }
+.serial-top { display: flex; align-items: center; gap: 8px; margin-bottom: var(--ui-label-gap); }
 .step-badge { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; font-size: 12px; border-radius: 9999px; background: #eef2ff; color: #4f46e5; font-weight: 700; border: 1px solid #e0e7ff; }
 .serial-suffix { grid-column: span 4; }
 

@@ -2,6 +2,8 @@
 
 Tài liệu này mô tả tổng quan hệ thống, các nhóm người dùng, chức năng nghiệp vụ, luồng xử lý chính, dữ liệu quan trọng và các thành phần kỹ thuật của chương trình hóa đơn điện tử.
 
+Cập nhật gần nhất: 17/06/2026.
+
 ## 1. Mục Đích Chương Trình
 
 Chương trình là hệ thống quản lý hóa đơn điện tử dành cho doanh nghiệp và bộ phận quản trị hệ thống. Hệ thống hỗ trợ doanh nghiệp đăng ký sử dụng, quản lý hồ sơ công ty, quản lý mẫu hóa đơn, lập hóa đơn GTGT, ký và gửi hóa đơn đến cơ quan thuế, gửi email hóa đơn cho khách mua, mua thêm gói hóa đơn, báo cáo thống kê và tra cứu hóa đơn công khai.
@@ -36,6 +38,7 @@ Chương trình là hệ thống quản lý hóa đơn điện tử dành cho do
 - TinyMCE.
 - Font Awesome.
 - Vue Advanced Cropper cho avatar/logo.
+- vuedraggable cho các màn hình cần sắp xếp thứ tự bằng kéo thả.
 
 ### 2.3 Lưu Trữ File
 
@@ -76,7 +79,7 @@ Người dùng doanh nghiệp có thể:
 - Mua gói hóa đơn.
 - Xem lịch sử mua gói và thanh toán lại giao dịch chưa thành công.
 - Cấu hình máy chủ gửi mail.
-- Xem trạng thái email gửi hóa đơn.
+- Xem lịch sử gửi mail.
 - Xuất báo cáo hóa đơn.
 - Cập nhật tài khoản cá nhân.
 - Xem phiên đăng nhập.
@@ -94,6 +97,14 @@ Admin công ty có thêm quyền:
 - Khóa, mở khóa, reset mật khẩu, gửi thông tin đăng nhập cho thành viên.
 - Cấu hình bảo mật IP.
 - Xem lịch sử đăng nhập trong phạm vi công ty.
+
+Tài khoản admin công ty có `role = 1`. Hệ thống dùng thêm cột `admin_scope` trong bảng `users` để phân biệt phạm vi admin:
+
+- `ROOT`: tài khoản Root hệ thống.
+- `ROOT_COMPANY`: tài khoản admin thuộc công ty root, tức `company_id = 1`.
+- `COMPANY`: tài khoản admin công ty thường.
+
+Chỉ admin của công ty root (`company_id = 1`, `admin_scope = ROOT_COMPANY`) mới có mật khẩu quản trị riêng và được hiển thị dropdown `Quản trị` ở header. Admin công ty thường không dùng mật khẩu quản trị riêng.
 
 ### 3.4 Admin Hệ Thống Và Root
 
@@ -157,10 +168,15 @@ Hệ thống dùng bảng:
 - `permission_categories`: nhóm quyền.
 - `permissions`: danh sách quyền, trong đó `name` là permission key.
 - `user_permissions`: quyền được gán cho từng user.
+- `users.admin_scope`: phân biệt tài khoản Root, admin công ty root và admin công ty thường.
 
-Controller backend gọi `permission("permission-key")` để kiểm tra quyền. Nếu user không có quyền phù hợp thì hệ thống trả lỗi không có quyền thao tác.
+Controller backend gọi `permission("permission-key")` để kiểm tra quyền. Có thể truyền nhiều quyền dạng `permission("key-a|key-b")`; khi đó user chỉ cần có một trong các quyền được liệt kê. Nếu user không có quyền phù hợp thì hệ thống trả lỗi rõ tên quyền thiếu, ví dụ `Thiếu quyền: Xem danh mục sản phẩm`, dựa theo `display_name` trong bảng `permissions`.
 
-Root có `role = 0` được phép toàn bộ. Các user khác cần được gán quyền trong `user_permissions`.
+Root có `role = 0` được phép toàn bộ. Nhân viên có `role = 2` cần được gán quyền trong `user_permissions`.
+
+Admin công ty có `role = 1` được mặc định cho qua các quyền level 0. Vì vậy tài khoản quản trị công ty root và tài khoản quản trị công ty thường không cần insert `user_permissions` cho các quyền user level 0. Nhân viên có `role = 2` vẫn kiểm tra theo `user_permissions`.
+
+Các API dữ liệu phụ như dropdown, autocomplete hoặc danh sách gợi ý không được làm sai quyền chính của màn hình. Khi dữ liệu phụ bị thiếu quyền, frontend phải xử lý nhẹ nhàng hoặc dùng `suppressGlobalErrorToast`, còn API chính vẫn trả thông báo thiếu quyền rõ ràng.
 
 Một số nhóm quyền quan trọng:
 
@@ -177,6 +193,8 @@ Một số nhóm quyền quan trọng:
 - Quyền Telegram: `telegram-config-manage`.
 - Quyền quản trị danh mục nền: `bank-list`, `bank-save`, `tax-authority-list`, `tax-authority-save`, `tax-authority-delete`, `vat-rate-list`, `vat-rate-save`, `vat-rate-delete`.
 - Quyền quản lý phân quyền: `permission-manage`, `permission-category-manage`.
+
+Nhóm quyền được sắp xếp theo `orderIndex` để điều khiển thứ tự hiển thị trong màn phân quyền thành viên và các màn quản trị liên quan. Màn quản lý nhóm quyền hỗ trợ kéo thả, chọn 2 nhóm để hoán đổi nhanh, bật/tắt trạng thái ngay trên dòng và lưu lại thứ tự bằng API reorder.
 
 ## 6. Luồng Đăng Ký Công Ty
 
@@ -335,6 +353,12 @@ API chính:
 - `/v1/form-invoices`
 - `/v1/file`
 
+Ghi chú phân quyền:
+
+- Danh sách và xem trước mẫu dùng quyền `form-invoice-list`.
+- Tạo/cập nhật/xóa mẫu dùng quyền `form-invoice-save`.
+- Khi người dùng đang tạo hoặc sửa mẫu, API đọc chi tiết mẫu hoặc đọc mẫu hệ thống để sao chép được phép dùng `form-invoice-list` hoặc `form-invoice-save`, tránh trường hợp có quyền thêm/sửa mẫu nhưng không mở được form tạo/sửa.
+
 ### 7.5 Lập Và Quản Lý Hóa Đơn GTGT
 
 Đường dẫn:
@@ -378,7 +402,7 @@ Trạng thái hóa đơn phổ biến:
 Luồng hóa đơn thông thường:
 
 1. Người dùng lập hóa đơn.
-2. Hệ thống kiểm tra mẫu hóa đơn, hạn mức hóa đơn và dữ liệu bắt buộc.
+2. Hệ thống gọi `/v1/invoices/prepare` để kiểm tra quyền `invoice-save`, mẫu hóa đơn GTGT đang kích hoạt, tờ khai đã được chấp nhận và hình thức hóa đơn đã đăng ký.
 3. Hóa đơn được lưu ở trạng thái mới khởi tạo.
 4. Người dùng ký hóa đơn.
 5. Hệ thống tạo XML hóa đơn và lưu thông tin ký.
@@ -387,6 +411,12 @@ Luồng hóa đơn thông thường:
 8. Khi phát hành thành công, hệ thống có thể đưa email hóa đơn vào hàng đợi gửi cho khách mua.
 
 API chính: `/v1/invoices`.
+
+Ghi chú phân quyền:
+
+- Màn lập hóa đơn dùng quyền chính `invoice-save`.
+- Dữ liệu khách hàng và sản phẩm trên màn lập hóa đơn chỉ là dữ liệu gợi ý để tự điền nhanh. Nếu user không có `category-customer-list` hoặc `category-product-list`, form lập hóa đơn vẫn được mở; người dùng vẫn có thể nhập tay thông tin người mua và hàng hóa.
+- Khi thiếu quyền chính, hệ thống báo rõ quyền thiếu thay vì báo chung chung.
 
 ### 7.6 Import Hóa Đơn
 
@@ -399,8 +429,15 @@ Chức năng:
 - Kiểm tra lỗi dữ liệu.
 - Tạo hóa đơn nháp hoặc nhóm hóa đơn.
 - Trả file lỗi hoặc danh sách lỗi nếu dữ liệu không hợp lệ.
+- Xem lịch sử import hóa đơn.
+- Import lại file đã upload để tạo hóa đơn nháp mới khi cần.
 
 API chính: `/v1/invoice-imports` hoặc controller import hóa đơn tương ứng.
+
+Ghi chú phân quyền:
+
+- Tải mẫu Excel, upload file và import lại dùng quyền `invoice-save`.
+- Danh sách lịch sử import cho phép `invoice-list` hoặc `invoice-save`, để user có quyền import vẫn xem được kết quả import của chính công ty.
 
 ### 7.7 Danh Mục Sản Phẩm
 
@@ -466,7 +503,7 @@ Chức năng:
 
 API chính: `/v1/mail-servers`.
 
-### 7.11 Trạng Thái Email Gửi Hóa Đơn
+### 7.11 Lịch sử gửi mail
 
 Đường dẫn: `/email/mail-history`
 
@@ -629,6 +666,7 @@ Chức năng:
 - Duyệt hồ sơ.
 - Từ chối hồ sơ.
 - Xem thời gian và người xử lý.
+- Thao tác trên từng hồ sơ qua menu chức năng dạng dropdown để đồng bộ với các bảng quản trị khác.
 
 API chính: `/v1/administrator/company-registration`.
 
@@ -657,8 +695,11 @@ Chức năng:
 - Xem danh sách hạn mức hóa đơn của các công ty.
 - Thêm/cập nhật số hóa đơn mua.
 - Theo dõi số hóa đơn đã dùng.
-- Xem lịch sử mua gói.
+- Lọc theo công ty và trạng thái.
+- Xem lịch sử thay đổi hạn mức.
+- Lọc lịch sử theo công ty, nguồn, loại thay đổi và khoảng ngày.
 - Không cho xóa bản ghi đã phát sinh sử dụng hoặc đang có ràng buộc nghiệp vụ.
+- Thao tác cập nhật/xóa qua menu chức năng dạng dropdown.
 
 API chính: `/v1/administrator/buy-invoice`.
 
@@ -740,7 +781,7 @@ Chức năng:
 
 API chính: `/v1/administrator/mail-template`.
 
-### 9.11 Trạng Thái Email Toàn Hệ Thống
+### 9.11 Lịch Sử Gửi Mail Toàn Hệ Thống
 
 Đường dẫn: `/administrator/email/mail-history`
 
@@ -796,7 +837,10 @@ Chức năng:
 - Quản lý danh sách quyền.
 - Quản lý nhóm quyền.
 - Cập nhật tên hiển thị, level, mô tả, trạng thái.
-- Sắp xếp nhóm quyền.
+- Sắp xếp nhóm quyền bằng kéo thả.
+- Hoán đổi nhanh vị trí của 2 nhóm quyền bằng bộ chọn.
+- Bật/tắt trạng thái nhóm quyền ngay trên danh sách.
+- Lưu thứ tự nhóm quyền bằng API reorder sau khi thay đổi.
 - Quyền mới tạo có thể được tự gán cho Root.
 - Một số quyền level thấp có thể dùng cho admin công ty/member tùy cấu hình.
 
@@ -822,6 +866,14 @@ Chức năng:
 API chính: `/v1/public/invoices/lookup` hoặc controller public lookup tương ứng.
 
 ## 11. Thông Báo Và Lịch Sử
+
+Hệ thống thống nhất dùng Toastr cho thông báo giao diện. Các lời gọi cũ qua `$bvToast.toast(...)` được chuyển tiếp sang Toastr để không còn đồng thời hiển thị hai kiểu thông báo. BootstrapVue vẫn được dùng cho component giao diện như modal, form, table, sidebar, nhưng không dùng BootstrapVue Toast làm kênh thông báo chính.
+
+Quy tắc xử lý lỗi quyền trên frontend:
+
+- Request chính của trang để interceptor Axios xử lý lỗi 403, hiển thị Toastr và điều hướng về trang phù hợp.
+- Request phụ như dropdown, dữ liệu gợi ý, thông tin header hoặc dữ liệu autocomplete dùng `meta.suppressGlobalErrorToast = true` khi cần tự xử lý, để tránh double thông báo.
+- Thông báo lỗi quyền ưu tiên nội dung từ backend, ví dụ `Thiếu quyền: Xem danh mục khách hàng`.
 
 ### 11.1 Thông Báo Header
 
@@ -1017,7 +1069,7 @@ Các bảng/entity quan trọng:
 - `/v1/tax-authorities`: cơ quan thuế.
 - `/v1/administrator/vat-rate`: thuế suất.
 - `/v1/administrator/mail-template`: mail template.
-- `/v1/administrator/mail-jobs`: trạng thái email toàn hệ thống.
+- `/v1/administrator/mail-jobs`: lịch sử gửi mail toàn hệ thống.
 - `/v1/administrator/telegram-config`: cấu hình Telegram.
 - `/v1/administrator/telegram-report`: gửi báo cáo Telegram.
 - `/v1/administrator/permissions`: quyền.
@@ -1029,10 +1081,14 @@ Các bảng/entity quan trọng:
 - Người dùng chỉ thao tác dữ liệu thuộc công ty của mình.
 - Admin hệ thống thao tác dữ liệu toàn hệ thống theo quyền được cấp.
 - Root có quyền toàn bộ.
+- Admin công ty (`role = 1`) được cho qua quyền user level 0; nhân viên (`role = 2`) phải có quyền được gán trong `user_permissions`.
+- Admin công ty root (`company_id = 1`, `admin_scope = ROOT_COMPANY`) mới có mật khẩu quản trị riêng và menu quản trị ở header.
 - Mẫu hóa đơn cần hợp lệ trước khi lập hóa đơn.
 - Hóa đơn cần đủ dữ liệu người bán, người mua, hàng hóa, thuế suất và mẫu hóa đơn.
+- Màn lập hóa đơn chỉ bắt buộc quyền `invoice-save`; dữ liệu gợi ý khách hàng/sản phẩm không được chặn người dùng lập hóa đơn nếu thiếu quyền danh mục.
 - Hóa đơn đã phát hành không được sửa như hóa đơn nháp.
 - Hóa đơn thay thế/điều chỉnh phải tham chiếu hóa đơn gốc.
+- Import hóa đơn dùng quyền `invoice-save`; lịch sử import cho phép `invoice-list` hoặc `invoice-save`.
 - Giao dịch mua gói thành công mới được cộng hạn mức hóa đơn.
 - Không dùng lại URL/chữ ký thanh toán cũ khi thanh toán lại.
 - Email gửi hóa đơn xử lý qua hàng đợi để tránh chậm request người dùng.
@@ -1049,6 +1105,7 @@ Các cơ chế bảo mật hiện có:
 - Security filter backend.
 - Permission key ở controller.
 - Phân quyền theo user.
+- Thông báo thiếu quyền hiển thị rõ tên quyền dựa trên `permissions.display_name`.
 - Bảo mật IP theo công ty.
 - Ghi nhận phiên đăng nhập.
 - Cho phép đăng xuất phiên khác.
@@ -1153,7 +1210,7 @@ Tùy cấu hình server port, backend phục vụ API dưới prefix `/v1`.
 - `/categories/customer/list`: khách hàng.
 - `/reports/invoice/list`: báo cáo hóa đơn.
 - `/email/mail-server`: máy chủ gửi mail.
-- `/email/mail-history`: trạng thái email.
+- `/email/mail-history`: Lịch sử gửi mail.
 
 ### 21.3 Cài Đặt
 
@@ -1176,16 +1233,37 @@ Tùy cấu hình server port, backend phục vụ API dưới prefix `/v1`.
 - `/administrator/tax-authority/list`: cơ quan thuế.
 - `/administrator/vat-rate/list`: thuế suất.
 - `/administrator/email-template/list`: mail template.
-- `/administrator/email/mail-history`: trạng thái email toàn hệ thống.
+- `/administrator/email-template/create`: tạo/cập nhật mail template.
+- `/administrator/email/mail-history`: lịch sử gửi mail toàn hệ thống.
 - `/administrator/telegram/config`: cấu hình Telegram.
 - `/administrator/sessions/list`: phiên đăng nhập admin.
+- `/administrator/form-invoice/create`: tạo mẫu hóa đơn hệ thống.
+- `/administrator/form-invoice/:id/edit`: cập nhật mẫu hóa đơn hệ thống.
 - `/administrator/access-control/permissions/list`: quyền.
 - `/administrator/access-control/permission-categories/list`: nhóm quyền.
 
-## 22. Ghi Chú Vận Hành
+## 22. Chuẩn Giao Diện Hiện Tại
+
+Các màn hình giao diện đang được chuẩn hóa theo các quy tắc sau:
+
+- Sidebar admin, sidebar doanh nghiệp và sidebar setting giữ chiều rộng cố định khi mở, có trạng thái thu gọn qua nút menu trên header và không bị bóp khi nội dung bảng rộng.
+- Bảng danh sách dùng cột `Chức năng` dạng dropdown ba chấm để đồng bộ thao tác cập nhật, xóa, duyệt, gửi lại hoặc các hành động phụ.
+- Dropdown trong bảng dùng kích thước nhỏ, có vùng hiển thị đủ rộng và tránh bị cắt bởi bảng responsive trên desktop.
+- Phân trang dùng thanh chung `pagination_bar.vue`, hiển thị số dòng/trang, khoảng bản ghi hiện tại, tổng bản ghi và cụm nút trang ở bên phải.
+- Modal dùng header/footer thống nhất, nút hành động đặt ở footer hoặc cụm hành động cuối form; tránh để nút dính sát input.
+- Khoảng cách label và input được rút gọn bằng biến CSS chung `--ui-label-gap`.
+- Các form trong setting/profile/account dùng cụm nút hành động tách riêng để không dính vào ô nhập.
+- Màn phân quyền thành viên dùng modal dạng lưới nhóm quyền, có tổng số quyền đã chọn và thao tác chọn/bỏ chọn theo nhóm.
+- Màn nhóm quyền dùng danh sách sắp xếp gọn, hỗ trợ kéo thả và hoán đổi nhanh 2 nhóm, cột chức năng vẫn là dropdown ba chấm.
+- Toàn bộ thông báo thành công, cảnh báo và lỗi dùng Toastr. Không dùng BootstrapVue Toast để tránh giao diện thông báo bị chồng kiểu.
+- Các request phụ phục vụ dropdown, autocomplete hoặc dữ liệu nền phải tránh làm chặn màn hình chính nếu thiếu quyền không liên quan trực tiếp.
+
+## 23. Ghi Chú Vận Hành
 
 - Khi thêm chức năng quản trị mới, cần kiểm tra và bổ sung permission key ở controller.
 - Khi thêm menu frontend, cần kiểm tra route guard và quyền backend tương ứng.
+- Khi thêm API phụ cho màn hình, cần xác định rõ quyền chính của màn và quyền của API phụ. Nếu API phụ chỉ phục vụ gợi ý hoặc dropdown, frontend cần dùng `suppressGlobalErrorToast` hoặc backend cần cho phép nhiều key bằng `permission("key-a|key-b")` để tránh lỗi quyền sai ngữ cảnh.
+- Khi thêm thông báo mới, dùng `this.$toastr` hoặc utility Toastr; không gọi BootstrapVue Toast trực tiếp.
 - Khi thêm callback public như cổng thanh toán, không gắn permission theo user vì cổng thanh toán gọi từ bên ngoài.
 - Khi thêm cấu hình nhạy cảm, ưu tiên lưu database và mã hóa, không commit token/mật khẩu thật vào source.
 - Khi build frontend, Vue CLI tạo file static có hash mới trong `src/main/resources/static`.

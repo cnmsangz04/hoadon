@@ -27,19 +27,23 @@ public class UserEntity {
     @Column(nullable = false, length = 32, unique = true)
     private String username;
 
-    // Add display name for the user
+    // Tên hiển thị của user.
     @Column(name = "name", columnDefinition = "NVARCHAR(255)")
     private String name;
 
-    // Email no longer unique
+    // Email không còn ràng buộc unique.
     @Column(length = 255)
     private String email;
 
     @Column(nullable = false, length = 64)
     private String password;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(name = "admin_password", length = 64)
     private String adminPassword;
+
+    @Column(name = "admin_scope", length = 20)
+    private String adminScope;
 
     @Column(length = 255)
     private String avatar;
@@ -47,7 +51,7 @@ public class UserEntity {
     @Column(nullable = false)
     private Integer role;
 
-    // Phone number for the user
+    // Số điện thoại của user.
     @Column(name = "phone", length = 32)
     private String phone;
 
@@ -148,6 +152,14 @@ public class UserEntity {
 
     public void setAdminPassword(String adminPassword) {
         this.adminPassword = adminPassword;
+    }
+
+    public String getAdminScope() {
+        return adminScope;
+    }
+
+    public void setAdminScope(String adminScope) {
+        this.adminScope = adminScope;
     }
 
     public String getAvatar() {
@@ -262,7 +274,15 @@ public class UserEntity {
         this.userPermissionOverrides = userPermissionOverrides;
     }
 
-    // Compute effective permissions: use per-user overrides only
+    public boolean isRootCompanyAdmin() {
+        return Integer.valueOf(1).equals(this.role) && Long.valueOf(1L).equals(this.companyId);
+    }
+
+    public boolean canAccessAdminArea() {
+        return Integer.valueOf(0).equals(this.role) || isRootCompanyAdmin();
+    }
+
+    // Tính quyền hiệu lực từ các quyền riêng của user.
     public Set<PermissionEntity> getPermissions() {
         Set<PermissionEntity> effective = new HashSet<>();
         if (this.userPermissionOverrides != null && !this.userPermissionOverrides.isEmpty()) {

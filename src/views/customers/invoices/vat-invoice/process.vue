@@ -180,5 +180,6 @@ export default {
 .form-label {
   font-weight: 600;
   color: #334155;
+  margin-bottom: var(--ui-label-gap);
 }
 </style>

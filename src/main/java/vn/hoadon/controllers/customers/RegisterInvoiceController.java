@@ -6,6 +6,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.dto.registerinvoice.RegisterInvoicePrefillDto;
@@ -38,6 +40,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 @RestController
 @RequestMapping("/v1/register-invoices")
 public class RegisterInvoiceController extends BaseController {
+    private static final Logger log = LoggerFactory.getLogger(RegisterInvoiceController.class);
+
     private final RegisterInvoiceService service;
     private final CompanyRepository companyRepository;
     // Replace repository with service per 3-layer architecture
@@ -56,9 +60,17 @@ public class RegisterInvoiceController extends BaseController {
     @GetMapping("/{id}")
     public ResponseEntity<RegisterInvoiceEntity> getById(@PathVariable Long id) {
         permission("register-invoice-list");
-        return service.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        UserEntity user = currentUser();
+        if (user == null || user.getCompanyId() == null) {
+            return ResponseEntity.status(403).build();
+        }
+        Optional<RegisterInvoiceEntity> entityOpt = service.findById(id);
+        if (entityOpt.isEmpty()) return ResponseEntity.notFound().build();
+        RegisterInvoiceEntity entity = entityOpt.get();
+        if (!canAccessRegisterInvoice(user, entity)) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(entity);
     }
 
     @GetMapping
@@ -66,23 +78,12 @@ public class RegisterInvoiceController extends BaseController {
             @RequestParam(required = false) Long companyId,
             @RequestParam(required = false) Long userId) {
         permission("register-invoice-list");
-        if (companyId != null) {
-            return ResponseEntity.ok(service.findByCompany(companyId));
-        }
-        if (userId != null) {
-            return ResponseEntity.ok(service.findByUser(userId));
-        }
-        // Dự phòng: dùng ngữ cảnh người dùng hiện tại
         UserEntity user = currentUser();
-        if (user != null) {
-            // prefer company scope if available
-            if (user.getCompanyId() != null) {
-                return ResponseEntity.ok(service.findByCompany(user.getCompanyId()));
-            }
-            return ResponseEntity.ok(service.findByUser(user.getId()));
+        if (user == null || user.getCompanyId() == null) {
+            return ResponseEntity.ok(List.of());
         }
-        // default: return empty to avoid exposing all
-        return ResponseEntity.ok(List.of());
+        // Luôn lấy theo công ty của tài khoản đang đăng nhập, bỏ qua companyId/userId từ query.
+        return ResponseEntity.ok(service.findByCompany(user.getCompanyId()));
     }
 
     // Prefill data for create.vue - auto-detect companyId from authenticated user
@@ -302,40 +303,48 @@ public class RegisterInvoiceController extends BaseController {
                 RegisterInvoiceXmlTaxValidator.validate(entity.getSignedXml());
         // Simulate 102 after ~2 seconds
         new Thread(() -> {
-            try { Thread.sleep(2000L); } catch (InterruptedException ignored) {}
-            boolean acceptedReceive = receiveValidation.isValid();
-            String reason = acceptedReceive ? null : receiveValidation.getMessage();
-            String xml = buildResponseXml(102, acceptedReceive ? 1 : 0, reason);
-            RegisterInvoiceEntity current = service.findById(id).orElse(entity);
-            RegisterInvoiceEntity patch = cloneEntityPreserveAll(current);
-            patch.setStatus(acceptedReceive ? 4 : 3);
-            patch.setResponseReceiveFile(xml);
-            service.update(id, patch);
-            // Insert history row for message 102
-            String desc102 = acceptedReceive ? "Mã thông điệp 102 đã tiếp nhận" : "Mã thông điệp 102 không tiếp nhận: " + reason;
-            insertHistoryRow(companyId, 0L, "register_invoices", id,
-                    "Thông điệp 102 tiếp nhận thông tin tờ khai hóa đơn điện tử", desc102, 1, 1, 102, xml);
+            try {
+                Thread.sleep(2000L);
+                boolean acceptedReceive = receiveValidation.isValid();
+                String reason = acceptedReceive ? null : receiveValidation.getMessage();
+                String xml = buildResponseXml(102, acceptedReceive ? 1 : 0, reason);
+                RegisterInvoiceEntity current = service.findById(id).orElse(entity);
+                RegisterInvoiceEntity patch = cloneEntityPreserveAll(current);
+                patch.setStatus(acceptedReceive ? 4 : 3);
+                patch.setResponseReceiveFile(xml);
+                service.update(id, patch);
+                // Insert history row for message 102
+                String desc102 = acceptedReceive ? "Mã thông điệp 102 đã tiếp nhận" : "Mã thông điệp 102 không tiếp nhận: " + reason;
+                insertHistoryRow(companyId, 0L, "register_invoices", id,
+                        "Thông điệp 102 tiếp nhận thông tin tờ khai hóa đơn điện tử", desc102, 1, 1, 102, xml);
+            } catch (Exception e) {
+                log.error("Không thể lưu phản hồi 102 cho tờ khai {}", id, e);
+            }
         }).start();
         // Simulate 103 after ~5 seconds
         new Thread(() -> {
-            try { Thread.sleep(5000L); } catch (InterruptedException ignored) {}
-            if (!receiveValidation.isValid()) return;
-            boolean accepted = acceptValidation.isValid();
-            String reason = accepted ? null : acceptValidation.getMessage();
-            String xml = buildResponseXml(103, accepted ? 1 : 0, reason);
-            RegisterInvoiceEntity current = service.findById(id).orElse(entity);
-            RegisterInvoiceEntity patch = cloneEntityPreserveAll(current);
-            patch.setStatus(accepted ? 6 : 5);
-            patch.setResponseAcceptFile(xml);
-            // Khi status = 6 (đã chấp nhận), set effectiveDate là thời gian hiện tại
-            if (accepted) {
-                try { patch.setEffectiveDate(java.time.LocalDateTime.now()); } catch (Exception ignored) {}
+            try {
+                Thread.sleep(5000L);
+                if (!receiveValidation.isValid()) return;
+                boolean accepted = acceptValidation.isValid();
+                String reason = accepted ? null : acceptValidation.getMessage();
+                String xml = buildResponseXml(103, accepted ? 1 : 0, reason);
+                RegisterInvoiceEntity current = service.findById(id).orElse(entity);
+                RegisterInvoiceEntity patch = cloneEntityPreserveAll(current);
+                patch.setStatus(accepted ? 6 : 5);
+                patch.setResponseAcceptFile(xml);
+                // Khi status = 6 (đã chấp nhận), set effectiveDate là thời gian hiện tại
+                if (accepted) {
+                    try { patch.setEffectiveDate(java.time.LocalDateTime.now()); } catch (Exception ignored) {}
+                }
+                service.update(id, patch);
+                // Insert history row for message 103
+                String desc103 = accepted ? "Mã thông điệp 103 đã chấp nhận" : "Mã thông điệp 103 không chấp nhận: " + reason;
+                insertHistoryRow(companyId, 0L, "register_invoices", id,
+                        "Thông điệp 103 tiếp nhận thông tin tờ khai hóa đơn điện tử", desc103, 1, 1, 103, xml);
+            } catch (Exception e) {
+                log.error("Không thể lưu phản hồi 103 cho tờ khai {}", id, e);
             }
-            service.update(id, patch);
-            // Insert history row for message 103
-            String desc103 = accepted ? "Mã thông điệp 103 đã chấp nhận" : "Mã thông điệp 103 không chấp nhận: " + reason;
-            insertHistoryRow(companyId, 0L, "register_invoices", id,
-                    "Thông điệp 103 tiếp nhận thông tin tờ khai hóa đơn điện tử", desc103, 1, 1, 103, xml);
         }).start();
     }
 
@@ -376,80 +385,11 @@ public class RegisterInvoiceController extends BaseController {
         permission("register-invoice-list");
         UserEntity user = currentUser();
         Long actorCompanyId = user != null ? user.getCompanyId() : null;
-        Integer actorRole = user != null ? user.getRole() : null;
-        boolean isRoot = actorRole != null && actorRole == 0;
-
-        // Nếu không phải root, giới hạn theo công ty của người dùng
-        if (!isRoot) {
-            companyId = actorCompanyId;
-        }
+        companyId = actorCompanyId;
 
         // Spring pages are 0-based; apply default sort desc by createdAt
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<RegisterInvoiceEntity> p;
-
-        // Nếu là root và không truyền companyId, cho phép xem toàn bộ
-        if (isRoot && companyId == null) {
-            p = service.pageAll(pageable);
-            // Optional filter by status
-            if (status != null) {
-                List<RegisterInvoiceEntity> filteredByStatus = p.getContent().stream()
-                        .filter(e -> status.equals(e.getStatus()))
-                        .toList();
-                p = new org.springframework.data.domain.PageImpl<>(filteredByStatus, pageable, filteredByStatus.size());
-            }
-            // Keyword filter by company name/tax code via companies table
-            if (keyword != null && !keyword.isBlank()) {
-                Set<Long> ids = p.getContent().stream().map(RegisterInvoiceEntity::getCompanyId).collect(Collectors.toSet());
-                Map<Long, CompanyEntity> map = new HashMap<>();
-                if (!ids.isEmpty()) {
-                    for (CompanyEntity c : companyRepository.findAllById(ids)) {
-                        map.put(c.getId(), c);
-                    }
-                }
-                String kw = keyword.toLowerCase();
-                List<RegisterInvoiceEntity> filtered = p.getContent().stream()
-                        .filter(e -> {
-                            CompanyEntity c = map.get(e.getCompanyId());
-                            String name = c != null && c.getName() != null ? c.getName().toLowerCase() : "";
-                            String tax = c != null && c.getTaxcode() != null ? c.getTaxcode().toLowerCase() : "";
-                            return name.contains(kw) || tax.contains(kw);
-                        })
-                        .toList();
-                p = new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
-            }
-            // Optional filter by declarationType for global branch
-            if (declarationType != null) {
-                List<RegisterInvoiceEntity> filteredByDecl = p.getContent().stream()
-                        .filter(e -> declarationType.equals(e.getDeclarationType()))
-                        .toList();
-                p = new org.springframework.data.domain.PageImpl<>(filteredByDecl, pageable, filteredByDecl.size());
-            }
-            // Áp dụng bộ lọc ngày cho cả nhánh toàn cục
-            try {
-                java.time.LocalDate from = (dateFrom != null && !dateFrom.isBlank()) ? java.time.LocalDate.parse(dateFrom) : null;
-                java.time.LocalDate to = (dateTo != null && !dateTo.isBlank()) ? java.time.LocalDate.parse(dateTo) : null;
-                if (from != null || to != null) {
-                    List<RegisterInvoiceEntity> filtered = p.getContent().stream()
-                            .filter(e -> {
-                                java.time.LocalDate d = e.getDeclarationDate();
-                                if (d == null) return false;
-                                if (from != null && to == null) {
-                                    return d.equals(from);
-                                }
-                                if (from == null && to != null) {
-                                    return d.equals(to);
-                                }
-                                boolean geFrom = !d.isBefore(from);
-                                boolean leTo = !d.isAfter(to);
-                                return geFrom && leTo;
-                            })
-                            .toList();
-                    p = new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
-                }
-            } catch (Exception ignored) {}
-            return toPaginationResponse(p);
-        }
 
         // Nếu companyId vẫn null (không có phạm vi), trả về phân trang rỗng
         if (companyId == null) {
@@ -642,82 +582,14 @@ public class RegisterInvoiceController extends BaseController {
             @RequestParam(required = false) String dateTo,
             @RequestParam(required = false) Integer declarationType
     ) {
+        permission("register-invoice-list");
         UserEntity user = currentUser();
         Long actorCompanyId = user != null ? user.getCompanyId() : null;
-        Integer actorRole = user != null ? user.getRole() : null;
-        boolean isRoot = actorRole != null && actorRole == 0;
-
-        // Nếu không phải root, giới hạn theo công ty của người dùng
-        if (!isRoot) {
-            companyId = actorCompanyId;
-        }
+        companyId = actorCompanyId;
 
         // Spring pages are 0-based; apply default sort desc by createdAt
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<RegisterInvoiceEntity> p;
-
-        // Nếu là root và không truyền companyId, cho phép xem toàn bộ
-        if (isRoot && companyId == null) {
-            p = service.pageAll(pageable);
-            // Optional filter by status
-            if (status != null) {
-                List<RegisterInvoiceEntity> filteredByStatus = p.getContent().stream()
-                        .filter(e -> status.equals(e.getStatus()))
-                        .toList();
-                p = new org.springframework.data.domain.PageImpl<>(filteredByStatus, pageable, filteredByStatus.size());
-            }
-            // Keyword filter by company name/tax code via companies table
-            if (keyword != null && !keyword.isBlank()) {
-                Set<Long> ids = p.getContent().stream().map(RegisterInvoiceEntity::getCompanyId).collect(Collectors.toSet());
-                Map<Long, CompanyEntity> map = new HashMap<>();
-                if (!ids.isEmpty()) {
-                    for (CompanyEntity c : companyRepository.findAllById(ids)) {
-                        map.put(c.getId(), c);
-                    }
-                }
-                String kw = keyword.toLowerCase();
-                List<RegisterInvoiceEntity> filtered = p.getContent().stream()
-                        .filter(e -> {
-                            CompanyEntity c = map.get(e.getCompanyId());
-                            String name = c != null && c.getName() != null ? c.getName().toLowerCase() : "";
-                            String tax = c != null && c.getTaxcode() != null ? c.getTaxcode().toLowerCase() : "";
-                            return name.contains(kw) || tax.contains(kw);
-                        })
-                        .toList();
-                p = new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
-            }
-            // Optional filter by declarationType for global branch
-            if (declarationType != null) {
-                List<RegisterInvoiceEntity> filteredByDecl = p.getContent().stream()
-                        .filter(e -> declarationType.equals(e.getDeclarationType()))
-                        .toList();
-                p = new org.springframework.data.domain.PageImpl<>(filteredByDecl, pageable, filteredByDecl.size());
-            }
-            // Áp dụng bộ lọc ngày cho cả nhánh toàn cục
-            try {
-                java.time.LocalDate from = (dateFrom != null && !dateFrom.isBlank()) ? java.time.LocalDate.parse(dateFrom) : null;
-                java.time.LocalDate to = (dateTo != null && !dateTo.isBlank()) ? java.time.LocalDate.parse(dateTo) : null;
-                if (from != null || to != null) {
-                    List<RegisterInvoiceEntity> filtered = p.getContent().stream()
-                            .filter(e -> {
-                                java.time.LocalDate d = e.getDeclarationDate();
-                                if (d == null) return false;
-                                if (from != null && to == null) {
-                                    return d.equals(from);
-                                }
-                                if (from == null && to != null) {
-                                    return d.equals(to);
-                                }
-                                boolean geFrom = !d.isBefore(from);
-                                boolean leTo = !d.isAfter(to);
-                                return geFrom && leTo;
-                            })
-                            .toList();
-                    p = new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
-                }
-            } catch (Exception ignored) {}
-            return toPaginationResponse(p);
-        }
 
         // Nếu companyId vẫn null (không có phạm vi), trả về phân trang rỗng
         if (companyId == null) {
@@ -895,12 +767,9 @@ public class RegisterInvoiceController extends BaseController {
     public ResponseEntity<String> getUnsignedXml(@PathVariable Long id) {
         Optional<RegisterInvoiceEntity> e = service.findById(id);
         if (e.isEmpty()) return ResponseEntity.notFound().build();
-        // Authorization: ensure same company unless root
         UserEntity user = currentUser();
-        if (user != null && user.getRole() != null && user.getRole() != 0) {
-            if (user.getCompanyId() == null || !user.getCompanyId().equals(e.get().getCompanyId())) {
-                return ResponseEntity.status(403).build();
-            }
+        if (!canAccessRegisterInvoice(user, e.get())) {
+            return ResponseEntity.status(403).build();
         }
         String xml = service.buildUnsignedXml(e.get());
         return ResponseEntity.ok(xml);
@@ -911,10 +780,8 @@ public class RegisterInvoiceController extends BaseController {
         Optional<RegisterInvoiceEntity> e = service.findById(id);
         if (e.isEmpty()) return ResponseEntity.notFound().build();
         UserEntity user = currentUser();
-        if (user != null && user.getRole() != null && user.getRole() != 0) {
-            if (user.getCompanyId() == null || !user.getCompanyId().equals(e.get().getCompanyId())) {
-                return ResponseEntity.status(403).build();
-            }
+        if (!canAccessRegisterInvoice(user, e.get())) {
+            return ResponseEntity.status(403).build();
         }
         Optional<String> xmlOpt = service.getXmlForDownload(id);
         return xmlOpt.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
@@ -1029,7 +896,19 @@ public class RegisterInvoiceController extends BaseController {
             return ResponseEntity.status(403).build();
         }
         if (historyService == null) return ResponseEntity.ok(List.of());
+        Optional<RegisterInvoiceEntity> entityOpt = service.findById(id);
+        if (entityOpt.isEmpty()) return ResponseEntity.notFound().build();
+        if (!canAccessRegisterInvoice(user, entityOpt.get())) {
+            return ResponseEntity.status(403).build();
+        }
         List<HistoryDto> rows = historyService.listByRegisterInvoice(user.getCompanyId(), id);
         return ResponseEntity.ok(rows);
+    }
+
+    private boolean canAccessRegisterInvoice(UserEntity user, RegisterInvoiceEntity entity) {
+        if (user == null || entity == null) return false;
+        Integer role = user.getRole();
+        if (role != null && role == 0) return true;
+        return user.getCompanyId() != null && user.getCompanyId().equals(entity.getCompanyId());
     }
 }

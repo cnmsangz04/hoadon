@@ -136,8 +136,11 @@ export default {
       } catch (e) {
         this.list.data = []
         this.list.total = 0
-        const message = e?.response?.data?.message || 'Không thể tải lịch sử đăng nhập'
-        this.$toastr && this.$toastr.error(message)
+        const status = e?.response?.status
+        if (status !== 401 && status !== 403) {
+          const message = e?.response?.data?.message || 'Không thể tải lịch sử đăng nhập'
+          this.$toastr && this.$toastr.error(message)
+        }
       } finally {
         this.isBusy = false
       }

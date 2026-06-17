@@ -9,12 +9,12 @@ import vn.hoadon.entity.UserEntity;
 import java.util.Optional;
 
 public interface PermissionService {
-    Page<PermissionEntity> list(String keyword, Pageable pageable);
+    Page<PermissionEntity> list(String keyword, Long categoryId, Integer level, Byte status, Pageable pageable);
     Optional<PermissionEntity> findById(Long id);
     PermissionEntity saveOrUpdate(PermissionCreateDTO dto);
-    // Soft delete: mark status=0
+    // Xóa mềm bằng cách chuyển status = 0.
     void delete(Long id);
-    // Explicit status update for hide/show
+    // Cập nhật trạng thái ẩn/hiện.
     void updateStatus(Long id, byte status);
 
     /**

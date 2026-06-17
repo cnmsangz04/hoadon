@@ -256,12 +256,18 @@ export default {
         },
         async loadProfile() {
             try {
-                const res = await axios.post("/setting/profile/get");
-                if (res.data) {
-                    this.currentCompanyName = res.data.companyName || res.data.name;
+                const appCompany = this.$app?.info?.company || {};
+                if (appCompany.name) {
+                    this.currentCompanyName = appCompany.name;
+                    return;
                 }
+                const res = await axios.get("/auth/info", {
+                    meta: { suppressGlobalErrorToast: true },
+                });
+                const company = res.data?.company || {};
+                this.currentCompanyName = company.name || "";
             } catch (e) {
-                console.error("Lỗi lấy Profile:", e);
+                this.currentCompanyName = "";
             }
         },
         async loadData() {
@@ -279,7 +285,8 @@ export default {
                 this.list.from = pageFrom(d, this.list.current_page, this.list.per_page);
                 this.list.to = pageTo(d, this.list.data.length, this.list.current_page, this.list.per_page);
             } catch (error) {
-                this.$bvToast.toast("Lỗi tải danh sách khách hàng", { variant: "danger" });
+                if (error?.response?.status === 403) return;
+                this.$toastr && this.$toastr.error(error?.response?.data?.message || "Lỗi tải danh sách khách hàng", "Lỗi");
             } finally {
                 this.isBusy = false;
             }
@@ -329,16 +336,19 @@ export default {
         },
         async saveData() {
             if (!this.validateForm()) {
-                return this.$bvToast.toast(firstError(Object.values(this.errors)) || "Vui lòng kiểm tra lại thông tin", { variant: "warning" });
+                this.$toastr && this.$toastr.warning(firstError(Object.values(this.errors)) || "Vui lòng kiểm tra lại thông tin", "Cảnh báo");
+                return;
             }
             this.isSaving = true;
             try {
-                await axios.post("/categories/customer/save", this.form);
-                this.$bvToast.toast("Lưu khách hàng thành công", { variant: "success" });
+                await axios.post("/categories/customer/save", this.form, {
+                    meta: { suppressGlobalErrorToast: true },
+                });
+                this.$toastr && this.$toastr.success("Lưu khách hàng thành công", "Thành công");
                 this.$refs.customerModal.hide();
                 this.loadData();
             } catch (e) {
-                this.$bvToast.toast(e.response?.data?.message || "Lỗi lưu dữ liệu", { variant: "danger" });
+                this.$toastr && this.$toastr.error(e.response?.data?.message || "Lỗi lưu dữ liệu", "Lỗi");
             } finally {
                 this.isSaving = false;
             }
@@ -346,11 +356,13 @@ export default {
         async toggleLock(item) {
             try {
                 const newStatus = item.status === 1 ? 0 : 1;
-                await axios.post("/categories/customer/save", { ...item, status: newStatus });
-                this.$bvToast.toast("Cập nhật trạng thái thành công", { variant: "success" });
+                await axios.post("/categories/customer/save", { ...item, status: newStatus }, {
+                    meta: { suppressGlobalErrorToast: true },
+                });
+                this.$toastr && this.$toastr.success("Cập nhật trạng thái thành công", "Thành công");
                 this.loadData();
             } catch (e) {
-                this.$bvToast.toast("Thao tác thất bại", { variant: "danger" });
+                this.$toastr && this.$toastr.error("Thao tác thất bại", "Lỗi");
             }
         }
     }

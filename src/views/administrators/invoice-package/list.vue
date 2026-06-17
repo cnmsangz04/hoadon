@@ -185,31 +185,46 @@
     </b-tabs>
 
     <b-modal ref="packageModal" :title="packageForm.id ? 'Cập nhật gói hóa đơn' : 'Thêm gói hóa đơn'" hide-footer size="lg">
-      <b-form @submit.prevent="savePackage">
+      <b-form novalidate @submit.prevent="savePackage">
         <b-row>
           <b-col md="8">
-            <b-form-group label="Tên gói" label-class="font-weight-bold">
-              <b-form-input v-model.trim="packageForm.name" required placeholder="VD: Bill #1" />
+            <b-form-group label="Tên gói" label-class="font-weight-bold" :state="state('name')">
+              <b-form-input v-model.trim="packageForm.name" required placeholder="VD: Bill #1" :state="state('name')" />
+              <b-form-invalid-feedback :state="state('name')">
+                {{ invalidFeedback('name') }}
+              </b-form-invalid-feedback>
             </b-form-group>
           </b-col>
           <b-col md="4">
-            <b-form-group label="Thứ tự" label-class="font-weight-bold">
-              <b-form-input v-model.number="packageForm.displayOrder" type="number" min="0" />
+            <b-form-group label="Thứ tự" label-class="font-weight-bold" :state="state('displayOrder')">
+              <b-form-input v-model.number="packageForm.displayOrder" type="number" min="0" :state="state('displayOrder')" />
+              <b-form-invalid-feedback :state="state('displayOrder')">
+                {{ invalidFeedback('displayOrder') }}
+              </b-form-invalid-feedback>
             </b-form-group>
           </b-col>
           <b-col md="4">
-            <b-form-group label="Số hóa đơn" label-class="font-weight-bold">
-              <b-form-input v-model.number="packageForm.invoiceQuantity" type="number" min="1" required @input="updateTotalPrice" />
+            <b-form-group label="Số hóa đơn" label-class="font-weight-bold" :state="state('invoiceQuantity')">
+              <b-form-input v-model.number="packageForm.invoiceQuantity" type="number" min="1" required @input="updateTotalPrice" :state="state('invoiceQuantity')" />
+              <b-form-invalid-feedback :state="state('invoiceQuantity')">
+                {{ invalidFeedback('invoiceQuantity') }}
+              </b-form-invalid-feedback>
             </b-form-group>
           </b-col>
           <b-col md="4">
-            <b-form-group label="Đơn giá" label-class="font-weight-bold">
-              <b-form-input v-model.number="packageForm.unitPrice" type="number" min="0" required @input="updateTotalPrice" />
+            <b-form-group label="Đơn giá" label-class="font-weight-bold" :state="state('unitPrice')">
+              <b-form-input v-model.number="packageForm.unitPrice" type="number" min="0" required @input="updateTotalPrice" :state="state('unitPrice')" />
+              <b-form-invalid-feedback :state="state('unitPrice')">
+                {{ invalidFeedback('unitPrice') }}
+              </b-form-invalid-feedback>
             </b-form-group>
           </b-col>
           <b-col md="4">
-            <b-form-group label="Thành tiền" label-class="font-weight-bold">
-              <b-form-input v-model.number="packageForm.totalPrice" type="number" min="0" required />
+            <b-form-group label="Thành tiền" label-class="font-weight-bold" :state="state('totalPrice')">
+              <b-form-input v-model.number="packageForm.totalPrice" type="number" min="0" required :state="state('totalPrice')" />
+              <b-form-invalid-feedback :state="state('totalPrice')">
+                {{ invalidFeedback('totalPrice') }}
+              </b-form-invalid-feedback>
             </b-form-group>
           </b-col>
           <b-col md="6">
@@ -272,6 +287,7 @@ export default {
         toDate: '',
       },
       packageForm: this.emptyPackageForm(),
+      packageErrors: {},
       packageList: {
         current_page: 1,
         per_page: 10,
@@ -380,6 +396,7 @@ export default {
     },
     openPackageModal(item) {
       this.packageForm = item ? { ...item } : this.emptyPackageForm()
+      this.packageErrors = {}
       this.$refs.packageModal.show()
     },
     updateTotalPrice() {
@@ -388,6 +405,7 @@ export default {
       this.packageForm.totalPrice = quantity * unitPrice
     },
     async savePackage() {
+      if (!this.validatePackageForm()) return
       this.saving = true
       try {
         await axios.post('/administrator/invoice-packages/save', this.packageForm)
@@ -400,6 +418,37 @@ export default {
       } finally {
         this.saving = false
       }
+    },
+    validatePackageForm() {
+      const errors = {}
+      if (!String(this.packageForm.name || '').trim()) {
+        errors.name = ['Vui lòng nhập tên gói']
+      }
+      const invoiceQuantity = Number(this.packageForm.invoiceQuantity)
+      if (!Number.isFinite(invoiceQuantity) || invoiceQuantity < 1) {
+        errors.invoiceQuantity = ['Số hóa đơn phải lớn hơn 0']
+      }
+      const unitPrice = Number(this.packageForm.unitPrice)
+      if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+        errors.unitPrice = ['Đơn giá không được âm']
+      }
+      const totalPrice = Number(this.packageForm.totalPrice)
+      if (!Number.isFinite(totalPrice) || totalPrice < 0) {
+        errors.totalPrice = ['Thành tiền không được âm']
+      }
+      const displayOrder = Number(this.packageForm.displayOrder || 0)
+      if (!Number.isFinite(displayOrder) || displayOrder < 0) {
+        errors.displayOrder = ['Thứ tự không được âm']
+      }
+      this.packageErrors = errors
+      return Object.keys(errors).length === 0
+    },
+    state(field) {
+      return Object.prototype.hasOwnProperty.call(this.packageErrors, field) ? false : null
+    },
+    invalidFeedback(field) {
+      const value = this.packageErrors[field]
+      return Array.isArray(value) ? value.join(' ') : (value || '')
     },
     async deletePackage(item) {
       const ok = await this.$bvModal.msgBoxConfirm(`Xóa gói ${item.name}?`, {
@@ -472,7 +521,10 @@ export default {
     },
     async loadCompanies() {
       try {
-        const { data } = await axios.post('/administrator/company/list', {}, { params: { page: 0, size: 5000 } })
+        const { data } = await axios.post('/administrator/company/list', {}, {
+          params: { page: 0, size: 5000 },
+          meta: { suppressGlobalErrorToast: true },
+        })
         this.companyOptions = (data.content || []).map(c => ({
           value: c.id,
           label: c.name || `#${c.id}`,

@@ -108,61 +108,51 @@
       id="companyModal"
       ref="companyModal"
       :title="companyForm.id ? 'Cập nhật công ty' : 'Thêm công ty mới'"
-      hide-footer
       size="lg"
       modal-class="company-modal"
-      header-class="company-modal-header"
       body-class="company-modal-body"
+      footer-class="company-modal-footer"
     >
-      <b-form @submit.prevent="saveCompany" class="company-form">
+      <b-form id="companyForm" novalidate @submit.prevent="saveCompany" class="company-form">
         <div class="form-section">
           <div class="section-header">
-            <i class="fas fa-building text-primary"></i>
-            <h6 class="mb-0">Thông tin công ty</h6>
+            <span class="section-icon">
+              <i class="fas fa-building"></i>
+            </span>
+            <div>
+              <h6>Thông tin công ty</h6>
+              <p>Thông tin định danh và trạng thái hoạt động.</p>
+            </div>
           </div>
 
           <b-row>
             <b-col cols="12">
-              <b-form-group label="Tên công ty" label-for="name" class="required-field">
-                <b-input-group>
-                  <b-input-group-prepend is-text>
-                    <i class="fas fa-building"></i>
-                  </b-input-group-prepend>
-                  <b-form-input id="name" v-model.trim="companyForm.name" required placeholder="Nhập tên công ty" />
-                </b-input-group>
+              <b-form-group label="Tên công ty" label-for="name" class="required-field company-field" :state="companyState('name')">
+                <b-form-input id="name" v-model.trim="companyForm.name" required placeholder="Nhập tên công ty" :state="companyState('name')" />
+                <b-form-invalid-feedback :state="companyState('name')">
+                  {{ companyFeedback('name') }}
+                </b-form-invalid-feedback>
               </b-form-group>
             </b-col>
 
             <b-col cols="12" md="6">
-              <b-form-group label="Mã số thuế" label-for="taxcode" class="required-field">
-                <b-input-group>
-                  <b-input-group-prepend is-text>
-                    <i class="fas fa-hashtag"></i>
-                  </b-input-group-prepend>
-                  <b-form-input id="taxcode" v-model.trim="companyForm.taxcode" required placeholder="Nhập mã số thuế" />
-                </b-input-group>
+              <b-form-group label="Mã số thuế" label-for="taxcode" class="required-field company-field" :state="companyState('taxcode')">
+                <b-form-input id="taxcode" v-model.trim="companyForm.taxcode" required placeholder="Nhập mã số thuế" :state="companyState('taxcode')" />
+                <b-form-invalid-feedback :state="companyState('taxcode')">
+                  {{ companyFeedback('taxcode') }}
+                </b-form-invalid-feedback>
               </b-form-group>
             </b-col>
 
             <b-col cols="12" md="6">
-              <b-form-group label="Trạng thái" label-for="status">
-                <b-input-group>
-                  <b-input-group-prepend is-text>
-                    <i class="fas fa-toggle-on"></i>
-                  </b-input-group-prepend>
-                  <b-form-select id="status" v-model="companyForm.status" :options="statusOptions" />
-                </b-input-group>
+              <b-form-group label="Trạng thái" label-for="status" class="company-field">
+                <b-form-select id="status" v-model="companyForm.status" :options="statusOptions" />
               </b-form-group>
             </b-col>
 
             <b-col cols="12">
-              <b-form-group label="Địa chỉ" label-for="address">
-                <b-input-group>
-                  <b-input-group-prepend is-text>
-                    <i class="fas fa-map-marker-alt"></i>
-                  </b-input-group-prepend>
-                  <b-form-input id="address" v-model.trim="companyForm.address" placeholder="Nhập địa chỉ công ty" />
-                </b-input-group>
+              <b-form-group label="Địa chỉ" label-for="address" class="company-field">
+                <b-form-input id="address" v-model.trim="companyForm.address" placeholder="Nhập địa chỉ công ty" />
               </b-form-group>
             </b-col>
           </b-row>
@@ -170,46 +160,47 @@
 
         <div class="form-section">
           <div class="section-header">
-            <i class="fas fa-address-book text-info"></i>
-            <h6 class="mb-0">Thông tin liên hệ</h6>
+            <span class="section-icon section-icon-info">
+              <i class="fas fa-address-book"></i>
+            </span>
+            <div>
+              <h6>Thông tin liên hệ</h6>
+              <p>Email và số điện thoại dùng để liên hệ công ty.</p>
+            </div>
           </div>
 
           <b-row>
             <b-col cols="12" md="6">
-              <b-form-group label="Email" label-for="email">
-                <b-input-group>
-                  <b-input-group-prepend is-text>
-                    <i class="fas fa-envelope"></i>
-                  </b-input-group-prepend>
-                  <b-form-input id="email" v-model.trim="companyForm.email" type="email" placeholder="contact@example.com" />
-                </b-input-group>
+              <b-form-group label="Email" label-for="email" class="company-field" :state="companyState('email')">
+                <b-form-input id="email" v-model.trim="companyForm.email" type="email" placeholder="contact@example.com" :state="companyState('email')" />
+                <b-form-invalid-feedback :state="companyState('email')">
+                  {{ companyFeedback('email') }}
+                </b-form-invalid-feedback>
               </b-form-group>
             </b-col>
 
             <b-col cols="12" md="6">
-              <b-form-group label="Hotline" label-for="hotline">
-                <b-input-group>
-                  <b-input-group-prepend is-text>
-                    <i class="fas fa-phone"></i>
-                  </b-input-group-prepend>
-                  <b-form-input id="hotline" v-model.trim="companyForm.hotline" placeholder="1900 xxxx" />
-                </b-input-group>
+              <b-form-group label="Hotline" label-for="hotline" class="company-field" :state="companyState('hotline')">
+                <b-form-input id="hotline" v-model.trim="companyForm.hotline" type="tel" placeholder="1900 xxxx" :state="companyState('hotline')" />
+                <b-form-invalid-feedback :state="companyState('hotline')">
+                  {{ companyFeedback('hotline') }}
+                </b-form-invalid-feedback>
               </b-form-group>
             </b-col>
           </b-row>
         </div>
-
-        <div class="form-actions">
-          <b-button type="button" variant="secondary" size="sm" class="btn-modal-cancel" @click="$refs.companyModal.hide()">
-            <i class="fas fa-times mr-1"></i>
+      </b-form>
+      <template #modal-footer>
+        <div class="company-modal-actions">
+          <b-button type="button" variant="light" size="sm" @click="$refs.companyModal.hide()">
             Hủy
           </b-button>
-          <b-button type="submit" variant="primary" size="sm" class="btn-modal-save">
+          <b-button type="submit" form="companyForm" variant="primary" size="sm">
             <i class="fas fa-save mr-1"></i>
             {{ companyForm.id ? 'Cập nhật' : 'Thêm mới' }}
           </b-button>
         </div>
-      </b-form>
+      </template>
     </b-modal>
   </div>
 </template>
@@ -218,6 +209,7 @@
 import axios from '@/plugins/axios'
 import { pageItems, pageNumber, pageTotal } from '@/utils/pagination'
 import PaginationBar from '@/views/components/pagination_bar.vue'
+import { email, required, taxCode } from '@/utils/validators'
 
 export default {
   name: 'CompanyList',
@@ -231,6 +223,7 @@ export default {
         companyId: null,
       },
       companyForm: this.emptyCompanyForm(),
+      companyErrors: {},
       statusOptions: [
         { value: 1, text: 'Kích hoạt' },
         { value: 0, text: 'Ngưng hoạt động' },
@@ -307,6 +300,7 @@ export default {
     },
     showModal() {
       this.companyForm = this.emptyCompanyForm()
+      this.companyErrors = {}
       this.$refs.companyModal.show()
     },
     editCompany(item) {
@@ -314,6 +308,7 @@ export default {
       if (!this.companyForm.name && item.companyName) this.companyForm.name = item.companyName
       if (!this.companyForm.address && item.companyAddress) this.companyForm.address = item.companyAddress
       this.companyForm.status = this.normalizeStatus(this.companyForm.status, 1)
+      this.companyErrors = {}
       this.$refs.companyModal.show()
     },
     normalizeStatus(status, fallback = 0) {
@@ -338,6 +333,7 @@ export default {
       return 'secondary'
     },
     saveCompany() {
+      if (!this.validateCompanyForm()) return
       const payload = { ...this.companyForm }
       if (payload.companyName && !payload.name) payload.name = payload.companyName
       if (payload.companyAddress && !payload.address) payload.address = payload.companyAddress
@@ -360,6 +356,28 @@ export default {
           const message = err.response?.data?.message || 'Không thể lưu thông tin công ty'
           this.$toastr && this.$toastr.error(message)
         })
+    },
+    validateCompanyForm() {
+      const errors = {}
+      const nameError = required(this.companyForm.name, 'Vui lòng nhập tên công ty')
+      if (nameError) errors.name = [nameError]
+      const taxcodeError = required(this.companyForm.taxcode, 'Vui lòng nhập mã số thuế') || taxCode(this.companyForm.taxcode)
+      if (taxcodeError) errors.taxcode = [taxcodeError]
+      const emailError = email(this.companyForm.email)
+      if (emailError) errors.email = [emailError]
+      const hotline = String(this.companyForm.hotline || '').trim()
+      if (hotline && !/^[0-9+().\-\s]{6,20}$/.test(hotline)) {
+        errors.hotline = ['Hotline không đúng định dạng']
+      }
+      this.companyErrors = errors
+      return Object.keys(errors).length === 0
+    },
+    companyState(field) {
+      return Object.prototype.hasOwnProperty.call(this.companyErrors, field) ? false : null
+    },
+    companyFeedback(field) {
+      const value = this.companyErrors[field]
+      return Array.isArray(value) ? value.join(' ') : (value || '')
     },
     setCompanyStatus(id, status) {
       axios.post(`/administrator/company/${id}/status`, { status })
@@ -452,116 +470,110 @@ export default {
   font-size: 13px;
 }
 
-.company-modal .modal-dialog {
-  max-width: 800px;
-}
-
-.company-modal-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-bottom: none;
-  padding: 1.25rem 1.5rem;
-}
-
-.company-modal-header .modal-title {
-  font-weight: 600;
-  font-size: 1.25rem;
-}
-
-.company-modal-header .close {
-  color: white;
-  opacity: 0.9;
-  text-shadow: none;
-}
-
-.company-modal-body {
-  padding: 1.5rem;
-  background: #f8f9fa;
+.company-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .company-form .form-section {
-  background: white;
-  border-radius: 12px;
-  padding: 1.25rem;
-  margin-bottom: 1.25rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e9ecef;
+  background: #fff;
+  border: 1px solid #e6ebf2;
+  border-radius: 10px;
+  padding: 16px;
 }
 
 .company-form .section-header {
+  align-items: flex-start;
+  border-bottom: 1px solid #eef2f7;
   display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+}
+
+.company-form .section-icon {
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 2px solid #f0f0f0;
+  background: #e8f0ff;
+  border-radius: 10px;
+  color: #2563eb;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+.company-form .section-icon-info {
+  background: #e6f7fb;
+  color: #0891b2;
 }
 
 .company-form .section-header h6 {
-  font-weight: 600;
-  color: #2d3748;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.company-form .section-header p {
+  color: #64748b;
+  font-size: 12px;
+  margin: 3px 0 0;
 }
 
 .company-form label {
-  font-weight: 500;
-  color: #4a5568;
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: var(--ui-label-gap);
 }
 
 .company-form .required-field label::after {
+  color: #dc2626;
   content: ' *';
-  color: #e53e3e;
 }
 
-.company-form .input-group-text {
-  background: #f7fafc;
-  border-right: none;
-  color: #718096;
-  min-width: 40px;
-  justify-content: center;
+.company-form :deep(.form-control),
+.company-form :deep(.custom-select) {
+  border-color: #d8dee8;
+  border-radius: 8px;
+  min-height: 36px;
 }
 
-.company-form .input-group .form-control,
-.company-form .input-group .custom-select {
-  border-left: none;
+.company-form :deep(.form-control:focus),
+.company-form :deep(.custom-select:focus) {
+  border-color: #7aa7f7;
+  box-shadow: 0 0 0 3px rgba(122, 167, 247, 0.2);
 }
 
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  padding-top: 1rem;
-  margin-top: 1.25rem;
-  border-top: 1px solid #e2e8f0;
-}
-
-.form-actions .btn {
-  font-weight: 500;
-  border-radius: 0.35rem;
-  display: inline-flex;
+.company-modal-actions {
   align-items: center;
-  gap: 0.35rem;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  width: 100%;
 }
 
-.btn-modal-cancel {
-  background-color: #f8fafc;
-  border-color: #e2e8f0;
-  color: #4a5568;
+.company-modal-actions .btn {
+  min-width: 92px;
 }
 
 @media (max-width: 768px) {
-  .company-modal-body {
-    padding: 1rem;
+  .company-form .form-section {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 576px) {
+  .company-modal-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
   }
 
-  .form-actions {
-    flex-direction: row-reverse;
-  }
-
-  .form-actions .btn {
+  .company-modal-actions .btn {
     width: 100%;
-    justify-content: center;
   }
 }
 </style>

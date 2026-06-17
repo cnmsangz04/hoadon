@@ -40,12 +40,12 @@
       </b-row>
     </b-card>
 
-    <!-- B?ng -->
+    <!-- Bảng -->
     <b-card class="shadow-sm">
       <b-table
         bordered
         hover
-        responsive
+        responsive="lg"
         small
         show-empty
         :fields="fields"
@@ -77,7 +77,15 @@
         </template>
 
         <template #cell(option)="data">
-          <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret boundary="window">
+          <b-dropdown
+            class="table-action-dropdown"
+            size="sm"
+            right
+            variant="link"
+            toggle-class="text-decoration-none"
+            no-caret
+            boundary="window"
+          >
             <template #button-content>
               <i class="fas fa-ellipsis-h"></i>
             </template>
@@ -207,8 +215,8 @@
 
     <!-- Hộp thoại -->
     <b-modal ref="buyInvoiceModal" :title="invoiceForm.id ? 'Cập nhật hóa đơn' : 'Thêm hóa đơn'" hide-footer>
-      <b-form @submit.prevent="saveInvoice">
-        <b-form-group label="Công ty" label-class="font-weight-bold">
+      <b-form novalidate @submit.prevent="saveInvoice">
+        <b-form-group label="Công ty" label-class="font-weight-bold" :state="state('companyId')">
           <v-select 
             v-model="invoiceForm.companyId" 
             :options="companyOptions" 
@@ -217,11 +225,18 @@
             :disabled="invoiceForm.id != null"
             placeholder="Chọn công ty"
             required
+            :class="{ 'is-invalid': state('companyId') === false }"
           />
+          <b-form-invalid-feedback :state="state('companyId')">
+            {{ invalidFeedback('companyId') }}
+          </b-form-invalid-feedback>
         </b-form-group>
 
-        <b-form-group label="Số lượng" label-class="font-weight-bold">
-          <b-form-input type="number" v-model.number="invoiceForm.amount" required min="1" />
+        <b-form-group label="Số lượng" label-class="font-weight-bold" :state="state('amount')">
+          <b-form-input type="number" v-model.number="invoiceForm.amount" required min="1" :state="state('amount')" />
+          <b-form-invalid-feedback :state="state('amount')">
+            {{ invalidFeedback('amount') }}
+          </b-form-invalid-feedback>
           <small v-if="invoiceForm.id && invoiceForm.amountUsed > 0" class="form-text text-muted">
             <i class="fas fa-info-circle"></i> Đã sử dụng: <strong>{{ invoiceForm.amountUsed }}</strong> hóa đơn. 
             Số lượng phải ≥ {{ invoiceForm.amountUsed }}
@@ -237,7 +252,7 @@
         </b-form-group>
 
         <div class="text-right">
-          <b-button type="submit" variant="primary" class="mr-2" :disabled="!canSubmit">Lưu</b-button>
+          <b-button type="submit" variant="primary" class="mr-2">Lưu</b-button>
           <b-button variant="secondary" @click="$refs.buyInvoiceModal.hide()">Hủy</b-button>
         </div>
       </b-form>
@@ -283,6 +298,7 @@ export default {
         status: 1,
         note: ''
       },
+      invoiceErrors: {},
 
       companyOptions: [],
       companyNameById: {},
@@ -320,7 +336,7 @@ export default {
         { key: "company", label: "Công ty" },
         { key: "amount", label: "Số lượng" },
         { key: "status", label: "Trạng thái" },
-        { key: "option", label: "Chức năng", thStyle: { width: "150px" } }
+        { key: "option", label: "Chức năng", class: "text-center table-action-cell", thStyle: { width: "120px", minWidth: "120px" } }
       ],
       historyFields: [
         { key: "createdAt", label: "Thời gian", thStyle: { width: "145px" } },
@@ -443,6 +459,7 @@ export default {
         await this.loadCompanies();
       }
       this.invoiceForm = { id: null, companyId: null, amount: 0, status: 1, note: '' };
+      this.invoiceErrors = {};
       this.$refs.buyInvoiceModal.show();
     },
 
@@ -459,10 +476,12 @@ export default {
         status: item.status,
         note: ''
       };
+      this.invoiceErrors = {};
       this.$refs.buyInvoiceModal.show();
     },
 
     async saveInvoice() {
+      if (!this.validateInvoiceForm()) return;
       try {
         await axios.post("/administrator/buy-invoice/create", this.invoiceForm);
         this.$toastr && this.$toastr.success(this.invoiceForm.id ? 'Cập nhật hóa đơn thành công' : 'Thêm hóa đơn thành công');
@@ -473,6 +492,30 @@ export default {
         const message = error.response?.data?.message || 'Không thể lưu hóa đơn';
         this.$toastr && this.$toastr.error(message);
       }
+    },
+
+    validateInvoiceForm() {
+      const errors = {};
+      if (!this.invoiceForm.companyId) {
+        errors.companyId = ["Vui lòng chọn công ty"];
+      }
+      const amount = Number(this.invoiceForm.amount);
+      if (!Number.isFinite(amount) || amount < 1) {
+        errors.amount = ["Số lượng phải lớn hơn 0"];
+      } else if (this.invoiceForm.id && Number(this.invoiceForm.amountUsed || 0) > 0 && amount < Number(this.invoiceForm.amountUsed)) {
+        errors.amount = [`Số lượng phải lớn hơn hoặc bằng ${this.invoiceForm.amountUsed}`];
+      }
+      this.invoiceErrors = errors;
+      return Object.keys(errors).length === 0;
+    },
+
+    state(field) {
+      return Object.prototype.hasOwnProperty.call(this.invoiceErrors, field) ? false : null;
+    },
+
+    invalidFeedback(field) {
+      const value = this.invoiceErrors[field];
+      return Array.isArray(value) ? value.join(" ") : (value || "");
     },
 
     async deleteInvoice(item) {
@@ -511,7 +554,10 @@ export default {
 
     async loadCompanies() {
       try {
-        const res = await axios.post("/administrator/company/list", {}, { params: { page: 0, size: 5000 } });
+        const res = await axios.post("/administrator/company/list", {}, {
+          params: { page: 0, size: 5000 },
+          meta: { suppressGlobalErrorToast: true },
+        });
         const list = res.data?.content || [];
         const map = {};
         this.companyOptions = list.map(c => {
@@ -629,4 +675,12 @@ export default {
 .card-body { padding: 0.75rem 1rem; }
 
 .v-select { width: 100%; }
+
+::v-deep .v-select.is-invalid .vs__dropdown-toggle {
+  border-color: #dc3545;
+}
+
+::v-deep .v-select.is-invalid .vs__dropdown-toggle:focus-within {
+  box-shadow: 0 0 0 .2rem rgba(220, 53, 69, .25);
+}
 </style>

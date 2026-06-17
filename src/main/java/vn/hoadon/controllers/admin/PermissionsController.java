@@ -24,6 +24,9 @@ public class PermissionsController extends BaseController {
     @PostMapping("/list")
     public ResponseEntity<Page<PermissionEntity>> list(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Integer level,
+            @RequestParam(required = false) Byte status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
@@ -32,7 +35,7 @@ public class PermissionsController extends BaseController {
                 Sort.Order.desc("createdAt"),
                 Sort.Order.asc("name")
         ));
-        Page<PermissionEntity> data = service.list(keyword, pageable);
+        Page<PermissionEntity> data = service.list(keyword, categoryId, level, status, pageable);
         return ResponseEntity.ok(data);
     }
 

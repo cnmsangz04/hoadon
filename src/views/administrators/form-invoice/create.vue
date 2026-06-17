@@ -1,9 +1,9 @@
 ﻿<template>
-    <div class="container-fluid form-invoice-create-classic">
+    <div class="container-fluid py-3 form-invoice-create">
 
-        <!-- Thẻ cổ điển có tiêu đề -->
-        <div class="card">
-            <div class="card-header bg-light">
+        <!-- Thẻ thông tin chính -->
+        <div class="card form-panel shadow-sm">
+            <div class="card-header form-panel-header">
                 <h4 class="card-title mb-0">
                     <i class="fa fa-file-text-o"></i> Thông tin mẫu hóa đơn
                 </h4>
@@ -16,9 +16,9 @@
                             Tên mẫu <span class="text-danger">*</span>
                         </label>
                         <div class="col-md-9">
-                            <b-form-input 
-                                v-model="form.name" 
-                                required 
+                            <b-form-input
+                                v-model="form.name"
+                                required
                                 placeholder="Nhập tên mẫu hóa đơn"
                             />
                         </div>
@@ -30,20 +30,20 @@
                             Loại hóa đơn <span class="text-danger">*</span>
                         </label>
                         <div class="col-md-3">
-                            <b-form-select 
-                                v-model.number="form.category" 
-                                :options="categoryOptions" 
-                                required 
+                            <b-form-select
+                                v-model.number="form.category"
+                                :options="categoryOptions"
+                                required
                             />
                         </div>
                         <label class="col-md-2 col-form-label">
                             Thuế suất <span class="text-danger">*</span>
                         </label>
                         <div class="col-md-4">
-                            <b-form-select 
-                                v-model.number="form.type" 
-                                :options="typeOptions" 
-                                required 
+                            <b-form-select
+                                v-model.number="form.type"
+                                :options="typeOptions"
+                                required
                             />
                         </div>
                     </div>
@@ -52,16 +52,16 @@
                     <div class="form-group row">
                         <label class="col-md-3 col-form-label">Hình thức</label>
                         <div class="col-md-3">
-                            <b-form-select 
-                                v-model.number="form.have_code" 
-                                :options="haveCodeOptions" 
+                            <b-form-select
+                                v-model.number="form.have_code"
+                                :options="haveCodeOptions"
                             />
                         </div>
                         <label class="col-md-2 col-form-label">Trạng thái</label>
                         <div class="col-md-4">
-                            <b-form-select 
-                                v-model.number="form.status" 
-                                :options="statusOptions" 
+                            <b-form-select
+                                v-model.number="form.status"
+                                :options="statusOptions"
                             />
                         </div>
                     </div>
@@ -72,39 +72,39 @@
                     <div class="form-group row">
                         <label class="col-md-3 col-form-label">Tập tin mẫu (XSLT)</label>
                         <div class="col-md-9">
-                            <input 
-                                ref="fileInput" 
-                                type="file" 
-                                accept=".xslt,.xml,text/xml" 
-                                @change="onFileChange" 
-                                class="d-none" 
+                            <input
+                                ref="fileInput"
+                                type="file"
+                                accept=".xslt,.xml,text/xml"
+                                @change="onFileChange"
+                                class="d-none"
                             />
-                            <div class="file-upload-classic">
+                            <div class="file-upload-block">
                                 <b-button variant="outline-success" size="sm" @click="$refs.fileInput.click()">
                                     <i class="fa fa-file-code-o"></i> Chọn file
                                 </b-button>
                                 <span class="file-name-text ml-2">{{ fileName || 'Chưa chọn file' }}</span>
-                                <b-button 
-                                    v-if="fileName" 
-                                    variant="link" 
-                                    size="sm" 
-                                    class="text-danger ml-2" 
+                                <b-button
+                                    v-if="fileName"
+                                    variant="link"
+                                    size="sm"
+                                    class="text-danger ml-2"
                                     @click.prevent="clearFile"
                                 >
                                     <i class="fa fa-times"></i> Xóa
                                 </b-button>
                             </div>
-                            <div class="file-preview-classic mt-2" v-if="filePreviewUrl || fileName">
+                            <div class="file-preview-box mt-2" v-if="filePreviewUrl || fileName">
                                 <template v-if="filePreviewIsImage">
-                                    <img 
-                                        :src="filePreviewUrl" 
-                                        alt="Preview" 
-                                        class="preview-img" 
-                                        @click.prevent="previewFile('file')" 
+                                    <img
+                                        :src="filePreviewUrl"
+                                        alt="Xem trước"
+                                        class="preview-img"
+                                        @click.prevent="previewFile('file')"
                                     />
                                 </template>
                                 <template v-else>
-                                    <div class="file-info-classic">
+                                    <div class="file-info-box">
                                         <i class="fa fa-file-text-o fa-2x text-muted"></i>
                                         <div class="ml-3">
                                             <div class="filename-display">{{ fileName }}</div>
@@ -122,34 +122,34 @@
                     <div class="form-group row">
                         <label class="col-md-3 col-form-label">Ảnh mẫu</label>
                         <div class="col-md-9">
-                            <input 
-                                ref="photoInput" 
-                                type="file" 
-                                accept=".png,.jpg,.jpeg" 
-                                @change="onPhotoChange" 
-                                class="d-none" 
+                            <input
+                                ref="photoInput"
+                                type="file"
+                                accept=".png,.jpg,.jpeg"
+                                @change="onPhotoChange"
+                                class="d-none"
                             />
-                            <div class="file-upload-classic">
+                            <div class="file-upload-block">
                                 <b-button variant="outline-success" size="sm" @click="$refs.photoInput.click()">
                                     <i class="fa fa-image"></i> Chọn ảnh
                                 </b-button>
                                 <span class="file-name-text ml-2">{{ photoName || 'Chưa chọn ảnh' }}</span>
-                                <b-button 
-                                    v-if="photoName" 
-                                    variant="link" 
-                                    size="sm" 
-                                    class="text-danger ml-2" 
+                                <b-button
+                                    v-if="photoName"
+                                    variant="link"
+                                    size="sm"
+                                    class="text-danger ml-2"
                                     @click.prevent="clearPhoto"
                                 >
                                     <i class="fa fa-times"></i> Xóa
                                 </b-button>
                             </div>
-                            <div class="file-preview-classic mt-2" v-if="photoPreviewUrl">
-                                <img 
-                                    :src="photoPreviewUrl" 
-                                    alt="Ảnh mẫu" 
-                                    class="preview-img" 
-                                    @click.prevent="previewFile('photo')" 
+                            <div class="file-preview-box mt-2" v-if="photoPreviewUrl">
+                                <img
+                                    :src="photoPreviewUrl"
+                                    alt="Ảnh mẫu"
+                                    class="preview-img"
+                                    @click.prevent="previewFile('photo')"
                                 />
                             </div>
                         </div>
@@ -160,17 +160,17 @@
                     <!-- Nút hành động -->
                     <div class="form-group row mb-0">
                         <div class="col-md-12 text-right">
-                             <b-button variant="secondary" size="sm" @click="$router.back()">
-			                    <i class="fa fa-arrow-left"></i> Quay lại
-			                </b-button>
-                            <b-button 
-                                type="submit" 
-                                :disabled="isSaving" 
-                                variant="primary" 
+                            <b-button variant="secondary" size="sm" @click="$router.back()">
+                                <i class="fa fa-arrow-left"></i> Quay lại
+                            </b-button>
+                            <b-button
+                                type="submit"
+                                :disabled="isSaving"
+                                variant="primary"
                                 class="ml-2"
                                 size="sm"
                             >
-                                <i class="fa fa-save"></i> 
+                                <i class="fa fa-save"></i>
                                 {{ isEdit ? (isSaving ? 'Đang cập nhật...' : 'Cập nhật') : (isSaving ? 'Đang tạo...' : 'Lưu') }}
                             </b-button>
                         </div>
@@ -187,7 +187,7 @@
             </div>
             <div v-else>
                 <div v-if="!filePreviewModalIsText" class="text-center">
-                    <img :src="filePreviewModalImg" alt="Preview" style="max-width:100%;" />
+                    <img :src="filePreviewModalImg" alt="Xem trước" class="modal-preview-img" />
                 </div>
                 <div v-else>
                     <pre class="preview-code">{{ filePreviewModalContent }}</pre>
@@ -261,7 +261,7 @@ export default {
             const f = e.target.files && e.target.files[0]
             if (!f) { this.fileInputObj = null; this.fileName = ''; this.filePreviewUrl = ''; this.filePreviewIsImage = false; this.filePreviewObjectUrl = false; return }
             this.fileInputObj = f; this.fileName = f.name
-            // detect image type
+            // Nhận diện file ảnh để hiển thị xem trước trực tiếp
             const lower = (f.name || '').toLowerCase()
             const isImage = f.type && f.type.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(lower)
             if (isImage) {
@@ -325,17 +325,17 @@ export default {
                     }
                 }
             } catch (e) {
-                console.error('Load error:', e)
+                console.error('Lỗi tải mẫu hóa đơn:', e)
             }
         },
         previewFile(source) {
-            // source can be 'file' or 'photo' (if omitted, default to 'file')
+            // Mặc định xem file mẫu nếu không truyền nguồn cụ thể
             source = source || 'file';
             this.filePreviewModalContent = '';
             this.filePreviewModalLoading = true;
             this.filePreviewModalIsText = false;
             this.filePreviewModalImg = '';
-            // prefer showing a friendly basename title instead of full path
+            // Ưu tiên hiển thị tên file ngắn gọn thay vì toàn bộ đường dẫn
             this.filePreviewModalTitle = (source === 'photo' ? this.photoName : this.fileName) || this.fileName || this.photoName || 'Xem file';
 
             if (source === 'file') {
@@ -397,7 +397,7 @@ export default {
                     return;
                 }
             } else if (source === 'photo') {
-                // Photo requested: show photo if available
+                // Nếu người dùng chọn ảnh mẫu thì hiển thị ảnh trước
                 if (this.photoPreviewUrl) {
                     this.filePreviewModalLoading = false;
                     this.filePreviewModalIsText = false;
@@ -405,14 +405,14 @@ export default {
                     this.$refs.filePreviewModal && this.$refs.filePreviewModal.show();
                     return;
                 }
-                // Otherwise, fall back to file behavior
+                // Nếu chưa có ảnh mẫu thì dùng lại luồng xem file mẫu
                 if (this.fileInputObj || this.filePreviewUrl) {
                     this.previewFile('file');
                     return;
                 }
             }
 
-            // Final fallback
+            // Trường hợp cuối cùng khi không có nội dung để xem
             this.filePreviewModalContent = 'Không có file để xem';
             this.filePreviewModalIsText = true;
             this.filePreviewModalLoading = false;
@@ -468,207 +468,137 @@ export default {
 </script>
 
 <style scoped>
-/* ====== Classic Page Title Box ====== */
-.form-invoice-create-classic {
-    padding: 20px 15px;
+.form-invoice-create {
+    font-size: 13px;
 }
 
-.page-title-box {
-    display: flex;
-    justify-content: space-between;
+.form-panel {
+    border: 1px solid #e6ebf2;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.form-panel-header {
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid #e9ecef;
-}
-
-.page-title {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 600;
-    color: #333;
-}
-
-.page-title-right {
+    background: #f8fafc;
+    border-bottom: 1px solid #e6ebf2;
     display: flex;
-    gap: 8px;
-}
-
-/* ====== Classic Card ====== */
-.card {
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-.card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    padding: 12px 20px;
+    min-height: 48px;
+    padding: 12px 16px;
 }
 
 .card-title {
+    color: #1f2937;
     font-size: 16px;
-    font-weight: 600;
-    color: #495057;
+    font-weight: 700;
+}
+
+.card-title i {
+    color: #2563eb;
+    margin-right: 8px;
 }
 
 .card-body {
-    padding: 25px 20px;
+    padding: 18px;
 }
 
-/* ====== Classic Form Layout ====== */
 .form-group.row {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .col-form-label {
-    font-weight: 500;
-    color: #495057;
-    padding-top: 8px;
+    color: #334155;
+    font-weight: 600;
+    padding-top: 7px;
     text-align: right;
 }
 
-.form-control,
-.custom-select {
-    border: 1px solid #ced4da;
-    border-radius: 3px;
-    padding: 6px 12px;
-    font-size: 14px;
+hr {
+    border-top: 1px solid #e6ebf2;
 }
 
-.form-control:focus,
-.custom-select:focus {
-    border-color: #80bdff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-/* ====== Tải file kiểu cổ điển ====== */
-.file-upload-classic {
-    display: flex;
+.file-upload-block {
     align-items: center;
-}
-
-.file-name-text {
-    color: #6c757d;
-    font-size: 14px;
-    max-width: 400px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* ====== File Preview Classic ====== */
-.file-preview-classic {
-    border: 1px solid #dee2e6;
-    border-radius: 3px;
-    padding: 10px;
-    background-color: #f8f9fa;
-}
-
-.preview-img {
-    max-width: 200px;
-    max-height: 150px;
-    border: 1px solid #dee2e6;
-    border-radius: 3px;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.preview-img:hover {
-    transform: scale(1.05);
-}
-
-.file-info-classic {
+    background: #f8fafc;
+    border: 1px dashed #d8dee8;
+    border-radius: 8px;
     display: flex;
-    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 44px;
     padding: 8px;
 }
 
-.filename-display {
-    font-weight: 500;
-    color: #495057;
-    margin-bottom: 4px;
+.file-name-text {
+    color: #64748b;
+    flex: 1 1 220px;
+    font-size: 13px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* ====== Preview Modal Code ====== */
+.file-preview-box {
+    background: #fff;
+    border: 1px solid #e6ebf2;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.preview-img {
+    border: 1px solid #e6ebf2;
+    border-radius: 6px;
+    cursor: pointer;
+    display: block;
+    max-height: 150px;
+    max-width: 220px;
+    object-fit: contain;
+}
+
+.file-info-box {
+    align-items: center;
+    display: flex;
+    min-width: 0;
+    padding: 4px;
+}
+
+.filename-display {
+    color: #1f2937;
+    font-weight: 600;
+    margin-bottom: 2px;
+    overflow-wrap: anywhere;
+}
+
 .preview-code {
-    white-space: pre-wrap;
+    background-color: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    color: #e2e8f0;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 13px;
     max-height: 500px;
     overflow: auto;
-    background-color: #f4f4f4;
-    border: 1px solid #ddd;
-    padding: 15px;
-    border-radius: 3px;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 13px;
-    color: #333;
+    padding: 14px;
+    white-space: pre-wrap;
 }
 
-/* ====== Buttons ====== */
-.btn {
-    border-radius: 3px;
-    font-weight: 500;
+.modal-preview-img {
+    display: block;
+    margin: 0 auto;
+    max-height: 70vh;
+    max-width: 100%;
+    object-fit: contain;
 }
 
-.btn-primary {
-    background-color: #007bff;
-    border-color: #007bff;
-}
-
-.btn-primary:hover {
-    background-color: #0056b3;
-    border-color: #004085;
-}
-
-.btn-secondary {
-    background-color: #6c757d;
-    border-color: #6c757d;
-}
-
-.btn-info {
-    background-color: #17a2b8;
-    border-color: #17a2b8;
-}
-
-.btn-outline-success {
-    color: #28a745;
-    border-color: #28a745;
-}
-
-.btn-outline-success:hover {
-    background-color: #28a745;
-    color: white;
-}
-
-/* ====== Utilities ====== */
-.text-danger {
-    color: #dc3545 !important;
-}
-
-hr {
-    border-top: 1px solid #dee2e6;
-}
-
-/* ====== Responsive ====== */
 @media (max-width: 768px) {
     .col-form-label {
-        text-align: left;
         padding-top: 0;
-        margin-bottom: 8px;
+        text-align: left;
     }
-    
-    .page-title-box {
-        flex-direction: column;
-        align-items: flex-start;
+
+    .card-body {
+        padding: 14px;
     }
-    
-    .page-title-right {
-        margin-top: 10px;
-        width: 100%;
-    }
-}
-</style>
-    min-height: 48px;
 }
 </style>

@@ -20,17 +20,13 @@ public class JwtUtil {
     private static final String SECRET =
         "hoadon-prod-jwt-secret-2025-!@#A9fKxQ2LmP8wZr7YHnC4E6S1VdB";
 
-    private static final long EXPIRATION_MS = 1000L * 60 * 60 * 4; // 4 hours
+    private static final long EXPIRATION_MS = 1000L * 60 * 60 * 4; // 4 giờ
 
     private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
 
     /**
-     * Generate JWT token for user
-     * Role convention:
-     * 0 = Root
-     * 1 = System Admin
-     * 2 = Company Admin
-     * 3 = Employee
+     * Tạo JWT cho user.
+     * Quy ước role: 0 = Root, 1 = Quản trị công ty, 2 = Nhân viên.
      */
     public String generateToken(UserEntity user) {
         return generateToken(user, null);
@@ -48,6 +44,9 @@ public class JwtUtil {
                 .claim("userId", user.getId())
                 .claim("role", role)
                 .claim("companyId", companyId)
+                .claim("adminScope", user.getAdminScope())
+                .claim("rootCompanyAdmin", user.isRootCompanyAdmin())
+                .claim("adminAccess", user.canAccessAdminArea())
                 .setIssuedAt(now)
                 .setExpiration(exp)
                 .signWith(key, SignatureAlgorithm.HS256);
@@ -60,7 +59,7 @@ public class JwtUtil {
     }
 
     /**
-     * Parse and validate JWT claims
+     * Phân tích và kiểm tra claim trong JWT.
      */
     public Claims parseClaims(String token) {
         return Jwts.parserBuilder()
@@ -78,7 +77,7 @@ public class JwtUtil {
     }
 
     /**
-     * Helper methods (optional)
+     * Các hàm hỗ trợ đọc claim.
      */
     public Integer getRole(String token) {
         Object role = parseClaims(token).get("role");
@@ -102,8 +101,8 @@ public class JwtUtil {
                 : null;
     }
 
-    public boolean isSystemAdmin(String token) {
-        Object v = parseClaims(token).get("isSystemAdmin");
+    public boolean isRootCompanyAdmin(String token) {
+        Object v = parseClaims(token).get("rootCompanyAdmin");
         return Boolean.TRUE.equals(v);
     }
 }

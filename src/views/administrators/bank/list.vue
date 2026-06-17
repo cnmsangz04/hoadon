@@ -106,23 +106,31 @@
       @ok.prevent="saveData"
       :busy="isSaving"
     >
-      <form ref="formRef" @submit.stop.prevent="saveData">
-        <b-form-group label="Mã ngân hàng (Viết tắt)" label-for="input-abbr">
+      <form ref="formRef" novalidate @submit.stop.prevent="saveData">
+        <b-form-group label="Mã ngân hàng (Viết tắt)" label-for="input-abbr" :state="state('abbreviation')">
           <b-form-input
             id="input-abbr"
-            v-model="form.abbreviation"
+            v-model.trim="form.abbreviation"
             placeholder="VD: VCB, ACB..."
             required
+            :state="state('abbreviation')"
           ></b-form-input>
+          <b-form-invalid-feedback :state="state('abbreviation')">
+            {{ invalidFeedback('abbreviation') }}
+          </b-form-invalid-feedback>
         </b-form-group>
 
-        <b-form-group label="Tên đầy đủ" label-for="input-name">
+        <b-form-group label="Tên đầy đủ" label-for="input-name" :state="state('name')">
           <b-form-input
             id="input-name"
-            v-model="form.name"
+            v-model.trim="form.name"
             placeholder="VD: Ngân hàng TMCP Ngoại thương..."
             required
+            :state="state('name')"
           ></b-form-input>
+          <b-form-invalid-feedback :state="state('name')">
+            {{ invalidFeedback('name') }}
+          </b-form-invalid-feedback>
         </b-form-group>
 
         <b-form-group label="Trạng thái">
@@ -177,7 +185,8 @@ export default {
         abbreviation: '',
         name: '',
         status: 1
-      }
+      },
+      errors: {}
     }
   },
   mounted() {
@@ -246,20 +255,18 @@ export default {
 
     openCreate() {
       this.form = { id: null, abbreviation: '', name: '', status: 1 };
+      this.errors = {};
       this.$refs.modalForm.show();
     },
 
     openEdit(item) {
       this.form = { ...item }; 
+      this.errors = {};
       this.$refs.modalForm.show();
     },
 
 	async saveData() {
-	  if (!this.form.abbreviation || !this.form.name) {
-	    this.$bvToast.toast('Vui lòng nhập đầy đủ Mã và Tên ngân hàng', { 
-	      variant: 'warning', 
-	      title: 'Chú ý' 
-	    });
+	  if (!this.validateForm()) {
 	    return;
 	  }
 
@@ -285,6 +292,29 @@ export default {
 	    this.isSaving = false;
 	  }
 	},
+
+    validateForm() {
+      const errors = {};
+      if (!String(this.form.abbreviation || '').trim()) {
+        errors.abbreviation = ['Vui lòng nhập mã ngân hàng'];
+      } else if (!/^[A-Za-z0-9_-]{2,20}$/.test(String(this.form.abbreviation).trim())) {
+        errors.abbreviation = ['Mã ngân hàng chỉ gồm chữ, số, gạch ngang hoặc gạch dưới'];
+      }
+      if (!String(this.form.name || '').trim()) {
+        errors.name = ['Vui lòng nhập tên đầy đủ'];
+      }
+      this.errors = errors;
+      return Object.keys(errors).length === 0;
+    },
+
+    state(field) {
+      return Object.prototype.hasOwnProperty.call(this.errors, field) ? false : null;
+    },
+
+    invalidFeedback(field) {
+      const value = this.errors[field];
+      return Array.isArray(value) ? value.join(' ') : (value || '');
+    },
 
     async toggleLock(item) {
       try {

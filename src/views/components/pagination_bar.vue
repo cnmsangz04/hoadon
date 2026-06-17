@@ -1,10 +1,10 @@
 <template>
-  <b-row class="pagination-bar mt-2">
-    <b-col cols="6">
-      <b-form inline>
+  <div class="pagination-bar">
+    <div class="pagination-summary">
+      <b-form inline class="pagination-size-form">
         <b-form-select
           size="sm"
-          class="d-inline-block mb-2 mr-2 pl-2 pr-4"
+          class="pagination-size-select"
           :value="size"
           :options="sizes"
           @input="onSizeInput"
@@ -19,21 +19,23 @@
           bản ghi.
         </div>
       </b-form>
-    </b-col>
-    <b-col cols="6">
+    </div>
+    <div class="pagination-pages">
       <b-pagination
         v-if="totalPages > 1"
-        align="right"
+        class="pagination-control"
         :value="current"
         :per-page="size"
         :total-rows="total"
         :hide-goto-end-buttons="true"
+        prev-text="‹"
+        next-text="›"
         size="sm"
         pills
         @input="onPageInput"
       />
-    </b-col>
-  </b-row>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -84,32 +86,57 @@ export default {
 
 <style scoped>
 .pagination-bar {
+  align-items: center;
   padding-top: 10px;
   margin-top: 12px;
   border-top: 1px dashed #e5e7eb;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
 }
 
-.pagination-bar .custom-select-sm {
-  height: 30px;
-  padding: 4px 10px;
+.pagination-summary,
+.pagination-pages {
+  min-width: 0;
+}
+
+.pagination-size-form {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pagination-size-select {
+  height: 32px;
+  margin: 0;
+  min-width: 64px;
+  padding: 4px 28px 4px 10px;
   font-size: 13px;
   border-radius: 8px;
 }
 
-.pagination-bar .pagination {
+.pagination-bar ::v-deep .pagination {
+  align-items: center;
+  display: flex;
   margin: 0;
   gap: 6px;
+  justify-content: flex-end;
 }
 
 .pagination-bar ::v-deep .page-item .page-link {
+  align-items: center;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  line-height: 1;
   min-width: 32px;
-  height: 30px;
   padding: 0 10px;
-  border-radius: 8px;
+  border-radius: 999px;
   border: 1px solid #e5e7eb;
-  color: #374151;
+  color: #2563eb !important;
   font-size: 13px;
-  line-height: 28px;
+  font-weight: 600;
   text-align: center;
   background-color: #fff;
   transition: all 0.15s ease;
@@ -118,35 +145,41 @@ export default {
 .pagination-bar ::v-deep .page-item:not(.active):not(.disabled) .page-link:hover {
   background-color: #f3f4f6;
   border-color: #d1d5db;
-  color: #111827;
+  color: #111827 !important;
 }
 
 .pagination-bar ::v-deep .page-item.active .page-link {
   background-color: #2563eb;
   border-color: #2563eb;
-  color: #fff;
-  font-weight: 600;
+  color: #fff !important;
+  font-weight: 800;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .pagination-bar ::v-deep .page-item.disabled .page-link {
   background-color: #f9fafb;
-  color: #9ca3af;
+  color: #9ca3af !important;
   border-color: #e5e7eb;
+}
+
+.pagination-bar ::v-deep .page-item:first-child .page-link,
+.pagination-bar ::v-deep .page-item:last-child .page-link {
+  font-size: 18px;
+  padding-bottom: 2px;
 }
 
 @media (max-width: 576px) {
   .pagination-bar {
     flex-direction: column;
-    align-items: flex-start !important;
-    gap: 8px;
+    align-items: stretch;
   }
 
-  .pagination-bar > div {
-    flex: 0 0 100%;
-    max-width: 100%;
+  .pagination-size-form {
+    align-items: flex-start;
   }
-  .pagination-bar .pagination {
+
+  .pagination-pages,
+  .pagination-bar ::v-deep .pagination {
     justify-content: flex-start;
   }
 }
