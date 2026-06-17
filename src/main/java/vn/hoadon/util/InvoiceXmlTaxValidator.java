@@ -14,6 +14,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Validate signed invoice XML before simulating the tax authority response.
@@ -21,8 +23,70 @@ import java.util.List;
 public final class InvoiceXmlTaxValidator {
     private InvoiceXmlTaxValidator() {}
 
+    private static final String HDCTT_CHINH_DEFAULT = "<HDCTTChinh>0</HDCTTChinh>";
+    private static final Pattern HDCTT_CHINH_TAG = Pattern.compile("(?is)<(?:\\w+:)?HDCTTChinh\\b");
+    private static final Pattern TT_CHUNG_BLOCK = Pattern.compile("(?is)<(?:\\w+:)?TTChung\\b[^>]*>.*?</(?:\\w+:)?TTChung>");
+    private static final Pattern N_LAP_CLOSE_TAG = Pattern.compile("(?is)</(?:\\w+:)?NLap>");
+    private static final Pattern S_BKE_OPEN_TAG = Pattern.compile("(?is)<(?:\\w+:)?SBKe\\b");
+    private static final Pattern TT_CHUNG_CLOSE_TAG = Pattern.compile("(?is)</(?:\\w+:)?TTChung>");
+
+    public static String addDefaultValues(String xml) {
+        return addDefaultFinancialLeaseFlag(xml);
+    }
+
+    public static String addDefaultFinancialLeaseFlag(String xml) {
+        if (!hasText(xml)) {
+            return xml;
+        }
+
+        Matcher ttChungMatcher = TT_CHUNG_BLOCK.matcher(xml);
+        if (!ttChungMatcher.find()) {
+            return xml;
+        }
+
+        String ttChung = ttChungMatcher.group();
+        if (HDCTT_CHINH_TAG.matcher(ttChung).find()) {
+            return xml;
+        }
+
+        String normalizedTtChung = insertDefaultFinancialLeaseFlag(ttChung);
+        if (normalizedTtChung.equals(ttChung)) {
+            return xml;
+        }
+
+        return xml.substring(0, ttChungMatcher.start())
+                + normalizedTtChung
+                + xml.substring(ttChungMatcher.end());
+    }
+
+    private static String insertDefaultFinancialLeaseFlag(String ttChung) {
+        Matcher nLapMatcher = N_LAP_CLOSE_TAG.matcher(ttChung);
+        if (nLapMatcher.find()) {
+            return ttChung.substring(0, nLapMatcher.end())
+                    + HDCTT_CHINH_DEFAULT
+                    + ttChung.substring(nLapMatcher.end());
+        }
+
+        Matcher sBKeMatcher = S_BKE_OPEN_TAG.matcher(ttChung);
+        if (sBKeMatcher.find()) {
+            return ttChung.substring(0, sBKeMatcher.start())
+                    + HDCTT_CHINH_DEFAULT
+                    + ttChung.substring(sBKeMatcher.start());
+        }
+
+        Matcher closeMatcher = TT_CHUNG_CLOSE_TAG.matcher(ttChung);
+        if (closeMatcher.find()) {
+            return ttChung.substring(0, closeMatcher.start())
+                    + HDCTT_CHINH_DEFAULT
+                    + ttChung.substring(closeMatcher.start());
+        }
+
+        return ttChung;
+    }
+
     public static Result validate(String xml) {
         List<String> errors = new ArrayList<>();
+        xml = addDefaultValues(xml);
         Document doc = parseTaxXml(xml, errors);
         if (doc == null) return Result.invalid(errors);
 

@@ -66,6 +66,7 @@ public final class SampleInvoiceXmlBuilder {
           .append(tag("SHDon", "0"))
           .append(tag("MHSo", ""))
           .append(tag("NLap", nLap))
+          .append(tag("HDCTTChinh", "0"))
           .append(tag("SBKe", ""))
           .append(tag("NBKe", ""))
           .append(tag("DVTTe", ""))

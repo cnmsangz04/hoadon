@@ -461,10 +461,48 @@ public class InvoiceController extends BaseController {
     private String extractCustomerName(String customerJson) {
         Object parsed = parseJson(customerJson);
         if (parsed instanceof java.util.Map<?,?> map) {
-            Object name = map.get("name");
-            Object buyer = map.get("buyer");
-            if (name != null && !String.valueOf(name).trim().isEmpty()) return String.valueOf(name);
-            if (buyer != null && !String.valueOf(buyer).trim().isEmpty()) return String.valueOf(buyer);
+            String name = invoiceCustomerCompanyName(map);
+            String buyer = invoiceCustomerBuyerName(map);
+            if (!name.isEmpty()) return name;
+            if (!buyer.isEmpty()) return buyer;
+        }
+        return "";
+    }
+
+    static String invoiceCustomerCompanyName(java.util.Map<?, ?> customer) {
+        if (customer == null) return "";
+        return firstNonBlankText(
+                customer.get("name"),
+                customer.get("companyName"),
+                customer.get("company_name"),
+                customer.get("customerName"),
+                customer.get("customer_name")
+        );
+    }
+
+    static String invoiceCustomerBuyerName(java.util.Map<?, ?> customer) {
+        if (customer == null) return "";
+        return firstNonBlankText(
+                customer.get("buyer"),
+                customer.get("buyerName"),
+                customer.get("buyer_name")
+        );
+    }
+
+    static String invoiceMailGreetingName(java.util.Map<?, ?> customer) {
+        String companyName = invoiceCustomerCompanyName(customer);
+        if (!companyName.isEmpty()) return companyName;
+        String buyerName = invoiceCustomerBuyerName(customer);
+        if (!buyerName.isEmpty()) return buyerName;
+        return "Quý khách";
+    }
+
+    private static String firstNonBlankText(Object... values) {
+        if (values == null) return "";
+        for (Object value : values) {
+            if (value == null) continue;
+            String text = String.valueOf(value).trim();
+            if (!text.isEmpty()) return text;
         }
         return "";
     }
@@ -1496,6 +1534,12 @@ public class InvoiceController extends BaseController {
         if (sig == null || sig.getXml() == null || sig.getXml().isBlank()) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Hóa đơn chưa được ký số"));
         }
+        String xmlToSend = normalizeInvoiceXml(sig.getXml());
+        if (!xmlToSend.equals(sig.getXml())) {
+            sig.setXml(xmlToSend);
+            sig.setUpdatedAt(java.time.LocalDateTime.now());
+            signatureVatRepository.save(sig);
+        }
         // Determine message code based on form.haveCode
         Integer messageType = 200; String description;
         FormInvoiceEntity form = null;
@@ -1518,7 +1562,7 @@ public class InvoiceController extends BaseController {
         h.setShowNotify(1);
         h.setStatus(1);
         h.setType(messageType);
-        h.setXmlData(sig.getXml());
+        h.setXmlData(xmlToSend);
         try { historyService.save(h); } catch (Exception e) { log.warn("History save failed for invoice {}: {}", id, e.toString()); }
 
         // Cập nhật invoice status to 2 (đã gửi thuế)
@@ -1577,6 +1621,7 @@ public class InvoiceController extends BaseController {
                         "Không tìm thấy XML hóa đơn đã ký");
                 return;
             }
+            xml = normalizeInvoiceXml(xml);
             
             boolean isCapMa = have != null && have == 1;
             InvoiceXmlTaxValidator.Result validation = InvoiceXmlTaxValidator.validate(xml);
@@ -1735,12 +1780,12 @@ public class InvoiceController extends BaseController {
             java.util.Map<String, Object> customerMap = JSON.readValue(inv.getCustomer(),
                     new TypeReference<java.util.Map<String, Object>>() {});
 
-            String toEmail = (String) customerMap.get("email");
+            String toEmail = firstNonBlankText(customerMap.get("email"));
             if (toEmail == null || toEmail.isBlank()) return;
 
-            String buyerName = inv.getName() != null ? inv.getName()
-                    : (String) customerMap.getOrDefault("name", "Quý khách");
-            String taxCode = (String) customerMap.getOrDefault("tax_code", "");
+            String customerName = invoiceMailGreetingName(customerMap);
+            String buyerName = invoiceCustomerBuyerName(customerMap);
+            String taxCode = firstNonBlankText(customerMap.get("tax_code"), customerMap.get("taxcode"), customerMap.get("taxCode"));
 
             // Fetch company details for template variables
             String companyName = "", hotline = "", comEmail = "", website = "", sellerTaxcode = "";
@@ -1762,7 +1807,10 @@ public class InvoiceController extends BaseController {
 
             java.util.Map<String, String> vars = new java.util.HashMap<>();
             vars.put("SO_HOA_DON",   inv.getNo() != null ? String.valueOf(inv.getNo()) : "");
-            vars.put("CUS_NAME",     buyerName);
+            vars.put("CUS_NAME",     customerName);
+            vars.put("CUSTOMER_NAME", customerName);
+            vars.put("BUYER_NAME",   buyerName);
+            vars.put("CUS_BUYER",    buyerName);
             vars.put("CUS_TAXCODE",  taxCode);
             vars.put("LOOKUP_LINK",  lookupLink);
             vars.put("LOOKUP_CODE",  lookupCode);
@@ -1775,7 +1823,7 @@ public class InvoiceController extends BaseController {
             msg.setTemplateKey("ISSUE_INVOICE_MAIL");
             msg.setCompanyId(companyId);
             msg.setToEmail(toEmail);
-            msg.setToName(buyerName);
+            msg.setToName(customerName);
             msg.setVariables(vars);
 
             if (mailQueueService != null) {
@@ -2028,18 +2076,20 @@ public class InvoiceController extends BaseController {
             } catch (Exception ignore) {}
             String pdfLink = buildPublicInvoiceFileLink(lookupCode, "/download-pdf", sellerTaxcode);
             String xmlLink = buildPublicInvoiceFileLink(lookupCode, "/download-xml", sellerTaxcode);
-            String html = buildEmailHtml(inv, formSerial, pdfLink, xmlLink, name);
 
-            String taxCode = "";
+            java.util.Map<String, Object> customerMap = java.util.Collections.emptyMap();
             try {
                 String custJson = inv.getCustomer();
                 if (custJson != null && !custJson.isBlank()) {
-                    java.util.Map<String, Object> cm = JSON.readValue(custJson,
+                    customerMap = JSON.readValue(custJson,
                             new TypeReference<java.util.Map<String, Object>>() {});
-                    Object tc = cm.get("tax_code");
-                    if (tc != null) taxCode = tc.toString();
                 }
             } catch (Exception ignore) {}
+            String invoiceCustomerName = invoiceCustomerCompanyName(customerMap);
+            String buyerName = invoiceCustomerBuyerName(customerMap);
+            String customerName = firstNonBlankText(invoiceCustomerName, buyerName, name.trim(), "Quý khách");
+            String taxCode = firstNonBlankText(customerMap.get("tax_code"), customerMap.get("taxcode"), customerMap.get("taxCode"));
+            String html = buildEmailHtml(inv, formSerial, pdfLink, xmlLink, customerName);
 
             MailJobMessage msg = new MailJobMessage();
             msg.setTemplateKey("ISSUE_INVOICE_MAIL");
@@ -2048,7 +2098,12 @@ public class InvoiceController extends BaseController {
             msg.setToName(name.trim());
             java.util.Map<String, String> vars = new java.util.HashMap<>();
             vars.put("SO_HOA_DON",  inv.getNo() != null ? String.valueOf(inv.getNo()) : "");
-            vars.put("CUS_NAME",    name.trim());
+            vars.put("CUS_NAME",    customerName);
+            vars.put("CUSTOMER_NAME", customerName);
+            vars.put("BUYER_NAME",  buyerName);
+            vars.put("CUS_BUYER",   buyerName);
+            vars.put("RECIPIENT_NAME", name.trim());
+            vars.put("TO_NAME",     name.trim());
             vars.put("CUS_TAXCODE", taxCode);
             vars.put("LOOKUP_LINK", buildPublicLookupLink(lookupCode, sellerTaxcode));
             vars.put("LOOKUP_CODE", lookupCode);
@@ -2163,6 +2218,10 @@ public class InvoiceController extends BaseController {
         return buildInvoiceXml(inv, form, company, bank);
     }
 
+    private String normalizeInvoiceXml(String xml) {
+        return InvoiceXmlTaxValidator.addDefaultValues(xml);
+    }
+
     private String buildInvoiceXml(InvoiceEntity inv, FormInvoiceEntity form, CompanyEntity company, CompanyBankEntity bank) {
         InvoiceEntity referenceInvoice = null;
         FormInvoiceEntity referenceForm = null;
@@ -2176,7 +2235,7 @@ public class InvoiceController extends BaseController {
                 referenceForm = formInvoiceRepository.findById(referenceInvoice.getFormId().longValue()).orElse(null);
             }
         }
-        return vn.hoadon.util.InvoiceXmlBuilder.build(inv, form, company, bank, referenceInvoice, referenceForm);
+        return normalizeInvoiceXml(vn.hoadon.util.InvoiceXmlBuilder.build(inv, form, company, bank, referenceInvoice, referenceForm));
     }
 
     private String getXmlFromSignatureVats(Integer invoiceId) {
@@ -2194,7 +2253,7 @@ public class InvoiceController extends BaseController {
                 return cb.compareTo(ca);
             });
             String xml = rows.get(0) != null ? rows.get(0).getXml() : null;
-            return (xml != null && !xml.isBlank()) ? xml : null;
+            return (xml != null && !xml.isBlank()) ? normalizeInvoiceXml(xml) : null;
         } catch (Exception e) {
             log.warn("Failed to load signature_vats xml for invoice {}: {}", invoiceId, e.toString());
             return null;
@@ -2209,7 +2268,7 @@ public class InvoiceController extends BaseController {
             try {
                 latest = signatureAuthoritiesTaxService.getLatestByInvoiceId(invoiceId);
             } catch (Exception ignore) {}
-            if (latest != null && latest.xml != null && !latest.xml.isBlank()) return latest.xml;
+            if (latest != null && latest.xml != null && !latest.xml.isBlank()) return normalizeInvoiceXml(latest.xml);
 
             java.util.List<vn.hoadon.dto.SignatureAuthoritiesTaxDTO> rows = signatureAuthoritiesTaxService.listByInvoiceId(invoiceId);
             if (rows == null || rows.isEmpty()) return null;
@@ -2222,7 +2281,7 @@ public class InvoiceController extends BaseController {
                 return cb.compareTo(ca);
             });
             String xml = rows.get(0) != null ? rows.get(0).xml : null;
-            return (xml != null && !xml.isBlank()) ? xml : null;
+            return (xml != null && !xml.isBlank()) ? normalizeInvoiceXml(xml) : null;
         } catch (Exception e) {
             log.warn("Failed to load signature_authorities_tax xml for invoice {}: {}", invoiceId, e.toString());
             return null;

@@ -204,6 +204,12 @@ export default {
         this.list.last_page = data.last_page || 1
         this.list.from = rows.length ? (this.list.current_page - 1) * this.list.per_page + 1 : 0
         this.list.to = rows.length ? this.list.from + rows.length - 1 : 0
+      } catch {
+        this.list.data = []
+        this.list.total = 0
+        this.list.last_page = 1
+        this.list.from = 0
+        this.list.to = 0
       } finally {
         this.isBusy = false
       }
@@ -239,6 +245,7 @@ export default {
         const { data } = await axios.post(`/administrator/mail-jobs/${item.id}/retry`)
         this.toastSuccess(data?.message || 'Đã đưa email vào hàng đợi gửi lại')
         this.fetchList()
+      } catch {
       } finally {
         this.retryingId = null
       }
@@ -248,6 +255,7 @@ export default {
       if (key === 'ACCOUNT_INFO_MAIL') return 'Gửi thông tin tài khoản'
       if (key === 'LOGIN_INFO_MAIL') return 'Gửi thông tin đăng nhập'
       if (key === 'RESET_PASSWORD_MAIL') return 'Đặt lại mật khẩu'
+      if (key === 'BUY_INVOICE_MAIL') return 'Thông báo mua gói hóa đơn thành công'
       return key || 'Email hệ thống'
     },
     statusText(status) {

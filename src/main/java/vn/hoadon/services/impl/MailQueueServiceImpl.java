@@ -29,12 +29,16 @@ public class MailQueueServiceImpl implements MailQueueService {
     @Override
     public void enqueue(MailJobMessage message) {
         try {
+            Long jobCompanyId = resolveJobCompanyId(message);
+            if (message != null && SystemMail.usesCompanyOne(message.getTemplateKey())) {
+                message.setCompanyId(jobCompanyId);
+            }
             String payload = objectMapper.writeValueAsString(message);
             long now = System.currentTimeMillis();
             MailJobEntity job = new MailJobEntity();
             job.setPayload(payload);
             job.setInvoiceId(message.getInvoiceId());
-            job.setCompanyId(message.getCompanyId());
+            job.setCompanyId(jobCompanyId);
             job.setTemplateKey(message.getTemplateKey());
             job.setToEmail(message.getToEmail());
             job.setToName(message.getToName());
@@ -50,6 +54,11 @@ public class MailQueueServiceImpl implements MailQueueService {
             log.error("[MailQueue] Failed to save job: {}", e.getMessage(), e);
             throw new RuntimeException("Không thể đưa email vào hàng đợi", e);
         }
+    }
+
+    static Long resolveJobCompanyId(MailJobMessage message) {
+        if (message == null) return null;
+        return SystemMail.resolveCompanyId(message.getTemplateKey(), message.getCompanyId());
     }
 
     private String resolveSubject(MailJobMessage message) {

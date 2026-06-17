@@ -1,0 +1,676 @@
+Project hoadon {
+  database_type: 'SQL Server'
+  Note: 'Generated from Spring JPA entities under src/main/java/vn/hoadon/entity and SQL helper scripts. Ref lines include both JPA foreign keys and logical *_id relationships used by the application.'
+}
+
+// Diagram organization for dbdiagram.io.
+// Exact table coordinates are saved in Diagram Views, but these groups keep the
+// side panel and auto-layout clustered by business area.
+TableGroup reference_data {
+  banks
+  tax_authorities
+  provinces
+  vat_rates
+  telegram_configs
+}
+
+TableGroup company_accounts {
+  companies
+  users
+  company_allowed_ips
+  company_banks
+  legal_representatives
+  company_registration_requests
+}
+
+TableGroup catalog {
+  customers
+  products
+}
+
+TableGroup invoice_flow {
+  form_invoices
+  invoice_numbers
+  invoices
+  invoice_imports
+  register_invoices
+  signature_vats
+  signature_authorities_tax
+}
+
+TableGroup invoice_packages_flow {
+  invoice_packages
+  invoice_package_purchases
+  buy_invoices
+  buy_invoice_histories
+}
+
+TableGroup access_control {
+  permission_categories
+  permissions
+  user_permissions
+}
+
+TableGroup mail_and_notifications {
+  mail_servers
+  mail_templates
+  mail_jobs
+  history
+  notification_reads
+}
+
+TableGroup login_audit {
+  login_histories
+  login_sessions
+}
+
+Table banks {
+  id bigint [pk, increment]
+  abbreviation nvarchar(255)
+  name nvarchar(255)
+  status int
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table tax_authorities {
+  id bigint [pk, increment]
+  code int
+  name nvarchar(255)
+  parent_id bigint
+  province_name nvarchar(255)
+  status int
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table provinces {
+  id int [pk, increment]
+  parent_id int [not null]
+  name nvarchar(255) [not null]
+  status int [not null]
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table companies {
+  id bigint [pk, increment]
+  prefix nvarchar(255) [not null, unique]
+  taxcode nvarchar(255) [unique]
+  name nvarchar(255)
+  email nvarchar(255)
+  hotline nvarchar(255)
+  address nvarchar(255)
+  business nvarchar(255)
+  info nvarchar(max)
+  logo nvarchar(255)
+  favicon nvarchar(255)
+  invoice_email nvarchar(255)
+  invoice_fax nvarchar(255)
+  invoice_phone nvarchar(255)
+  invoice_website nvarchar(255)
+  contact_name nvarchar(255)
+  contact_mail nvarchar(255)
+  contact_phone nvarchar(50)
+  contact_address nvarchar(255)
+  status int [not null]
+  ip_security_enabled bit
+  tax_authority_id bigint
+  tax_authority_city_id bigint
+  expired_at datetime2
+  deleted_at datetime2
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table users {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  username varchar(32) [not null, unique]
+  name nvarchar(255)
+  email varchar(255)
+  password varchar(64) [not null]
+  admin_password varchar(64)
+  admin_scope varchar(20)
+  avatar varchar(255)
+  role int [not null, note: '0=root, 1=company admin, 2=staff']
+  phone varchar(32)
+  status tinyint [not null]
+  info nvarchar(max)
+  ip_login nvarchar(max)
+  forget_token varchar(32)
+  time_reset datetime2
+  remember_token varchar(100)
+  api_token varchar(100)
+  deleted_at datetime2
+  created_at datetime2
+  updated_at datetime2
+
+  indexes {
+    username [unique, name: 'uk_users_username']
+  }
+}
+
+Table company_allowed_ips {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  ip_address nvarchar(64) [not null]
+  original_ip bit
+  status int
+  note nvarchar(255)
+  created_by bigint
+  created_at datetime2
+  updated_at datetime2
+
+  indexes {
+    (company_id, ip_address) [unique, name: 'uk_company_allowed_ip']
+  }
+}
+
+Table company_banks {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  bank_name nvarchar(255) [not null]
+  account_number nvarchar(50) [not null]
+  bank_address nvarchar(255)
+  bank_brand nvarchar(255)
+}
+
+Table legal_representatives {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  fullname nvarchar(255)
+  gender int
+  date_of_birth date
+  citizen_id varchar(255)
+  passport_no varchar(255)
+  phone varchar(255)
+  email varchar(255)
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table company_registration_requests {
+  id bigint [pk, increment]
+  company_name nvarchar(255) [not null]
+  taxcode nvarchar(255) [not null]
+  address nvarchar(255) [not null]
+  email nvarchar(255) [not null]
+  phone nvarchar(50)
+  contact_name nvarchar(255)
+  company_id bigint
+  status int [not null, note: '0=pending, 1=approved, 2=rejected']
+  note nvarchar(max)
+  reviewed_at datetime2
+  reviewed_by_id bigint
+  reviewed_by_name nvarchar(255)
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table customers {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  code nvarchar(255) [not null]
+  tax_code nvarchar(255)
+  company_name nvarchar(255)
+  buyer_name nvarchar(255)
+  address nvarchar(255)
+  phone nvarchar(255)
+  fax nvarchar(255)
+  email nvarchar(255)
+  bank_account_number nvarchar(255)
+  bank_name nvarchar(255)
+  description nvarchar(255)
+  status tinyint [not null]
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table products {
+  id bigint [pk, increment]
+  company_id int [not null, note: 'Entity uses Long but columnDefinition is INT']
+  code nvarchar(max) [not null]
+  name nvarchar(255) [not null]
+  price decimal(18,2)
+  unit nvarchar(50)
+  vat_rate tinyint
+  description nvarchar(max)
+  status tinyint [not null]
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table form_invoices {
+  id bigint [pk, increment]
+  company_id bigint
+  user_id bigint
+  name nvarchar(255)
+  serial nvarchar(50)
+  form_code nvarchar(50)
+  file varchar(255)
+  photo varchar(255)
+  system tinyint
+  type tinyint
+  category tinyint
+  status tinyint
+  have_code smallint
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table invoice_numbers {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  form_id bigint [not null]
+  category tinyint [not null]
+  total int [not null]
+  status tinyint [not null]
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table invoices {
+  id bigint [pk, increment]
+  company_id int [not null]
+  user_id int [not null]
+  form_id int [not null]
+  invoice_number_id int [not null]
+  reference_id int
+  summary_id int
+  id_attr varchar(255)
+  code varchar(255)
+  code_cqt varchar(255)
+  name nvarchar(255) [not null]
+  no int
+  date_export date
+  note nvarchar(max)
+  date_convert datetime2
+  name_convert nvarchar(255)
+  status_convert smallint [not null]
+  date_cancel date
+  reason_cancel nvarchar(max)
+  bill nvarchar(max)
+  customer nvarchar(max)
+  related nvarchar(max)
+  others nvarchar(max)
+  detail nvarchar(max)
+  currency varchar(255) [not null]
+  exchange_rate float [not null]
+  send_mail_directly smallint [not null]
+  discount float [not null]
+  vat_rate smallint [not null]
+  vat_rate_other int [not null]
+  vat_amount float [not null]
+  vat_amount_discount float [not null]
+  total float [not null]
+  amount float [not null]
+  discount_amount float [not null]
+  amount_in_words nvarchar(255)
+  payment smallint [not null]
+  payment_type smallint [not null]
+  status smallint [not null]
+  invoice_type smallint [not null]
+  invoice_type_adjust smallint [not null]
+  lookup_code varchar(255)
+  type_api smallint [not null]
+  id_partner int
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table invoice_imports {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  user_id bigint
+  source_import_id bigint
+  original_filename nvarchar(255)
+  stored_filename nvarchar(255)
+  file_path nvarchar(500)
+  file_url nvarchar(500)
+  status varchar(30)
+  total_rows int
+  invoice_count int
+  success_count int
+  error_count int
+  error_message nvarchar(max)
+  imported_invoice_ids nvarchar(max)
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table register_invoices {
+  id bigint [pk, increment]
+  company_id bigint [not null]
+  user_id bigint [not null]
+  declaration_code varchar(100)
+  declaration_type int [not null]
+  form_pattern varchar(20) [not null]
+  declaration_date date [not null]
+  create_place nvarchar(255) [not null]
+  effective_date datetime2
+  invoice_forms nvarchar(max) [not null, note: 'JSON array']
+  invoice_types nvarchar(max) [not null, note: 'JSON array']
+  send_methods nvarchar(max) [not null, note: 'JSON array']
+  transfer_methods nvarchar(max) [not null, note: 'JSON array']
+  digital_certificates nvarchar(max) [not null, note: 'JSON array']
+  solution_providers nvarchar(max) [note: 'JSON array']
+  transmit_providers nvarchar(max) [note: 'JSON array']
+  signed_xml nvarchar(max)
+  signature_info nvarchar(max)
+  sign_date datetime2
+  status int [not null]
+  response_receive_file nvarchar(max)
+  response_accept_file nvarchar(max)
+  created_at datetime2 [not null]
+  updated_at datetime2
+}
+
+Table signature_vats {
+  id int [pk, increment]
+  company_id int [not null]
+  invoice_id int [not null]
+  xml nvarchar(max) [not null]
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table signature_authorities_tax {
+  id int [pk, increment]
+  company_id int [not null]
+  invoice_id int [not null]
+  xml nvarchar(max) [not null]
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table invoice_packages {
+  id bigint [pk, increment]
+  name nvarchar(255) [not null]
+  invoice_quantity int [not null]
+  unit_price decimal(18,2) [not null]
+  total_price decimal(18,2) [not null]
+  include_trial bit
+  description nvarchar(max)
+  status int [not null]
+  display_order int
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table invoice_package_purchases {
+  id bigint [pk, increment]
+  package_id bigint
+  package_name nvarchar(255)
+  company_id bigint [not null]
+  company_name nvarchar(255)
+  company_taxcode nvarchar(255)
+  buyer_name nvarchar(255)
+  buyer_email nvarchar(255)
+  buyer_phone nvarchar(50)
+  invoice_quantity int [not null]
+  unit_price decimal(18,2) [not null]
+  total_price decimal(18,2) [not null]
+  payment_method nvarchar(50)
+  payment_status nvarchar(50)
+  payment_code nvarchar(100)
+  buy_invoice_id bigint
+  note nvarchar(max)
+  paid_at datetime2
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table buy_invoices {
+  id bigint [pk, increment]
+  company_id bigint
+  amount int
+  amount_used int
+  status int
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table buy_invoice_histories {
+  id bigint [pk, increment]
+  buy_invoice_id bigint
+  company_id bigint
+  company_name nvarchar(255)
+  company_taxcode nvarchar(64)
+  change_type varchar(40)
+  source varchar(30)
+  previous_amount int
+  new_amount int
+  amount_delta int
+  previous_amount_used int
+  new_amount_used int
+  previous_status int
+  new_status int
+  package_purchase_id bigint
+  package_name nvarchar(255)
+  payment_code nvarchar(100)
+  actor_user_id bigint
+  actor_name nvarchar(255)
+  actor_username nvarchar(255)
+  note nvarchar(max)
+  created_at datetime2
+}
+
+Table vat_rates {
+  id int [pk, increment]
+  user_id int [not null]
+  label nvarchar(255) [not null]
+  code int [not null]
+  status int [not null]
+  prioritize int [not null]
+  created_at datetime2 [not null]
+  updated_at datetime2
+}
+
+Table permission_categories {
+  id bigint [pk, increment]
+  name nvarchar(255) [not null]
+  sothutu int
+  status tinyint
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table permissions {
+  id bigint [pk, increment]
+  name varchar(255) [not null, unique]
+  display_name nvarchar(255)
+  level int
+  category bigint [not null]
+  description nvarchar(255)
+  status tinyint
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table user_permissions {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  permission_id bigint [not null]
+  allowed tinyint [not null, note: '1=allow, 0=deny']
+}
+
+Table mail_servers {
+  id int [pk, increment]
+  company_id int [not null]
+  host varchar(255) [not null]
+  port int [not null]
+  username varchar(255) [not null]
+  password varchar(512) [not null]
+  from_name nvarchar(255)
+  from_email varchar(255)
+  encryption smallint [not null, note: '1=STARTTLS, 2=SSL/TLS, 0=none']
+  status smallint [not null]
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table mail_templates {
+  id int [pk, increment]
+  key varchar(32) [not null, note: 'SQL Server column is escaped as [key] in JPA']
+  title nvarchar(255) [not null]
+  content nvarchar(max) [not null]
+  status tinyint [not null]
+  system tinyint [not null]
+  company_id bigint [not null]
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table mail_jobs {
+  id bigint [pk, increment]
+  queue varchar(255) [not null]
+  invoice_id bigint
+  company_id bigint
+  template_key varchar(100)
+  to_email varchar(255)
+  to_name nvarchar(255)
+  subject nvarchar(500)
+  show_history bit [not null]
+  status varchar(30)
+  payload nvarchar(max) [not null, note: 'JSON MailJobMessage']
+  attempts int [not null]
+  reserved_at bigint [note: 'Epoch milliseconds']
+  available_at bigint [not null, note: 'Epoch milliseconds']
+  created_at bigint [not null, note: 'Epoch milliseconds']
+  updated_at bigint [note: 'Epoch milliseconds']
+  last_attempt_at bigint [note: 'Epoch milliseconds']
+  sent_at bigint [note: 'Epoch milliseconds']
+  failed_at bigint [note: 'Epoch milliseconds']
+  failed bit [not null]
+  error nvarchar(max)
+}
+
+Table history {
+  id bigint [pk, increment]
+  company_id bigint
+  user_id bigint
+  table_name nvarchar(255)
+  table_id bigint
+  title nvarchar(255)
+  description nvarchar(max)
+  show_notify int
+  status int
+  type int
+  xml_data nvarchar(max)
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table notification_reads {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  company_id bigint
+  history_id bigint [not null]
+  read_at datetime2 [not null]
+
+  indexes {
+    (user_id, history_id) [unique, name: 'uk_notification_read_user_history']
+  }
+}
+
+Table login_histories {
+  id bigint [pk, increment]
+  company_id bigint
+  user_id bigint
+  username nvarchar(255)
+  ip_address nvarchar(64)
+  user_agent nvarchar(max)
+  login_type nvarchar(32)
+  login_at datetime2
+}
+
+Table login_sessions {
+  id bigint [pk, increment]
+  session_id varchar(64) [not null, unique]
+  user_id bigint [not null]
+  company_id bigint
+  username nvarchar(255)
+  login_type nvarchar(32)
+  ip_address nvarchar(64)
+  user_agent nvarchar(max)
+  issued_at datetime2 [not null]
+  expires_at datetime2
+  last_seen_at datetime2
+  revoked_at datetime2
+  revoked_reason nvarchar(255)
+
+  indexes {
+    session_id [name: 'idx_login_sessions_session_id']
+    user_id [name: 'idx_login_sessions_user_id']
+  }
+}
+
+Table telegram_configs {
+  id int [pk, increment]
+  enabled bit [not null]
+  bot_token nvarchar(max)
+  chat_id nvarchar(128)
+  daily_hour int [not null]
+  daily_minute int [not null]
+  last_report_date date
+  last_sent_at datetime2
+  created_at datetime2
+  updated_at datetime2
+}
+
+Ref: users.company_id > companies.id
+Ref: companies.tax_authority_id > tax_authorities.id
+Ref: companies.tax_authority_city_id > tax_authorities.id
+Ref: company_allowed_ips.company_id > companies.id
+Ref: company_allowed_ips.created_by > users.id
+Ref: company_banks.company_id > companies.id
+Ref: legal_representatives.company_id > companies.id
+Ref: company_registration_requests.company_id > companies.id
+Ref: company_registration_requests.reviewed_by_id > users.id
+Ref: customers.company_id > companies.id
+Ref: products.company_id > companies.id
+Ref: form_invoices.company_id > companies.id
+Ref: form_invoices.user_id > users.id
+Ref: invoice_numbers.company_id > companies.id
+Ref: invoice_numbers.form_id > form_invoices.id
+Ref: invoices.company_id > companies.id
+Ref: invoices.user_id > users.id
+Ref: invoices.form_id > form_invoices.id
+Ref: invoices.invoice_number_id > invoice_numbers.id
+Ref: invoices.reference_id > invoices.id
+Ref: invoices.summary_id > invoices.id
+Ref: invoice_imports.company_id > companies.id
+Ref: invoice_imports.user_id > users.id
+Ref: invoice_imports.source_import_id > invoice_imports.id
+Ref: register_invoices.company_id > companies.id
+Ref: register_invoices.user_id > users.id
+Ref: signature_vats.company_id > companies.id
+Ref: signature_vats.invoice_id > invoices.id
+Ref: signature_authorities_tax.company_id > companies.id
+Ref: signature_authorities_tax.invoice_id > invoices.id
+Ref: invoice_package_purchases.package_id > invoice_packages.id
+Ref: invoice_package_purchases.company_id > companies.id
+Ref: invoice_package_purchases.buy_invoice_id > buy_invoices.id
+Ref: buy_invoices.company_id > companies.id
+Ref: buy_invoice_histories.buy_invoice_id > buy_invoices.id
+Ref: buy_invoice_histories.company_id > companies.id
+Ref: buy_invoice_histories.package_purchase_id > invoice_package_purchases.id
+Ref: buy_invoice_histories.actor_user_id > users.id
+Ref: vat_rates.user_id > users.id
+Ref: permissions.category > permission_categories.id
+Ref: user_permissions.user_id > users.id
+Ref: user_permissions.permission_id > permissions.id
+Ref: mail_servers.company_id > companies.id
+Ref: mail_templates.company_id > companies.id
+Ref: mail_jobs.invoice_id > invoices.id
+Ref: mail_jobs.company_id > companies.id
+Ref: history.company_id > companies.id
+Ref: history.user_id > users.id
+Ref: notification_reads.user_id > users.id
+Ref: notification_reads.company_id > companies.id
+Ref: notification_reads.history_id > history.id
+Ref: login_histories.company_id > companies.id
+Ref: login_histories.user_id > users.id
+Ref: login_sessions.company_id > companies.id
+Ref: login_sessions.user_id > users.id

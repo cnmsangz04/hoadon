@@ -147,6 +147,12 @@ public class MailJobController extends BaseController {
         if ("LOGIN_INFO_MAIL".equals(job.getTemplateKey())) {
             return "Gửi thông tin đăng nhập";
         }
+        if ("RESET_PASSWORD_MAIL".equals(job.getTemplateKey())) {
+            return "Đặt lại mật khẩu";
+        }
+        if ("BUY_INVOICE_MAIL".equals(job.getTemplateKey())) {
+            return "Thông báo mua gói hóa đơn thành công";
+        }
         return job.getTemplateKey();
     }
 
