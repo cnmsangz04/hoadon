@@ -1,6 +1,6 @@
 # Tổng hợp validate form
 
-Cập nhật: 17/06/2026
+Cập nhật: 18/06/2026
 
 Tài liệu này ghi lại quy ước validate form đang áp dụng trong hệ thống. Mục tiêu là khi sửa hoặc thêm màn hình mới, giao diện không còn hiện tooltip validate mặc định của trình duyệt, thông báo lỗi đồng nhất bằng BootstrapVue trên form và Toastr ở góc màn hình.
 
@@ -172,6 +172,10 @@ Quy tắc chính:
 - Import bắt buộc chọn file Excel.
 - Input nhận `.xlsx` và `.xls`.
 - Import lại file cũ cần có ID bản ghi import và xác nhận từ người dùng.
+- Mẫu Excel tải về là một mẫu dùng chung cho cả mẫu nhiều thuế suất và mẫu một thuế suất.
+- Nội dung mẫu cần hướng dẫn rõ cách nhập thông tin hóa đơn, thông tin người mua và nhiều dòng hàng hóa/dịch vụ.
+- Khi import, backend phải gom đúng nhiều dòng hàng thuộc cùng hóa đơn, không chỉ lấy một dòng đầu tiên.
+- Với hóa đơn một thuế suất, file import vẫn phải có dữ liệu thuế suất, tiền thuế và tổng tiền hợp lệ theo mẫu đang dùng.
 - Chưa validate dung lượng file và số dòng ở phía giao diện.
 
 ### Tờ khai đăng ký hóa đơn điện tử
@@ -226,6 +230,8 @@ Các màn quản trị đã được rà soát lại giao diện modal, spacing 
 | Nhóm quyền | `src/views/administrators/access-control/permission-categories/list.vue` | Tên nhóm bắt buộc. Có sắp xếp nhanh bằng nhập STT/nút lên xuống ngoài kéo thả. |
 | Mẫu email | `src/views/administrators/email-template/create.vue` | Loại template, mã template khi tạo mới, tên template và trạng thái là các trường chính. |
 | Mẫu hóa đơn hệ thống | `src/views/administrators/form-invoice/create.vue` | Tên mẫu, loại hóa đơn, thuế suất, hình thức, trạng thái và file mẫu. |
+| Cấu hình Telegram | `src/views/administrators/telegram/config.vue` | Bật/tắt Telegram, Bot Token và Group Chat ID. Khi gửi test cần giữ lỗi backend nếu token hoặc chat id không hợp lệ. |
+| Báo cáo hóa đơn ngày | `src/views/administrators/daily-invoice-report/config.vue` | Bật/tắt lịch gửi, giờ gửi trong khoảng 0-23, phút gửi trong khoảng 0-59. Gửi thử dùng ngày báo cáo hợp lệ hoặc mặc định ngày hôm qua. |
 
 ## Những điểm còn cần siết nếu làm chặt hơn
 
@@ -235,6 +241,7 @@ Các màn quản trị đã được rà soát lại giao diện modal, spacing 
 - Một số form quản trị cũ vẫn còn dựa một phần vào backend validate. Khi sửa tiếp nên chuyển dần về helper chung.
 - Các field như fax, website, số tài khoản ngân hàng đã có kiểm tra ở hồ sơ công ty, nhưng chưa chắc đã được áp dụng giống nhau ở mọi form khác.
 - Các input `type=email`, `type=number`, `required` có thể vẫn tồn tại để hỗ trợ bàn phím và accessibility, nhưng form có validate riêng phải dùng `novalidate` để không hiện tooltip mặc định của trình duyệt.
+- Một số màn cấu hình admin mới vẫn cần rà thêm giới hạn độ dài chuỗi theo database, ví dụ Bot Token, Group Chat ID và nội dung test.
 
 ## Checklist khi thêm hoặc sửa form
 

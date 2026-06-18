@@ -1,42 +1,51 @@
-# Getting Started
+# Trợ giúp nhanh cho dự án hóa đơn điện tử
 
-### Reference Documentation
-For further reference, please consider the following sections:
+File này thay cho nội dung mẫu của Spring Boot để người mới vào dự án có thể tìm đúng tài liệu cần đọc.
 
-* [Official Apache Maven documentation](https://maven.apache.org/guides/index.html)
-* [Spring Boot Maven Plugin Reference Guide](https://docs.spring.io/spring-boot/3.5.7/maven-plugin)
-* [Create an OCI image](https://docs.spring.io/spring-boot/3.5.7/maven-plugin/build-image.html)
-* [Spring Configuration Processor](https://docs.spring.io/spring-boot/3.5.7/specification/configuration-metadata/annotation-processor.html)
-* [Spring Data JDBC](https://docs.spring.io/spring-boot/3.5.7/reference/data/sql.html#data.sql.jdbc)
-* [Spring Data JPA](https://docs.spring.io/spring-boot/3.5.7/reference/data/sql.html#data.sql.jpa-and-spring-data)
-* [Spring Boot DevTools](https://docs.spring.io/spring-boot/3.5.7/reference/using/devtools.html)
-* [Java Mail Sender](https://docs.spring.io/spring-boot/3.5.7/reference/io/email.html)
-* [Spring Security](https://docs.spring.io/spring-boot/3.5.7/reference/web/spring-security.html)
-* [Thymeleaf](https://docs.spring.io/spring-boot/3.5.7/reference/web/servlet.html#web.servlet.spring-mvc.template-engines)
-* [Validation](https://docs.spring.io/spring-boot/3.5.7/reference/io/validation.html)
-* [Spring Web](https://docs.spring.io/spring-boot/3.5.7/reference/web/servlet.html)
-* [WebSocket](https://docs.spring.io/spring-boot/3.5.7/reference/messaging/websockets.html)
+## Nên bắt đầu từ đâu
 
-### Guides
-The following guides illustrate how to use some features concretely:
+1. Đọc [README.md](README.md) để biết cách chạy chương trình và danh sách tài liệu.
+2. Đọc [docs/TONG_QUAN.md](docs/TONG_QUAN.md) để nắm phạm vi chức năng.
+3. Đọc [docs/KIEN_TRUC.md](docs/KIEN_TRUC.md) để hiểu cách frontend, backend và database phối hợp.
+4. Đọc [docs/CO_SO_DU_LIEU.md](docs/CO_SO_DU_LIEU.md) trước khi sửa dữ liệu hoặc query.
+5. Đọc [docs/YEU_CAU_HE_THONG.md](docs/YEU_CAU_HE_THONG.md), [docs/USE_CASE.md](docs/USE_CASE.md) và [docs/HUONG_DAN_VIET_BAO_CAO.md](docs/HUONG_DAN_VIET_BAO_CAO.md) nếu cần viết báo cáo.
+6. Đọc [QUY_TAC_VAI_TRO_CHUONG_TRINH.md](QUY_TAC_VAI_TRO_CHUONG_TRINH.md) trước khi sửa quyền, route hoặc API theo công ty.
 
-* [Using Spring Data JDBC](https://github.com/spring-projects/spring-data-examples/tree/main/jdbc/basics)
-* [Accessing Data with JPA](https://spring.io/guides/gs/accessing-data-jpa/)
-* [Accessing data with MySQL](https://spring.io/guides/gs/accessing-data-mysql/)
-* [Securing a Web Application](https://spring.io/guides/gs/securing-web/)
-* [Spring Boot and OAuth2](https://spring.io/guides/tutorials/spring-boot-oauth2/)
-* [Authenticating a User with LDAP](https://spring.io/guides/gs/authenticating-ldap/)
-* [Handling Form Submission](https://spring.io/guides/gs/handling-form-submission/)
-* [Validation](https://spring.io/guides/gs/validating-form-input/)
-* [Building a RESTful Web Service](https://spring.io/guides/gs/rest-service/)
-* [Serving Web Content with Spring MVC](https://spring.io/guides/gs/serving-web-content/)
-* [Building REST services with Spring](https://spring.io/guides/tutorials/rest/)
-* [Using WebSocket to build an interactive web application](https://spring.io/guides/gs/messaging-stomp-websocket/)
+## Lệnh nhanh
 
-### Maven Parent overrides
+Chạy backend:
 
-Due to Maven's design, elements are inherited from the parent POM to the project POM.
-While most of the inheritance is fine, it also inherits unwanted elements like `<license>` and `<developers>` from the parent.
-To prevent this, the project POM contains empty overrides for these elements.
-If you manually switch to a different parent and actually want the inheritance, you need to remove those overrides.
+```bash
+./mvnw spring-boot:run
+```
 
+Chạy frontend:
+
+```bash
+npm run serve
+```
+
+Build frontend:
+
+```bash
+npm run build
+```
+
+Chạy test backend:
+
+```bash
+./mvnw test
+```
+
+## File cần xem khi điều tra lỗi
+
+| Lỗi cần kiểm tra | File/thư mục nên xem |
+| --- | --- |
+| Backend không chạy | `src/main/resources/application.properties`, `logs/hoadon.log`, `pom.xml`. |
+| Frontend không chạy | `package.json`, `vue.config.js`, `src/router`. |
+| Sai quyền hoặc sai menu | `QUY_TAC_VAI_TRO_CHUONG_TRINH.md`, `src/router`, `PermissionServiceImpl`. |
+| Sai dữ liệu công ty | `docs/CO_SO_DU_LIEU.md`, repository/service liên quan. |
+| Sai mail | `mail_templates`, `mail_jobs`, `MailQueueServiceImpl`, `DbMailQueueWorker`. |
+| Sai báo cáo ngày | `DailyInvoiceReportServiceImpl`, `DailyInvoiceReportConfigRepository`, `daily_invoice_report_configs`. |
+| Sai XML hóa đơn | `InvoiceXmlBuilder`, `SignatureVatRepository`, `SignatureAuthoritiesTaxRepository`. |
+| Sai import Excel | `InvoiceImportServiceImpl`. |

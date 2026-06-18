@@ -2,17 +2,55 @@
 
 Tài liệu này mô tả tổng quan hệ thống, các nhóm người dùng, chức năng nghiệp vụ, luồng xử lý chính, dữ liệu quan trọng và các thành phần kỹ thuật của chương trình hóa đơn điện tử.
 
-Cập nhật gần nhất: 17/06/2026.
+Cập nhật gần nhất: 18/06/2026.
 
 ## 1. Mục Đích Chương Trình
 
 Chương trình là hệ thống quản lý hóa đơn điện tử dành cho doanh nghiệp và bộ phận quản trị hệ thống. Hệ thống hỗ trợ doanh nghiệp đăng ký sử dụng, quản lý hồ sơ công ty, quản lý mẫu hóa đơn, lập hóa đơn GTGT, ký và gửi hóa đơn đến cơ quan thuế, gửi email hóa đơn cho khách mua, mua thêm gói hóa đơn, báo cáo thống kê và tra cứu hóa đơn công khai.
 
-Ở phía quản trị, hệ thống hỗ trợ duyệt đăng ký công ty, quản lý công ty, quản lý gói hóa đơn, quản lý hạn mức hóa đơn, quản lý danh mục nền, quản lý phân quyền, theo dõi trạng thái gửi email, cấu hình Telegram và gửi báo cáo tự động.
+Ở phía quản trị, hệ thống hỗ trợ duyệt đăng ký công ty, quản lý công ty, quản lý gói hóa đơn, quản lý hạn mức hóa đơn, quản lý danh mục nền, quản lý phân quyền, theo dõi trạng thái gửi email, cấu hình Telegram, cấu hình báo cáo hóa đơn ngày và gửi báo cáo tự động.
+
+Tài liệu nền bổ sung:
+
+- [README.md](README.md): điểm vào tài liệu dự án.
+- [docs/KIEN_TRUC.md](docs/KIEN_TRUC.md): mô hình kiến trúc 3 tầng, Spring MVC REST và backend nhiều lớp.
+- [docs/CO_SO_DU_LIEU.md](docs/CO_SO_DU_LIEU.md): nhóm bảng và nguyên tắc dữ liệu nhiều công ty.
+- [docs/CAU_TRUC_THU_MUC.md](docs/CAU_TRUC_THU_MUC.md): cấu trúc thư mục.
+- [docs/LUONG_NGHIEP_VU.md](docs/LUONG_NGHIEP_VU.md): các luồng nghiệp vụ chính.
 
 ## 2. Công Nghệ Sử Dụng
 
-### 2.1 Backend
+### 2.1 Mô Hình Kiến Trúc
+
+Chương trình là ứng dụng web 3 tầng:
+
+- Tầng trình bày: frontend Vue 2.
+- Tầng ứng dụng/nghiệp vụ: backend Spring Boot.
+- Tầng dữ liệu: SQL Server.
+
+Backend dùng Spring MVC theo kiểu REST API. Controller nhận request và trả JSON; phần view chính nằm ở frontend Vue, không phải render view server truyền thống.
+
+Tổ chức backend theo mô hình nhiều lớp:
+
+- Controller: nhận request, đọc tham số, gọi service.
+- Service: xử lý nghiệp vụ, kiểm tra quyền, kiểm tra phạm vi công ty.
+- Repository: truy vấn database.
+- Entity/DTO: mô tả dữ liệu lưu trữ và dữ liệu trao đổi.
+- Nhóm hạ tầng: Security, Auth, Config, Util, Worker.
+
+Nếu mô tả theo mô hình 03 lớp trong Java thì backend đang áp dụng:
+
+- Presentation layer: frontend Vue hiển thị giao diện và gửi request; backend `controllers` nhận request, kiểm tra dữ liệu đầu vào cơ bản và trả response.
+- Business logic layer: `services`, `services/impl` xử lý nghiệp vụ, kiểm tra quyền, vai trò, phạm vi công ty và trạng thái dữ liệu.
+- Data access layer: `repositories`, `entity` và SQL Server kết nối, query, lưu dữ liệu rồi chuyển kết quả cho lớp xử lý nghiệp vụ.
+
+Ví dụ đăng nhập: người dùng nhập tài khoản/mật khẩu ở Vue, frontend gửi request xuống controller, controller gọi service xác thực, service dùng repository query database để kiểm tra user, mật khẩu, trạng thái và vai trò. Nếu hợp lệ, hệ thống tạo phiên đăng nhập, trả JWT và frontend điều hướng vào trang phù hợp.
+
+Nếu mô tả theo triển khai tổng thể thì hệ thống là 3 tầng: frontend Vue, backend Spring Boot và SQL Server.
+
+Khi mô tả ngắn gọn có thể nói: hệ thống là ứng dụng web 3 tầng; riêng backend Java áp dụng mô hình 03 lớp trên nền Spring MVC REST.
+
+### 2.2 Backend
 
 - Spring Boot 3.
 - Java 21.
@@ -27,7 +65,7 @@ Chương trình là hệ thống quản lý hóa đơn điện tử dành cho do
 - Jackson để xử lý JSON.
 - AES encryptor để mã hóa dữ liệu nhạy cảm như mật khẩu SMTP và bot token Telegram.
 
-### 2.2 Frontend
+### 2.3 Frontend
 
 - Vue 2.
 - Vue Router.
@@ -40,7 +78,7 @@ Chương trình là hệ thống quản lý hóa đơn điện tử dành cho do
 - Vue Advanced Cropper cho avatar/logo.
 - vuedraggable cho các màn hình cần sắp xếp thứ tự bằng kéo thả.
 
-### 2.3 Lưu Trữ File
+### 2.4 Lưu Trữ File
 
 Hệ thống lưu file upload trong thư mục `uploads`, gồm:
 
@@ -122,7 +160,8 @@ Admin hệ thống hoặc Root có thể:
 - Quản lý mail template.
 - Theo dõi và gửi lại email toàn hệ thống.
 - Cấu hình Telegram.
-- Gửi báo cáo Telegram thử.
+- Cấu hình báo cáo hóa đơn ngày.
+- Gửi báo cáo hóa đơn ngày thử.
 - Quản lý quyền và nhóm quyền.
 - Xem phiên đăng nhập theo ngữ cảnh admin.
 
@@ -190,7 +229,7 @@ Một số nhóm quyền quan trọng:
 - Quyền mua gói: `invoice-package-purchase`, `buy-invoice-list`, `buy-invoice-save`, `buy-invoice-delete`.
 - Quyền quản lý công ty: `company-list`, `company-save`, `company-manage`.
 - Quyền mail template: `mail-template-list`, `mail-template-save`, `mail-template-delete`.
-- Quyền Telegram: `telegram-config-manage`.
+- Quyền Telegram và báo cáo hóa đơn ngày: `telegram-config-manage`.
 - Quyền quản trị danh mục nền: `bank-list`, `bank-save`, `tax-authority-list`, `tax-authority-save`, `tax-authority-delete`, `vat-rate-list`, `vat-rate-save`, `vat-rate-delete`.
 - Quyền quản lý phân quyền: `permission-manage`, `permission-category-manage`.
 
@@ -387,6 +426,7 @@ Chức năng:
 - Xem lịch sử truyền nhận.
 - Lập hóa đơn thay thế.
 - Lập hóa đơn điều chỉnh.
+- Hỗ trợ luồng phát hành cho hóa đơn GTGT mẫu một thuế suất với `form_invoices.type = 1`.
 
 Trạng thái hóa đơn phổ biến:
 
@@ -418,6 +458,11 @@ Ghi chú phân quyền:
 - Dữ liệu khách hàng và sản phẩm trên màn lập hóa đơn chỉ là dữ liệu gợi ý để tự điền nhanh. Nếu user không có `category-customer-list` hoặc `category-product-list`, form lập hóa đơn vẫn được mở; người dùng vẫn có thể nhập tay thông tin người mua và hàng hóa.
 - Khi thiếu quyền chính, hệ thống báo rõ quyền thiếu thay vì báo chung chung.
 
+Ghi chú dữ liệu và XML:
+
+- Hóa đơn một thuế suất vẫn phải có dòng hàng hợp lệ, thuế suất và tổng tiền đúng theo mẫu.
+- Khi lấy XML đã ký hoặc XML gửi cơ quan thuế, hệ thống cần lọc đúng hóa đơn, công ty và mã tra cứu để tránh dùng nhầm XML của công ty khác.
+
 ### 7.6 Import Hóa Đơn
 
 Đường dẫn: `/imports/invoice`
@@ -433,6 +478,13 @@ Chức năng:
 - Import lại file đã upload để tạo hóa đơn nháp mới khi cần.
 
 API chính: `/v1/invoice-imports` hoặc controller import hóa đơn tương ứng.
+
+Ghi chú mẫu Excel:
+
+- Hệ thống dùng một mẫu Excel import chung để người dùng có thể nhập dữ liệu dù công ty đang dùng mẫu nhiều thuế suất hay mẫu một thuế suất.
+- Mẫu cần có hướng dẫn rõ cách nhập thông tin người mua, thông tin hóa đơn và nhiều dòng hàng hóa/dịch vụ.
+- Import phải gom đúng nhiều dòng hàng thuộc cùng hóa đơn, không chỉ lấy một dòng đầu tiên.
+- Với mẫu một thuế suất, dữ liệu import vẫn phải kiểm tra thuế suất, tiền thuế và tổng tiền theo rule của mẫu.
 
 Ghi chú phân quyền:
 
@@ -800,15 +852,34 @@ API chính: `/v1/administrator/mail-jobs`.
 
 Chức năng:
 
-- Bật/tắt gửi báo cáo Telegram.
+- Bật/tắt gửi Telegram.
 - Lưu Bot Token ở database, token được mã hóa.
 - Lưu Group Chat ID.
-- Cấu hình giờ và phút gửi báo cáo hằng ngày.
+- Gửi tin nhắn kiểm tra để xác nhận Bot Token và Group Chat ID đúng.
+
+API chính:
+
+- `/v1/administrator/telegram-config`
+- `/v1/administrator/telegram-config/test`
+
+Ghi chú:
+
+- Bảng `telegram_configs` chỉ lưu cấu hình Telegram như trạng thái, bot token và chat id.
+- Lịch gửi báo cáo hóa đơn ngày không lưu trong bảng này.
+
+### 9.13 Cấu Hình Báo Cáo Hóa Đơn Ngày
+
+Đường dẫn: `/administrator/daily-invoice-report/config`
+
+Chức năng:
+
+- Bật/tắt lịch gửi báo cáo tự động.
+- Cấu hình giờ và phút gửi hằng ngày.
 - Xem ngày báo cáo đã gửi gần nhất.
 - Xem thời điểm gửi gần nhất.
-- Gửi báo cáo thử.
+- Gửi báo cáo thử theo ngày báo cáo được chọn hoặc mặc định ngày hôm qua.
 
-Báo cáo Telegram gồm số lượng hóa đơn của ngày hôm qua theo từng công ty:
+Báo cáo hóa đơn ngày gồm số lượng hóa đơn của ngày báo cáo theo từng công ty:
 
 - Đã ký.
 - Đã gửi thuế.
@@ -817,15 +888,21 @@ Báo cáo Telegram gồm số lượng hóa đơn của ngày hôm qua theo từ
 
 Nếu không có hóa đơn, Telegram vẫn gửi thông báo: `Không có hóa đơn cần kiểm tra.`
 
-Scheduler chạy mỗi phút, sau đó kiểm tra cấu hình giờ/phút trong bảng `telegram_configs`. Nếu đến đúng giờ và chưa gửi cho ngày báo cáo đó, hệ thống gửi báo cáo và cập nhật `last_report_date`, `last_sent_at`.
+Email báo cáo ngày chỉ gửi khi có dữ liệu hóa đơn cần báo cáo. Email gửi từ cấu hình công ty root nhưng nội dung, người nhận và lịch sử mail nằm theo công ty thường. Tiêu đề lưu vào `mail_jobs` phải thay `[REPORT_DATE]` bằng ngày báo cáo thực tế.
+
+Scheduler chạy mỗi phút, sau đó kiểm tra cấu hình giờ/phút trong bảng `daily_invoice_report_configs`. Nếu đã đến thời điểm gửi và chưa gửi cho ngày báo cáo đó, hệ thống gửi báo cáo và cập nhật `last_report_date`, `last_sent_at`.
 
 API chính:
 
-- `/v1/administrator/telegram-config`
-- `/v1/administrator/telegram-config/test`
-- `/v1/administrator/telegram-report/send`
+- `/v1/administrator/daily-invoice-report/config`
+- `/v1/administrator/daily-invoice-report/send`
 
-### 9.13 Quản Lý Phân Quyền
+Ghi chú quyền:
+
+- Hiện controller đang dùng quyền `telegram-config-manage` cho màn này.
+- Nếu sau này tách quyền chi tiết hơn, cần bổ sung permission key và cập nhật route/menu tương ứng.
+
+### 9.14 Quản Lý Phân Quyền
 
 Đường dẫn:
 
@@ -1011,6 +1088,8 @@ Các bảng/entity quan trọng:
 - `invoices`: hóa đơn GTGT.
 - `invoice_numbers`: quản lý số hóa đơn.
 - `invoice_imports`: dữ liệu import hóa đơn.
+- `signature_vats`: XML hóa đơn đã ký.
+- `signature_authorities_tax`: XML gửi/nhận cơ quan thuế.
 - `histories`: lịch sử nghiệp vụ.
 - `notification_reads`: trạng thái đọc thông báo theo user.
 - `invoice_packages`: gói hóa đơn.
@@ -1021,6 +1100,7 @@ Các bảng/entity quan trọng:
 - `mail_servers`: cấu hình SMTP theo công ty.
 - `mail_jobs`: hàng đợi gửi email.
 - `telegram_configs`: cấu hình Telegram.
+- `daily_invoice_report_configs`: cấu hình lịch gửi báo cáo hóa đơn ngày.
 - `banks`: danh mục ngân hàng.
 - `tax_authorities`: cơ quan thuế.
 - `vat_rates`: thuế suất.
@@ -1071,7 +1151,7 @@ Các bảng/entity quan trọng:
 - `/v1/administrator/mail-template`: mail template.
 - `/v1/administrator/mail-jobs`: lịch sử gửi mail toàn hệ thống.
 - `/v1/administrator/telegram-config`: cấu hình Telegram.
-- `/v1/administrator/telegram-report`: gửi báo cáo Telegram.
+- `/v1/administrator/daily-invoice-report`: cấu hình và gửi báo cáo hóa đơn ngày.
 - `/v1/administrator/permissions`: quyền.
 - `/v1/administrator/permission-categories`: nhóm quyền.
 
@@ -1092,6 +1172,9 @@ Các bảng/entity quan trọng:
 - Giao dịch mua gói thành công mới được cộng hạn mức hóa đơn.
 - Không dùng lại URL/chữ ký thanh toán cũ khi thanh toán lại.
 - Email gửi hóa đơn xử lý qua hàng đợi để tránh chậm request người dùng.
+- Job/lịch sử mail phải lưu theo công ty phát sinh nội dung, không dồn hết về công ty root.
+- Báo cáo hóa đơn ngày dùng `daily_invoice_report_configs` để lưu lịch gửi; `telegram_configs` chỉ lưu thông tin Telegram.
+- Báo cáo hóa đơn ngày gửi Telegram cả khi không có dữ liệu, nhưng email chỉ gửi khi có dữ liệu hóa đơn cần báo cáo.
 - Bot token Telegram không lưu plain text mà được mã hóa.
 - SMTP password không trả ngược ra frontend, chỉ trả dạng che `••••••••`.
 
@@ -1129,18 +1212,23 @@ Chức năng:
 - Retry khi lỗi.
 - Ghi lỗi cuối cùng khi thất bại vĩnh viễn.
 
-### 19.2 Telegram Daily Report Scheduler
+### 19.2 Daily Invoice Report Scheduler
 
-Scheduler chạy mỗi phút, kiểm tra cấu hình Telegram trong database.
+Scheduler chạy mỗi phút, kiểm tra cấu hình báo cáo hóa đơn ngày trong bảng `daily_invoice_report_configs`.
 
 Nếu:
 
-- Telegram đang bật.
-- Có bot token và chat id.
-- Đến đúng giờ/phút cấu hình.
+- Lịch gửi báo cáo đang bật.
+- Đã đến hoặc vượt qua giờ/phút cấu hình trong ngày.
 - Chưa gửi báo cáo cho ngày hôm qua.
 
-Thì hệ thống gửi báo cáo hóa đơn ngày hôm qua vào group Telegram.
+Thì hệ thống gửi báo cáo hóa đơn ngày hôm qua.
+
+Quy tắc gửi:
+
+- Telegram dùng cấu hình trong `telegram_configs`; nếu không có dữ liệu vẫn gửi thông báo không có hóa đơn cần kiểm tra.
+- Email dùng template `DAILY_INVOICE_REPORT_MAIL`; chỉ gửi khi công ty có dữ liệu hóa đơn cần báo cáo.
+- Mail job của công ty nào phải lưu theo `company_id` của công ty đó.
 
 ## 20. Lệnh Chạy Và Build
 
@@ -1236,6 +1324,7 @@ Tùy cấu hình server port, backend phục vụ API dưới prefix `/v1`.
 - `/administrator/email-template/create`: tạo/cập nhật mail template.
 - `/administrator/email/mail-history`: lịch sử gửi mail toàn hệ thống.
 - `/administrator/telegram/config`: cấu hình Telegram.
+- `/administrator/daily-invoice-report/config`: cấu hình báo cáo hóa đơn ngày.
 - `/administrator/sessions/list`: phiên đăng nhập admin.
 - `/administrator/form-invoice/create`: tạo mẫu hóa đơn hệ thống.
 - `/administrator/form-invoice/:id/edit`: cập nhật mẫu hóa đơn hệ thống.
