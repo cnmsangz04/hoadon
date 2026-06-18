@@ -16,6 +16,7 @@ import vn.hoadon.dto.invoicepackage.InvoicePackagePurchaseRequestDTO;
 import vn.hoadon.dto.invoicepackage.InvoicePackageResponseDTO;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.services.InvoicePackageService;
+import vn.hoadon.services.ZaloPayPaymentService;
 
 import java.net.URI;
 import java.util.List;
@@ -28,6 +29,9 @@ public class InvoicePackageController extends BaseController {
 
     @Autowired
     private InvoicePackageService service;
+
+    @Autowired
+    private ZaloPayPaymentService zaloPayPaymentService;
 
     @GetMapping
     public ResponseEntity<List<InvoicePackageResponseDTO>> activePackages() {
@@ -46,11 +50,14 @@ public class InvoicePackageController extends BaseController {
         );
         boolean momoPending = isMomoPayment(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
         boolean vnpayPending = "VNPAY".equals(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
+        boolean zaloPayPending = "ZALOPAY".equals(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
         return ResponseEntity.ok(Map.of(
                 "message", momoPending
                         ? "Đã tạo giao dịch MoMo, vui lòng thanh toán trên MoMo"
                         : vnpayPending
                         ? "Đã tạo giao dịch VNPAY, vui lòng thanh toán trên VNPAY"
+                        : zaloPayPending
+                        ? "Đã tạo giao dịch ZaloPay, vui lòng thanh toán trên ZaloPay"
                         : "Thanh toán giả lập thành công",
                 "purchase", result
         ));
@@ -62,11 +69,14 @@ public class InvoicePackageController extends BaseController {
         InvoicePackagePurchaseDTO result = service.retryPayment(id, currentUser());
         boolean momoPending = isMomoPayment(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
         boolean vnpayPending = "VNPAY".equals(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
+        boolean zaloPayPending = "ZALOPAY".equals(result.getPaymentMethod()) && "PENDING".equals(result.getPaymentStatus());
         return ResponseEntity.ok(Map.of(
                 "message", momoPending
                         ? "Đã tạo lại giao dịch MoMo, vui lòng thanh toán trên MoMo"
                         : vnpayPending
                         ? "Đã tạo lại giao dịch VNPAY, vui lòng thanh toán trên VNPAY"
+                        : zaloPayPending
+                        ? "Đã tạo lại giao dịch ZaloPay, vui lòng thanh toán trên ZaloPay"
                         : "Đã xử lý thanh toán lại",
                 "purchase", result
         ));
@@ -100,6 +110,25 @@ public class InvoicePackageController extends BaseController {
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header(HttpHeaders.LOCATION, URI.create(redirectUrl).toString())
                 .build();
+    }
+
+    @PostMapping("/zalopay/callback")
+    public ResponseEntity<Map<String, Object>> zaloPayCallback(@RequestBody(required = false) Map<String, Object> payload) {
+        return ResponseEntity.ok(service.handleZaloPayCallback(payload != null ? payload : Map.of()));
+    }
+
+    @GetMapping("/zalopay/return")
+    public ResponseEntity<Void> zaloPayReturn(@RequestParam Map<String, String> params) {
+        String redirectUrl = service.handleZaloPayReturn(params);
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header(HttpHeaders.LOCATION, URI.create(redirectUrl).toString())
+                .build();
+    }
+
+    @GetMapping("/zalopay/banks")
+    public ResponseEntity<ZaloPayPaymentService.BankListResponse> zaloPayBanks() {
+        permission("invoice-package-purchase");
+        return ResponseEntity.ok(zaloPayPaymentService.getSupportedBanks());
     }
 
     @GetMapping("/my-purchases")

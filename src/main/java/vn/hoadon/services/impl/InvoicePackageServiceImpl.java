@@ -7,6 +7,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,7 @@ import vn.hoadon.dto.invoicepackage.InvoicePackagePurchaseFilterDTO;
 import vn.hoadon.dto.invoicepackage.InvoicePackageRequestDTO;
 import vn.hoadon.dto.invoicepackage.InvoicePackageResponseDTO;
 import vn.hoadon.dto.invoicepackage.InvoicePackageStatisticsDTO;
+import vn.hoadon.config.ZaloPayProperties;
 import vn.hoadon.entity.BuyInvoiceEntity;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.InvoicePackageEntity;
@@ -44,6 +46,7 @@ import vn.hoadon.services.InvoicePackageService;
 import vn.hoadon.services.MailQueueService;
 import vn.hoadon.services.MomoPaymentService;
 import vn.hoadon.services.VnpayPaymentService;
+import vn.hoadon.services.ZaloPayPaymentService;
 import vn.hoadon.util.SystemMail;
 
 import java.io.ByteArrayOutputStream;
@@ -56,6 +59,8 @@ import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -84,9 +89,15 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
     @Autowired private BuyInvoiceHistoryService buyInvoiceHistoryService;
     @Autowired private MomoPaymentService momoPaymentService;
     @Autowired private VnpayPaymentService vnpayPaymentService;
+    @Autowired private ZaloPayPaymentService zaloPayPaymentService;
+    @Autowired private ZaloPayProperties zaloPayProperties;
+    @Autowired private ObjectMapper objectMapper;
 
     @Value("${app.frontend-url:http://localhost:8080}")
     private String frontendUrl;
+
+    @Value("${app.backend-url:http://localhost:8081}")
+    private String backendUrl;
 
     @Override
     public Page<InvoicePackageResponseDTO> listPackages(InvoicePackageFilterDTO filter, Pageable pageable) {
@@ -159,6 +170,9 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
         if ("VNPAY".equals(context.method())) {
             return createVnpayPurchase(purchase, context.company());
         }
+        if ("ZALOPAY".equals(context.method())) {
+            return createZaloPayPurchase(purchase, context.company());
+        }
 
         purchase.setPaymentStatus("SUCCESS");
         purchase.setPaymentCode(fakePaymentCode(context.method()));
@@ -205,7 +219,7 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
                 ? purchase.getPaymentMethod().trim().toUpperCase(Locale.ROOT)
                 : "";
         method = normalizePaymentMethod(method);
-        if (!isMomoPaymentMethod(method) && !"VNPAY".equals(method)) {
+        if (!isMomoPaymentMethod(method) && !"VNPAY".equals(method) && !"ZALOPAY".equals(method)) {
             throw new IllegalArgumentException("Phương thức thanh toán không hỗ trợ thanh toán lại");
         }
         CompanyEntity company = companyRepository.findById(purchase.getCompanyId())
@@ -218,6 +232,14 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
                     company,
                     "Đang chờ thanh toán lại " + momoPaymentLabel(method) + " từ giao dịch #" + purchase.getId(),
                     "Đã tạo lại giao dịch " + momoPaymentLabel(method) + ", chờ khách hàng thanh toán"
+            );
+        }
+        if ("ZALOPAY".equals(method)) {
+            return createZaloPayCheckout(
+                    retryPurchase,
+                    company,
+                    "Đang chờ thanh toán lại ZaloPay từ giao dịch #" + purchase.getId(),
+                    "Đã tạo lại giao dịch ZaloPay, chờ khách hàng thanh toán"
             );
         }
         return createVnpayCheckout(
@@ -272,6 +294,37 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
             log.warn("Không thể xử lý redirect VNPAY: {}", e.getMessage());
             String orderId = params != null ? params.get("vnp_TxnRef") : null;
             return buildFrontendPaymentRedirect("vnpayStatus", "failed", orderId, e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> handleZaloPayCallback(Map<String, Object> payload) {
+        try {
+            handleZaloPayCallbackInternal(payload, "ZALOPAY_CALLBACK");
+            return zaloPayResponse(1, "success");
+        } catch (IllegalArgumentException e) {
+            log.warn("Callback ZaloPay không hợp lệ: {}", e.getMessage());
+            return zaloPayResponse(-1, e.getMessage());
+        } catch (Exception e) {
+            log.warn("Không thể xử lý callback ZaloPay: {}", e.getMessage());
+            return zaloPayResponse(0, e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public String handleZaloPayReturn(Map<String, String> params) {
+        try {
+            InvoicePackagePurchaseDTO purchase = handleZaloPayRedirect(params, "ZALOPAY_RETURN");
+            String status = "SUCCESS".equals(purchase.getPaymentStatus())
+                    ? "success"
+                    : "PENDING".equals(purchase.getPaymentStatus()) ? "pending" : "failed";
+            return buildFrontendPaymentRedirect("zalopayStatus", status, purchase.getPaymentCode(), purchase.getPaymentMessage());
+        } catch (Exception e) {
+            log.warn("Không thể xử lý redirect ZaloPay: {}", e.getMessage());
+            String orderId = params != null ? firstNotBlank(params.get("app_trans_id"), params.get("apptransid")) : null;
+            return buildFrontendPaymentRedirect("zalopayStatus", "failed", orderId, e.getMessage());
         }
     }
 
@@ -441,6 +494,63 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
         return dto;
     }
 
+    private InvoicePackagePurchaseDTO createZaloPayPurchase(InvoicePackagePurchaseEntity purchase, CompanyEntity company) {
+        return createZaloPayCheckout(
+                purchase,
+                company,
+                "Đang chờ thanh toán ZaloPay",
+                "Đã tạo giao dịch ZaloPay, chờ khách hàng thanh toán"
+        );
+    }
+
+    private InvoicePackagePurchaseDTO createZaloPayCheckout(InvoicePackagePurchaseEntity purchase, CompanyEntity company,
+                                                            String waitingNote, String paymentMessage) {
+        purchase.setPaymentStatus("PENDING");
+        purchase.setPaidAt(null);
+        purchase.setNote(waitingNote);
+        purchase = purchaseRepository.save(purchase);
+
+        String appTransId = buildZaloPayAppTransId(purchase.getId());
+        purchase.setPaymentCode(appTransId);
+        purchase = purchaseRepository.save(purchase);
+
+        String redirectUrl = firstNotBlank(
+                zaloPayProperties.getRedirectUrl(),
+                trimTrailingSlash(backendUrl) + "/v1/invoice-packages/zalopay/return"
+        );
+        String callbackUrl = firstNotBlank(
+                zaloPayProperties.getCallbackUrl(),
+                trimTrailingSlash(backendUrl) + "/v1/invoice-packages/zalopay/callback"
+        );
+
+        ZaloPayPaymentService.CreatePaymentResponse zaloPayResponse;
+        try {
+            zaloPayResponse = zaloPayPaymentService.createPayment(
+                    new ZaloPayPaymentService.CreatePaymentRequest(
+                            appTransId,
+                            amountLong(purchase.getTotalPrice()),
+                            buildZaloPayAppUser(purchase),
+                            "Hóa đơn - Thanh toán gói " + nullToBlank(purchase.getPackageName()),
+                            buildZaloPayEmbedData(purchase, redirectUrl),
+                            buildZaloPayItems(purchase),
+                            null,
+                            redirectUrl,
+                            callbackUrl
+                    )
+            );
+        } catch (IllegalStateException e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
+        }
+
+        purchase.setNote(zaloPayResponse.message());
+        purchase = purchaseRepository.save(purchase);
+
+        InvoicePackagePurchaseDTO dto = dtoWithInvoiceState(purchase, company);
+        dto.setPayUrl(zaloPayResponse.payUrl());
+        dto.setPaymentMessage(paymentMessage);
+        return dto;
+    }
+
     private Map<String, String> handleVnpayIpnInternal(Map<String, String> params) {
         if (params == null || params.isEmpty()) {
             return vnpayResponse("99", "Input data required");
@@ -530,6 +640,125 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
             purchase = purchaseRepository.save(purchase);
         }
         return dtoWithInvoiceState(purchase, company);
+    }
+
+    private InvoicePackagePurchaseDTO handleZaloPayCallbackInternal(Map<String, ?> payload, String source) {
+        if (payload == null || payload.isEmpty()) {
+            throw new IllegalArgumentException("ZaloPay không gửi dữ liệu thanh toán");
+        }
+
+        ZaloPayPaymentService.CallbackPayment callback = zaloPayPaymentService.verifyCallback(payload);
+        InvoicePackagePurchaseEntity purchase = purchaseRepository.findByPaymentCode(callback.appTransId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy giao dịch ZaloPay: " + callback.appTransId()));
+        CompanyEntity company = companyRepository.findById(purchase.getCompanyId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty của giao dịch ZaloPay"));
+        validateZaloPayPayment(purchase, callback.appId(), callback.amount());
+
+        String note = "ZaloPay xác nhận thanh toán thành công"
+                + (!isBlank(callback.zpTransId()) ? ", zpTransId=" + callback.zpTransId() : "");
+        InvoicePackagePurchaseDTO dto = completeSuccessfulPurchase(purchase, company, null, source, note, note);
+        dto.setPaymentMessage(note);
+        return dto;
+    }
+
+    private InvoicePackagePurchaseDTO handleZaloPayRedirect(Map<String, ?> params, String source) {
+        if (params == null || params.isEmpty()) {
+            throw new IllegalArgumentException("ZaloPay không gửi dữ liệu redirect");
+        }
+        if (!zaloPayPaymentService.verifyRedirectChecksum(params)) {
+            throw new IllegalArgumentException("Chữ ký redirect ZaloPay không hợp lệ");
+        }
+
+        String appTransId = firstNotBlank(
+                zaloPayPaymentService.value(params, "app_trans_id"),
+                zaloPayPaymentService.value(params, "apptransid")
+        );
+        if (appTransId == null || appTransId.isBlank()) {
+            throw new IllegalArgumentException("ZaloPay không gửi app_trans_id");
+        }
+
+        InvoicePackagePurchaseEntity purchase = purchaseRepository.findByPaymentCode(appTransId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy giao dịch ZaloPay: " + appTransId));
+        CompanyEntity company = companyRepository.findById(purchase.getCompanyId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty của giao dịch ZaloPay"));
+        validateZaloPayPayment(
+                purchase,
+                firstNotBlank(zaloPayPaymentService.value(params, "app_id"), zaloPayPaymentService.value(params, "appid")),
+                parseLong(zaloPayPaymentService.value(params, "amount"), -1)
+        );
+
+        if ("SUCCESS".equals(purchase.getPaymentStatus()) && purchase.getBuyInvoiceId() != null) {
+            InvoicePackagePurchaseDTO dto = dtoWithInvoiceState(purchase, company);
+            dto.setPaymentMessage("ZaloPay đã xác nhận thanh toán trước đó");
+            return dto;
+        }
+
+        if (!zaloPayPaymentService.isSuccessRedirect(params)) {
+            String message = "ZaloPay thanh toán không thành công: status=" + zaloPayPaymentService.value(params, "status");
+            InvoicePackagePurchaseDTO dto = failZaloPayPurchase(purchase, company, message);
+            dto.setPaymentMessage(message);
+            return dto;
+        }
+
+        try {
+            ZaloPayPaymentService.QueryStatusResponse query = zaloPayPaymentService.queryStatus(appTransId);
+            if (query.returnCode() == 1) {
+                validateZaloPayPayment(purchase, null, query.amount());
+                String note = "ZaloPay xác nhận thanh toán thành công"
+                        + (!isBlank(query.zpTransId()) ? ", zpTransId=" + query.zpTransId() : "");
+                InvoicePackagePurchaseDTO dto = completeSuccessfulPurchase(purchase, company, null, source, note, note);
+                dto.setPaymentMessage(note);
+                return dto;
+            }
+            if (query.returnCode() == 3 || query.processing()) {
+                purchase.setPaymentStatus("PENDING");
+                purchase.setNote("ZaloPay đang xử lý giao dịch: " + nullToBlank(query.returnMessage()));
+                purchase = purchaseRepository.save(purchase);
+                InvoicePackagePurchaseDTO dto = dtoWithInvoiceState(purchase, company);
+                dto.setPaymentMessage("ZaloPay đang xử lý giao dịch, hệ thống sẽ cập nhật khi có callback");
+                return dto;
+            }
+
+            String message = "ZaloPay thanh toán không thành công: returnCode="
+                    + query.returnCode()
+                    + ", message=" + nullToBlank(query.returnMessage());
+            InvoicePackagePurchaseDTO dto = failZaloPayPurchase(purchase, company, message);
+            dto.setPaymentMessage(message);
+            return dto;
+        } catch (Exception e) {
+            log.warn("Không thể truy vấn trạng thái ZaloPay cho {}: {}", appTransId, e.getMessage());
+            purchase.setPaymentStatus("PENDING");
+            purchase.setNote("Đã nhận redirect ZaloPay hợp lệ, đang chờ callback xác nhận");
+            purchase = purchaseRepository.save(purchase);
+            InvoicePackagePurchaseDTO dto = dtoWithInvoiceState(purchase, company);
+            dto.setPaymentMessage("Đã nhận redirect ZaloPay, hệ thống đang chờ callback xác nhận");
+            return dto;
+        }
+    }
+
+    private void validateZaloPayPayment(InvoicePackagePurchaseEntity purchase, String appId, long amount) {
+        if (!isBlank(appId) && !zaloPayPaymentService.isExpectedAppId(appId)) {
+            throw new IllegalArgumentException("app_id ZaloPay không khớp cấu hình");
+        }
+
+        long expectedAmount = amountLong(purchase.getTotalPrice());
+        if (amount >= 0 && amount != expectedAmount) {
+            throw new IllegalArgumentException("Số tiền ZaloPay không khớp giao dịch");
+        }
+    }
+
+    private InvoicePackagePurchaseDTO failZaloPayPurchase(InvoicePackagePurchaseEntity purchase, CompanyEntity company,
+                                                          String message) {
+        if (!"SUCCESS".equals(purchase.getPaymentStatus())) {
+            purchase.setPaymentStatus("FAILED");
+            purchase.setNote(message);
+            purchase = purchaseRepository.save(purchase);
+        }
+        return dtoWithInvoiceState(purchase, company);
+    }
+
+    private Map<String, Object> zaloPayResponse(int returnCode, String message) {
+        return Map.of("return_code", returnCode, "return_message", message != null ? message : "");
     }
 
     private Map<String, String> vnpayResponse(String rspCode, String message) {
@@ -685,6 +914,14 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
         return "VNPAY" + purchaseId + time + random;
     }
 
+    private String buildZaloPayAppTransId(Long purchaseId) {
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        String date = now.format(DateTimeFormatter.ofPattern("yyMMdd"));
+        String random = UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase(Locale.ROOT);
+        String value = date + "_HD" + purchaseId + random;
+        return value.length() <= 40 ? value : value.substring(0, 40);
+    }
+
     private String buildMomoRequestId(Long purchaseId) {
         String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         String random = UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase(Locale.ROOT);
@@ -694,6 +931,55 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
     private String buildMomoExtraData(InvoicePackagePurchaseEntity purchase) {
         String json = "{\"purchaseId\":\"" + purchase.getId() + "\",\"companyId\":\"" + purchase.getCompanyId() + "\"}";
         return Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String buildZaloPayAppUser(InvoicePackagePurchaseEntity purchase) {
+        String raw = firstNotBlank(
+                purchase.getBuyerPhone(),
+                purchase.getBuyerEmail(),
+                "company_" + purchase.getCompanyId()
+        );
+        String normalized = raw != null ? raw.replaceAll("\\s+", "_") : "hoadon";
+        return normalized.length() <= 50 ? normalized : normalized.substring(0, 50);
+    }
+
+    private String buildZaloPayEmbedData(InvoicePackagePurchaseEntity purchase, String redirectUrl) {
+        Map<String, Object> embedData = new LinkedHashMap<>();
+        embedData.put("redirecturl", redirectUrl);
+        embedData.put("preferred_payment_method", zaloPayPreferredPaymentMethods());
+        embedData.put("merchantinfo", "purchaseId=" + purchase.getId() + ";companyId=" + purchase.getCompanyId());
+        try {
+            return objectMapper.writeValueAsString(embedData);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Không thể tạo embed_data ZaloPay", e);
+        }
+    }
+
+    private List<String> zaloPayPreferredPaymentMethods() {
+        List<String> methods = new ArrayList<>();
+        String configured = zaloPayProperties.getPreferredPaymentMethods();
+        if (configured != null) {
+            for (String part : configured.split(",")) {
+                String method = part != null ? part.trim() : "";
+                if (!method.isEmpty()) {
+                    methods.add(method);
+                }
+            }
+        }
+        return methods;
+    }
+
+    private String buildZaloPayItems(InvoicePackagePurchaseEntity purchase) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("itemid", "invoice-package-" + purchase.getPackageId());
+        item.put("itemname", nullToBlank(purchase.getPackageName()));
+        item.put("itemprice", amountLong(purchase.getTotalPrice()));
+        item.put("itemquantity", 1);
+        try {
+            return objectMapper.writeValueAsString(List.of(item));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Không thể tạo item ZaloPay", e);
+        }
     }
 
     private String buildAsciiOrderInfo(InvoicePackagePurchaseEntity purchase) {
@@ -1150,7 +1436,7 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
 
     private String normalizePaymentMethod(String paymentMethod) {
         String method = paymentMethod != null ? paymentMethod.trim().toUpperCase(Locale.ROOT) : "";
-        if (!isMomoPaymentMethod(method) && !"VNPAY".equals(method)) {
+        if (!isMomoPaymentMethod(method) && !"VNPAY".equals(method) && !"ZALOPAY".equals(method)) {
             return "MOMO";
         }
         return method;
@@ -1191,6 +1477,9 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
         String method = paymentMethod != null ? paymentMethod.trim().toUpperCase(Locale.ROOT) : "";
         if ("VNPAY".equals(method)) {
             return "VNPAY";
+        }
+        if ("ZALOPAY".equals(method)) {
+            return "ZaloPay";
         }
         if (isMomoPaymentMethod(method)) {
             return momoPaymentLabel(method);
@@ -1270,6 +1559,10 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
             }
         }
         return null;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     private String trimToNull(String value) {

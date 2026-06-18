@@ -28,6 +28,7 @@ Nhóm cấu hình quan trọng:
 | Mail | `spring.mail.*`, `app.mail.*` | Cấu hình mail hệ thống và hàng đợi mail. |
 | MoMo | `momo.*` | Cấu hình thanh toán MoMo. |
 | VNPAY | `vnpay.*` | Cấu hình thanh toán VNPAY. |
+| ZaloPay | `zalopay.*` | Cấu hình thanh toán ZaloPay sandbox. |
 
 ## Cấu hình frontend
 
@@ -103,11 +104,20 @@ Nguyên tắc gửi:
 
 ## Thanh toán
 
-Cấu hình MoMo và VNPAY đang ở chế độ cấu hình qua property. Khi đổi môi trường thật cần kiểm tra:
+Cấu hình MoMo, VNPAY và ZaloPay đang ở chế độ cấu hình qua property. Khi đổi môi trường thật cần kiểm tra:
 
 - Endpoint thanh toán.
-- Partner code hoặc terminal code.
+- Partner code, terminal code hoặc `app_id`.
 - Secret key.
 - Return URL và notify URL.
 - Log giao dịch trong bảng mua gói hóa đơn.
 
+Với ZaloPay sandbox, các khóa chính là:
+
+- `zalopay.app-id`, `zalopay.key1`, `zalopay.key2`.
+- `zalopay.create-order-url`, `zalopay.query-order-url`.
+- `zalopay.bank-list-url`, `zalopay.bank-list-app-id`, `zalopay.bank-list-key1`.
+- `zalopay.redirect-url`, `zalopay.callback-url`.
+- `zalopay.bank-code`, `zalopay.preferred-payment-methods`.
+
+Nếu `zalopay.redirect-url` hoặc `zalopay.callback-url` để trống, backend tự dùng `app.backend-url` và các endpoint `/v1/invoice-packages/zalopay/return`, `/v1/invoice-packages/zalopay/callback`. Khi test callback thật, URL backend phải truy cập được từ ZaloPay sandbox.

@@ -140,6 +140,7 @@ export default {
         { value: 'MOMO_CREDIT', text: 'MoMo thẻ quốc tế' },
         { value: 'MOMO_PAY_LATER', text: 'MoMo trả sau' },
         { value: 'VNPAY', text: 'VNPAY' },
+        { value: 'ZALOPAY', text: 'ZaloPay' },
       ],
       stats: {
         totalOrders: 0,

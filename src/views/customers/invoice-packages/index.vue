@@ -286,6 +286,12 @@ export default {
           description: 'ATM, QR hoặc thẻ test',
           icon: 'fas fa-credit-card',
         },
+        {
+          value: 'ZALOPAY',
+          label: 'ZaloPay',
+          description: 'Ví ZaloPay sandbox',
+          icon: 'fas fa-qrcode',
+        },
       ],
       purchaseFilter: {
         keyword: '',
@@ -302,6 +308,7 @@ export default {
         { value: 'MOMO_CREDIT', text: 'MoMo thẻ quốc tế' },
         { value: 'MOMO_PAY_LATER', text: 'MoMo trả sau' },
         { value: 'VNPAY', text: 'VNPAY' },
+        { value: 'ZALOPAY', text: 'ZaloPay' },
       ],
       purchaseStatusOptions: [
         { value: null, text: 'Tất cả' },
@@ -335,10 +342,12 @@ export default {
     paymentButtonText() {
       if (this.isMomoMethod(this.paymentMethod)) return `Thanh toán ${this.paymentMethodText(this.paymentMethod)}`
       if (this.paymentMethod === 'VNPAY') return 'Thanh toán VNPAY'
+      if (this.paymentMethod === 'ZALOPAY') return 'Thanh toán ZaloPay'
       return 'Thanh toán giả lập'
     },
     paymentHelpText() {
       if (this.paymentMethod === 'VNPAY') return 'Cổng VNPAY.'
+      if (this.paymentMethod === 'ZALOPAY') return 'Cổng ZaloPay sandbox.'
       return `Cổng ${this.paymentMethodText(this.paymentMethod)}.`
     },
   },
@@ -623,6 +632,7 @@ export default {
       if (normalized === 'MOMO_ATM') return 'MoMo ATM nội địa'
       if (normalized === 'MOMO_CREDIT') return 'MoMo thẻ quốc tế'
       if (normalized === 'VNPAY') return 'VNPAY'
+      if (normalized === 'ZALOPAY') return 'ZaloPay'
       return method || 'thanh toán'
     },
     canRetryPayment(item) {
@@ -631,13 +641,15 @@ export default {
     },
     handlePaymentReturnMessage() {
       const query = this.$route?.query || {}
-      const status = query.momoStatus || query.vnpayStatus
+      const status = query.momoStatus || query.vnpayStatus || query.zalopayStatus
       if (!status) return
 
-      const gateway = query.vnpayStatus ? 'VNPAY' : 'MoMo'
+      const gateway = query.zalopayStatus ? 'ZaloPay' : query.vnpayStatus ? 'VNPAY' : 'MoMo'
       const message = query.message || (status === 'success'
         ? `Thanh toán ${gateway} thành công`
-        : `Thanh toán ${gateway} chưa thành công`)
+        : status === 'pending'
+          ? `Thanh toán ${gateway} đang chờ xác nhận`
+          : `Thanh toán ${gateway} chưa thành công`)
 
       if (status === 'success') {
         localStorage.setItem('company-status', '1')
@@ -648,6 +660,8 @@ export default {
           }
         }
         this.$toastr && this.$toastr.success(message)
+      } else if (status === 'pending') {
+        this.$toastr && this.$toastr.warning(message)
       } else {
         this.$toastr && this.$toastr.error(message)
       }
@@ -655,6 +669,7 @@ export default {
       const cleaned = { ...query }
       delete cleaned.momoStatus
       delete cleaned.vnpayStatus
+      delete cleaned.zalopayStatus
       delete cleaned.orderId
       delete cleaned.message
       if (this.$router) {

@@ -26,7 +26,7 @@ flowchart LR
     API --> DB[(SQL Server)]
     API --> Mail[SMTP]
     API --> Telegram[Telegram Bot]
-    API --> Payment[MoMo/VNPAY]
+    API --> Payment[MoMo/VNPAY/ZaloPay]
     API --> Tax[Cơ quan thuế]
 ```
 
@@ -90,4 +90,3 @@ sequenceDiagram
 - Use case diagram chỉ nên đưa chức năng chính, tránh quá dày.
 - Sequence diagram nên chọn 2 đến 4 luồng tiêu biểu: đăng nhập, lập hóa đơn, import hóa đơn, báo cáo ngày.
 - Nếu dùng Mermaid trong Markdown, có thể chụp lại sơ đồ để đưa vào file Word/PDF.
-

@@ -56,6 +56,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/v1/invoice-packages/momo/return").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/invoice-packages/vnpay/ipn").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/invoice-packages/vnpay/return").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/invoice-packages/zalopay/callback").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/invoice-packages/zalopay/return").permitAll()
 
                         .requestMatchers("/v1/administrator/**").authenticated()
                         .requestMatchers("/v1/setting/**").authenticated()

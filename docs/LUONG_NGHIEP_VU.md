@@ -73,7 +73,7 @@ Mẫu import cần đủ hướng dẫn để người dùng hiểu cách nhập
 
 1. Người dùng chọn gói hóa đơn.
 2. Hệ thống tạo giao dịch mua trong bảng mua gói.
-3. Người dùng thanh toán qua MoMo hoặc VNPAY nếu chọn cổng thanh toán.
+3. Người dùng thanh toán qua MoMo, VNPAY hoặc ZaloPay nếu chọn cổng thanh toán.
 4. Sau khi thanh toán thành công, hạn mức hóa đơn được cộng vào công ty.
 5. Lịch sử mua và thanh toán được lưu để đối soát.
 
@@ -83,4 +83,3 @@ Mẫu import cần đủ hướng dẫn để người dùng hiểu cách nhập
 2. Backend tìm hóa đơn theo mã tra cứu hoặc điều kiện public được hỗ trợ.
 3. Nếu hợp lệ, hệ thống trả thông tin hóa đơn hoặc file xem/tải.
 4. API public không được làm lộ dữ liệu công ty khác ngoài hóa đơn được tra cứu hợp lệ.
-

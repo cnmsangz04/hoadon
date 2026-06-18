@@ -316,6 +316,7 @@ export default {
         { value: 'MOMO_CREDIT', text: 'MoMo thẻ quốc tế' },
         { value: 'MOMO_PAY_LATER', text: 'MoMo trả sau' },
         { value: 'VNPAY', text: 'VNPAY' },
+        { value: 'ZALOPAY', text: 'ZaloPay' },
       ],
       packageFields: [
         { key: 'index', label: '#', thStyle: { width: '60px' }, tdClass: 'text-center' },
@@ -547,6 +548,7 @@ export default {
       if (normalized === 'MOMO_ATM') return 'MoMo ATM nội địa'
       if (normalized === 'MOMO_CREDIT') return 'MoMo thẻ quốc tế'
       if (normalized === 'VNPAY') return 'VNPAY'
+      if (normalized === 'ZALOPAY') return 'ZaloPay'
       return method || '—'
     },
     formatDateTime(value) {

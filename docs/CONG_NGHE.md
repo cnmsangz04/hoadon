@@ -55,6 +55,7 @@ Cập nhật: 18/06/2026.
 | Telegram Bot | Gửi thông báo hoặc báo cáo vào nhóm Telegram. |
 | MoMo | Thanh toán mua gói hóa đơn. |
 | VNPAY | Thanh toán mua gói hóa đơn. |
+| ZaloPay | Thanh toán mua gói hóa đơn trong môi trường sandbox. |
 | Cơ quan thuế | Luồng XML hóa đơn/tờ khai và trạng thái gửi cơ quan thuế. |
 
 ## Ghi chú lựa chọn kỹ thuật
@@ -63,4 +64,3 @@ Cập nhật: 18/06/2026.
 - Frontend khi build sẽ được đưa vào `src/main/resources/static`, phù hợp kiểu triển khai một ứng dụng Spring Boot phục vụ cả API và giao diện.
 - Hàng đợi mail nằm trong database, giúp xem lại lịch sử, gửi lại và xử lý lỗi gửi mail.
 - Các dữ liệu nhạy cảm như mật khẩu SMTP hoặc token Telegram cần được mã hóa trước khi lưu.
-

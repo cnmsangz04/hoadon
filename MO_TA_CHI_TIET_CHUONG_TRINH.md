@@ -306,6 +306,7 @@ Phương thức thanh toán:
 - `MOMO_CREDIT`: MoMo thẻ quốc tế.
 - `MOMO_PAY_LATER`: MoMo trả sau.
 - `VNPAY`: cổng VNPAY.
+- `ZALOPAY`: cổng ZaloPay sandbox.
 
 Trạng thái thanh toán:
 
@@ -317,7 +318,7 @@ Luồng xử lý:
 
 1. Người dùng chọn gói và phương thức thanh toán.
 2. Hệ thống tạo bản ghi `invoice_package_purchases`.
-3. Nếu là MoMo hoặc VNPAY, hệ thống tạo URL thanh toán và mở cổng thanh toán.
+3. Nếu là MoMo, VNPAY hoặc ZaloPay, hệ thống tạo URL thanh toán và mở cổng thanh toán.
 4. Cổng thanh toán gọi IPN/return về hệ thống.
 5. Hệ thống xác thực chữ ký, số tiền, mã giao dịch.
 6. Nếu thành công, hệ thống cộng hạn mức hóa đơn vào `buy_invoices`.
@@ -333,6 +334,9 @@ API chính:
 - `/v1/invoice-packages/momo/return`
 - `/v1/invoice-packages/vnpay/ipn`
 - `/v1/invoice-packages/vnpay/return`
+- `/v1/invoice-packages/zalopay/callback`
+- `/v1/invoice-packages/zalopay/return`
+- `/v1/invoice-packages/zalopay/banks`
 
 ### 7.3 Tờ Khai Đăng Ký Hóa Đơn Điện Tử
 
@@ -998,7 +1002,7 @@ Luồng xử lý:
 
 Các email đăng nhập và reset mật khẩu có thể không hiển thị ở lịch sử phía khách hàng để tránh lộ thông tin nhạy cảm.
 
-## 13. Thanh Toán MoMo Và VNPAY
+## 13. Thanh Toán MoMo, VNPAY Và ZaloPay
 
 ### 13.1 MoMo
 
@@ -1044,14 +1048,44 @@ Khi VNPAY IPN/return:
 - Nếu thành công thì cộng hạn mức hóa đơn.
 - Nếu thất bại thì cập nhật trạng thái thất bại.
 
-### 13.3 Thanh Toán Lại
+### 13.3 ZaloPay
+
+ZaloPay được tích hợp theo môi trường sandbox và dùng API v2.
+
+Khi tạo giao dịch:
+
+- Hệ thống tạo `app_trans_id` theo định dạng bắt đầu bằng `yyMMdd` theo giờ Việt Nam.
+- Hệ thống tạo `embed_data` gồm `redirecturl`, `preferred_payment_method` và thông tin giao dịch nội bộ.
+- Hệ thống tạo `item` mô tả gói hóa đơn.
+- Hệ thống ký dữ liệu bằng HMAC-SHA256 với `zalopay.key1`.
+- Gọi API tạo đơn ZaloPay và nhận `order_url`.
+- Lưu `app_trans_id` vào `payment_code` để đối soát callback/redirect.
+
+Khi ZaloPay callback:
+
+- Hệ thống kiểm tra `mac` bằng `zalopay.key2`.
+- Đọc trường `data` do ZaloPay gửi.
+- Kiểm tra `app_id`, `app_trans_id` và số tiền.
+- Nếu hợp lệ thì cộng hạn mức hóa đơn và trả `return_code = 1`.
+
+Khi ZaloPay redirect:
+
+- Hệ thống kiểm tra `checksum` bằng `zalopay.key2`.
+- Kiểm tra `app_trans_id`, `app_id` và số tiền.
+- Nếu redirect báo thành công, hệ thống truy vấn lại trạng thái đơn hàng qua API query.
+- Nếu query thành công thì cộng hạn mức hóa đơn; nếu còn xử lý thì giữ trạng thái `PENDING`.
+- Nếu redirect hoặc query thất bại thì cập nhật trạng thái `FAILED`.
+
+Hệ thống có API `/v1/invoice-packages/zalopay/banks` để lấy danh sách ngân hàng ZaloPay sandbox hỗ trợ. API này dùng `zalopay.bank-list-app-id`, `zalopay.bank-list-key1` và ký theo công thức ZaloPay yêu cầu.
+
+### 13.4 Thanh Toán Lại
 
 Người dùng có thể thanh toán lại khi:
 
 - Giao dịch đang `PENDING`.
 - Giao dịch đã `FAILED`.
 - Giao dịch chưa được cộng hạn mức.
-- Phương thức thanh toán thuộc MoMo hoặc VNPAY.
+- Phương thức thanh toán thuộc MoMo, VNPAY hoặc ZaloPay.
 
 Hệ thống tạo giao dịch mới dựa trên giao dịch cũ để tránh dùng lại URL hoặc chữ ký cũ gây lỗi.
 

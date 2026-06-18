@@ -37,6 +37,15 @@ Tài liệu này tóm tắt nhóm API chính để người đọc hiểu cách 
 | `/v1/mail-jobs` | Lịch sử gửi mail của công ty. |
 | `/v1/invoice-packages` | Gói hóa đơn, mua gói, thanh toán, lịch sử mua. |
 
+Các endpoint thanh toán của nhóm gói hóa đơn:
+
+- `/v1/invoice-packages/purchase`: tạo giao dịch mua gói.
+- `/v1/invoice-packages/purchases/{id}/retry-payment`: tạo lại giao dịch cho đơn đang chờ hoặc thất bại.
+- `/v1/invoice-packages/momo/ipn`, `/v1/invoice-packages/momo/return`: nhận kết quả MoMo.
+- `/v1/invoice-packages/vnpay/ipn`, `/v1/invoice-packages/vnpay/return`: nhận kết quả VNPAY.
+- `/v1/invoice-packages/zalopay/callback`, `/v1/invoice-packages/zalopay/return`: nhận kết quả ZaloPay.
+- `/v1/invoice-packages/zalopay/banks`: lấy danh sách ngân hàng sandbox ZaloPay đang hỗ trợ.
+
 ## API cài đặt
 
 | API | Chức năng |
@@ -81,4 +90,3 @@ Tài liệu này tóm tắt nhóm API chính để người đọc hiểu cách 
 3. Frontend gửi dữ liệu hóa đơn.
 4. Backend lưu hóa đơn, sinh XML/PDF khi cần.
 5. Khi phát hành, backend cập nhật trạng thái và có thể tạo mail job.
-

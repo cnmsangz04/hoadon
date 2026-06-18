@@ -34,6 +34,10 @@ public interface InvoicePackageService {
 
     String handleVnpayReturn(Map<String, String> params);
 
+    Map<String, Object> handleZaloPayCallback(Map<String, Object> payload);
+
+    String handleZaloPayReturn(Map<String, String> params);
+
     InvoicePackagePurchaseDTO getMyPurchase(Long purchaseId, UserEntity user);
 
     Page<InvoicePackagePurchaseDTO> listPurchases(InvoicePackagePurchaseFilterDTO filter, Pageable pageable);
