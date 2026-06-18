@@ -74,7 +74,7 @@
         </template>
 
         <template #cell(summary)="{ item }">
-          <div>{{ item.successCount || 0 }} hóa đơn / {{ item.totalRows || 0 }} dòng</div>
+          <div>{{ item.successCount || 0 }} hóa đơn / {{ item.totalRows || 0 }} dòng hàng</div>
           <small v-if="item.errorCount" class="text-danger">{{ item.errorCount }} lỗi</small>
         </template>
 
@@ -242,7 +242,7 @@ export default {
     },
     notifyResult (data) {
       if (data?.status === 'SUCCESS') {
-        this.toastSuccess(`Đã tạo ${data.successCount || 0} hóa đơn nháp`)
+        this.toastSuccess(`Đã tạo ${data.successCount || 0} hóa đơn nháp từ ${data.totalRows || 0} dòng hàng`)
       } else {
         this.toastError(data?.errorMessage || 'Import hóa đơn thất bại')
       }

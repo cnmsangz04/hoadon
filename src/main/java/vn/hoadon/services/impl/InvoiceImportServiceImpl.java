@@ -1,6 +1,8 @@
 package vn.hoadon.services.impl;
 
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -62,6 +64,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
     public ResponseEntity<byte[]> template() {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Import hóa đơn");
+            CreationHelper helper = workbook.getCreationHelper();
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);
@@ -72,11 +75,13 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
             headerStyle.setBorderTop(BorderStyle.THIN);
             headerStyle.setBorderLeft(BorderStyle.THIN);
             headerStyle.setBorderRight(BorderStyle.THIN);
+            headerStyle.setWrapText(true);
+            headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
 
             String[] headers = {
-                    "Mã hóa đơn import",
-                    "Ngày lập",
-                    "Hình thức thanh toán",
+                    "Mã hóa đơn import\n(cùng mã gom thành 1 hóa đơn)",
+                    "Ngày lập\n(dd/MM/yyyy)",
+                    "Hình thức thanh toán\n(Tiền mặt/Chuyển khoản)",
                     "Mã khách hàng",
                     "Đơn vị mua",
                     "Người mua",
@@ -92,26 +97,45 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
                     "Số lượng",
                     "Đơn giá",
                     "Thành tiền",
-                    "Thuế suất",
-                    "Thuế suất khác",
-                    "Tính chất",
+                    "Thuế suất\n(0/5/8/10/KCT/KKKNT/Khác)",
+                    "Thuế suất khác\n(khi Thuế suất = Khác)",
+                    "Tính chất\n(1 HH,DV; 2 KM; 3 CK; 4 Ghi chú)",
                     "Ghi chú"
             };
             Row header = sheet.createRow(0);
+            header.setHeightInPoints(48);
+            Drawing<?> drawing = sheet.createDrawingPatriarch();
             for (int i = 0; i < headers.length; i += 1) {
                 Cell cell = header.createCell(i);
                 cell.setCellValue(headers[i]);
                 cell.setCellStyle(headerStyle);
-                sheet.setColumnWidth(i, Math.min(9000, Math.max(3500, headers[i].length() * 420)));
+                int visibleLength = headers[i].replace("\n", " ").length();
+                sheet.setColumnWidth(i, Math.min(10000, Math.max(4200, visibleLength * 300)));
             }
+            sheet.setColumnWidth(0, 9500);
+            sheet.setColumnWidth(18, 9500);
+            sheet.setColumnWidth(19, 9000);
+            sheet.setColumnWidth(20, 10000);
+            addHeaderComment(sheet, helper, drawing, header.getCell(0),
+                    "Các dòng cùng Mã hóa đơn import sẽ được gom thành 1 hóa đơn có nhiều dòng hàng. Đổi mã khi muốn tạo hóa đơn khác.");
+            addHeaderComment(sheet, helper, drawing, header.getCell(18),
+                    "Nhập 0, 5, 8, 10, KCT, KKKNT hoặc Khác. Nếu dùng mẫu một thuế suất, các dòng cùng mã phải cùng thuế suất.");
+            addHeaderComment(sheet, helper, drawing, header.getCell(19),
+                    "Chỉ nhập khi cột Thuế suất là Khác hoặc -3.");
+            addHeaderComment(sheet, helper, drawing, header.getCell(20),
+                    "1 HH,DV; 2 Khuyến mại; 3 Chiết khấu; 4 Ghi chú.");
+            sheet.createFreezePane(0, 1);
+            sheet.setAutoFilter(new CellRangeAddress(0, 0, 0, headers.length - 1));
+            addDropdown(sheet, 1, 500, 2, "Tiền mặt", "Chuyển khoản", "Tiền mặt/Chuyển khoản", "1", "2", "3");
+            addDropdown(sheet, 1, 500, 18, "0", "5", "8", "10", "KCT", "KKKNT", "Khác", "-1", "-2", "-3");
+            addDropdown(sheet, 1, 500, 20, "1", "2", "3", "4");
 
             Object[][] samples = {
                     {"HD001", LocalDate.now(), "Chuyển khoản", "KH001", "Công ty TNHH Minh An", "Nguyễn Văn A", "0101234567", "12 Nguyễn Trãi, Hà Nội", "ketoan@minhan.vn", "0901000001", "VCB", "001100000001", "SP001", "Dịch vụ tư vấn", "Lần", 1, 3000000, "", 10, "", 1, ""},
-                    {"HD001", LocalDate.now(), "Chuyển khoản", "KH001", "Công ty TNHH Minh An", "Nguyễn Văn A", "0101234567", "12 Nguyễn Trãi, Hà Nội", "ketoan@minhan.vn", "0901000001", "VCB", "001100000001", "SP002", "Phí triển khai", "Gói", 1, 2000000, "", 8, "", 1, ""},
+                    {"HD001", LocalDate.now(), "Chuyển khoản", "KH001", "Công ty TNHH Minh An", "Nguyễn Văn A", "0101234567", "12 Nguyễn Trãi, Hà Nội", "ketoan@minhan.vn", "0901000001", "VCB", "001100000001", "SP002", "Phí triển khai", "Gói", 1, 2000000, "", 10, "", 1, ""},
                     {"HD002", LocalDate.now(), "Tiền mặt", "KH002", "Hộ kinh doanh Bình Minh", "Trần Thị B", "", "25 Lê Lợi, Đà Nẵng", "binhminh@example.com", "0902000002", "", "", "DV001", "Dịch vụ bảo trì", "Tháng", 2, 500000, "", 0, "", 1, ""}
             };
             CellStyle dateStyle = workbook.createCellStyle();
-            CreationHelper helper = workbook.getCreationHelper();
             dateStyle.setDataFormat(helper.createDataFormat().getFormat("yyyy-mm-dd"));
             for (int r = 0; r < samples.length; r += 1) {
                 Row row = sheet.createRow(r + 1);
@@ -128,20 +152,15 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
                     }
                 }
             }
+            addHeaderComment(sheet, helper, drawing, sheet.getRow(1).getCell(0),
+                    "HD001 có 2 dòng trong file mẫu, sau import sẽ tạo 1 hóa đơn có 2 dòng hàng.");
+            addHeaderComment(sheet, helper, drawing, sheet.getRow(2).getCell(0),
+                    "Dòng này vẫn thuộc hóa đơn HD001 vì có cùng Mã hóa đơn import.");
+            addHeaderComment(sheet, helper, drawing, sheet.getRow(3).getCell(0),
+                    "HD002 là mã khác nên sẽ tạo hóa đơn khác.");
 
-            Sheet guide = workbook.createSheet("Huong dan");
-            String[] notes = {
-                    "Một dòng là một hàng hóa/dịch vụ.",
-                    "Các dòng có cùng Mã hóa đơn import sẽ được gom thành một hóa đơn.",
-                    "Ngày lập nhập dạng yyyy-MM-dd hoặc dd/MM/yyyy. Nếu để trống sẽ lấy ngày hiện tại.",
-                    "Hình thức thanh toán: 1/Tiền mặt, 2/Chuyển khoản, 3/Tiền mặt/Chuyển khoản.",
-                    "Thuế suất: nhập 0, 5, 8, 10; nhập KCT hoặc -1 cho không chịu thuế; nhập KKKNT hoặc -2 cho không kê khai; nhập Khác hoặc -3 và điền Thuế suất khác.",
-                    "Tính chất: 1 HH,DV; 2 Khuyến mại; 3 Chiết khấu; 4 Ghi chú.",
-                    "Thành tiền có thể để trống, hệ thống tự tính bằng Số lượng x Đơn giá."
-            };
-            for (int i = 0; i < notes.length; i += 1) {
-                guide.createRow(i).createCell(0).setCellValue(notes[i]);
-            }
+            Sheet guide = workbook.createSheet("Hướng dẫn");
+            writeGuideSheet(workbook, guide);
             guide.setColumnWidth(0, 18000);
 
             workbook.write(out);
@@ -152,6 +171,84 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         } catch (Exception ex) {
             throw new IllegalStateException("Không tạo được mẫu Excel import hóa đơn: " + ex.getMessage(), ex);
         }
+    }
+
+    private void addHeaderComment(Sheet sheet, CreationHelper helper, Drawing<?> drawing, Cell cell, String text) {
+        if (sheet == null || helper == null || drawing == null || cell == null || text == null || text.isBlank()) {
+            return;
+        }
+        ClientAnchor anchor = helper.createClientAnchor();
+        anchor.setCol1(cell.getColumnIndex());
+        anchor.setCol2(Math.min(cell.getColumnIndex() + 5, 21));
+        anchor.setRow1(cell.getRowIndex());
+        anchor.setRow2(cell.getRowIndex() + 4);
+        Comment comment = drawing.createCellComment(anchor);
+        comment.setString(helper.createRichTextString(text));
+        comment.setAuthor("Hệ thống");
+        cell.setCellComment(comment);
+    }
+
+    private void addDropdown(Sheet sheet, int firstRow, int lastRow, int column, String... values) {
+        if (sheet == null || values == null || values.length == 0) {
+            return;
+        }
+        DataValidationHelper helper = sheet.getDataValidationHelper();
+        DataValidationConstraint constraint = helper.createExplicitListConstraint(values);
+        CellRangeAddressList regions = new CellRangeAddressList(firstRow, lastRow, column, column);
+        DataValidation validation = helper.createValidation(constraint, regions);
+        validation.setShowErrorBox(true);
+        sheet.addValidationData(validation);
+    }
+
+    private void writeGuideSheet(Workbook workbook, Sheet guide) {
+        CellStyle titleStyle = workbook.createCellStyle();
+        Font titleFont = workbook.createFont();
+        titleFont.setBold(true);
+        titleFont.setFontHeightInPoints((short) 14);
+        titleStyle.setFont(titleFont);
+
+        CellStyle sectionStyle = workbook.createCellStyle();
+        Font sectionFont = workbook.createFont();
+        sectionFont.setBold(true);
+        sectionStyle.setFont(sectionFont);
+        sectionStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+        sectionStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+        int row = 0;
+        row = writeGuideRow(guide, row, "Mẫu import hóa đơn", titleStyle);
+        row++;
+        row = writeGuideRow(guide, row, "Cách hiểu dữ liệu", sectionStyle);
+        row = writeGuideRow(guide, row, "- Một dòng là một hàng hóa/dịch vụ.", null);
+        row = writeGuideRow(guide, row, "- Các dòng cùng Mã hóa đơn import sẽ được gom thành 1 hóa đơn có nhiều dòng hàng.", null);
+        row = writeGuideRow(guide, row, "- Nếu muốn tạo hóa đơn khác, hãy nhập Mã hóa đơn import khác.", null);
+        row = writeGuideRow(guide, row, "- Ví dụ trong mẫu: HD001 có 2 dòng hàng nên import ra 1 hóa đơn có 2 dòng hàng; HD002 là hóa đơn khác.", null);
+        row = writeGuideRow(guide, row, "- Sheet Import hóa đơn có sẵn dữ liệu mẫu hợp lệ cho cả mẫu một thuế suất và mẫu nhiều thuế suất.", null);
+        row++;
+        row = writeGuideRow(guide, row, "Khi công ty dùng mẫu một thuế suất", sectionStyle);
+        row = writeGuideRow(guide, row, "- Các dòng cùng Mã hóa đơn import phải có cùng Thuế suất và cùng Thuế suất khác.", null);
+        row = writeGuideRow(guide, row, "- Ví dụ đúng: HD001 có 2 dòng và cả 2 dòng đều Thuế suất = 10.", null);
+        row = writeGuideRow(guide, row, "- Ví dụ sai: HD001 dòng 1 Thuế suất = 10, dòng 2 Thuế suất = 8.", null);
+        row++;
+        row = writeGuideRow(guide, row, "Khi công ty dùng mẫu nhiều thuế suất", sectionStyle);
+        row = writeGuideRow(guide, row, "- Cùng một Mã hóa đơn import có thể có nhiều Thuế suất khác nhau.", null);
+        row = writeGuideRow(guide, row, "- Ví dụ: một dòng dịch vụ 10% và một dòng hàng hóa 8% trong cùng một hóa đơn.", null);
+        row++;
+        row = writeGuideRow(guide, row, "Giá trị thường dùng", sectionStyle);
+        row = writeGuideRow(guide, row, "- Ngày lập: yyyy-MM-dd hoặc dd/MM/yyyy; bỏ trống sẽ lấy ngày hiện tại.", null);
+        row = writeGuideRow(guide, row, "- Hình thức thanh toán: Tiền mặt, Chuyển khoản, Tiền mặt/Chuyển khoản hoặc 1, 2, 3.", null);
+        row = writeGuideRow(guide, row, "- Thuế suất: 0, 5, 8, 10; KCT hoặc -1; KKKNT hoặc -2; Khác hoặc -3 và nhập thêm Thuế suất khác.", null);
+        row = writeGuideRow(guide, row, "- Tính chất: 1 HH,DV; 2 Khuyến mại; 3 Chiết khấu; 4 Ghi chú.", null);
+        writeGuideRow(guide, row, "- Thành tiền có thể để trống, hệ thống tự tính Số lượng x Đơn giá.", null);
+    }
+
+    private int writeGuideRow(Sheet sheet, int rowIndex, String text, CellStyle style) {
+        Row row = sheet.createRow(rowIndex);
+        Cell cell = row.createCell(0);
+        cell.setCellValue(text);
+        if (style != null) {
+            cell.setCellStyle(style);
+        }
+        return rowIndex + 1;
     }
 
     @Override
@@ -240,6 +337,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
             FormInvoiceEntity form = resolveActiveVatForm(user.getCompanyId());
             List<String> errors = new ArrayList<>();
             List<ImportInvoiceGroup> groups = readGroups(filePath, errors);
+            validateOneVatRateForm(form, groups, errors);
             entity.setTotalRows(groups.stream().mapToInt(g -> g.rows.size()).sum());
             entity.setInvoiceCount(groups.size());
             if (!errors.isEmpty()) {
@@ -360,6 +458,35 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
             errors.add("File Excel không có dòng dữ liệu để import");
         }
         return new ArrayList<>(map.values());
+    }
+
+    private void validateOneVatRateForm(FormInvoiceEntity form, List<ImportInvoiceGroup> groups, List<String> errors) {
+        if (form == null || form.getType() == null || form.getType() != 1 || groups == null) {
+            return;
+        }
+        for (ImportInvoiceGroup group : groups) {
+            String firstRate = null;
+            for (Map<String, Object> row : group.rows) {
+                String currentRate = vatRateKey(row);
+                if (firstRate == null) {
+                    firstRate = currentRate;
+                    continue;
+                }
+                if (!Objects.equals(firstRate, currentRate)) {
+                    errors.add("Mã import " + group.importCode + ": mẫu một thuế suất chỉ được nhập một mức thuế suất");
+                    break;
+                }
+            }
+        }
+    }
+
+    private String vatRateKey(Map<String, Object> row) {
+        if (row == null) return "-1:0";
+        Number vatRate = row.get("vatRate") instanceof Number ? (Number) row.get("vatRate") : null;
+        Number vatRateOther = row.get("vatRateOther") instanceof Number ? (Number) row.get("vatRateOther") : null;
+        int rate = vatRate != null ? vatRate.intValue() : -1;
+        int other = rate == -3 && vatRateOther != null ? vatRateOther.intValue() : 0;
+        return rate + ":" + other;
     }
 
     private FormInvoiceEntity resolveActiveVatForm(Long companyId) throws Exception {

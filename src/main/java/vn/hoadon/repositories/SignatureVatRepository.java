@@ -11,4 +11,6 @@ import java.util.Optional;
 public interface SignatureVatRepository extends JpaRepository<SignatureVatEntity, Integer> {
     Optional<SignatureVatEntity> findTopByInvoiceIdOrderByIdDesc(Integer invoiceId);
     List<SignatureVatEntity> findByInvoiceId(Integer invoiceId);
+    Optional<SignatureVatEntity> findTopByInvoiceIdAndCompanyIdOrderByIdDesc(Integer invoiceId, Integer companyId);
+    List<SignatureVatEntity> findByInvoiceIdAndCompanyId(Integer invoiceId, Integer companyId);
 }

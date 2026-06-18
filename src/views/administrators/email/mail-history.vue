@@ -256,6 +256,7 @@ export default {
       if (key === 'LOGIN_INFO_MAIL') return 'Gửi thông tin đăng nhập'
       if (key === 'RESET_PASSWORD_MAIL') return 'Đặt lại mật khẩu'
       if (key === 'BUY_INVOICE_MAIL') return 'Thông báo mua gói hóa đơn thành công'
+      if (key === 'DAILY_INVOICE_REPORT_MAIL') return 'Báo cáo hóa đơn ngày'
       return key || 'Email hệ thống'
     },
     statusText(status) {

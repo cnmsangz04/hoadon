@@ -61,4 +61,15 @@ public class SignatureVatServiceImpl implements SignatureVatService {
     public List<SignatureVatDTO> listByInvoiceId(Integer invoiceId) {
         return repository.findByInvoiceId(invoiceId).stream().map(this::toDto).collect(Collectors.toList());
     }
+
+    @Override
+    public SignatureVatDTO getLatestByInvoiceIdAndCompanyId(Integer invoiceId, Integer companyId) {
+        Optional<SignatureVatEntity> opt = repository.findTopByInvoiceIdAndCompanyIdOrderByIdDesc(invoiceId, companyId);
+        return toDto(opt.orElse(null));
+    }
+
+    @Override
+    public List<SignatureVatDTO> listByInvoiceIdAndCompanyId(Integer invoiceId, Integer companyId) {
+        return repository.findByInvoiceIdAndCompanyId(invoiceId, companyId).stream().map(this::toDto).collect(Collectors.toList());
+    }
 }

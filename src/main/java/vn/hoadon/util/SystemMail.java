@@ -10,7 +10,8 @@ public final class SystemMail {
             "ACCOUNT_INFO_MAIL",
             "LOGIN_INFO_MAIL",
             "RESET_PASSWORD_MAIL",
-            "BUY_INVOICE_MAIL"
+            "BUY_INVOICE_MAIL",
+            "DAILY_INVOICE_REPORT_MAIL"
     );
 
     private SystemMail() {

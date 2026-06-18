@@ -611,6 +611,13 @@ Table telegram_configs {
   enabled bit [not null]
   bot_token nvarchar(max)
   chat_id nvarchar(128)
+  created_at datetime2
+  updated_at datetime2
+}
+
+Table daily_invoice_report_configs {
+  id int [pk, increment]
+  report_enabled bit [not null]
   daily_hour int [not null]
   daily_minute int [not null]
   last_report_date date

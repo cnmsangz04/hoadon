@@ -165,6 +165,7 @@ public class InvoiceController extends BaseController {
         dto.formCode = activeVatForm.getFormCode();
         dto.serial = activeVatForm.getSerial();
         dto.haveCode = activeVatForm.getHaveCode();
+        dto.formType = activeVatForm.getType();
         dto.registerId = latestAccepted.getId();
         dto.registerEffectiveDate = latestAccepted.getEffectiveDate() != null ? latestAccepted.getEffectiveDate().toString() : null;
         dto.companyId = user.getCompanyId();
@@ -369,8 +370,11 @@ public class InvoiceController extends BaseController {
         if (inv.getFormId() != null) {
             FormInvoiceEntity form = formInvoiceRepository.findById(inv.getFormId().longValue()).orElse(null);
             if (form != null && form.getCompanyId() != null && form.getCompanyId().equals(user.getCompanyId())) {
+                resp.put("formName", form.getName());
                 resp.put("formCode", form.getFormCode());
                 resp.put("serial", form.getSerial());
+                resp.put("haveCode", form.getHaveCode());
+                resp.put("formType", form.getType());
             }
         }
         // Parse JSON fields
@@ -570,7 +574,7 @@ public class InvoiceController extends BaseController {
         }
     }
     public static class ErrorDTO { public String message; public ErrorDTO(String m){ this.message = m; } }
-    public static class PrepareDTO { public Long formId; public String formName; public String formCode; public String serial; public Integer haveCode; public Long registerId; public String registerEffectiveDate; public Long companyId; }
+    public static class PrepareDTO { public Long formId; public String formName; public String formCode; public String serial; public Integer haveCode; public Integer formType; public Long registerId; public String registerEffectiveDate; public Long companyId; }
 
     // Incoming request from Vue create form
     public static class CreateRequest {
@@ -1530,7 +1534,9 @@ public class InvoiceController extends BaseController {
         if (iCompany != null && !uCompany.equals(iCompany)) {
             return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền thao tác hóa đơn của công ty khác"));
         }
-        SignatureVatEntity sig = signatureVatRepository.findTopByInvoiceIdOrderByIdDesc(inv.getId().intValue()).orElse(null);
+        SignatureVatEntity sig = signatureVatRepository
+                .findTopByInvoiceIdAndCompanyIdOrderByIdDesc(inv.getId().intValue(), uCompany.intValue())
+                .orElse(null);
         if (sig == null || sig.getXml() == null || sig.getXml().isBlank()) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Hóa đơn chưa được ký số"));
         }
@@ -1603,16 +1609,31 @@ public class InvoiceController extends BaseController {
                 log.warn("processCqtResponse: Invoice {} not found", invoiceId);
                 return;
             }
+            Integer invoiceCompanyId = inv.getCompanyId();
+            Integer requestCompanyId = companyId != null ? companyId.intValue() : null;
+            if (invoiceCompanyId == null || requestCompanyId == null || !invoiceCompanyId.equals(requestCompanyId)) {
+                log.warn("processCqtResponse: Invoice {} does not belong to company {}", invoiceId, companyId);
+                return;
+            }
             
             // Ensure we have the latest tax upload xml
             SignatureAuthoritiesTaxDTO lastTax = null;
             try {
-                lastTax = signatureAuthoritiesTaxService.getLatestByInvoiceId(inv.getId().intValue());
+                lastTax = signatureAuthoritiesTaxService
+                        .getLatestByInvoiceIdAndCompanyId(inv.getId().intValue(), requestCompanyId);
             } catch (Exception ignore) {}
             String xml = lastTax != null ? lastTax.xml : null;
+            if (!isXmlForInvoice(inv, xml)) {
+                xml = null;
+            }
             if (xml == null || xml.isBlank()) {
-                SignatureVatEntity sig = signatureVatRepository.findTopByInvoiceIdOrderByIdDesc(inv.getId().intValue()).orElse(null);
+                SignatureVatEntity sig = signatureVatRepository
+                        .findTopByInvoiceIdAndCompanyIdOrderByIdDesc(inv.getId().intValue(), requestCompanyId)
+                        .orElse(null);
                 xml = sig != null ? sig.getXml() : null;
+                if (!isXmlForInvoice(inv, xml)) {
+                    xml = null;
+                }
             }
             if (xml == null || xml.isBlank()) {
                 log.warn("processCqtResponse: No XML found for invoice {}", invoiceId);
@@ -2194,6 +2215,7 @@ public class InvoiceController extends BaseController {
 
         short status = inv.getStatus() == null ? 0 : inv.getStatus();
         Integer invoiceId = inv.getId() == null ? null : inv.getId().intValue();
+        Integer companyId = inv.getCompanyId();
 
         // 0: build from current data
         if (status == 0) {
@@ -2202,20 +2224,35 @@ public class InvoiceController extends BaseController {
 
         // 1-2: signed XML
         if (status == 1 || status == 2) {
-            String xml = getXmlFromSignatureVats(invoiceId);
-            if (xml != null && !xml.isBlank()) return xml;
+            String xml = getXmlFromSignatureVats(invoiceId, companyId);
+            if (isXmlForInvoice(inv, xml)) return xml;
             // Dự phòng
             return buildInvoiceXml(inv, form, company, bank);
         }
 
         // >2: CQT XML preferred
-        String xmlCqt = getXmlFromSignatureAuthoritiesTax(invoiceId);
-        if (xmlCqt != null && !xmlCqt.isBlank()) return xmlCqt;
+        String xmlCqt = getXmlFromSignatureAuthoritiesTax(invoiceId, companyId);
+        if (isXmlForInvoice(inv, xmlCqt)) return xmlCqt;
 
-        String xmlSigned = getXmlFromSignatureVats(invoiceId);
-        if (xmlSigned != null && !xmlSigned.isBlank()) return xmlSigned;
+        String xmlSigned = getXmlFromSignatureVats(invoiceId, companyId);
+        if (isXmlForInvoice(inv, xmlSigned)) return xmlSigned;
 
         return buildInvoiceXml(inv, form, company, bank);
+    }
+
+    private boolean isXmlForInvoice(InvoiceEntity inv, String xml) {
+        if (inv == null || xml == null || xml.isBlank()) {
+            return false;
+        }
+        String lookupCode = inv.getLookupCode();
+        if (lookupCode != null && !lookupCode.isBlank()) {
+            return xml.contains("<DLieu>" + lookupCode + "</DLieu>")
+                    || xml.contains("<DLieu><![CDATA[" + lookupCode + "]]></DLieu>");
+        }
+        if (inv.getNo() != null) {
+            return xml.contains("<SHDon>" + inv.getNo() + "</SHDon>");
+        }
+        return true;
     }
 
     private String normalizeInvoiceXml(String xml) {
@@ -2238,10 +2275,11 @@ public class InvoiceController extends BaseController {
         return normalizeInvoiceXml(vn.hoadon.util.InvoiceXmlBuilder.build(inv, form, company, bank, referenceInvoice, referenceForm));
     }
 
-    private String getXmlFromSignatureVats(Integer invoiceId) {
-        if (invoiceId == null) return null;
+    private String getXmlFromSignatureVats(Integer invoiceId, Integer companyId) {
+        if (invoiceId == null || companyId == null) return null;
         try {
-            java.util.List<vn.hoadon.entity.SignatureVatEntity> rows = signatureVatRepository.findByInvoiceId(invoiceId);
+            java.util.List<vn.hoadon.entity.SignatureVatEntity> rows =
+                    signatureVatRepository.findByInvoiceIdAndCompanyId(invoiceId, companyId);
             if (rows == null || rows.isEmpty()) return null;
             // Try newest first if ordering is not guaranteed
             rows.sort((a, b) -> {
@@ -2255,22 +2293,23 @@ public class InvoiceController extends BaseController {
             String xml = rows.get(0) != null ? rows.get(0).getXml() : null;
             return (xml != null && !xml.isBlank()) ? normalizeInvoiceXml(xml) : null;
         } catch (Exception e) {
-            log.warn("Failed to load signature_vats xml for invoice {}: {}", invoiceId, e.toString());
+            log.warn("Failed to load signature_vats xml for invoice {} company {}: {}", invoiceId, companyId, e.toString());
             return null;
         }
     }
 
-    private String getXmlFromSignatureAuthoritiesTax(Integer invoiceId) {
-        if (invoiceId == null) return null;
+    private String getXmlFromSignatureAuthoritiesTax(Integer invoiceId, Integer companyId) {
+        if (invoiceId == null || companyId == null) return null;
         try {
             // Prefer 'latest' if service supports it
             vn.hoadon.dto.SignatureAuthoritiesTaxDTO latest = null;
             try {
-                latest = signatureAuthoritiesTaxService.getLatestByInvoiceId(invoiceId);
+                latest = signatureAuthoritiesTaxService.getLatestByInvoiceIdAndCompanyId(invoiceId, companyId);
             } catch (Exception ignore) {}
             if (latest != null && latest.xml != null && !latest.xml.isBlank()) return normalizeInvoiceXml(latest.xml);
 
-            java.util.List<vn.hoadon.dto.SignatureAuthoritiesTaxDTO> rows = signatureAuthoritiesTaxService.listByInvoiceId(invoiceId);
+            java.util.List<vn.hoadon.dto.SignatureAuthoritiesTaxDTO> rows =
+                    signatureAuthoritiesTaxService.listByInvoiceIdAndCompanyId(invoiceId, companyId);
             if (rows == null || rows.isEmpty()) return null;
             rows.sort((a, b) -> {
                 java.time.LocalDateTime ca = a != null ? a.createdAt : null;
@@ -2283,7 +2322,7 @@ public class InvoiceController extends BaseController {
             String xml = rows.get(0) != null ? rows.get(0).xml : null;
             return (xml != null && !xml.isBlank()) ? normalizeInvoiceXml(xml) : null;
         } catch (Exception e) {
-            log.warn("Failed to load signature_authorities_tax xml for invoice {}: {}", invoiceId, e.toString());
+            log.warn("Failed to load signature_authorities_tax xml for invoice {} company {}: {}", invoiceId, companyId, e.toString());
             return null;
         }
     }

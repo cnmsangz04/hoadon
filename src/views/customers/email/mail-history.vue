@@ -267,6 +267,7 @@ export default {
       if (key === 'ISSUE_INVOICE_MAIL') return 'Thông báo phát hành hóa đơn'
       if (key === 'ACCOUNT_INFO_MAIL') return 'Gửi thông tin tài khoản'
       if (key === 'LOGIN_INFO_MAIL') return 'Gửi thông tin đăng nhập'
+      if (key === 'DAILY_INVOICE_REPORT_MAIL') return 'Báo cáo hóa đơn ngày'
       return key || 'Email hệ thống'
     },
     statusText(status) {

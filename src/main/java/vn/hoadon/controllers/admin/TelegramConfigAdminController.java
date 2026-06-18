@@ -45,8 +45,6 @@ public class TelegramConfigAdminController extends BaseController {
 
         config.setEnabled(Boolean.TRUE.equals(request.enabled));
         config.setChatId(trimToNull(request.chatId));
-        config.setDailyHour(clamp(request.dailyHour, 0, 23, 1));
-        config.setDailyMinute(clamp(request.dailyMinute, 0, 59, 0));
 
         String token = trimToNull(request.botToken);
         if (token != null && !isMaskedToken(token)) {
@@ -87,10 +85,6 @@ public class TelegramConfigAdminController extends BaseController {
         row.put("enabled", Boolean.TRUE.equals(config.getEnabled()));
         row.put("botTokenConfigured", config.getBotToken() != null && !config.getBotToken().isBlank());
         row.put("chatId", config.getChatId());
-        row.put("dailyHour", config.getDailyHour() != null ? config.getDailyHour() : 1);
-        row.put("dailyMinute", config.getDailyMinute() != null ? config.getDailyMinute() : 0);
-        row.put("lastReportDate", config.getLastReportDate());
-        row.put("lastSentAt", config.getLastSentAt());
         row.put("createdAt", config.getCreatedAt());
         row.put("updatedAt", config.getUpdatedAt());
         return row;
@@ -106,16 +100,9 @@ public class TelegramConfigAdminController extends BaseController {
         return value != null && value.contains("•");
     }
 
-    private int clamp(Integer value, int min, int max, int fallback) {
-        if (value == null) return fallback;
-        return Math.max(min, Math.min(max, value));
-    }
-
     public static class TelegramConfigRequest {
         public Boolean enabled;
         public String botToken;
         public String chatId;
-        public Integer dailyHour;
-        public Integer dailyMinute;
     }
 }

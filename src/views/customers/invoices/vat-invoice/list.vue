@@ -537,14 +537,17 @@ export default {
     },
     statusVariant (s) {
       const v = Number(s)
-      if (v === 0) return 'secondary'
-      if (v === 1) return 'info'
-      if (v === 2) return 'warning'
-      if (v === 3) return 'success'
-      if (v === 4) return 'dark'
-      if (v === 5) return 'primary'
-      if (v === 6) return 'danger'
-      return 'secondary'
+      switch (v) {
+        case 0: return 'secondary' // Mới khởi tạo - xám
+        case 1: return 'info'      // Ký số - xanh dương
+        case 2: return 'warning'   // Gửi cơ quan thuế - vàng
+        case 3: return 'success'   // Đã phát hành - xanh lá
+        case 4: return 'primary'   // Bị thay thế - tím/xanh đậm
+        case 5: return 'dark'      // Bị điều chỉnh - đen/xám đậm
+        case 6: return 'danger'    // Đã hủy - đỏ
+        case 7: return 'light'     // Không đủ điều kiện cấp mã - trắng/xám nhạt
+        default: return 'secondary'
+      }
     },
     canSendToCqt (item) {
       const status = Number(item?.status)
@@ -576,11 +579,11 @@ export default {
     relationVariant (item) {
       const type = Number(item?.invoiceType || 0)
       const status = Number(item?.status)
-      if (type === 1) return 'warning'
-      if (type === 2) return 'primary'
-      if (status === 4) return 'dark'
-      if (status === 5) return 'info'
-      return 'light'
+      if (type === 1) return 'primary'
+      if (type === 2) return 'dark'
+      if (status === 4) return 'primary'
+      if (status === 5) return 'dark'
+      return 'secondary'
     },
     adjustTypeShort (type) {
       const v = Number(type)

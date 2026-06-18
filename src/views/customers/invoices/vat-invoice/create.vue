@@ -427,8 +427,8 @@ export default {
       errors: {},
       // Theo dõi key lỗi đã hiển thị để tránh toast trùng
       shownErrorKeys: new Set(),
-      prepare: { formId: null, formName: null, formCode: null, serial: null, haveCode: null, registerId: null, registerEffectiveDate: null },
-      formInvoices: { form_id: null, name: null, form_code: null, serial: null, have_code: null },
+      prepare: { formId: null, formName: null, formCode: null, serial: null, haveCode: null, formType: null, registerId: null, registerEffectiveDate: null },
+      formInvoices: { form_id: null, name: null, form_code: null, serial: null, have_code: null, type: null },
       companies: { name: null, taxcode: null, address: null },
       loadingCustomers: false,
       customerOptions: [],
@@ -587,6 +587,36 @@ export default {
       const n = Number(v)
       return Number.isNaN(n) ? null : n
     },
+    currentFormType () {
+      const type = this.formInvoices.type != null ? this.formInvoices.type : this.prepare.formType
+      return Number(type || 0)
+    },
+    normalizedRowVatRate (row) {
+      const rate = row && row.vatRate !== null && row.vatRate !== undefined && row.vatRate !== ''
+        ? Number(row.vatRate)
+        : -1
+      return {
+        rate: Number.isFinite(rate) ? rate : -1,
+        other: Number(rate) === -3 ? Number(row.vatRateOther || 0) : 0,
+      }
+    },
+    sameVatRateError (rows) {
+      if (this.currentFormType() !== 1 || !Array.isArray(rows) || rows.length <= 1) return null
+      const first = this.normalizedRowVatRate(rows[0])
+      const hasDifferentRate = rows.some(row => {
+        const current = this.normalizedRowVatRate(row)
+        return current.rate !== first.rate || current.other !== first.other
+      })
+      return hasDifferentRate ? 'Mẫu một thuế suất chỉ được chọn một mức thuế suất' : null
+    },
+    resolveInvoiceVatRate (rows) {
+      if (this.currentFormType() !== 1 || !Array.isArray(rows) || rows.length === 0) return null
+      return this.normalizedRowVatRate(rows[0]).rate
+    },
+    resolveInvoiceVatRateOther (rows) {
+      if (this.currentFormType() !== 1 || !Array.isArray(rows) || rows.length === 0) return 0
+      return this.normalizedRowVatRate(rows[0]).other
+    },
     // Ánh xạ sản phẩm thô sang các trường chuẩn dùng trong dòng hóa đơn
     normalizeProduct (item) {
       if (!item) return null
@@ -643,6 +673,7 @@ export default {
         this.formInvoices.form_code = this.prepare.formCode || null
         this.formInvoices.serial = this.prepare.serial || null
         this.formInvoices.have_code = this.prepare.haveCode
+        this.formInvoices.type = this.prepare.formType
 
         // Tải khách hàng theo công ty hiện tại từ backend
         await this.refreshCustomers()
@@ -854,6 +885,12 @@ export default {
       if (options.copyDate) this.frmData.date_export = data?.dateExport ?? this.frmData.date_export
       this.frmData.payment_type = data?.paymentType ?? this.frmData.payment_type
       this.frmData.order = { code: data?.orderCode ?? this.frmData.order?.code }
+      if (data.formId != null) this.formInvoices.form_id = data.formId
+      if (data.formName != null) this.formInvoices.name = data.formName
+      if (data.formCode != null) this.formInvoices.form_code = data.formCode
+      if (data.serial != null) this.formInvoices.serial = data.serial
+      if (data.haveCode != null) this.formInvoices.have_code = data.haveCode
+      if (data.formType != null) this.formInvoices.type = data.formType
       const cust = data?.customer || {}
       this.frmData.customer = {
         code: cust.code ?? this.frmData.customer.code,
@@ -927,8 +964,8 @@ export default {
           amountInWords: this.frmData.amount_in_words || '',
           currency: 'VND',
           exchangeRate: 0,
-          vatRate: null,
-          vatRateOther: 0,
+          vatRate: this.resolveInvoiceVatRate(rows),
+          vatRateOther: this.resolveInvoiceVatRateOther(rows),
           referenceId: this.frmData.reference_id || null,
           invoiceType: Number(this.frmData.invoice_type || 0),
           invoiceTypeAdjust: Number(this.frmData.invoice_type) === 2 ? Number(this.frmData.invoice_type_adjust || 0) : 0
@@ -976,6 +1013,7 @@ export default {
         }
         return null
       })()
+      const sameVatRateError = !rowError ? this.sameVatRateError(rows) : null
       this.errors = {
         date_export: required(this.frmData.date_export, 'Vui lòng chọn ngày lập hóa đơn'),
         customerName: (!String(customer.name || '').trim() && !String(customer.buyer || '').trim())
@@ -985,7 +1023,7 @@ export default {
         customerEmail: email(customer.email),
         customerPhone: phone(customer.phone),
         payment_type: required(this.frmData.payment_type, 'Vui lòng chọn hình thức thanh toán'),
-        detail: rowError,
+        detail: rowError || sameVatRateError,
       }
       Object.keys(this.errors).forEach(key => {
         if (!this.errors[key]) delete this.errors[key]

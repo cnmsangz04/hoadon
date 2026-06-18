@@ -13,6 +13,8 @@ import vn.hoadon.repositories.MailTemplateRepository;
 import vn.hoadon.services.MailQueueService;
 import vn.hoadon.util.SystemMail;
 
+import java.util.Map;
+
 /**
  * Hàng đợi mail lưu bằng cơ sở dữ liệu.
  * Job được lưu vào bảng mail_jobs, DbMailQueueWorker quét và xử lý mỗi 5 giây.
@@ -66,13 +68,25 @@ public class MailQueueServiceImpl implements MailQueueService {
 
         MailTemplateEntity tpl = resolveTemplate(message);
         if (tpl != null && tpl.getTitle() != null && !tpl.getTitle().isBlank()) {
-            return tpl.getTitle();
+            return interpolateTemplate(tpl.getTitle(), message.getVariables());
         }
 
         if (message.getVariables() != null) {
             return message.getVariables().get("SUBJECT");
         }
         return null;
+    }
+
+    static String interpolateTemplate(String template, Map<String, String> vars) {
+        if (template == null) return null;
+        if (vars == null || vars.isEmpty()) return template;
+        String result = template;
+        for (Map.Entry<String, String> entry : vars.entrySet()) {
+            String value = entry.getValue() != null ? entry.getValue() : "";
+            result = result.replace("[" + entry.getKey() + "]", value)
+                    .replace("{{" + entry.getKey() + "}}", value);
+        }
+        return result;
     }
 
     private boolean shouldShowHistory(String templateKey) {

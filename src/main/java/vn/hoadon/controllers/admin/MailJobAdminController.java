@@ -128,6 +128,11 @@ public class MailJobAdminController extends BaseController {
         if (job == null || job.getTemplateKey() == null || job.getTemplateKey().isBlank()) {
             return null;
         }
+        if ("DAILY_INVOICE_REPORT_MAIL".equals(job.getTemplateKey())) {
+            return job.getSubject() != null && !job.getSubject().isBlank()
+                    ? job.getSubject()
+                    : "Báo cáo hóa đơn ngày";
+        }
 
         Long templateCompanyId = SystemMail.resolveCompanyId(job.getTemplateKey(), job.getCompanyId());
         if (templateCompanyId != null) {

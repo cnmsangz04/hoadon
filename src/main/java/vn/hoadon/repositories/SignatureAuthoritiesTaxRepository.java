@@ -11,4 +11,6 @@ import java.util.Optional;
 public interface SignatureAuthoritiesTaxRepository extends JpaRepository<SignatureAuthoritiesTaxEntity, Integer> {
     Optional<SignatureAuthoritiesTaxEntity> findTopByInvoiceIdOrderByIdDesc(Integer invoiceId);
     List<SignatureAuthoritiesTaxEntity> findByInvoiceId(Integer invoiceId);
+    Optional<SignatureAuthoritiesTaxEntity> findTopByInvoiceIdAndCompanyIdOrderByIdDesc(Integer invoiceId, Integer companyId);
+    List<SignatureAuthoritiesTaxEntity> findByInvoiceIdAndCompanyId(Integer invoiceId, Integer companyId);
 }

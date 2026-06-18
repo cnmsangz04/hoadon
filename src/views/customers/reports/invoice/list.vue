@@ -455,11 +455,18 @@ export default {
     },
     statusVariant (s) {
       const n = Number(s)
-      if (n === 3) return 'success'
-      if (n === 6 || n === 4 || n === 5 || n === 7) return 'danger'
-      if (n === 2) return 'warning'
-      if (n === 1) return 'info'
-      return 'secondary'
+
+      switch (n) {
+        case 0: return 'secondary' // Mới khởi tạo - xám
+        case 1: return 'info'      // Ký số - xanh dương
+        case 2: return 'warning'   // Gửi cơ quan thuế - vàng
+        case 3: return 'success'   // Đã phát hành - xanh lá
+        case 4: return 'primary'   // Bị thay thế - tím/xanh đậm
+        case 5: return 'dark'      // Bị điều chỉnh - đen/xám đậm
+        case 6: return 'danger'    // Đã hủy - đỏ
+        case 7: return 'light'     // Không đủ điều kiện cấp mã - trắng/xám nhạt
+        default: return 'secondary'
+      }
     },
     async exportExcel () {
       this.isBusy = true

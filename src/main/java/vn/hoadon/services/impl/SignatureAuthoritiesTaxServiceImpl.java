@@ -61,4 +61,15 @@ public class SignatureAuthoritiesTaxServiceImpl implements SignatureAuthoritiesT
     public List<SignatureAuthoritiesTaxDTO> listByInvoiceId(Integer invoiceId) {
         return repository.findByInvoiceId(invoiceId).stream().map(this::toDto).collect(Collectors.toList());
     }
+
+    @Override
+    public SignatureAuthoritiesTaxDTO getLatestByInvoiceIdAndCompanyId(Integer invoiceId, Integer companyId) {
+        Optional<SignatureAuthoritiesTaxEntity> opt = repository.findTopByInvoiceIdAndCompanyIdOrderByIdDesc(invoiceId, companyId);
+        return toDto(opt.orElse(null));
+    }
+
+    @Override
+    public List<SignatureAuthoritiesTaxDTO> listByInvoiceIdAndCompanyId(Integer invoiceId, Integer companyId) {
+        return repository.findByInvoiceIdAndCompanyId(invoiceId, companyId).stream().map(this::toDto).collect(Collectors.toList());
+    }
 }

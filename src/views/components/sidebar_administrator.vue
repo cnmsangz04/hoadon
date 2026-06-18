@@ -77,6 +77,7 @@ export default {
         { title: 'Email template', icon: 'fas fa-envelope', to: '/administrator/email-template/list' },
         { title: 'Lịch sử gửi mail', icon: 'fas fa-history', to: '/administrator/email/mail-history' },
         { title: 'Telegram', icon: 'fab fa-telegram-plane', to: '/administrator/telegram/config' },
+        { title: 'Báo cáo hóa đơn ngày', icon: 'fas fa-calendar-check', to: '/administrator/daily-invoice-report/config' },
         { title: 'Phiên đăng nhập', icon: 'fas fa-desktop', to: '/administrator/sessions/list' },
         {
           title: 'Phân quyền',

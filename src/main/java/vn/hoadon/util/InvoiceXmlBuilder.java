@@ -69,6 +69,8 @@ public final class InvoiceXmlBuilder {
 
         // Parse detail JSON array
         java.util.List<Map<String,Object>> details = parseJsonArray(inv.getDetail());
+        boolean oneVatRateForm = form != null && form.getType() != null && form.getType() == 1;
+        String invoiceVatRate = formatInvoiceVatRate(inv, details);
 
         StringBuilder sb = new StringBuilder();
         sb.append("<HDon>");
@@ -138,7 +140,7 @@ public final class InvoiceXmlBuilder {
           String tlckhau = toStringOrDefault(d.get("num"), "");
           String stckhau = toStringOrDefault(d.get("num"), "");
           String total = toStringOrDefault(d.get("total"), "");
-          String vatRate = formatVatRate(d.get("vatRate"));
+          String vatRate = oneVatRateForm ? invoiceVatRate : formatVatRate(d.get("vatRate"), d.get("vatRateOther"));
           String vatAmount = toStringOrDefault(d.get("vatAmount"), "");
           String amount = toStringOrDefault(d.get("amount"), "");
           sb.append("<HHDVu>")
@@ -169,13 +171,18 @@ public final class InvoiceXmlBuilder {
         }
         sb.append("</DSHHDVu>");
 
-        // Group totals by VAT rate
         Map<String, Totals> totalsByRate = new LinkedHashMap<>();
-        for (Map<String,Object> d : details) {
-            String rateKey = formatVatRate(d.get("vatRate"));
-            Totals t = totalsByRate.computeIfAbsent(rateKey, k -> new Totals());
-            t.thTien += toDouble(d.get("total"));
-            t.tThue += toDouble(d.get("vatAmount"));
+        if (oneVatRateForm) {
+            Totals t = totalsByRate.computeIfAbsent(invoiceVatRate, k -> new Totals());
+            t.thTien = inv.getTotal() != null ? inv.getTotal() : 0d;
+            t.tThue = inv.getVatAmount() != null ? inv.getVatAmount() : 0d;
+        } else {
+            for (Map<String,Object> d : details) {
+                String rateKey = formatVatRate(d.get("vatRate"), d.get("vatRateOther"));
+                Totals t = totalsByRate.computeIfAbsent(rateKey, k -> new Totals());
+                t.thTien += toDouble(d.get("total"));
+                t.tThue += toDouble(d.get("vatAmount"));
+            }
         }
         sb.append("<TToan>")
           .append("<THTTLTSuat>");
@@ -336,12 +343,36 @@ public final class InvoiceXmlBuilder {
     }
     private static String str(Object o) { return o == null ? "" : String.valueOf(o); }
     private static String toStringOrDefault(Object o, String def) { String s = str(o); return hasText(s) ? s : def; }
+    private static String formatInvoiceVatRate(InvoiceEntity inv, java.util.List<Map<String,Object>> details) {
+        String invoiceRate = inv != null ? formatVatRate(inv.getVatRate(), inv.getVatRateOther()) : "";
+        String detailRate = firstDetailVatRate(details);
+        if (hasText(invoiceRate) && (!"KCT".equals(invoiceRate) || !hasText(detailRate))) {
+            return invoiceRate;
+        }
+        return hasText(detailRate) ? detailRate : invoiceRate;
+    }
+
+    private static String firstDetailVatRate(java.util.List<Map<String,Object>> details) {
+        if (details == null) return "";
+        for (Map<String,Object> detail : details) {
+            if (detail == null) continue;
+            String rate = formatVatRate(detail.get("vatRate"), detail.get("vatRateOther"));
+            if (hasText(rate)) return rate;
+        }
+        return "";
+    }
+
     private static String formatVatRate(Object rateObj) {
+        return formatVatRate(rateObj, null);
+    }
+
+    private static String formatVatRate(Object rateObj, Object otherRateObj) {
         if (rateObj == null) return "";
         try {
             int r = Integer.parseInt(String.valueOf(rateObj));
             return switch (r) {
                 case -1 -> "KCT";
+                case -3 -> formatOtherVatRate(otherRateObj);
                 case 0 -> "0%";
                 case 5 -> "5%";
                 case 8 -> "8%";
@@ -350,6 +381,19 @@ public final class InvoiceXmlBuilder {
             };
         } catch (Exception ex) {
             return String.valueOf(rateObj);
+        }
+    }
+
+    private static String formatOtherVatRate(Object otherRateObj) {
+        if (otherRateObj == null) return "";
+        String raw = String.valueOf(otherRateObj).trim();
+        if (raw.isEmpty()) return "";
+        if (raw.endsWith("%")) return raw;
+        try {
+            double value = Double.parseDouble(raw);
+            return trimZeros(value) + "%";
+        } catch (Exception ex) {
+            return raw;
         }
     }
     private static double toDouble(Object o) {

@@ -83,6 +83,13 @@
       meta: { requiresAdmin: true, title: "Cấu hình Telegram" },
     },
     {
+      path: "daily-invoice-report/config",
+      name: "admin-daily-invoice-report-config",
+      component: () =>
+        import("../../views/administrators/daily-invoice-report/config.vue"),
+      meta: { requiresAdmin: true, title: "Báo cáo hóa đơn ngày" },
+    },
+    {
       path: "sessions/list",
       name: "admin-sessions",
       component: () =>
