@@ -1,6 +1,6 @@
 # Cấu hình và vận hành
 
-Cập nhật: 18/06/2026.
+Cập nhật: 19/06/2026.
 
 ## Cổng chạy
 
@@ -75,7 +75,7 @@ Chạy test backend:
 
 | Đường dẫn | Nội dung |
 | --- | --- |
-| `uploads` | Logo, avatar, file mẫu hóa đơn, file import và file upload khác. |
+| `uploads` | Logo, avatar, file mẫu hóa đơn, file import hóa đơn, file import danh mục và file upload khác. |
 | `logs/hoadon.log` | Log ứng dụng. |
 | `target` | Kết quả build Maven. |
 | `node_modules` | Dependency frontend sau khi `npm install`. |

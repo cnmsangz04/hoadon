@@ -1,6 +1,6 @@
 # Quy tắc và vai trò của chương trình
 
-Cập nhật: 17/06/2026
+Cập nhật: 19/06/2026
 
 Tài liệu này mô tả các vai trò, phạm vi quyền, rule phân quyền và rule nghiệp vụ quan trọng của hệ thống hóa đơn điện tử. Khi sửa quyền, thêm màn hình mới hoặc thêm API mới, cần đối chiếu file này với code backend để tránh mở nhầm dữ liệu công ty khác hoặc chặn sai người dùng hợp lệ.
 
@@ -281,14 +281,21 @@ Rule riêng:
 | Key | Ý nghĩa |
 | --- | --- |
 | `category-customer-list` | Xem danh mục khách hàng. |
-| `category-customer-save` | Thêm/sửa khách hàng. |
+| `category-customer-save` | Thêm/sửa/xóa khách hàng. |
 | `category-product-list` | Xem danh mục hàng hóa. |
-| `category-product-save` | Thêm/sửa hàng hóa. |
+| `category-product-save` | Thêm/sửa/xóa hàng hóa. |
+| `import-customer-list` | Xem lịch sử import khách hàng. |
+| `import-customer-save` | Tải mẫu, upload và import lại khách hàng. |
+| `import-product-list` | Xem lịch sử import sản phẩm. |
+| `import-product-save` | Tải mẫu, upload và import lại sản phẩm. |
 
 Rule riêng:
 
 - Danh sách khách hàng/hàng hóa luôn lọc theo `currentUser.companyId`.
 - Khi lưu, backend tự gán `companyId` theo user hiện tại; không tin companyId từ giao diện.
+- Khi thêm mới hoặc đổi mã thủ công, mã khách hàng/mã sản phẩm không được trùng với bản ghi khác trong cùng công ty.
+- API import danh mục cho phép quyền import riêng hoặc quyền danh mục tương ứng: customer dùng `category-customer-list|import-customer-list` và `category-customer-save|import-customer-save`; product dùng `category-product-list|import-product-list` và `category-product-save|import-product-save`.
+- Import danh mục dùng mã để cập nhật bản ghi đã tồn tại trong công ty, nhưng không cho mã bị lặp trong cùng file import.
 
 ### Báo cáo
 
@@ -411,6 +418,7 @@ Các dữ liệu bắt buộc lọc theo công ty:
 - Mail server.
 - Lịch sử gửi mail phía khách hàng.
 - Lịch sử import hóa đơn.
+- Lịch sử import khách hàng/sản phẩm.
 - Lịch sử mua gói phía khách hàng.
 - Thông báo/lịch sử thao tác theo công ty.
 
@@ -677,4 +685,3 @@ Các file chính:
 - `src/views/components/header.vue`
 - `src/plugins/axios.js`
 - `src/utils/toast.js`
-

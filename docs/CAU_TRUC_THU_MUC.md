@@ -1,6 +1,6 @@
 # Cấu trúc thư mục chương trình
 
-Cập nhật: 18/06/2026.
+Cập nhật: 19/06/2026.
 
 ## Thư mục gốc
 
@@ -49,6 +49,7 @@ Cập nhật: 18/06/2026.
 | --- | --- |
 | `src/views/auth` | Đăng nhập, đăng ký, quên mật khẩu. |
 | `src/views/customers` | Dashboard, hóa đơn, báo cáo, danh mục, mua gói. |
+| `src/views/customers/imports` | Màn hình import hóa đơn, import khách hàng và import sản phẩm. |
 | `src/views/administrators` | Quản trị công ty, gói hóa đơn, danh mục nền, mail, Telegram, quyền. |
 | `src/views/settings` | Hồ sơ công ty, thành viên, bảo mật IP, lịch sử đăng nhập. |
 | `src/views/public` | Trang công khai như tra cứu hóa đơn. |
@@ -67,4 +68,3 @@ Cập nhật: 18/06/2026.
 - API quản trị hệ thống đặt dưới `controllers/admin`.
 - Entity, repository, service và service impl nên đặt tên cùng nghiệp vụ để dễ tra cứu.
 - Script SQL bổ sung nên đặt trong `tools/sql` với ngày và mục đích rõ ràng.
-

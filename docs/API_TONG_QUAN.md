@@ -1,6 +1,6 @@
 # Tổng quan API
 
-Cập nhật: 18/06/2026.
+Cập nhật: 19/06/2026.
 
 Tài liệu này tóm tắt nhóm API chính để người đọc hiểu cách frontend giao tiếp với backend. Danh sách này không thay thế code controller, nhưng đủ dùng cho báo cáo và định hướng đọc mã nguồn.
 
@@ -30,6 +30,7 @@ Tài liệu này tóm tắt nhóm API chính để người đọc hiểu cách 
 | `/v1/form-invoices` | Mẫu hóa đơn của công ty. |
 | `/v1/invoices` | Hóa đơn GTGT, ký, phát hành, gửi cơ quan thuế, tải XML/PDF. |
 | `/v1/invoice-imports` | Import hóa đơn từ Excel và lịch sử import. |
+| `/v1/catalog-imports/{customer|product}` | Import danh mục khách hàng/sản phẩm từ Excel, tải mẫu, lịch sử import và import lại. |
 | `/v1/categories/product` | Danh mục sản phẩm. |
 | `/v1/categories/customer` | Danh mục khách hàng. |
 | `/v1/reports/invoices` | Báo cáo hóa đơn. |
@@ -90,3 +91,10 @@ Các endpoint thanh toán của nhóm gói hóa đơn:
 3. Frontend gửi dữ liệu hóa đơn.
 4. Backend lưu hóa đơn, sinh XML/PDF khi cần.
 5. Khi phát hành, backend cập nhật trạng thái và có thể tạo mail job.
+
+## Ví dụ luồng gọi API import danh mục
+
+1. Frontend tải mẫu bằng `/v1/catalog-imports/customer/template` hoặc `/v1/catalog-imports/product/template`.
+2. Người dùng upload Excel qua `/v1/catalog-imports/{type}/upload`.
+3. Backend kiểm tra quyền import hoặc quyền danh mục tương ứng, đọc file, kiểm tra trùng mã trong file và lưu lịch sử import.
+4. Nếu mã đã tồn tại trong công ty, import cập nhật bản ghi đó; nếu chưa tồn tại thì tạo mới.

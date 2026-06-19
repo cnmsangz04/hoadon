@@ -1,6 +1,6 @@
 # Tổng hợp validate form
 
-Cập nhật: 18/06/2026
+Cập nhật: 19/06/2026
 
 Tài liệu này ghi lại quy ước validate form đang áp dụng trong hệ thống. Mục tiêu là khi sửa hoặc thêm màn hình mới, giao diện không còn hiện tooltip validate mặc định của trình duyệt, thông báo lỗi đồng nhất bằng BootstrapVue trên form và Toastr ở góc màn hình.
 
@@ -120,7 +120,9 @@ File: `src/views/customers/categories/customer/list.vue`
 Quy tắc chính:
 
 - Mã khách hàng và tên khách hàng bắt buộc.
+- Khi thêm mới hoặc cập nhật mã, backend không cho trùng mã khách hàng trong cùng công ty.
 - Mã số thuế, số điện thoại, email nhận hóa đơn là tùy chọn nhưng nếu nhập phải đúng định dạng.
+- Màn danh sách có thao tác xóa khách hàng và nút đi tới `Import khách hàng`.
 - Khi component tự xử lý lỗi lưu, request dùng `suppressGlobalErrorToast` để không hiện double toast.
 - Nếu thiếu quyền khi tải danh sách, dùng thông báo quyền chi tiết từ backend.
 
@@ -131,8 +133,10 @@ File: `src/views/customers/categories/product/list.vue`
 Quy tắc chính:
 
 - Mã sản phẩm và tên sản phẩm bắt buộc.
+- Khi thêm mới hoặc cập nhật mã, backend không cho trùng mã sản phẩm trong cùng công ty.
 - Đơn giá bắt buộc, là số và không âm.
 - Thuế suất có giá trị mặc định theo danh sách thuế suất.
+- Màn danh sách có thao tác xóa sản phẩm và nút đi tới `Import sản phẩm`.
 - Lỗi quyền khi mở danh sách phải hiện rõ quyền thiếu, ví dụ `Thiếu quyền: Xem danh mục sản phẩm`.
 - Các thao tác lưu, xóa, đổi trạng thái dùng Toastr và chống double toast.
 
@@ -176,7 +180,21 @@ Quy tắc chính:
 - Nội dung mẫu cần hướng dẫn rõ cách nhập thông tin hóa đơn, thông tin người mua và nhiều dòng hàng hóa/dịch vụ.
 - Khi import, backend phải gom đúng nhiều dòng hàng thuộc cùng hóa đơn, không chỉ lấy một dòng đầu tiên.
 - Với hóa đơn một thuế suất, file import vẫn phải có dữ liệu thuế suất, tiền thuế và tổng tiền hợp lệ theo mẫu đang dùng.
+- Màn import hóa đơn có nút `Danh sách hóa đơn` để đi tới danh sách hóa đơn GTGT.
 - Chưa validate dung lượng file và số dòng ở phía giao diện.
+
+### Import danh mục khách hàng/sản phẩm
+
+File: `src/views/customers/imports/catalog/index.vue`
+
+Quy tắc chính:
+
+- Dùng chung component cho `/imports/customer` và `/imports/product`.
+- Import bắt buộc chọn file Excel, input nhận `.xlsx` và `.xls`.
+- Trang import khách hàng có nút `Danh sách khách hàng`; trang import sản phẩm có nút `Danh sách sản phẩm`.
+- Mẫu Excel phải hướng dẫn mã là khóa import: mã đã tồn tại thì cập nhật bản ghi trong công ty, mã chưa có thì tạo mới.
+- Backend không chấp nhận mã khách hàng hoặc mã sản phẩm bị lặp trong cùng file import.
+- Lịch sử import phải lọc theo đúng loại `CUSTOMER` hoặc `PRODUCT`, không lẫn với import hóa đơn.
 
 ### Tờ khai đăng ký hóa đơn điện tử
 

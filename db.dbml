@@ -324,6 +324,7 @@ Table invoice_imports {
   company_id bigint [not null]
   user_id bigint
   source_import_id bigint
+  import_type varchar(30)
   original_filename nvarchar(255)
   stored_filename nvarchar(255)
   file_path nvarchar(500)
@@ -331,10 +332,12 @@ Table invoice_imports {
   status varchar(30)
   total_rows int
   invoice_count int
+  item_count int
   success_count int
   error_count int
   error_message nvarchar(max)
   imported_invoice_ids nvarchar(max)
+  imported_item_ids nvarchar(max)
   created_at datetime2
   updated_at datetime2
 }

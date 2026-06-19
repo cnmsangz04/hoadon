@@ -48,4 +48,4 @@ Chạy test backend:
 | Sai mail | `mail_templates`, `mail_jobs`, `MailQueueServiceImpl`, `DbMailQueueWorker`. |
 | Sai báo cáo ngày | `DailyInvoiceReportServiceImpl`, `DailyInvoiceReportConfigRepository`, `daily_invoice_report_configs`. |
 | Sai XML hóa đơn | `InvoiceXmlBuilder`, `SignatureVatRepository`, `SignatureAuthoritiesTaxRepository`. |
-| Sai import Excel | `InvoiceImportServiceImpl`. |
+| Sai import Excel | `InvoiceImportServiceImpl`, `CatalogImportServiceImpl`. |

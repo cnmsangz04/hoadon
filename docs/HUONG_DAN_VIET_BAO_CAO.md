@@ -1,6 +1,6 @@
 # Hướng dẫn viết báo cáo chương trình
 
-Cập nhật: 18/06/2026.
+Cập nhật: 19/06/2026.
 
 Tài liệu này giúp người viết báo cáo biết nên lấy nội dung ở đâu và sắp xếp báo cáo như thế nào để trình bày đầy đủ hệ thống hóa đơn điện tử.
 
@@ -36,7 +36,7 @@ Khi cần giải thích 03 lớp:
 - Đăng nhập, JWT, phiên đăng nhập và phân quyền.
 - Quản lý hồ sơ công ty, thành viên, bảo mật IP.
 - Quản lý mẫu hóa đơn, tờ khai và hóa đơn GTGT.
-- Import hóa đơn từ Excel.
+- Import hóa đơn, khách hàng và sản phẩm từ Excel.
 - Ký hóa đơn, gửi cơ quan thuế, xem XML/PDF.
 - Gửi email hóa đơn và hàng đợi mail.
 - Báo cáo hóa đơn và báo cáo hóa đơn ngày qua Telegram/email.

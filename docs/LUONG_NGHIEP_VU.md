@@ -1,6 +1,6 @@
 # Luồng nghiệp vụ chính
 
-Cập nhật: 18/06/2026.
+Cập nhật: 19/06/2026.
 
 ## Đăng ký công ty
 
@@ -50,6 +50,17 @@ Cập nhật: 18/06/2026.
 5. Hóa đơn hợp lệ được tạo trong hệ thống; dòng lỗi được trả về để người dùng sửa.
 
 Mẫu import cần đủ hướng dẫn để người dùng hiểu cách nhập dù công ty đang dùng mẫu nhiều thuế suất hay một thuế suất.
+
+## Import danh mục khách hàng/sản phẩm
+
+1. Người dùng vào `/imports/customer` hoặc `/imports/product`.
+2. Người dùng tải mẫu Excel tương ứng, nhập dữ liệu và upload file.
+3. Backend đọc file bằng Apache POI, kiểm tra dữ liệu bắt buộc và kiểm tra mã bị lặp trong cùng file.
+4. Với khách hàng, mã khách hàng là khóa nhận diện để tạo mới hoặc cập nhật bản ghi đã tồn tại trong cùng công ty.
+5. Với sản phẩm, mã sản phẩm là khóa nhận diện để tạo mới hoặc cập nhật bản ghi đã tồn tại trong cùng công ty.
+6. Hệ thống lưu lịch sử import và cho phép import lại file cũ khi cần.
+
+Danh mục khách hàng/sản phẩm có nút đi tới import tương ứng, và trang import có nút đi tới danh sách cùng loại để thao tác nhanh.
 
 ## Gửi email hóa đơn
 

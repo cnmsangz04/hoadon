@@ -1,6 +1,6 @@
 # Use case hệ thống
 
-Cập nhật: 18/06/2026.
+Cập nhật: 19/06/2026.
 
 Tài liệu này tóm tắt các use case chính để dùng trong phần phân tích thiết kế và báo cáo.
 
@@ -26,6 +26,7 @@ Tài liệu này tóm tắt các use case chính để dùng trong phần phân 
 | UC16 | Quản lý danh mục nền | Admin hệ thống |
 | UC17 | Cấu hình báo cáo hóa đơn ngày | Admin hệ thống |
 | UC18 | Tra cứu hóa đơn công khai | Khách chưa đăng nhập |
+| UC19 | Import danh mục khách hàng/sản phẩm từ Excel | Nhân viên công ty |
 
 ## UC03 - Đăng nhập hệ thống
 
@@ -36,6 +37,26 @@ Tài liệu này tóm tắt các use case chính để dùng trong phần phân 
 | Luồng chính | Người dùng nhập tài khoản/mật khẩu, frontend gửi request, controller gọi service, service kiểm tra user, mật khẩu, trạng thái, IP, phiên đăng nhập, sau đó trả JWT. |
 | Kết quả | Người dùng vào trang phù hợp với vai trò. |
 | Ngoại lệ | Sai mật khẩu, user bị khóa, công ty chưa hợp lệ, IP không được phép, phiên lỗi. |
+
+## UC06 - Quản lý khách hàng
+
+| Mục | Nội dung |
+| --- | --- |
+| Tác nhân | Nhân viên công ty. |
+| Điều kiện trước | Có quyền xem hoặc lưu danh mục khách hàng. |
+| Luồng chính | Người dùng xem danh sách, tìm kiếm, thêm, cập nhật, đổi mã khách hàng hoặc xóa khách hàng trong công ty hiện tại. |
+| Kết quả | Danh mục khách hàng được cập nhật và dùng để nạp nhanh thông tin bên mua khi lập hóa đơn. |
+| Ngoại lệ | Mã khách hàng bị trùng trong cùng công ty, thiếu dữ liệu bắt buộc, thiếu quyền hoặc truy cập dữ liệu công ty khác. |
+
+## UC07 - Quản lý sản phẩm
+
+| Mục | Nội dung |
+| --- | --- |
+| Tác nhân | Nhân viên công ty. |
+| Điều kiện trước | Có quyền xem hoặc lưu danh mục sản phẩm. |
+| Luồng chính | Người dùng xem danh sách, tìm kiếm, thêm, cập nhật, đổi mã sản phẩm hoặc xóa sản phẩm trong công ty hiện tại. |
+| Kết quả | Danh mục sản phẩm được cập nhật và dùng để nạp nhanh dòng hàng khi lập hóa đơn. |
+| Ngoại lệ | Mã sản phẩm bị trùng trong cùng công ty, thiếu dữ liệu bắt buộc, thiếu quyền hoặc truy cập dữ liệu công ty khác. |
 
 ## UC10 - Lập hóa đơn GTGT
 
@@ -67,6 +88,16 @@ Tài liệu này tóm tắt các use case chính để dùng trong phần phân 
 | Kết quả | Hóa đơn được import hoặc danh sách lỗi được trả về. |
 | Ngoại lệ | File sai định dạng, thiếu thông tin bắt buộc, dữ liệu tiền/thuế sai, không gom được dòng hàng. |
 
+## UC19 - Import danh mục khách hàng/sản phẩm từ Excel
+
+| Mục | Nội dung |
+| --- | --- |
+| Tác nhân | Nhân viên công ty. |
+| Điều kiện trước | Có quyền import hoặc quyền lưu danh mục tương ứng. |
+| Luồng chính | Người dùng tải mẫu Excel, nhập danh mục, upload file; hệ thống kiểm tra trùng mã trong file, tạo mới hoặc cập nhật bản ghi theo mã trong cùng công ty. |
+| Kết quả | Khách hàng hoặc sản phẩm được import, lịch sử import được lưu. |
+| Ngoại lệ | File sai định dạng, thiếu mã bắt buộc, mã bị lặp trong file, dữ liệu sản phẩm sai đơn giá/thuế suất hoặc thiếu quyền. |
+
 ## UC17 - Cấu hình báo cáo hóa đơn ngày
 
 | Mục | Nội dung |
@@ -86,4 +117,3 @@ Tài liệu này tóm tắt các use case chính để dùng trong phần phân 
 | Luồng chính | Người dùng nhập thông tin tra cứu, hệ thống tìm hóa đơn public phù hợp và trả dữ liệu xem/tải. |
 | Kết quả | Người dùng xem được hóa đơn hợp lệ. |
 | Ngoại lệ | Không tìm thấy hóa đơn, thông tin tra cứu sai, hóa đơn không được phép public. |
-

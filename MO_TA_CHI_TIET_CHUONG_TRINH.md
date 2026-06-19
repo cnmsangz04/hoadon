@@ -2,7 +2,7 @@
 
 Tài liệu này mô tả tổng quan hệ thống, các nhóm người dùng, chức năng nghiệp vụ, luồng xử lý chính, dữ liệu quan trọng và các thành phần kỹ thuật của chương trình hóa đơn điện tử.
 
-Cập nhật gần nhất: 18/06/2026.
+Cập nhật gần nhất: 19/06/2026.
 
 ## 1. Mục Đích Chương Trình
 
@@ -87,7 +87,7 @@ Hệ thống lưu file upload trong thư mục `uploads`, gồm:
 - Avatar người dùng.
 - Ảnh đại diện mẫu hóa đơn.
 - File XSLT mẫu hóa đơn.
-- File import hóa đơn.
+- File import hóa đơn và import danh mục khách hàng/sản phẩm.
 
 Các file XML/PDF hóa đơn, tờ khai và mẫu xem trước thường được sinh tại thời điểm người dùng xem, tải hoặc gửi mail; không phải mọi file XML/PDF đều được lưu cố định trong `uploads`.
 
@@ -111,7 +111,7 @@ Người dùng doanh nghiệp có thể:
 - Quản lý tờ khai đăng ký sử dụng hóa đơn điện tử.
 - Quản lý mẫu hóa đơn.
 - Lập, sửa, ký, gửi và theo dõi hóa đơn GTGT.
-- Import hóa đơn từ file.
+- Import hóa đơn, khách hàng và sản phẩm từ file Excel.
 - Quản lý sản phẩm.
 - Quản lý khách hàng.
 - Mua gói hóa đơn.
@@ -224,6 +224,7 @@ Một số nhóm quyền quan trọng:
 - Quyền mẫu hóa đơn: `form-invoice-list`, `form-invoice-save`, `form-invoice-manage`.
 - Quyền báo cáo: `report-invoice`, `report-invoice-export`.
 - Quyền danh mục: `category-product-list`, `category-product-save`, `category-customer-list`, `category-customer-save`.
+- Quyền import danh mục: `import-customer-list`, `import-customer-save`, `import-product-list`, `import-product-save`.
 - Quyền cài đặt: `setting-profile`, `setting-member-list`, `setting-member-save`, `setting-member-manage`, `setting-security-ip`, `setting-login-history`.
 - Quyền email: `mail-server-manage`, `mail-job-list`, `mail-job-retry`, `admin-mail-job-list`, `admin-mail-job-retry`.
 - Quyền mua gói: `invoice-package-purchase`, `buy-invoice-list`, `buy-invoice-save`, `buy-invoice-delete`.
@@ -483,6 +484,11 @@ Chức năng:
 
 API chính: `/v1/invoice-imports` hoặc controller import hóa đơn tương ứng.
 
+Giao diện:
+
+- Trang danh sách hóa đơn có nút `Import hóa đơn`.
+- Trang import hóa đơn có nút `Danh sách hóa đơn`.
+
 Ghi chú mẫu Excel:
 
 - Hệ thống dùng một mẫu Excel import chung để người dùng có thể nhập dữ liệu dù công ty đang dùng mẫu nhiều thuế suất hay mẫu một thuế suất.
@@ -495,6 +501,36 @@ Ghi chú phân quyền:
 - Tải mẫu Excel, upload file và import lại dùng quyền `invoice-save`.
 - Danh sách lịch sử import cho phép `invoice-list` hoặc `invoice-save`, để user có quyền import vẫn xem được kết quả import của chính công ty.
 
+### 7.6.1 Import Danh Mục Khách Hàng/Sản Phẩm
+
+Đường dẫn:
+
+- `/imports/customer`: import khách hàng.
+- `/imports/product`: import sản phẩm.
+
+Chức năng:
+
+- Tải mẫu Excel theo từng loại danh mục.
+- Upload file import khách hàng hoặc sản phẩm.
+- Kiểm tra dữ liệu bắt buộc và trùng mã trong cùng file.
+- Tạo mới bản ghi khi mã chưa tồn tại trong công ty.
+- Cập nhật bản ghi hiện có khi mã đã tồn tại trong công ty.
+- Xem lịch sử import và import lại file cũ.
+
+API chính: `/v1/catalog-imports/{customer|product}`.
+
+Ghi chú giao diện:
+
+- Trang danh sách khách hàng có nút `Import khách hàng`.
+- Trang danh sách sản phẩm có nút `Import sản phẩm`.
+- Trang import khách hàng có nút `Danh sách khách hàng`.
+- Trang import sản phẩm có nút `Danh sách sản phẩm`.
+
+Ghi chú phân quyền:
+
+- Import khách hàng cho phép quyền import riêng hoặc quyền danh mục khách hàng: `import-customer-list|category-customer-list` và `import-customer-save|category-customer-save`.
+- Import sản phẩm cho phép quyền import riêng hoặc quyền danh mục sản phẩm: `import-product-list|category-product-list` và `import-product-save|category-product-save`.
+
 ### 7.7 Danh Mục Sản Phẩm
 
 Đường dẫn: `/categories/product/list`
@@ -505,7 +541,9 @@ Chức năng:
 - Tìm kiếm sản phẩm.
 - Thêm sản phẩm.
 - Cập nhật sản phẩm.
+- Xóa sản phẩm.
 - Quản lý mã, tên, đơn vị tính, đơn giá, thuế suất, mô tả và trạng thái.
+- Không cho thêm mới hoặc đổi mã sang mã sản phẩm đã thuộc bản ghi khác trong cùng công ty.
 - Dùng sản phẩm để nạp nhanh dòng hàng hóa khi lập hóa đơn.
 
 API chính: `/v1/categories/product`.
@@ -520,7 +558,9 @@ Chức năng:
 - Tìm kiếm khách hàng.
 - Thêm khách hàng.
 - Cập nhật khách hàng.
+- Xóa khách hàng.
 - Quản lý tên khách hàng, mã số thuế, người mua, địa chỉ, email, điện thoại, fax, tài khoản ngân hàng và tên ngân hàng.
+- Không cho thêm mới hoặc đổi mã sang mã khách hàng đã thuộc bản ghi khác trong cùng công ty.
 - Dùng khách hàng để nạp nhanh thông tin người mua khi lập hóa đơn.
 
 API chính: `/v1/categories/customer`.
@@ -1157,6 +1197,7 @@ Các bảng/entity quan trọng:
 - `/v1/form-invoices`: mẫu hóa đơn.
 - `/v1/invoices`: hóa đơn.
 - `/v1/invoice-packages`: gói hóa đơn và mua gói.
+- `/v1/catalog-imports/{customer|product}`: import danh mục khách hàng/sản phẩm.
 - `/v1/categories/product`: sản phẩm.
 - `/v1/categories/customer`: khách hàng.
 - `/v1/reports/invoices`: báo cáo hóa đơn.
@@ -1200,9 +1241,11 @@ Các bảng/entity quan trọng:
 - Mẫu hóa đơn cần hợp lệ trước khi lập hóa đơn.
 - Hóa đơn cần đủ dữ liệu người bán, người mua, hàng hóa, thuế suất và mẫu hóa đơn.
 - Màn lập hóa đơn chỉ bắt buộc quyền `invoice-save`; dữ liệu gợi ý khách hàng/sản phẩm không được chặn người dùng lập hóa đơn nếu thiếu quyền danh mục.
+- Dữ liệu gợi ý khách hàng/sản phẩm trên màn lập hóa đơn cần nạp đúng bản ghi người dùng chọn, kể cả khi còn dữ liệu cũ từng bị trùng mã.
 - Hóa đơn đã phát hành không được sửa như hóa đơn nháp.
 - Hóa đơn thay thế/điều chỉnh phải tham chiếu hóa đơn gốc.
 - Import hóa đơn dùng quyền `invoice-save`; lịch sử import cho phép `invoice-list` hoặc `invoice-save`.
+- Import khách hàng/sản phẩm dùng `import_type` trong `invoice_imports`; quyền import danh mục có thể dùng quyền import riêng hoặc quyền danh mục tương ứng.
 - Giao dịch mua gói thành công mới được cộng hạn mức hóa đơn.
 - Không dùng lại URL/chữ ký thanh toán cũ khi thanh toán lại.
 - Email gửi hóa đơn xử lý qua hàng đợi để tránh chậm request người dùng.
@@ -1328,6 +1371,8 @@ Tùy cấu hình server port, backend phục vụ API dưới prefix `/v1`.
 - `/invoice/replace`: hóa đơn thay thế.
 - `/invoice/adjust`: hóa đơn điều chỉnh.
 - `/imports/invoice`: import hóa đơn.
+- `/imports/customer`: import khách hàng.
+- `/imports/product`: import sản phẩm.
 - `/categories/product/list`: sản phẩm.
 - `/categories/customer/list`: khách hàng.
 - `/reports/invoice/list`: báo cáo hóa đơn.

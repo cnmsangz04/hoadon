@@ -1,6 +1,6 @@
 # Sơ đồ nên dùng trong báo cáo
 
-Cập nhật: 18/06/2026.
+Cập nhật: 19/06/2026.
 
 Tài liệu này gợi ý các sơ đồ nên đưa vào báo cáo để người đọc hiểu hệ thống nhanh hơn.
 
@@ -88,5 +88,5 @@ sequenceDiagram
 
 - Không cần đưa toàn bộ bảng database nếu sơ đồ quá lớn; có thể tách theo nhóm bảng.
 - Use case diagram chỉ nên đưa chức năng chính, tránh quá dày.
-- Sequence diagram nên chọn 2 đến 4 luồng tiêu biểu: đăng nhập, lập hóa đơn, import hóa đơn, báo cáo ngày.
+- Sequence diagram nên chọn 2 đến 4 luồng tiêu biểu: đăng nhập, lập hóa đơn, import hóa đơn hoặc import danh mục, báo cáo ngày.
 - Nếu dùng Mermaid trong Markdown, có thể chụp lại sơ đồ để đưa vào file Word/PDF.

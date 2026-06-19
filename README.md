@@ -2,7 +2,7 @@
 
 Tài liệu này là điểm bắt đầu cho người mới đọc mã nguồn chương trình. Dự án gồm backend Spring Boot, frontend Vue 2 và cơ sở dữ liệu SQL Server, phục vụ quản lý công ty, người dùng, mẫu hóa đơn, hóa đơn GTGT, ký hóa đơn, gửi cơ quan thuế, gửi email, báo cáo và các cấu hình quản trị.
 
-Cập nhật: 18/06/2026.
+Cập nhật: 19/06/2026.
 
 ## Đọc tài liệu theo thứ tự
 
@@ -14,7 +14,7 @@ Cập nhật: 18/06/2026.
 | [Cơ sở dữ liệu](docs/CO_SO_DU_LIEU.md) | Nhóm bảng, quan hệ chính và nguyên tắc dữ liệu nhiều công ty. |
 | [Công nghệ áp dụng](docs/CONG_NGHE.md) | Framework, thư viện và lý do sử dụng. |
 | [Cấu hình và vận hành](docs/CAU_HINH_VA_VAN_HANH.md) | Cổng chạy, cấu hình database, mail, thanh toán, log và upload. |
-| [Luồng nghiệp vụ chính](docs/LUONG_NGHIEP_VU.md) | Các luồng đăng ký, hóa đơn, import, email, báo cáo ngày, thanh toán. |
+| [Luồng nghiệp vụ chính](docs/LUONG_NGHIEP_VU.md) | Các luồng đăng ký, hóa đơn, import hóa đơn/danh mục, email, báo cáo ngày, thanh toán. |
 | [Yêu cầu hệ thống](docs/YEU_CAU_HE_THONG.md) | Yêu cầu chức năng, phi chức năng và ràng buộc nghiệp vụ. |
 | [Use case hệ thống](docs/USE_CASE.md) | Tác nhân, danh sách use case và mô tả luồng chính. |
 | [Tổng quan API](docs/API_TONG_QUAN.md) | Nhóm API public, doanh nghiệp, cài đặt và quản trị. |
@@ -59,6 +59,6 @@ npm run build
 - Backend: `src/main/resources/application.properties`.
 - Frontend: `package.json`, `vue.config.js`, `src/router`.
 - Database: `db.dbml`, `db.dbdiagram`.
-- Script dữ liệu hoặc chỉnh schema thủ công: `tools/sql`.
+- Script dữ liệu hoặc chỉnh schema thủ công: `tools/sql`, gồm script cột import danh mục `tools/sql/2026-06-19_invoice_imports_catalog_columns.sql` và script quyền import danh mục `tools/sql/2026-06-19_catalog_import_permissions.sql`.
 - File upload runtime: `uploads`.
 - Log runtime: `logs/hoadon.log`.

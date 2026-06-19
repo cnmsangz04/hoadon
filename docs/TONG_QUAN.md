@@ -1,6 +1,6 @@
 # Tổng quan chương trình
 
-Cập nhật: 18/06/2026.
+Cập nhật: 19/06/2026.
 
 ## Mục tiêu
 
@@ -13,7 +13,7 @@ Phần quản trị hệ thống hỗ trợ duyệt đăng ký công ty, quản 
 | Nhóm | Vai trò chính |
 | --- | --- |
 | Khách chưa đăng nhập | Đăng ký công ty, đăng nhập, quên mật khẩu, tra cứu hóa đơn công khai. |
-| Nhân viên công ty | Lập hóa đơn, import hóa đơn, quản lý khách hàng, sản phẩm, báo cáo theo quyền được cấp. |
+| Nhân viên công ty | Lập hóa đơn, import hóa đơn, import danh mục khách hàng/sản phẩm, quản lý khách hàng, sản phẩm, báo cáo theo quyền được cấp. |
 | Admin công ty | Quản lý hồ sơ công ty, thành viên, phân quyền nội bộ, cấu hình bảo mật và email. |
 | Admin công ty root | Vào khu quản trị, xử lý danh mục và cấu hình cấp hệ thống theo quyền. |
 | Root | Toàn quyền hệ thống, quản lý dữ liệu nhiều công ty và cấu hình lõi. |
@@ -29,7 +29,7 @@ Chi tiết quyền và phạm vi dữ liệu nằm trong [QUY_TAC_VAI_TRO_CHUONG
 | Người dùng | Thành viên, quyền, lịch sử đăng nhập, phiên đăng nhập. |
 | Danh mục | Khách hàng, sản phẩm, ngân hàng, cơ quan thuế, thuế suất. |
 | Hóa đơn | Mẫu hóa đơn, dải số, hóa đơn GTGT, XML, PDF, ký số, gửi cơ quan thuế. |
-| Import | Tải mẫu Excel, import nhiều hóa đơn và nhiều dòng hàng hóa. |
+| Import | Tải mẫu Excel, import nhiều hóa đơn và nhiều dòng hàng hóa; import/cập nhật danh mục khách hàng và sản phẩm theo mã. |
 | Email | Máy chủ mail, mẫu mail, hàng đợi gửi mail, lịch sử gửi mail. |
 | Báo cáo | Báo cáo hóa đơn, xuất dữ liệu, báo cáo hóa đơn ngày qua Telegram và email. |
 | Thanh toán | Gói hóa đơn, mua hóa đơn, lịch sử mua, thanh toán MoMo, VNPAY và ZaloPay sandbox. |
@@ -38,6 +38,7 @@ Chi tiết quyền và phạm vi dữ liệu nằm trong [QUY_TAC_VAI_TRO_CHUONG
 ## Nguyên tắc quan trọng
 
 - Hầu hết dữ liệu nghiệp vụ phải gắn với `company_id`.
+- Mã khách hàng và mã sản phẩm không được trùng trong cùng công ty khi thêm mới hoặc đổi mã thủ công; riêng import danh mục dùng mã để cập nhật bản ghi đã tồn tại.
 - Root có thể xem hoặc thao tác nhiều công ty khi API cho phép, nhưng dữ liệu công ty thường không được ghi nhầm về công ty root.
 - Lịch sử gửi mail và job mail phải nằm theo công ty phát sinh nội dung.
 - Báo cáo hóa đơn ngày gửi Telegram có thể thông báo cả khi không có dữ liệu, nhưng email chỉ gửi khi có dữ liệu cần báo cáo.

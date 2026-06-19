@@ -1,6 +1,6 @@
 # Cơ sở dữ liệu
 
-Cập nhật: 18/06/2026.
+Cập nhật: 19/06/2026.
 
 ## Nguồn mô tả schema
 
@@ -22,7 +22,7 @@ Cấu hình hiện tại trong `application.properties` kết nối SQL Server d
 | Người dùng | `users`, `login_sessions`, `login_history` | Tài khoản, phiên đăng nhập, lịch sử đăng nhập. |
 | Phân quyền | `permission_categories`, `permissions`, `user_permissions` | Nhóm quyền, quyền chi tiết, quyền từng user. |
 | Danh mục công ty | `customers`, `products` | Khách hàng và sản phẩm của từng công ty. |
-| Hóa đơn | `form_invoices`, `invoice_numbers`, `invoices`, `invoice_imports` | Mẫu hóa đơn, dải số, hóa đơn, dữ liệu import. |
+| Hóa đơn và import | `form_invoices`, `invoice_numbers`, `invoices`, `invoice_imports` | Mẫu hóa đơn, dải số, hóa đơn, lịch sử import hóa đơn và import danh mục. |
 | Chữ ký và XML | `signature_vats`, `signature_authorities_tax` | XML hóa đơn đã ký và XML gửi/nhận cơ quan thuế. |
 | Mail | `mail_servers`, `mail_templates`, `mail_jobs` | Cấu hình SMTP, mẫu mail, hàng đợi và lịch sử gửi mail. |
 | Báo cáo và thông báo | `telegram_configs`, `daily_invoice_report_configs`, `notification_reads`, `history` | Cấu hình Telegram, lịch báo cáo ngày, thông báo đã đọc, lịch sử thao tác. |
@@ -44,6 +44,16 @@ Cấu hình hiện tại trong `application.properties` kết nối SQL Server d
 | `mail_jobs.company_id -> companies.id` | Lịch sử/job mail phải nằm ở công ty phát sinh nội dung. |
 | `daily_invoice_report_configs.company_id -> companies.id` | Lịch gửi báo cáo ngày theo từng công ty cấu hình. |
 
+## Ghi chú về lịch sử import
+
+`invoice_imports` lưu lịch sử import Excel. Cột `import_type` phân loại dữ liệu:
+
+- `INVOICE` hoặc `NULL` với dữ liệu cũ: import hóa đơn.
+- `CUSTOMER`: import danh mục khách hàng.
+- `PRODUCT`: import danh mục sản phẩm.
+
+Với import danh mục, `item_count` và `imported_item_ids` lưu số lượng và danh sách ID khách hàng/sản phẩm đã tạo hoặc cập nhật. Với import hóa đơn, `invoice_count` và `imported_invoice_ids` tiếp tục lưu số lượng và danh sách hóa đơn đã tạo.
+
 ## Nguyên tắc nhiều công ty
 
 - Mọi dữ liệu nghiệp vụ của công ty thường phải truy vấn theo `company_id`.
@@ -55,4 +65,3 @@ Cấu hình hiện tại trong `application.properties` kết nối SQL Server d
 ## Ghi chú về `ddl-auto`
 
 Hiện cấu hình có `spring.jpa.hibernate.ddl-auto=update`. Cấu hình này tiện cho phát triển nhưng khi triển khai thật vẫn nên quản lý thay đổi schema bằng script SQL rõ ràng trong `tools/sql` để tránh thay đổi khó kiểm soát.
-

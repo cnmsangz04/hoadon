@@ -1,6 +1,6 @@
 # Bảo trì và kiểm tra
 
-Cập nhật: 18/06/2026.
+Cập nhật: 19/06/2026.
 
 ## Checklist trước khi sửa nghiệp vụ
 
@@ -55,6 +55,7 @@ git diff --check
 - Cập nhật `db.dbml` hoặc `db.dbdiagram` nếu thay đổi schema.
 - Tạo script SQL trong `tools/sql` nếu cần chạy dữ liệu hoặc migration thủ công.
 - Đặt tên script có ngày và mục đích, ví dụ `2026-06-18_ten_thay_doi.sql`.
+- Khi thêm quyền mới, tạo script idempotent để insert/update `permission_categories` và `permissions`.
 - Không dựa hoàn toàn vào `ddl-auto=update` cho môi trường thật.
 - Kiểm tra dữ liệu nhiều công ty, đặc biệt các bảng hóa đơn, chữ ký, mail và báo cáo.
 
@@ -79,9 +80,19 @@ git diff --check
 
 - Mẫu tải về phải đủ cột cho các loại mẫu hóa đơn đang hỗ trợ.
 - File import phải đọc được nhiều hóa đơn và nhiều dòng hàng.
+- Với import danh mục, file phải kiểm tra trùng mã trong cùng file và dùng mã để cập nhật bản ghi đã tồn tại trong công ty.
+- Lịch sử import hóa đơn và import danh mục cùng nằm trong `invoice_imports`, cần lọc đúng `import_type`.
 - Cần kiểm tra trường hợp một thuế suất và nhiều thuế suất.
 - Lỗi import nên chỉ rõ dòng dữ liệu để người dùng sửa được.
 - Không nên thay đổi thứ tự cột mà không cập nhật service đọc file và hướng dẫn trong mẫu.
+
+## Khi sửa danh mục khách hàng/sản phẩm
+
+- Kiểm tra thêm mới không cho trùng mã trong cùng công ty.
+- Kiểm tra cập nhật vẫn cho đổi mã, nhưng không được đổi sang mã đang thuộc bản ghi khác.
+- Kiểm tra xóa chỉ thao tác bản ghi thuộc công ty hiện tại.
+- Kiểm tra màn lập hóa đơn nạp đúng bản ghi được chọn, kể cả dữ liệu cũ từng có mã trùng.
+- Kiểm tra nút đi tới import và nút đi tới danh sách tương ứng vẫn đúng route.
 
 ## Khi sửa XML hóa đơn
 
@@ -96,4 +107,3 @@ git diff --check
 - Kiểm tra trên màn hình nhỏ và màn hình desktop.
 - Kiểm tra route, menu, quyền truy cập và thông báo lỗi.
 - Nếu thêm màn hình mới, cập nhật tài liệu route hoặc cấu trúc thư mục khi cần.
-
