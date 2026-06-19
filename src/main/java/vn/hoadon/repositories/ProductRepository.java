@@ -10,6 +10,7 @@ import vn.hoadon.entity.ProductsEntity;
 public interface ProductRepository extends JpaRepository<ProductsEntity, Long>, JpaSpecificationExecutor<ProductsEntity>{
 	List<ProductsEntity> findByName(String name);
 	List<ProductsEntity> findByCode(String code);
+	List<ProductsEntity> findByCompanyIdAndCode(Long companyId, String code);
 	List<ProductsEntity> findByStatus(Integer status);
 	
 }

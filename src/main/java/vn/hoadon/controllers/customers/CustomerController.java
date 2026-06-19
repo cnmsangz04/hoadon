@@ -11,6 +11,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -73,6 +75,12 @@ public class CustomerController extends BaseController {
 	public ResponseEntity<?> save(@RequestBody CustomersEntity customer) {
 		try {
 			permission("category-customer-save");
+			if (customer == null) {
+				return ResponseEntity.badRequest().body(Map.of("message", "Thiếu thông tin khách hàng"));
+			}
+			if (!hasText(customer.getCompanyName()) && !hasText(customer.getBuyerName())) {
+				return ResponseEntity.badRequest().body(Map.of("message", "Vui lòng nhập Đơn vị mua hàng hoặc Người mua hàng"));
+			}
 			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 			if (auth != null && auth.getPrincipal() instanceof UserEntity) {
 				UserEntity user = (UserEntity) auth.getPrincipal();
@@ -84,10 +92,34 @@ public class CustomerController extends BaseController {
 			CustomersEntity savedCustomer = customerService.saveOrUpdate(customer);
 			return ResponseEntity.ok(savedCustomer);
 
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
 		} catch (Exception e) {
-			return ResponseEntity.internalServerError().body("Lỗi hệ thống: " + e.getMessage());
+			return ResponseEntity.internalServerError().body(Map.of("message", "Lỗi hệ thống: " + e.getMessage()));
 		}
 
+	}
+
+	private boolean hasText(String value) {
+		return value != null && !value.trim().isEmpty();
+	}
+
+	@DeleteMapping("/{id}")
+	public ResponseEntity<?> delete(@PathVariable("id") Long id) {
+		try {
+			permission("category-customer-save");
+			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+			if (auth == null || !(auth.getPrincipal() instanceof UserEntity)) {
+				return ResponseEntity.status(401).body(Map.of("message", "Hết phiên làm việc"));
+			}
+			UserEntity user = (UserEntity) auth.getPrincipal();
+			customerService.delete(id, user.getCompanyId());
+			return ResponseEntity.ok(Map.of("message", "Xóa khách hàng thành công"));
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+		} catch (Exception e) {
+			return ResponseEntity.internalServerError().body(Map.of("message", "Xóa khách hàng thất bại: " + e.getMessage()));
+		}
 	}
 
 	@PostMapping("/get")

@@ -89,6 +89,8 @@ export default {
           icon: 'fas fa-file-import',
           children: [
             { title: 'Import hóa đơn', icon: 'fas fa-file-excel', to: '/imports/invoice' },
+            { title: 'Import khách hàng', icon: 'fas fa-users', to: '/imports/customer' },
+            { title: 'Import sản phẩm', icon: 'fas fa-box', to: '/imports/product' },
           ],
         },
         {
@@ -104,8 +106,8 @@ export default {
           title: 'Danh mục',
           icon: 'fas fa-th-list',
           children: [
-            { title: 'Sản phẩm', icon: 'fas fa-box', to: '/categories/product/list' },
             { title: 'Khách hàng', icon: 'fas fa-users', to: '/categories/customer/list' },
+            { title: 'Sản phẩm', icon: 'fas fa-box', to: '/categories/product/list' },
           ],
         },
         {

@@ -181,7 +181,7 @@
           </b-row>
 
           <datalist v-if="!loadingCustomers" id="autoCustomerCode">
-            <option v-for="item in customersRaw" :key="item.code" :value="item.code">
+            <option v-for="item in customersRaw" :key="item.id || item.code" :value="customerOptionValue(item)">
               {{ (item.companyName || item.buyerName || '') + ' - MST: ' + (item.taxCode || item.taxcode || 'N/A') }}
             </option>
           </datalist>
@@ -354,8 +354,8 @@
           </div>
 
           <datalist v-if="!loadingProduct" id="autoNameProduct">
-            <option v-for="item in app.product" :key="item.code" :value="item.name">
-              {{ 'Mã: ' + item.code + ' Giá: ' + splitNumber(item.price) + 'đ' }}
+            <option v-for="item in app.product" :key="item.id || item.code" :value="productOptionValue(item)">
+              {{ 'Giá: ' + splitNumber(item.price) + 'đ' }}
             </option>
           </datalist>
           
@@ -629,13 +629,37 @@ export default {
         feature: item.feature != null ? Number(item.feature) : (item.type != null ? Number(item.type) : 1)
       }
     },
-    // Tìm sản phẩm theo tên chính xác trước, sau đó theo mã, rồi theo tên chứa chuỗi (không phân biệt hoa thường)
+    customerOptionValue (item) {
+      if (!item) return ''
+      const code = String(item.code || '').trim()
+      const name = String(item.companyName || item.buyerName || '').trim()
+      const id = item.id != null ? ` (#${item.id})` : ''
+      return `${[code, name].filter(Boolean).join(' - ')}${id}`.trim()
+    },
+    productOptionValue (item) {
+      if (!item) return ''
+      const code = String(item.code || '').trim()
+      const name = String(item.name || '').trim()
+      const id = item.id != null ? ` (#${item.id})` : ''
+      return `${[code, name].filter(Boolean).join(' - ')}${id}`.trim()
+    },
+    findCustomerByInput (input) {
+      const raw = String(input || '').trim()
+      const s = raw.toLowerCase()
+      if (!s) return null
+      const arr = Array.isArray(this.customersRaw) ? this.customersRaw : []
+      let found = arr.find(c => this.customerOptionValue(c).toLowerCase() === s)
+      if (!found) found = arr.find(c => String(c?.code || '').trim().toLowerCase() === s)
+      return found || null
+    },
+    // Tìm sản phẩm theo option đã chọn, sau đó theo mã/tên (không phân biệt hoa thường)
     findProductByNameOrCode (input) {
       const s = String(input || '').trim().toLowerCase()
       if (!s) return null
       const arr = Array.isArray(this.app.product) ? this.app.product : []
-      let found = arr.find(p => String(p?.name || '').toLowerCase() === s)
+      let found = arr.find(p => this.productOptionValue(p).toLowerCase() === s)
       if (!found) found = arr.find(p => String(p?.code || '').toLowerCase() === s)
+      if (!found) found = arr.find(p => String(p?.name || '').toLowerCase() === s)
       if (!found) found = arr.find(p => String(p?.name || '').toLowerCase().includes(s))
       return this.normalizeProduct(found)
     },
@@ -750,25 +774,24 @@ export default {
     onCustomerSelected (code) {
       const s = String(code || '').trim()
       if (!s) return
-      const c = (this.customersRaw || []).find(x => String(x.code || '').trim() === s)
+      const c = this.findCustomerByInput(s)
       if (!c) return
-      // prefer companyName/buyerName, then fallback
-      this.frmData.customer.code = c.code || this.frmData.customer.code
-      this.frmData.customer.name = c.companyName || c.buyerName || this.frmData.customer.name
-      this.frmData.customer.buyer = c.buyerName || this.frmData.customer.buyer
-      this.frmData.customer.taxcode = c.taxCode || c.taxcode || this.frmData.customer.taxcode
-      this.frmData.customer.address = c.companyAddress || c.address || this.frmData.customer.address
-      this.frmData.customer.email = c.email || this.frmData.customer.email
-      this.frmData.customer.phone = c.phone || this.frmData.customer.phone
-      this.frmData.customer.bank_name = c.bankName || c.bank_name || this.frmData.customer.bank_name
-      this.frmData.customer.bank_no = c.bankAccountNumber || c.bank_no || this.frmData.customer.bank_no
+      this.frmData.customer.code = c.code || ''
+      this.frmData.customer.name = c.companyName || ''
+      this.frmData.customer.buyer = c.buyerName || ''
+      this.frmData.customer.taxcode = c.taxCode || c.taxcode || ''
+      this.frmData.customer.address = c.companyAddress || c.address || ''
+      this.frmData.customer.email = c.email || ''
+      this.frmData.customer.phone = c.phone || ''
+      this.frmData.customer.bank_name = c.bankName || c.bank_name || ''
+      this.frmData.customer.bank_no = c.bankAccountNumber || c.bank_no || ''
     },
     // Xử lý thay đổi mã khách hàng (cho datalist)
     onCustomerCodeChange () {
       const code = String(this.frmData.customer.code || '').trim()
       if (!code) return
       // Try to find customer by exact code match
-      const c = (this.customersRaw || []).find(x => String(x.code || '').trim() === code)
+      const c = this.findCustomerByInput(code)
       if (c) {
         // Auto-fill customer fields
         this.onCustomerSelected(code)

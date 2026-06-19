@@ -126,6 +126,18 @@ const router = new VueRouter({
 					meta: { requiresUser: true, title: 'Import hóa đơn' }
 				},
 				{
+					path: '/imports/customer',
+					name: 'CustomerImportCustomer',
+					component: () => import('@/views/customers/imports/catalog/index.vue'),
+					meta: { requiresUser: true, title: 'Import khách hàng', importType: 'customer' }
+				},
+				{
+					path: '/imports/product',
+					name: 'CustomerImportProduct',
+					component: () => import('@/views/customers/imports/catalog/index.vue'),
+					meta: { requiresUser: true, title: 'Import sản phẩm', importType: 'product' }
+				},
+				{
 					path: '/categories/product/list',
 					name: 'category-product-list',
 					component: () => import('@/views/customers/categories/product/list.vue'),

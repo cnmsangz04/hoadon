@@ -13,8 +13,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -87,18 +89,44 @@ public class ProductController extends BaseController {
 	public ResponseEntity<?> save(@RequestBody ProductsEntity product) {
 		try {
 			permission("category-product-save");
+			if (product == null) {
+				return ResponseEntity.badRequest().body(Map.of("message", "Thiếu thông tin sản phẩm"));
+			}
 			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 	        if (auth != null && auth.getPrincipal() instanceof UserEntity) {
 	            UserEntity user = (UserEntity) auth.getPrincipal();
 	            // Gán companyId vào filter để Service lọc dữ liệu
 	            product.setCompanyId(user.getCompanyId());
-	        }
+	        } else {
+				return ResponseEntity.status(401).body(Map.of("message", "Hết phiên làm việc"));
+			}
 	        
 			ProductsEntity savedProduct = productService.saveOrUpdate(product);
 			return ResponseEntity.ok(savedProduct);
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
 		} catch (Exception e) {
 			e.printStackTrace();
-			return ResponseEntity.internalServerError().body("Lỗi hệ thống: " + e.getMessage());
+			return ResponseEntity.internalServerError().body(Map.of("message", "Lỗi hệ thống: " + e.getMessage()));
+		}
+	}
+
+	@DeleteMapping("/{id}")
+	public ResponseEntity<?> delete(@PathVariable("id") Long id) {
+		try {
+			permission("category-product-save");
+			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+			if (auth == null || !(auth.getPrincipal() instanceof UserEntity)) {
+				return ResponseEntity.status(401).body(Map.of("message", "Hết phiên làm việc"));
+			}
+			UserEntity user = (UserEntity) auth.getPrincipal();
+			productService.delete(id, user.getCompanyId());
+			return ResponseEntity.ok(Map.of("message", "Xóa sản phẩm thành công"));
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.internalServerError().body(Map.of("message", "Xóa sản phẩm thất bại: " + e.getMessage()));
 		}
 	}
 

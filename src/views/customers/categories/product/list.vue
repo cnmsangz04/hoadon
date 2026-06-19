@@ -13,6 +13,9 @@
                 >
                     <i class="fas fa-sync-alt"></i> Làm mới
                 </b-button>
+                <b-button size="sm" variant="outline-success" class="mr-2" to="/imports/product">
+                    <i class="fas fa-box"></i> Import sản phẩm
+                </b-button>
                 <b-button size="sm" variant="success" @click="openCreate">
                     <i class="fas fa-plus"></i> Thêm hàng hóa
                 </b-button>
@@ -144,6 +147,9 @@
                             ></i>
                             {{ item.status == 1 ? "Khóa" : "Mở khóa" }}
                         </b-dropdown-item>
+                        <b-dropdown-item class="text-danger" @click="deleteItem(item)">
+                            <i class="fas fa-trash-alt mr-2"></i>Xóa
+                        </b-dropdown-item>
                     </b-dropdown>
                 </template>
             </b-table>
@@ -174,7 +180,6 @@
                             <b-form-input
                                 v-model.trim="form.code"
                                 placeholder="Ví dụ: SP001"
-                                :disabled="!!form.id"
                                 :state="state('code')"
                                 required
                             />
@@ -503,6 +508,20 @@ export default {
                 this.loadData();
             } catch (e) {
                 this.$toastr && this.$toastr.error("Không thể thay đổi trạng thái", "Lỗi");
+            }
+        },
+        async deleteItem(item) {
+            if (!item || !item.id) return;
+            const label = item.name || item.code || item.id;
+            if (!window.confirm(`Xóa sản phẩm "${label}"?`)) return;
+            try {
+                await axios.delete(`/categories/product/${item.id}`, {
+                    meta: { suppressGlobalErrorToast: true },
+                });
+                this.$toastr && this.$toastr.success("Xóa sản phẩm thành công", "Thành công");
+                this.loadData();
+            } catch (e) {
+                this.$toastr && this.$toastr.error(e.response?.data?.message || "Xóa sản phẩm thất bại", "Lỗi");
             }
         },
     },

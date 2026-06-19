@@ -11,4 +11,5 @@ public interface CustomerService {
 	Page<CustomersEntity> list(CustomerFilterDTO filter, Pageable pageable);
 	List<CustomersEntity> list(Integer status);
     CustomersEntity saveOrUpdate(CustomersEntity customer);
+    void delete(Long id, Long companyId);
 }

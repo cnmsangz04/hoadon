@@ -55,6 +55,7 @@ public class ProductServiceImpl implements ProductService {
 	@Override
 	@Transactional
 	public ProductsEntity saveOrUpdate(ProductsEntity product) {
+		validateUniqueCode(product);
 		if (product.getId() != null) {
 			return productRepository.findById(product.getId()).map(t -> {
 				t.setCode(product.getCode());
@@ -70,6 +71,53 @@ public class ProductServiceImpl implements ProductService {
 			}).orElseGet((() -> productRepository.save(product)));
 		}
 		return productRepository.save(product);
+	}
+
+	private void validateUniqueCode(ProductsEntity product) {
+		if (product == null) {
+			throw new IllegalArgumentException("Thiếu thông tin sản phẩm");
+		}
+		if (product.getCompanyId() == null) {
+			throw new IllegalArgumentException("Không xác định được công ty");
+		}
+		String code = product.getCode() != null ? product.getCode().trim() : "";
+		if (code.isEmpty()) {
+			throw new IllegalArgumentException("Vui lòng nhập mã sản phẩm");
+		}
+		product.setCode(code);
+		if (product.getId() != null) {
+			ProductsEntity existing = productRepository.findById(product.getId()).orElse(null);
+			if (existing != null && sameCode(existing.getCode(), code)) {
+				return;
+			}
+		}
+		List<ProductsEntity> duplicates = productRepository.findByCompanyIdAndCode(product.getCompanyId(), code);
+		boolean hasDuplicate = duplicates.stream()
+				.anyMatch(item -> item.getId() != null && !item.getId().equals(product.getId()));
+		if (hasDuplicate) {
+			throw new IllegalArgumentException("Mã sản phẩm " + code + " đã tồn tại");
+		}
+	}
+
+	private boolean sameCode(String left, String right) {
+		return left != null && right != null && left.trim().equalsIgnoreCase(right.trim());
+	}
+
+	@Override
+	@Transactional
+	public void delete(Long id, Long companyId) {
+		if (id == null) {
+			throw new IllegalArgumentException("Thiếu ID sản phẩm");
+		}
+		if (companyId == null) {
+			throw new IllegalArgumentException("Không xác định được công ty");
+		}
+		ProductsEntity existing = productRepository.findById(id)
+				.orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sản phẩm"));
+		if (!companyId.equals(existing.getCompanyId())) {
+			throw new IllegalArgumentException("Không tìm thấy sản phẩm");
+		}
+		productRepository.delete(existing);
 	}
 
 	@Override

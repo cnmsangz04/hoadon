@@ -8,6 +8,9 @@
                 <b-button size="sm" variant="outline-primary" class="mr-2" @click="reload">
                     <i class="fas fa-sync-alt"></i> Làm mới
                 </b-button>
+                <b-button size="sm" variant="outline-success" class="mr-2" to="/imports/customer">
+                    <i class="fas fa-users"></i> Import khách hàng
+                </b-button>
                 <b-button size="sm" variant="success" @click="openCreate">
                     <i class="fas fa-plus"></i> Thêm khách hàng
                 </b-button>
@@ -59,7 +62,7 @@
                 </template>
 
                 <template #cell(companyName)="data">
-                    <div class="font-weight-bold text-dark">{{ data.item.companyName }}</div>
+                    <div class="font-weight-bold text-dark">{{ data.item.companyName || data.item.buyerName }}</div>
                     <small class="text-muted" v-if="data.item.taxCode">MST: {{ data.item.taxCode }}</small>
                 </template>
 
@@ -80,6 +83,9 @@
                         <b-dropdown-item @click="toggleLock(item)">
                             <i class="fas mr-2" :class="item.status == 1 ? 'fa-lock text-warning' : 'fa-unlock text-success'"></i>
                             {{ item.status == 1 ? "Khóa" : "Mở khóa" }}
+                        </b-dropdown-item>
+                        <b-dropdown-item class="text-danger" @click="deleteItem(item)">
+                            <i class="fas fa-trash-alt mr-2"></i>Xóa
                         </b-dropdown-item>
                     </b-dropdown>
                 </template>
@@ -118,7 +124,7 @@
 
                     <b-col md="6">
                         <b-form-group label="Mã khách hàng" :state="state('code')">
-                            <b-form-input v-model.trim="form.code" placeholder="KH001" :disabled="!!form.id" :state="state('code')" />
+                            <b-form-input v-model.trim="form.code" placeholder="KH001" :state="state('code')" />
                             <b-form-invalid-feedback :state="state('code')">{{ errors.code }}</b-form-invalid-feedback>
                         </b-form-group>
                     </b-col>
@@ -130,15 +136,16 @@
                     </b-col>
 
                     <b-col md="12">
-                        <b-form-group label="Tên khách hàng / Tên Công ty đối tác" :state="state('companyName')">
-                            <b-form-input v-model.trim="form.companyName" required placeholder="Nhập tên đầy đủ của khách hàng" :state="state('companyName')" />
+                        <b-form-group label="Đơn vị mua hàng" :state="state('companyName')">
+                            <b-form-input v-model.trim="form.companyName" placeholder="Tên đơn vị mua hàng" :state="state('companyName')" />
                             <b-form-invalid-feedback :state="state('companyName')">{{ errors.companyName }}</b-form-invalid-feedback>
                         </b-form-group>
                     </b-col>
 
                     <b-col md="6">
-                        <b-form-group label="Người mua hàng">
-                            <b-form-input v-model="form.buyerName" placeholder="Tên người đại diện" />
+                        <b-form-group label="Người mua hàng" :state="state('buyerName')">
+                            <b-form-input v-model.trim="form.buyerName" placeholder="Tên người mua hàng" :state="state('buyerName')" />
+                            <b-form-invalid-feedback :state="state('buyerName')">{{ errors.buyerName }}</b-form-invalid-feedback>
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
@@ -322,9 +329,13 @@ export default {
             return this.errors[field] ? false : null;
         },
         validateForm() {
+            const customerNameError = this.hasCustomerNameInfo()
+                ? null
+                : "Vui lòng nhập Đơn vị mua hàng hoặc Người mua hàng";
             this.errors = {
                 code: required(this.form.code, "Vui lòng nhập mã khách hàng"),
-                companyName: required(this.form.companyName, "Vui lòng nhập tên khách hàng"),
+                companyName: customerNameError,
+                buyerName: customerNameError,
                 taxCode: taxCode(this.form.taxCode),
                 email: email(this.form.email),
                 phone: phone(this.form.phone),
@@ -333,6 +344,9 @@ export default {
                 if (!this.errors[key]) delete this.errors[key];
             });
             return !hasErrors(this.errors);
+        },
+        hasCustomerNameInfo() {
+            return [this.form.companyName, this.form.buyerName].some((value) => String(value || "").trim());
         },
         async saveData() {
             if (!this.validateForm()) {
@@ -363,6 +377,20 @@ export default {
                 this.loadData();
             } catch (e) {
                 this.$toastr && this.$toastr.error("Thao tác thất bại", "Lỗi");
+            }
+        },
+        async deleteItem(item) {
+            if (!item || !item.id) return;
+            const label = item.companyName || item.buyerName || item.code || item.id;
+            if (!window.confirm(`Xóa khách hàng "${label}"?`)) return;
+            try {
+                await axios.delete(`/categories/customer/${item.id}`, {
+                    meta: { suppressGlobalErrorToast: true },
+                });
+                this.$toastr && this.$toastr.success("Xóa khách hàng thành công", "Thành công");
+                this.loadData();
+            } catch (e) {
+                this.$toastr && this.$toastr.error(e.response?.data?.message || "Xóa khách hàng thất bại", "Lỗi");
             }
         }
     }

@@ -11,6 +11,7 @@ public interface ProductService {
 	Page<ProductsEntity> list(ProductFilterDTO filter, Pageable pageable);
 	List<ProductsEntity> list(Integer status);
 	ProductsEntity saveOrUpdate(ProductsEntity product);
+	void delete(Long id, Long companyId);
 	void setLock(Long id, boolean lock);
 	Optional<ProductsEntity> finbyCode(String code);
 	Optional<ProductsEntity> findbyName(String name);

@@ -44,6 +44,7 @@ import java.util.stream.Collectors;
 @Service
 public class InvoiceImportServiceImpl implements InvoiceImportService {
 
+    private static final String TYPE_INVOICE = "INVOICE";
     private static final String IMPORT_TYPE = "importhoadon";
     private static final DataFormatter FORMATTER = new DataFormatter(Locale.forLanguageTag("vi-VN"));
     private static final DateTimeFormatter FILE_TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
@@ -275,6 +276,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
             InvoiceImportEntity entity = new InvoiceImportEntity();
             entity.setCompanyId(companyId);
             entity.setUserId(user.getId());
+            entity.setImportType(TYPE_INVOICE);
             entity.setOriginalFilename(originalName);
             entity.setStoredFilename(storedName);
             entity.setFilePath(target.toString().replace("\\", "/"));
@@ -299,7 +301,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         if (importId == null) {
             throw new IllegalArgumentException("Thiếu ID lần import");
         }
-        InvoiceImportEntity source = repository.findByIdAndCompanyId(importId, user.getCompanyId())
+        InvoiceImportEntity source = repository.findInvoiceImportByIdAndCompanyId(importId, user.getCompanyId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy file import của công ty"));
         if (source.getFilePath() == null || source.getFilePath().isBlank()) {
             throw new IllegalArgumentException("Lần import này chưa có đường dẫn file");
@@ -312,6 +314,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         InvoiceImportEntity entity = new InvoiceImportEntity();
         entity.setCompanyId(user.getCompanyId());
         entity.setUserId(user.getId());
+        entity.setImportType(TYPE_INVOICE);
         entity.setSourceImportId(source.getId());
         entity.setOriginalFilename(source.getOriginalFilename());
         entity.setStoredFilename(source.getStoredFilename());
@@ -329,7 +332,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
     @Override
     public Page<InvoiceImportDTO> list(UserEntity user, Pageable pageable) {
         requireUser(user);
-        return repository.findByCompanyIdOrderByIdDesc(user.getCompanyId(), pageable).map(this::toDto);
+        return repository.findInvoiceImportsByCompanyId(user.getCompanyId(), pageable).map(this::toDto);
     }
 
     private InvoiceImportResultDTO processStoredFile(InvoiceImportEntity entity, UserEntity user, Path filePath) {
@@ -340,6 +343,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
             validateOneVatRateForm(form, groups, errors);
             entity.setTotalRows(groups.stream().mapToInt(g -> g.rows.size()).sum());
             entity.setInvoiceCount(groups.size());
+            entity.setItemCount(groups.size());
             if (!errors.isEmpty()) {
                 markError(entity, errors);
                 return toResult(entity);
@@ -363,6 +367,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
             entity.setSuccessCount(lookupCodes.size());
             entity.setErrorCount(0);
             entity.setImportedInvoiceIds(String.join(",", lookupCodes));
+            entity.setImportedItemIds(String.join(",", lookupCodes));
             entity.setErrorMessage(null);
             repository.save(entity);
             return toResult(entity);
@@ -533,6 +538,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         dto.companyId = e.getCompanyId();
         dto.userId = e.getUserId();
         dto.sourceImportId = e.getSourceImportId();
+        dto.importType = e.getImportType();
         dto.originalFilename = e.getOriginalFilename();
         dto.storedFilename = e.getStoredFilename();
         dto.filePath = e.getFilePath();
@@ -540,10 +546,12 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         dto.status = e.getStatus();
         dto.totalRows = e.getTotalRows();
         dto.invoiceCount = e.getInvoiceCount();
+        dto.itemCount = e.getItemCount();
         dto.successCount = e.getSuccessCount();
         dto.errorCount = e.getErrorCount();
         dto.errorMessage = e.getErrorMessage();
         dto.importedInvoiceIds = e.getImportedInvoiceIds();
+        dto.importedItemIds = e.getImportedItemIds();
         dto.createdAt = e.getCreatedAt();
         dto.updatedAt = e.getUpdatedAt();
         return dto;
@@ -553,13 +561,16 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         InvoiceImportResultDTO dto = new InvoiceImportResultDTO();
         dto.id = e.getId();
         dto.status = e.getStatus();
+        dto.importType = e.getImportType();
         dto.totalRows = e.getTotalRows();
         dto.invoiceCount = e.getInvoiceCount();
+        dto.itemCount = e.getItemCount();
         dto.successCount = e.getSuccessCount();
         dto.errorCount = e.getErrorCount();
         dto.errorMessage = e.getErrorMessage();
         dto.fileUrl = e.getFileUrl();
         dto.importedInvoiceIds = e.getImportedInvoiceIds();
+        dto.importedItemIds = e.getImportedItemIds();
         return dto;
     }
 

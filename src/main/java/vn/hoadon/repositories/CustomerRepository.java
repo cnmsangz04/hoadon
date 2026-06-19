@@ -9,5 +9,6 @@ import vn.hoadon.entity.CustomersEntity;
 
 public interface CustomerRepository extends JpaRepository<CustomersEntity, Long>, JpaSpecificationExecutor<CustomersEntity>{
 	List<CustomersEntity> findByCode(String code);
+	List<CustomersEntity> findByCompanyIdAndCode(Long companyId, String code);
 	List<CustomersEntity> findByStatus(Integer status);
 }

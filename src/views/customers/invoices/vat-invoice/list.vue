@@ -10,6 +10,10 @@
           <i class="fas fa-sync-alt"></i>
           Làm mới
         </b-button>
+        <b-button size="sm" variant="outline-success" class="mr-2" to="/imports/invoice">
+          <i class="fas fa-file-invoice"></i>
+          Import hóa đơn
+        </b-button>
         <b-button size="sm" variant="success" @click="goCreate">
           <i class="fas fa-file-invoice"></i>
           Lập hóa đơn

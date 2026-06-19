@@ -19,6 +19,9 @@ public class InvoiceImportEntity {
     @Column(name = "source_import_id")
     private Long sourceImportId;
 
+    @Column(name = "import_type", length = 30)
+    private String importType;
+
     @Column(name = "original_filename", columnDefinition = "NVARCHAR(255)")
     private String originalFilename;
 
@@ -40,6 +43,9 @@ public class InvoiceImportEntity {
     @Column(name = "invoice_count")
     private Integer invoiceCount;
 
+    @Column(name = "item_count")
+    private Integer itemCount;
+
     @Column(name = "success_count")
     private Integer successCount;
 
@@ -51,6 +57,9 @@ public class InvoiceImportEntity {
 
     @Column(name = "imported_invoice_ids", columnDefinition = "NVARCHAR(MAX)")
     private String importedInvoiceIds;
+
+    @Column(name = "imported_item_ids", columnDefinition = "NVARCHAR(MAX)")
+    private String importedItemIds;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -78,6 +87,8 @@ public class InvoiceImportEntity {
     public void setUserId(Long userId) { this.userId = userId; }
     public Long getSourceImportId() { return sourceImportId; }
     public void setSourceImportId(Long sourceImportId) { this.sourceImportId = sourceImportId; }
+    public String getImportType() { return importType; }
+    public void setImportType(String importType) { this.importType = importType; }
     public String getOriginalFilename() { return originalFilename; }
     public void setOriginalFilename(String originalFilename) { this.originalFilename = originalFilename; }
     public String getStoredFilename() { return storedFilename; }
@@ -92,6 +103,8 @@ public class InvoiceImportEntity {
     public void setTotalRows(Integer totalRows) { this.totalRows = totalRows; }
     public Integer getInvoiceCount() { return invoiceCount; }
     public void setInvoiceCount(Integer invoiceCount) { this.invoiceCount = invoiceCount; }
+    public Integer getItemCount() { return itemCount; }
+    public void setItemCount(Integer itemCount) { this.itemCount = itemCount; }
     public Integer getSuccessCount() { return successCount; }
     public void setSuccessCount(Integer successCount) { this.successCount = successCount; }
     public Integer getErrorCount() { return errorCount; }
@@ -100,6 +113,8 @@ public class InvoiceImportEntity {
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
     public String getImportedInvoiceIds() { return importedInvoiceIds; }
     public void setImportedInvoiceIds(String importedInvoiceIds) { this.importedInvoiceIds = importedInvoiceIds; }
+    public String getImportedItemIds() { return importedItemIds; }
+    public void setImportedItemIds(String importedItemIds) { this.importedItemIds = importedItemIds; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
