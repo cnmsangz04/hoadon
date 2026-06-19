@@ -27,6 +27,7 @@ Cập nhật: 19/06/2026.
 
 | Tài liệu | Ghi chú |
 | --- | --- |
+| [HELP.md](HELP.md) | Trợ giúp nhanh, lệnh hay dùng và file cần xem khi điều tra lỗi. |
 | [MO_TA_CHI_TIET_CHUONG_TRINH.md](MO_TA_CHI_TIET_CHUONG_TRINH.md) | Mô tả nghiệp vụ chi tiết theo nhiều nhóm chức năng. |
 | [QUY_TAC_VAI_TRO_CHUONG_TRINH.md](QUY_TAC_VAI_TRO_CHUONG_TRINH.md) | Quy tắc vai trò, phân quyền, phạm vi dữ liệu và đăng nhập. |
 | [dinh_dang_du_lieu_hoa_don_dien_tu.md](dinh_dang_du_lieu_hoa_don_dien_tu.md) | Định dạng dữ liệu hóa đơn điện tử. |
@@ -34,6 +35,13 @@ Cập nhật: 19/06/2026.
 | [FORM_VALIDATION_SUMMARY.md](FORM_VALIDATION_SUMMARY.md) | Ghi chú liên quan kiểm tra dữ liệu form. |
 
 ## Chạy nhanh môi trường phát triển
+
+Điều kiện cần có:
+
+- Java 21.
+- Node.js/npm tương thích Vue CLI 5.
+- SQL Server đang chạy và có database `hoadon_database`.
+- Cấu hình kết nối database nằm trong `src/main/resources/application.properties`.
 
 Backend chạy trên cổng `8081`:
 
@@ -53,6 +61,8 @@ Build frontend vào thư mục static của backend:
 ```bash
 npm run build
 ```
+
+Sau khi clone mới hoặc chuyển môi trường, cần kiểm tra thêm các script SQL trong `tools/sql`, đặc biệt script quyền và script bổ sung cột dùng cho import. Nếu chạy môi trường thật, không dùng nguyên secret/key mặc định trong `application.properties`.
 
 ## Nguồn cấu hình quan trọng
 

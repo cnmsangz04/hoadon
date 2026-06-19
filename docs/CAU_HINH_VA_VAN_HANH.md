@@ -23,9 +23,9 @@ Nhóm cấu hình quan trọng:
 | Frontend | `app.frontend-url` | URL frontend dùng trong link hoặc mail. |
 | Database | `spring.datasource.*` | Kết nối SQL Server. |
 | JPA | `spring.jpa.*` | Dialect, log SQL, cập nhật schema. |
-| JWT | `jwt.secret`, `jwt.expiration` | Bí mật ký token và thời hạn token. |
+| JWT | `jwt.secret`, `jwt.expiration_ms` | Bí mật ký token và thời hạn token theo mili-giây. |
 | Log | `logging.file.name` | File log runtime. |
-| Mail | `spring.mail.*`, `app.mail.*` | Cấu hình mail hệ thống và hàng đợi mail. |
+| Mail | `spring.mail.*`, `app.encryption.key`, `mail.queue.max-retries` | Cấu hình mail dự phòng, khóa mã hóa SMTP lưu trong DB và số lần retry hàng đợi mail. SMTP chính của từng công ty lưu trong bảng `mail_servers`. |
 | MoMo | `momo.*` | Cấu hình thanh toán MoMo. |
 | VNPAY | `vnpay.*` | Cấu hình thanh toán VNPAY. |
 | ZaloPay | `zalopay.*` | Cấu hình thanh toán ZaloPay sandbox. |
@@ -81,6 +81,18 @@ Chạy test backend:
 | `node_modules` | Dependency frontend sau khi `npm install`. |
 
 Không nên commit file log runtime, file build tạm hoặc file upload phát sinh ngoài dữ liệu mẫu cần thiết.
+
+## Lưu ý secret và môi trường thật
+
+File `application.properties` hiện có giá trị mặc định để chạy/dev nhanh. Khi triển khai thật cần thay hoặc override bằng biến môi trường:
+
+- `jwt.secret`: khóa ký JWT, không dùng khóa mẫu.
+- `app.encryption.key`: khóa AES mã hóa mật khẩu SMTP/token lưu DB.
+- `spring.datasource.*`: thông tin SQL Server.
+- `momo.*`, `vnpay.*`, `zalopay.*`: thông tin merchant/cổng thanh toán.
+- `app.frontend-url`, `app.backend-url`: domain thật để link email và callback thanh toán đúng.
+
+Không đưa mật khẩu DB, token Telegram, khóa thanh toán thật hoặc khóa mã hóa thật vào source public.
 
 ## Vận hành mail
 

@@ -19,7 +19,7 @@ Cấu hình hiện tại trong `application.properties` kết nối SQL Server d
 | Danh mục nền | `banks`, `tax_authorities`, `provinces`, `vat_rates` | Dữ liệu dùng chung toàn hệ thống. |
 | Công ty | `companies`, `company_banks`, `company_allowed_ips`, `legal_representatives` | Hồ sơ công ty, tài khoản ngân hàng, bảo mật IP, người đại diện. |
 | Đăng ký | `company_registration_requests`, `register_invoices` | Đăng ký công ty và tờ khai đăng ký sử dụng hóa đơn. |
-| Người dùng | `users`, `login_sessions`, `login_history` | Tài khoản, phiên đăng nhập, lịch sử đăng nhập. |
+| Người dùng | `users`, `login_sessions`, `login_histories` | Tài khoản, phiên đăng nhập, lịch sử đăng nhập. |
 | Phân quyền | `permission_categories`, `permissions`, `user_permissions` | Nhóm quyền, quyền chi tiết, quyền từng user. |
 | Danh mục công ty | `customers`, `products` | Khách hàng và sản phẩm của từng công ty. |
 | Hóa đơn và import | `form_invoices`, `invoice_numbers`, `invoices`, `invoice_imports` | Mẫu hóa đơn, dải số, hóa đơn, lịch sử import hóa đơn và import danh mục. |
@@ -42,7 +42,7 @@ Cấu hình hiện tại trong `application.properties` kết nối SQL Server d
 | `signature_vats.invoice_id -> invoices.id` | XML ký của hóa đơn. Cần lọc thêm theo công ty khi truy vấn nghiệp vụ. |
 | `signature_authorities_tax.invoice_id -> invoices.id` | XML gửi cơ quan thuế của hóa đơn. Cần lọc thêm theo công ty khi truy vấn nghiệp vụ. |
 | `mail_jobs.company_id -> companies.id` | Lịch sử/job mail phải nằm ở công ty phát sinh nội dung. |
-| `daily_invoice_report_configs.company_id -> companies.id` | Lịch gửi báo cáo ngày theo từng công ty cấu hình. |
+| `daily_invoice_report_configs` | Lưu cấu hình lịch gửi báo cáo ngày ở cấp hệ thống, gồm giờ/phút gửi và lần gửi gần nhất. Bảng hiện không có `company_id`; dữ liệu báo cáo và mail job được tách theo công ty khi gửi. |
 
 ## Ghi chú về lịch sử import
 
@@ -61,6 +61,7 @@ Với import danh mục, `item_count` và `imported_item_ids` lưu số lượng
 - Khi tạo mail job cho báo cáo ngày, `company_id` phải là công ty nhận nội dung báo cáo để lịch sử không dồn về root.
 - Khi lấy XML ký hoặc XML gửi cơ quan thuế, cần kiểm tra cả hóa đơn, công ty và mã tra cứu để tránh trả nhầm XML.
 - Cấu hình Telegram và cấu hình lịch báo cáo hóa đơn ngày là hai nghiệp vụ khác nhau, nên lưu ở hai bảng khác nhau: `telegram_configs` và `daily_invoice_report_configs`.
+- `daily_invoice_report_configs` hiện là cấu hình lịch gửi chung. Khi gửi báo cáo, hệ thống gom dữ liệu theo từng công ty và tạo `mail_jobs.company_id` theo công ty nhận nội dung.
 
 ## Ghi chú về `ddl-auto`
 

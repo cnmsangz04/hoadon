@@ -37,6 +37,9 @@ Tài liệu này tóm tắt nhóm API chính để người đọc hiểu cách 
 | `/v1/mail-servers` | Cấu hình SMTP theo công ty. |
 | `/v1/mail-jobs` | Lịch sử gửi mail của công ty. |
 | `/v1/invoice-packages` | Gói hóa đơn, mua gói, thanh toán, lịch sử mua. |
+| `/v1/history/notifications` | Thông báo header theo lịch sử nghiệp vụ của công ty. |
+| `/v1/file` | Xem/tải file preview mẫu hóa đơn công khai hoặc được phép xem. |
+| `/v1/provinces` | Danh sách tỉnh/thành đang hoạt động dùng cho form hồ sơ. |
 
 Các endpoint thanh toán của nhóm gói hóa đơn:
 
@@ -46,6 +49,8 @@ Các endpoint thanh toán của nhóm gói hóa đơn:
 - `/v1/invoice-packages/vnpay/ipn`, `/v1/invoice-packages/vnpay/return`: nhận kết quả VNPAY.
 - `/v1/invoice-packages/zalopay/callback`, `/v1/invoice-packages/zalopay/return`: nhận kết quả ZaloPay.
 - `/v1/invoice-packages/zalopay/banks`: lấy danh sách ngân hàng sandbox ZaloPay đang hỗ trợ.
+- `/v1/invoice-packages/my-purchases`: lịch sử mua gói của công ty hiện tại.
+- `/v1/invoice-packages/purchases/{id}`: xem chi tiết giao dịch mua gói của công ty hiện tại.
 
 ## API cài đặt
 
@@ -98,3 +103,14 @@ Các endpoint thanh toán của nhóm gói hóa đơn:
 2. Người dùng upload Excel qua `/v1/catalog-imports/{type}/upload`.
 3. Backend kiểm tra quyền import hoặc quyền danh mục tương ứng, đọc file, kiểm tra trùng mã trong file và lưu lịch sử import.
 4. Nếu mã đã tồn tại trong công ty, import cập nhật bản ghi đó; nếu chưa tồn tại thì tạo mới.
+
+## Ghi chú khi viết tài liệu API chi tiết
+
+File này chỉ tóm tắt nhóm API. Nếu cần bàn giao vận hành hoặc tích hợp, nên bổ sung bảng chi tiết cho từng endpoint gồm:
+
+- Method HTTP.
+- Quyền cần có.
+- Tham số query/path/body.
+- Response thành công.
+- Response lỗi phổ biến.
+- API public nào không cần JWT, ví dụ callback thanh toán hoặc tra cứu công khai.

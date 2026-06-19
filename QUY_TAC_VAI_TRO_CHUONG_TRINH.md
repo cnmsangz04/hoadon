@@ -16,7 +16,7 @@ Các bảng chính:
 | `permission_categories` | Nhóm quyền dùng để gom quyền trên màn hình phân quyền. |
 | `user_permissions` | Quyền riêng được bật/tắt cho từng user. `allowed = 1` là cho phép, `allowed = 0` là từ chối. |
 | `login_sessions` | Phiên đăng nhập hiện tại, dùng để thu hồi hoặc kiểm tra phiên. |
-| `login_history` | Lịch sử đăng nhập. |
+| `login_histories` | Lịch sử đăng nhập. |
 
 Các trường quan trọng trong `users`:
 
@@ -130,7 +130,7 @@ Rule chuẩn hóa:
 
 ## 4. JWT và đăng nhập
 
-JWT có thời hạn 4 giờ.
+JWT có thời hạn theo cấu hình `jwt.expiration_ms`. Cấu hình hiện tại là `86400000` ms, tương đương 24 giờ.
 
 Các claim quan trọng:
 
