@@ -26,9 +26,9 @@ Nhóm cấu hình quan trọng:
 | JWT | `jwt.secret`, `jwt.expiration_ms` | Bí mật ký token và thời hạn token theo mili-giây. |
 | Log | `logging.file.name` | File log runtime. |
 | Mail | `spring.mail.*`, `app.encryption.key`, `mail.queue.max-retries` | Cấu hình mail dự phòng, khóa mã hóa SMTP lưu trong DB và số lần retry hàng đợi mail. SMTP chính của từng công ty lưu trong bảng `mail_servers`. |
-| MoMo | `momo.*` | Cấu hình thanh toán MoMo. |
+| MoMo | `momo.*` | Cấu hình thanh toán MoMo sandbox/demo. |
 | VNPAY | `vnpay.*` | Cấu hình thanh toán VNPAY. |
-| ZaloPay | `zalopay.*` | Cấu hình thanh toán ZaloPay sandbox. |
+| ZaloPay | `zalopay.*` | Cấu hình thanh toán ZaloPay sandbox/demo. |
 
 ## Cấu hình frontend
 
@@ -92,6 +92,8 @@ File `application.properties` hiện có giá trị mặc định để chạy/d
 - `momo.*`, `vnpay.*`, `zalopay.*`: thông tin merchant/cổng thanh toán.
 - `app.frontend-url`, `app.backend-url`: domain thật để link email và callback thanh toán đúng.
 
+Các giá trị mặc định của MoMo và ZaloPay trong file cấu hình là bộ sandbox/demo public do nhà cung cấp công khai trong tài liệu hoặc mã nguồn mẫu để kiểm thử tích hợp. Đây không phải key riêng của dự án và không dùng cho production.
+
 Không đưa mật khẩu DB, token Telegram, khóa thanh toán thật hoặc khóa mã hóa thật vào source public.
 
 ## Vận hành mail
@@ -123,6 +125,18 @@ Cấu hình MoMo, VNPAY và ZaloPay đang ở chế độ cấu hình qua proper
 - Secret key.
 - Return URL và notify URL.
 - Log giao dịch trong bảng mua gói hóa đơn.
+
+Tài liệu chi tiết về luồng tạo giao dịch, callback, chữ ký và checklist triển khai nằm trong [TICH_HOP_THANH_TOAN.md](TICH_HOP_THANH_TOAN.md).
+
+Nguồn key sandbox/demo hiện tại:
+
+- MoMo dùng bộ `partnerCode`, `accessKey`, `secretKey` demo public trong repo mẫu `momo-wallet/payment` của MoMo, tương ứng endpoint test `https://test-payment.momo.vn`.
+- ZaloPay dùng bộ sandbox `app_id = 2553`, `key1` và `key2` trong tài liệu ZaloPay Developer, tương ứng endpoint sandbox `https://sb-openapi.zalopay.vn`.
+- Các bộ key này được nhà cung cấp đặt sẵn để developer, cá nhân hoặc tổ chức test luồng tạo đơn, redirect, IPN/callback và xác thực chữ ký.
+- Khi triển khai thật, cần override bằng biến môi trường `MOMO_*`, `VNPAY_*`, `ZALOPAY_*` được cấp cho merchant thật; không sửa trực tiếp key thật vào source.
+- `momo.redirect-url`, `momo.ipn-url`, `zalopay.redirect-url` và `zalopay.callback-url` là URL của hệ thống này, không phải key do cổng thanh toán cấp. Nếu để trống, backend dùng `app.backend-url` và endpoint callback/return tương ứng.
+
+Nguồn tham khảo: repo mẫu MoMo `https://github.com/momo-wallet/payment/blob/master/php/config.json`, tài liệu MoMo `https://developers.momo.vn/v3/vi/docs/payment/onboarding/integration-process/`, tài liệu ZaloPay `https://developers.zalopay.vn/v2/general/overview.html`.
 
 Với ZaloPay sandbox, các khóa chính là:
 

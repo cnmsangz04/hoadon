@@ -41,6 +41,7 @@ Khi cần giải thích 03 lớp:
 - Gửi email hóa đơn và hàng đợi mail.
 - Báo cáo hóa đơn và báo cáo hóa đơn ngày qua Telegram/email.
 - Mua gói hóa đơn và thanh toán.
+- Khi trình bày thanh toán, ghi rõ MoMo và ZaloPay đang dùng bộ key sandbox/demo public của nhà cung cấp để kiểm thử tích hợp; production phải thay bằng thông tin merchant thật và URL callback public.
 - Tra cứu hóa đơn công khai.
 
 ## Nội dung cần có khi viết phần database

@@ -14,6 +14,7 @@ Cập nhật: 19/06/2026.
 | [Cơ sở dữ liệu](docs/CO_SO_DU_LIEU.md) | Nhóm bảng, quan hệ chính và nguyên tắc dữ liệu nhiều công ty. |
 | [Công nghệ áp dụng](docs/CONG_NGHE.md) | Framework, thư viện và lý do sử dụng. |
 | [Cấu hình và vận hành](docs/CAU_HINH_VA_VAN_HANH.md) | Cổng chạy, cấu hình database, mail, thanh toán, log và upload. |
+| [Tích hợp thanh toán](docs/TICH_HOP_THANH_TOAN.md) | Tài liệu chi tiết tích hợp MoMo, VNPAY, ZaloPay: cấu hình, luồng tạo giao dịch, callback, chữ ký và checklist triển khai. |
 | [Luồng nghiệp vụ chính](docs/LUONG_NGHIEP_VU.md) | Các luồng đăng ký, hóa đơn, import hóa đơn/danh mục, email, báo cáo ngày, thanh toán. |
 | [Yêu cầu hệ thống](docs/YEU_CAU_HE_THONG.md) | Yêu cầu chức năng, phi chức năng và ràng buộc nghiệp vụ. |
 | [Use case hệ thống](docs/USE_CASE.md) | Tác nhân, danh sách use case và mô tả luồng chính. |

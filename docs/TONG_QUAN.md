@@ -32,7 +32,7 @@ Chi tiết quyền và phạm vi dữ liệu nằm trong [QUY_TAC_VAI_TRO_CHUONG
 | Import | Tải mẫu Excel, import nhiều hóa đơn và nhiều dòng hàng hóa; import/cập nhật danh mục khách hàng và sản phẩm theo mã. |
 | Email | Máy chủ mail, mẫu mail, hàng đợi gửi mail, lịch sử gửi mail. |
 | Báo cáo | Báo cáo hóa đơn, xuất dữ liệu, báo cáo hóa đơn ngày qua Telegram và email. |
-| Thanh toán | Gói hóa đơn, mua hóa đơn, lịch sử mua, thanh toán MoMo, VNPAY và ZaloPay sandbox. |
+| Thanh toán | Gói hóa đơn, mua hóa đơn, lịch sử mua, thanh toán MoMo, VNPAY và ZaloPay sandbox. Chi tiết tích hợp nằm trong [TICH_HOP_THANH_TOAN.md](TICH_HOP_THANH_TOAN.md). |
 | Công khai | Tra cứu hóa đơn bằng mã tra cứu hoặc thông tin hóa đơn. |
 
 ## Nguyên tắc quan trọng
@@ -43,3 +43,4 @@ Chi tiết quyền và phạm vi dữ liệu nằm trong [QUY_TAC_VAI_TRO_CHUONG
 - Lịch sử gửi mail và job mail phải nằm theo công ty phát sinh nội dung.
 - Báo cáo hóa đơn ngày gửi Telegram có thể thông báo cả khi không có dữ liệu, nhưng email chỉ gửi khi có dữ liệu cần báo cáo.
 - XML hóa đơn đã ký phải lấy đúng theo hóa đơn và công ty, tránh dùng nhầm XML của công ty khác.
+- Cấu hình thanh toán MoMo và ZaloPay hiện dùng bộ key sandbox/demo public của nhà cung cấp để cá nhân/tổ chức kiểm thử tích hợp; khi triển khai thật phải thay bằng key merchant riêng qua biến môi trường và domain callback public.
