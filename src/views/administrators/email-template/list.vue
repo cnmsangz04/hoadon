@@ -54,7 +54,7 @@
       </b-row>
     </b-card>
 
-    <!-- B?ng -->
+    <!-- Bảng -->
     <b-card class="shadow-sm">
       <b-table
         bordered
