@@ -1,10 +1,20 @@
-# Tích hợp thanh toán MoMo, VNPAY và ZaloPay
+# Tích Hợp Thanh Toán
+
+Tài liệu chi tiết tích hợp MoMo, VNPAY và ZaloPay.
+
+## Nguồn đã hợp nhất
+
+- `TICH_HOP_THANH_TOAN.md`
+
+## Nội dung
+
+### Từ `TICH_HOP_THANH_TOAN.md`
 
 Cập nhật: 19/06/2026.
 
 Tài liệu này mô tả toàn bộ cách hệ thống tích hợp ba cổng thanh toán MoMo, VNPAY và ZaloPay cho chức năng mua gói hóa đơn. Mục tiêu là để người mới đọc có thể hiểu được cấu hình nằm ở đâu, luồng thanh toán chạy như thế nào, backend ký và xác thực dữ liệu ra sao, callback cập nhật giao dịch như thế nào, và khi triển khai thật cần thay đổi những gì.
 
-## 1. Phạm vi tích hợp
+### 1. Phạm vi tích hợp
 
 Thanh toán trong project hiện phục vụ màn hình khách hàng mua gói hóa đơn tại `/invoice-packages`.
 
@@ -26,7 +36,7 @@ Các cổng đang hỗ trợ:
 
 Các key mặc định trong `application.properties` là key sandbox/demo public do nhà cung cấp công khai trong tài liệu hoặc repo mẫu để developer, cá nhân hoặc tổ chức test tích hợp. Không dùng các key này cho production.
 
-## 2. File liên quan
+### 2. File liên quan
 
 | File | Vai trò |
 | --- | --- |
@@ -42,7 +52,7 @@ Các key mặc định trong `application.properties` là key sandbox/demo publi
 | `src/main/java/vn/hoadon/security/SecurityConfig.java` | Mở public các endpoint callback/return để cổng thanh toán gọi được. |
 | `src/views/customers/invoice-packages/index.vue` | Giao diện chọn gói, chọn cổng, mở `payUrl`, poll trạng thái giao dịch. |
 
-## 3. Cấu hình chung
+### 3. Cấu hình chung
 
 Các cấu hình chính nằm trong `src/main/resources/application.properties`.
 
@@ -78,9 +88,9 @@ export ZALOPAY_REDIRECT_URL="https://your-backend.example.com/v1/invoice-package
 export ZALOPAY_CALLBACK_URL="https://your-backend.example.com/v1/invoice-packages/zalopay/callback"
 ```
 
-## 4. Cấu hình từng cổng
+### 4. Cấu hình từng cổng
 
-### 4.1 MoMo
+#### 4.1 MoMo
 
 ```properties
 momo.enabled=true
@@ -108,7 +118,7 @@ momo.lang=vi
 
 Bộ `MOMOBKUN20180529`, `klm05TvNBzhg7h7j`, `at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa` là sandbox/demo public trong repo mẫu `momo-wallet/payment`.
 
-### 4.2 VNPAY
+#### 4.2 VNPAY
 
 ```properties
 vnpay.enabled=true
@@ -140,7 +150,7 @@ VNPAY IPN URL không được gửi trong URL thanh toán của code hiện tạ
 https://your-backend.example.com/v1/invoice-packages/vnpay/ipn
 ```
 
-### 4.3 ZaloPay
+#### 4.3 ZaloPay
 
 ```properties
 zalopay.enabled=true
@@ -179,7 +189,7 @@ zalopay.preferred-payment-methods=${ZALOPAY_PREFERRED_PAYMENT_METHODS:zalopay_wa
 
 Bộ `app_id = 2553`, `key1`, `key2` hiện tại là sandbox public trong tài liệu ZaloPay Developer.
 
-## 5. Phương thức thanh toán và trạng thái
+### 5. Phương thức thanh toán và trạng thái
 
 Frontend gửi `paymentMethod` khi gọi API mua gói:
 
@@ -213,9 +223,9 @@ Mã giao dịch nội bộ lưu trong `payment_code`:
 
 `payment_code` là khóa đối soát chính khi nhận callback. Repository `findByPaymentCode` dùng `PESSIMISTIC_WRITE` để giảm rủi ro hai callback đồng thời cộng hạn mức hai lần.
 
-## 6. Luồng tổng quát
+### 6. Luồng tổng quát
 
-### 6.1 Tạo giao dịch
+#### 6.1 Tạo giao dịch
 
 1. Người dùng vào `/invoice-packages`.
 2. Frontend gọi `GET /v1/invoice-packages` để lấy gói active.
@@ -239,7 +249,7 @@ Content-Type: application/json
 9. Backend trả DTO có `payUrl`, `paymentStatus`, `paymentCode`, và thông tin gói.
 10. Frontend mở `payUrl` trong tab mới và bắt đầu poll trạng thái.
 
-### 6.2 Người dùng thanh toán
+#### 6.2 Người dùng thanh toán
 
 Người dùng hoàn tất thanh toán trên trang/cổng của MoMo, VNPAY hoặc ZaloPay.
 
@@ -250,7 +260,7 @@ Sau đó có hai đường kết quả:
 
 Backend chỉ cộng hạn mức khi kết quả đã qua kiểm tra chữ ký, mã giao dịch, số tiền và merchant/app id.
 
-### 6.3 Cập nhật thành công
+#### 6.3 Cập nhật thành công
 
 Khi một giao dịch hợp lệ và thành công:
 
@@ -263,7 +273,7 @@ Khi một giao dịch hợp lệ và thành công:
 7. Nếu công ty đang có `status = 2`, đổi sang `status = 1`.
 8. Enqueue email thông báo mua gói.
 
-### 6.4 Frontend poll trạng thái
+#### 6.4 Frontend poll trạng thái
 
 Sau khi mở `payUrl`, frontend gọi:
 
@@ -277,7 +287,7 @@ Mỗi 3 giây một lần, tối đa 120 lần. Nếu thấy:
 - `FAILED`: hiện thông báo lỗi.
 - `PENDING`: tiếp tục chờ.
 
-### 6.5 Sequence tổng quát
+#### 6.5 Sequence tổng quát
 
 ```mermaid
 sequenceDiagram
@@ -307,7 +317,7 @@ sequenceDiagram
     FE-->>U: Hiển thị kết quả thanh toán
 ```
 
-### 6.6 Sequence callback thành công
+#### 6.6 Sequence callback thành công
 
 ```mermaid
 sequenceDiagram
@@ -336,9 +346,9 @@ sequenceDiagram
     C-->>PG: Response theo format từng cổng
 ```
 
-## 7. API endpoint
+### 7. API endpoint
 
-### 7.1 Endpoint cần đăng nhập
+#### 7.1 Endpoint cần đăng nhập
 
 | Method | Endpoint | Chức năng |
 | --- | --- | --- |
@@ -351,7 +361,7 @@ sequenceDiagram
 
 Các endpoint này cần JWT và quyền `invoice-package-purchase`.
 
-### 7.2 Endpoint public cho cổng thanh toán
+#### 7.2 Endpoint public cho cổng thanh toán
 
 | Method | Endpoint | Cổng | Chức năng |
 | --- | --- | --- | --- |
@@ -364,9 +374,9 @@ Các endpoint này cần JWT và quyền `invoice-package-purchase`.
 
 Các endpoint này được `permitAll` trong `SecurityConfig` vì cổng thanh toán không gửi JWT. Tuy nhiên, chúng không tin dữ liệu đầu vào trực tiếp; backend vẫn xác thực chữ ký và đối soát dữ liệu trước khi cập nhật giao dịch.
 
-## 8. Chi tiết tích hợp MoMo
+### 8. Chi tiết tích hợp MoMo
 
-### 8.1 Tạo giao dịch
+#### 8.1 Tạo giao dịch
 
 Service: `MomoPaymentServiceImpl.createPayment`.
 
@@ -423,7 +433,7 @@ Các đoạn trên được nối liền bằng dấu `&`, không xuống dòng 
 
 Nếu MoMo trả `resultCode != 0`, backend ném lỗi và giao dịch không được trả về như giao dịch chờ thanh toán.
 
-### 8.2 Response dùng bởi frontend
+#### 8.2 Response dùng bởi frontend
 
 MoMo có thể trả:
 
@@ -436,7 +446,7 @@ MoMo có thể trả:
 
 Hiện frontend chủ yếu mở `payUrl`.
 
-### 8.3 Xử lý IPN/return
+#### 8.3 Xử lý IPN/return
 
 MoMo gửi dữ liệu về:
 
@@ -480,9 +490,9 @@ Nếu `paymentMethod` ban đầu là `MOMO`, backend có thể cập nhật lạ
 | `qr`, `webApp`, `app`, `miniapp`, `aio_qr`, `banktransfer_qr` | `MOMO_WALLET` |
 | `vts`, `paylater`, `pay_later` | `MOMO_PAY_LATER` |
 
-## 9. Chi tiết tích hợp VNPAY
+### 9. Chi tiết tích hợp VNPAY
 
-### 9.1 Tạo URL thanh toán
+#### 9.1 Tạo URL thanh toán
 
 Service: `VnpayPaymentServiceImpl.createPaymentUrl`.
 
@@ -521,7 +531,7 @@ Lưu ý quan trọng:
 - `vnp_OrderInfo` trong code được chuyển thành tiếng Việt không dấu và loại ký tự đặc biệt để tránh lỗi ký/hiển thị.
 - Nếu chạy sau reverse proxy, cần đảm bảo `X-Forwarded-For` hoặc `X-Real-IP` đúng để lấy IP người dùng.
 
-### 9.2 Xử lý IPN
+#### 9.2 Xử lý IPN
 
 Endpoint:
 
@@ -551,7 +561,7 @@ Backend kiểm tra:
 7. Nếu `vnp_ResponseCode = 00` và `vnp_TransactionStatus = 00`, cập nhật thành công.
 8. Nếu không, cập nhật `FAILED` nếu giao dịch chưa thành công.
 
-### 9.3 Xử lý Return URL
+#### 9.3 Xử lý Return URL
 
 Endpoint:
 
@@ -567,9 +577,9 @@ Backend xử lý tương tự IPN nhưng sau đó redirect về frontend:
 
 Nếu return xử lý lỗi, frontend vẫn nhận `vnpayStatus=failed` và message lỗi.
 
-## 10. Chi tiết tích hợp ZaloPay
+### 10. Chi tiết tích hợp ZaloPay
 
-### 10.1 Tạo đơn thanh toán
+#### 10.1 Tạo đơn thanh toán
 
 Service: `ZaloPayPaymentServiceImpl.createPayment`.
 
@@ -607,7 +617,7 @@ Nếu ZaloPay trả `return_code != 1`, backend báo lỗi. Nếu thành công n
 
 Frontend mở `order_url` trong tab mới.
 
-### 10.2 Callback server-to-server
+#### 10.2 Callback server-to-server
 
 Endpoint:
 
@@ -635,7 +645,7 @@ Response cho ZaloPay:
 | `-1` | Callback không hợp lệ, ví dụ sai chữ ký, thiếu dữ liệu. |
 | `0` | Lỗi xử lý nội bộ. |
 
-### 10.3 Redirect sau thanh toán
+#### 10.3 Redirect sau thanh toán
 
 Endpoint:
 
@@ -659,7 +669,7 @@ Sau khi redirect hợp lệ:
 4. Nếu redirect báo không thành công, set `FAILED`.
 5. Nếu redirect báo thành công, backend gọi API query trạng thái để xác nhận.
 
-### 10.4 Query trạng thái
+#### 10.4 Query trạng thái
 
 Service: `ZaloPayPaymentServiceImpl.queryStatus`.
 
@@ -694,7 +704,7 @@ Xử lý response:
 
 Nếu query bị lỗi sau khi redirect hợp lệ, backend giữ `PENDING` và chờ callback xác nhận.
 
-### 10.5 Danh sách ngân hàng ZaloPay
+#### 10.5 Danh sách ngân hàng ZaloPay
 
 Endpoint backend:
 
@@ -712,7 +722,7 @@ mac=HMAC_SHA256(bankListKey1, appid|reqtime)
 
 Kết quả trả về nguyên thông tin danh sách ngân hàng/phương thức từ ZaloPay sandbox.
 
-## 11. Thanh toán lại
+### 11. Thanh toán lại
 
 Endpoint:
 
@@ -730,7 +740,7 @@ POST /v1/invoice-packages/purchases/{id}/retry-payment
 
 Backend không tái sử dụng URL/chữ ký cũ. Thay vào đó, backend tạo một bản ghi purchase mới dựa trên giao dịch cũ, sinh `payment_code` mới, gọi lại cổng thanh toán và trả `payUrl` mới.
 
-## 12. Bảo mật và đối soát
+### 12. Bảo mật và đối soát
 
 Các callback/return public phải được xem là dữ liệu không đáng tin cho đến khi qua đủ kiểm tra.
 
@@ -746,9 +756,9 @@ Các kiểm tra hiện có:
 
 Không nên đưa key thật vào source. Production cần cấu hình bằng biến môi trường hoặc secret manager.
 
-## 13. Cách test local
+### 13. Cách test local
 
-### 13.1 Chạy hệ thống
+#### 13.1 Chạy hệ thống
 
 Backend:
 
@@ -762,7 +772,7 @@ Frontend:
 npm run serve
 ```
 
-### 13.2 Test redirect trên local
+#### 13.2 Test redirect trên local
 
 Nếu chỉ test người dùng quay về frontend, có thể dùng:
 
@@ -773,7 +783,7 @@ app.backend-url=http://localhost:8081
 
 Tuy nhiên, IPN/callback server-to-server thường không gọi được vào `localhost` từ hệ thống của cổng thanh toán.
 
-### 13.3 Test IPN/callback thật
+#### 13.3 Test IPN/callback thật
 
 Tạo URL public cho backend, ví dụ:
 
@@ -798,7 +808,7 @@ Với VNPAY, IPN URL cần khai báo trong merchant/admin VNPAY:
 https://xxxx.ngrok-free.app/v1/invoice-packages/vnpay/ipn
 ```
 
-### 13.4 Các bước test chức năng
+#### 13.4 Các bước test chức năng
 
 1. Đăng nhập user công ty có quyền `invoice-package-purchase`.
 2. Vào `/invoice-packages`.
@@ -811,7 +821,7 @@ https://xxxx.ngrok-free.app/v1/invoice-packages/vnpay/ipn
 9. Kiểm tra hạn mức hóa đơn tăng.
 10. Kiểm tra lịch sử mua gói và log nếu có lỗi.
 
-## 14. Checklist triển khai production
+### 14. Checklist triển khai production
 
 Trước khi chạy thật:
 
@@ -828,7 +838,7 @@ Trước khi chạy thật:
 - Bật log đủ để tra soát nhưng không log full secret key.
 - Đảm bảo DB transaction và lock hoạt động đúng để không cộng hạn mức hai lần khi callback lặp.
 
-## 15. Lỗi thường gặp
+### 15. Lỗi thường gặp
 
 | Hiện tượng | Nguyên nhân thường gặp | Cách kiểm tra |
 | --- | --- | --- |
@@ -842,14 +852,14 @@ Trước khi chạy thật:
 | Frontend không mở cổng thanh toán | Browser chặn popup | Dùng nút mở lại cổng thanh toán hoặc cho phép popup |
 | Giao dịch không cộng hạn mức | Callback chưa về, sai chữ ký, sai số tiền, hoặc giao dịch thất bại | Kiểm tra `payment_status`, `note`, log backend |
 
-## 16. Hạn chế hiện tại và gợi ý cải tiến
+### 16. Hạn chế hiện tại và gợi ý cải tiến
 
 - ZaloPay đã query trạng thái khi redirect về, nhưng chưa có scheduled job query định kỳ các giao dịch `PENDING` nếu callback bị mất. Tài liệu ZaloPay khuyến nghị query định kỳ cho đến khi nhận callback hoặc hết thời hạn đơn.
 - VNPAY IPN URL phải khai báo ngoài hệ thống VNPAY, không nằm trong `application.properties` hiện tại.
 - Frontend hiện mở `payUrl` trong tab mới; nếu cần trải nghiệm tốt hơn có thể hiển thị QR/deeplink cho MoMo hoặc QR banking cho VNPAY/ZaloPay.
 - Các key sandbox/demo public chỉ dùng để kiểm thử. Khi production cần quy trình quản lý secret riêng.
 
-## 17. Nguồn tham khảo
+### 17. Nguồn tham khảo
 
 - MoMo Create Payment API: `https://developers.momo.vn/v3/vi/docs/payment/api/wallet/onetime/`
 - MoMo Signature: `https://developers.momo.vn/v3/vi/docs/payment/api/other/signature/`

@@ -1,39 +1,20 @@
 # Hệ thống hóa đơn điện tử
 
-Tài liệu này là điểm bắt đầu cho người mới đọc mã nguồn chương trình. Dự án gồm backend Spring Boot, frontend Vue 2 và cơ sở dữ liệu SQL Server, phục vụ quản lý công ty, người dùng, mẫu hóa đơn, hóa đơn GTGT, ký hóa đơn, gửi cơ quan thuế, gửi email, báo cáo và các cấu hình quản trị.
+Tài liệu dự án đã được gom lại để dễ đọc và tránh quá nhiều file rời. Dự án gồm backend Spring Boot, frontend Vue 2 và SQL Server, phục vụ quản lý công ty, người dùng, mẫu hóa đơn, hóa đơn GTGT, ký hóa đơn, gửi cơ quan thuế, gửi email, báo cáo, thanh toán và cấu hình quản trị.
 
-Cập nhật: 19/06/2026.
+Cập nhật: 2026-06-22.
 
-## Đọc tài liệu theo thứ tự
+## Danh sách tài liệu
 
 | Tài liệu | Nội dung chính |
 | --- | --- |
-| [Tổng quan chương trình](docs/TONG_QUAN.md) | Mục tiêu, nhóm người dùng, phạm vi chức năng. |
-| [Kiến trúc chương trình](docs/KIEN_TRUC.md) | Mô hình 3 tầng, Spring MVC REST, backend nhiều lớp và cách các thành phần phối hợp. |
-| [Cấu trúc thư mục](docs/CAU_TRUC_THU_MUC.md) | Vai trò các thư mục và nhóm file quan trọng. |
-| [Cơ sở dữ liệu](docs/CO_SO_DU_LIEU.md) | Nhóm bảng, quan hệ chính và nguyên tắc dữ liệu nhiều công ty. |
-| [Công nghệ áp dụng](docs/CONG_NGHE.md) | Framework, thư viện và lý do sử dụng. |
-| [Cấu hình và vận hành](docs/CAU_HINH_VA_VAN_HANH.md) | Cổng chạy, cấu hình database, mail, thanh toán, log và upload. |
-| [Tích hợp thanh toán](docs/TICH_HOP_THANH_TOAN.md) | Tài liệu chi tiết tích hợp MoMo, VNPAY, ZaloPay: cấu hình, luồng tạo giao dịch, callback, chữ ký và checklist triển khai. |
-| [Luồng nghiệp vụ chính](docs/LUONG_NGHIEP_VU.md) | Các luồng đăng ký, hóa đơn, import hóa đơn/danh mục, email, báo cáo ngày, thanh toán. |
-| [Yêu cầu hệ thống](docs/YEU_CAU_HE_THONG.md) | Yêu cầu chức năng, phi chức năng và ràng buộc nghiệp vụ. |
-| [Use case hệ thống](docs/USE_CASE.md) | Tác nhân, danh sách use case và mô tả luồng chính. |
-| [Tổng quan API](docs/API_TONG_QUAN.md) | Nhóm API public, doanh nghiệp, cài đặt và quản trị. |
-| [Kiểm thử hệ thống](docs/KIEM_THU_HE_THONG.md) | Nhóm kiểm thử và test case tiêu biểu. |
-| [Sơ đồ nên dùng trong báo cáo](docs/SO_DO_BAO_CAO.md) | Gợi ý sơ đồ và Mermaid mẫu để đưa vào báo cáo. |
-| [Hướng dẫn viết báo cáo](docs/HUONG_DAN_VIET_BAO_CAO.md) | Cách sắp xếp nội dung để viết báo cáo đầy đủ. |
-| [Bảo trì và kiểm tra](docs/BAO_TRI_VA_KIEM_TRA.md) | Lệnh thường dùng, checklist kiểm tra và lưu ý khi sửa hệ thống. |
-
-## Tài liệu chi tiết đang có
-
-| Tài liệu | Ghi chú |
-| --- | --- |
-| [HELP.md](HELP.md) | Trợ giúp nhanh, lệnh hay dùng và file cần xem khi điều tra lỗi. |
-| [MO_TA_CHI_TIET_CHUONG_TRINH.md](MO_TA_CHI_TIET_CHUONG_TRINH.md) | Mô tả nghiệp vụ chi tiết theo nhiều nhóm chức năng. |
-| [QUY_TAC_VAI_TRO_CHUONG_TRINH.md](QUY_TAC_VAI_TRO_CHUONG_TRINH.md) | Quy tắc vai trò, phân quyền, phạm vi dữ liệu và đăng nhập. |
-| [dinh_dang_du_lieu_hoa_don_dien_tu.md](dinh_dang_du_lieu_hoa_don_dien_tu.md) | Định dạng dữ liệu hóa đơn điện tử. |
-| [cau_truc_tkhai_theo_xml_mau.md](cau_truc_tkhai_theo_xml_mau.md) | Cấu trúc tờ khai theo XML mẫu. |
-| [FORM_VALIDATION_SUMMARY.md](FORM_VALIDATION_SUMMARY.md) | Ghi chú liên quan kiểm tra dữ liệu form. |
+| [01_TONG_QUAN_HE_THONG.md](01_TONG_QUAN_HE_THONG.md) | Tổng quan, yêu cầu hệ thống, use case, luồng nghiệp vụ và mô tả chi tiết chương trình. |
+| [02_KIEN_TRUC_KY_THUAT.md](02_KIEN_TRUC_KY_THUAT.md) | Kiến trúc, công nghệ, cấu trúc thư mục và cơ sở dữ liệu. |
+| [03_API_CAU_HINH_VAN_HANH.md](03_API_CAU_HINH_VAN_HANH.md) | Tổng quan API, cấu hình, vận hành, bảo trì và lệnh kiểm tra. |
+| [04_PHAN_QUYEN_VA_VALIDATE.md](04_PHAN_QUYEN_VA_VALIDATE.md) | Quy tắc vai trò, phân quyền, phạm vi dữ liệu và validate form. |
+| [05_DINH_DANG_HOA_DON_VA_TO_KHAI.md](05_DINH_DANG_HOA_DON_VA_TO_KHAI.md) | Link tài liệu nguồn, định dạng hóa đơn điện tử và cấu trúc tờ khai XML. |
+| [06_THANH_TOAN.md](06_THANH_TOAN.md) | Tích hợp MoMo, VNPAY và ZaloPay. |
+| [07_BAO_CAO_VA_KIEM_THU.md](07_BAO_CAO_VA_KIEM_THU.md) | Hướng dẫn viết báo cáo, sơ đồ nên dùng và kiểm thử hệ thống. |
 
 ## Chạy nhanh môi trường phát triển
 
@@ -44,13 +25,13 @@ Cập nhật: 19/06/2026.
 - SQL Server đang chạy và có database `hoadon_database`.
 - Cấu hình kết nối database nằm trong `src/main/resources/application.properties`.
 
-Backend chạy trên cổng `8081`:
+Chạy backend:
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-Frontend chạy trên cổng `8080`:
+Chạy frontend:
 
 ```bash
 npm install
@@ -63,13 +44,30 @@ Build frontend vào thư mục static của backend:
 npm run build
 ```
 
-Sau khi clone mới hoặc chuyển môi trường, cần kiểm tra thêm các script SQL trong `tools/sql`, đặc biệt script quyền và script bổ sung cột dùng cho import. Nếu chạy môi trường thật, không dùng nguyên secret/key mặc định trong `application.properties`.
+Chạy test backend:
+
+```bash
+./mvnw test
+```
+
+## File cần xem khi điều tra lỗi
+
+| Lỗi cần kiểm tra | File/thư mục nên xem |
+| --- | --- |
+| Backend không chạy | `src/main/resources/application.properties`, `logs/hoadon.log`, `pom.xml`. |
+| Frontend không chạy | `package.json`, `vue.config.js`, `src/router`. |
+| Sai quyền hoặc sai menu | `docs/04_PHAN_QUYEN_VA_VALIDATE.md`, `src/router`, `PermissionServiceImpl`. |
+| Sai dữ liệu công ty | `docs/02_KIEN_TRUC_KY_THUAT.md`, repository/service liên quan. |
+| Sai mail | `mail_templates`, `mail_jobs`, `MailQueueServiceImpl`, `DbMailQueueWorker`. |
+| Sai báo cáo ngày | `DailyInvoiceReportServiceImpl`, `DailyInvoiceReportConfigRepository`, `daily_invoice_report_configs`. |
+| Sai XML hóa đơn | `docs/05_DINH_DANG_HOA_DON_VA_TO_KHAI.md`, `InvoiceXmlBuilder`, `SignatureVatRepository`, `SignatureAuthoritiesTaxRepository`. |
+| Sai import Excel | `InvoiceImportServiceImpl`, `CatalogImportServiceImpl`. |
 
 ## Nguồn cấu hình quan trọng
 
 - Backend: `src/main/resources/application.properties`.
 - Frontend: `package.json`, `vue.config.js`, `src/router`.
 - Database: `db.dbml`, `db.dbdiagram`.
-- Script dữ liệu hoặc chỉnh schema thủ công: `tools/sql`, gồm script cột import danh mục `tools/sql/2026-06-19_invoice_imports_catalog_columns.sql` và script quyền import danh mục `tools/sql/2026-06-19_catalog_import_permissions.sql`.
+- Script dữ liệu hoặc chỉnh schema thủ công: `tools/sql`.
 - File upload runtime: `uploads`.
 - Log runtime: `logs/hoadon.log`.
