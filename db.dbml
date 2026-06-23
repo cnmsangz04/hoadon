@@ -55,6 +55,7 @@ TableGroup mail_and_notifications {
   mail_servers
   mail_templates
   mail_jobs
+  daily_invoice_report_configs
   history
   notification_reads
 }

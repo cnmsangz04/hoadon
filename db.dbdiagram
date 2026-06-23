@@ -181,6 +181,12 @@
         "y": 552
       },
       {
+        "name": "daily_invoice_report_configs",
+        "schemaName": "public",
+        "x": 3401.8271484375,
+        "y": 1550
+      },
+      {
         "name": "history",
         "schemaName": "public",
         "x": 2679.31982421875,
