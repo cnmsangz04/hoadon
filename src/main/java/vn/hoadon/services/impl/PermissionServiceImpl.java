@@ -20,6 +20,7 @@ import vn.hoadon.repositories.PermissionCategoryRepository;
 import vn.hoadon.repositories.PermissionRepository;
 import vn.hoadon.repositories.UserRepository;
 import vn.hoadon.repositories.UserPermissionRepository;
+import vn.hoadon.security.UserRoles;
 import vn.hoadon.services.PermissionService;
 
 import java.time.LocalDateTime;
@@ -114,7 +115,7 @@ public class PermissionServiceImpl implements PermissionService {
 
         PermissionEntity saved = permissionRepository.save(entity);
 
-        // Tự gán quyền cho toàn bộ user root (role = 0).
+        // Tự gán quyền cho toàn bộ Quản trị viên toàn quyền (role = 0).
         try {
             List<UserEntity> roots = userRepository.findByRole(0);
             if (roots != null && !roots.isEmpty()) {
@@ -180,8 +181,8 @@ public class PermissionServiceImpl implements PermissionService {
                 keys,
                 requireAll);
 
-        // Root có toàn quyền.
-        if (user.getRole() != null && user.getRole() == 0) {
+        // Quản trị viên toàn quyền có toàn quyền.
+        if (UserRoles.isRoot(user.getRole())) {
             log.debug("Super admin detected → allow all");
             return true;
         }
@@ -221,7 +222,7 @@ public class PermissionServiceImpl implements PermissionService {
             PermissionEntity perm = permOpt.get();
 
             int level = perm.getLevel() != null ? perm.getLevel() : 0;
-            if (Integer.valueOf(1).equals(user.getRole()) && level == 0) {
+            if (UserRoles.isCompanyManager(user.getRole()) && level == 0) {
                 return true;
             }
 

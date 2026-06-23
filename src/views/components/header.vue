@@ -135,8 +135,6 @@ export default {
           name: '',
           role: null,
           companyId: null,
-          adminScope: '',
-          rootCompanyAdmin: false,
           adminAccess: false
         }
       },
@@ -166,13 +164,7 @@ export default {
     },
     showAdminLink() {
       const role = Number(this.app.auth.role)
-      return role === 0 || this.isRootCompanyAdmin
-    },
-    isRootCompanyAdmin() {
-      const role = Number(this.app.auth.role)
-      const cid = Number(this.app.auth.companyId ?? this.$app?.info?.company?.id)
-      const claim = this.app.auth.rootCompanyAdmin === true || this.app.auth.rootCompanyAdmin === 'true'
-      return role === 1 && (claim || cid === 1)
+      return role === 0 || role === 1 || this.app.auth.adminAccess === true || this.app.auth.adminAccess === 'true'
     },
     avatarSrc() {
       // Ưu tiên: $app.info.user.avatar (từ database) > payload JWT > dữ liệu local
@@ -218,9 +210,6 @@ export default {
           const s = pr.toUpperCase()
           this.app.auth.role = s.includes('SUPER') ? 0 : (s.includes('ADMIN') ? 1 : null)
         }
-        this.app.auth.adminScope = payload.adminScope || payload.admin_scope || this.app.auth.adminScope || ''
-        const rootAdminClaim = payload.rootCompanyAdmin ?? payload.root_company_admin ?? payload.isRootCompanyAdmin
-        this.app.auth.rootCompanyAdmin = rootAdminClaim === true || rootAdminClaim === 'true'
         const adminAccessClaim = payload.adminAccess ?? payload.admin_access
         this.app.auth.adminAccess = adminAccessClaim === true || adminAccessClaim === 'true'
 
@@ -233,7 +222,6 @@ export default {
         const nCid = cid != null && cid !== '' ? Number(cid) : undefined
         if (nCid != null && Number.isFinite(nCid)) {
           this.app.auth.companyId = nCid
-          this.app.auth.rootCompanyAdmin = this.app.auth.rootCompanyAdmin || (Number(this.app.auth.role) === 1 && nCid === 1)
           const cur = this.$app?.info?.company || {}
           this.$app.info.company = { ...(cur || {}), id: nCid }
         }
@@ -249,8 +237,6 @@ export default {
         this.app.auth.avatar = info.user.avatar || this.app.auth.avatar
         if (typeof info.user.role === 'number') this.app.auth.role = info.user.role
         if (info.user.companyId != null && Number.isFinite(Number(info.user.companyId))) this.app.auth.companyId = Number(info.user.companyId)
-        this.app.auth.adminScope = info.user.adminScope || this.app.auth.adminScope || ''
-        this.app.auth.rootCompanyAdmin = info.user.rootCompanyAdmin === true || info.user.rootCompanyAdmin === 'true' || (Number(info.user.role) === 1 && Number(info.user.companyId) === 1)
         this.app.auth.adminAccess = info.user.adminAccess === true || info.user.adminAccess === 'true'
       }
       if (info.company) {
@@ -301,10 +287,6 @@ export default {
             if (info.user.companyId != null && Number.isFinite(Number(info.user.companyId))) {
               this.app.auth.companyId = Number(info.user.companyId)
             }
-            this.app.auth.adminScope = info.user.adminScope || this.app.auth.adminScope || ''
-            this.app.auth.rootCompanyAdmin = info.user.rootCompanyAdmin === true ||
-              info.user.rootCompanyAdmin === 'true' ||
-              (Number(info.user.role) === 1 && Number(info.user.companyId) === 1)
             this.app.auth.adminAccess = info.user.adminAccess === true || info.user.adminAccess === 'true'
           }
           

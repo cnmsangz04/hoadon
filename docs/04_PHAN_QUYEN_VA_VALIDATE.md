@@ -21,7 +21,7 @@ Các bảng chính:
 
 | Bảng | Ý nghĩa |
 | --- | --- |
-| `users` | Tài khoản đăng nhập. Chứa `company_id`, `role`, `admin_scope`, `admin_password`, `status`. |
+| `users` | Tài khoản đăng nhập. Chứa `company_id`, `role`, `admin_password`, `status`. |
 | `companies` | Công ty/đơn vị sử dụng hệ thống. Chứa trạng thái kích hoạt công ty. |
 | `permissions` | Danh sách quyền chi tiết. `name` là key kiểm tra trong code, `display_name` là tên hiển thị khi báo thiếu quyền. |
 | `permission_categories` | Nhóm quyền dùng để gom quyền trên màn hình phân quyền. |
@@ -34,72 +34,67 @@ Các trường quan trọng trong `users`:
 | Trường | Rule |
 | --- | --- |
 | `company_id` | Xác định công ty sở hữu user. Hầu hết dữ liệu nghiệp vụ phải lọc theo company này. |
-| `role` | Vai trò cấp hệ thống: `0 = Root`, `1 = Quản trị công ty`, `2 = Nhân viên`. |
-| `admin_scope` | Phạm vi admin: `ROOT`, `ROOT_COMPANY`, `COMPANY`, hoặc `null` với nhân viên. |
-| `admin_password` | Mật khẩu riêng cho khu Quản trị. Chỉ Root hoặc admin công ty root dùng được. |
+| `role` | Vai trò cấp hệ thống: `0 = Quản trị viên toàn quyền`, `1 = Quản trị viên hệ thống`, `2 = Quản lý doanh nghiệp`, `3 = Nhân viên doanh nghiệp`. |
+| `admin_password` | Mật khẩu riêng cho khu Quản trị. Chỉ Quản trị viên toàn quyền hoặc Quản trị viên hệ thống dùng được. |
 | `status` | `1 = hoạt động`, `0 = khóa/ngừng hoạt động`. User không hoạt động không được đăng nhập. |
 | `deleted_at` | Nếu có giá trị thì user bị xóa mềm, không nên hiện trong danh sách thành viên. |
 
 ### 2. Vai trò hệ thống
 
-#### 2.1 Root
+#### 2.1 Quản trị viên toàn quyền
 
 Giá trị:
 
 - `users.role = 0`
-- `users.admin_scope = ROOT`
 
 Rule:
 
 - Có toàn quyền trong hệ thống.
-- `PermissionServiceImpl.hasPermission()` luôn cho phép Root.
+- `PermissionServiceImpl.hasPermission()` luôn cho phép Quản trị viên toàn quyền.
 - Được vào khu Quản trị bằng `/auth/login-admin` nếu có `admin_password`.
 - Được thao tác dữ liệu nhiều công ty khi API hỗ trợ lọc công ty.
-- Không được tạo thêm user role Root từ màn hình thành viên. Service chặn payload có `role = 0`.
-- Tài khoản Root không được thao tác/xóa/khóa bởi admin công ty.
+- Không được tạo thêm user role Quản trị viên toàn quyền từ màn hình thành viên. Service chặn payload có `role = 0`.
+- Tài khoản Quản trị viên toàn quyền không được thao tác/xóa/khóa bởi Quản lý doanh nghiệp.
 
-#### 2.2 Admin công ty root
+#### 2.2 Quản trị viên hệ thống
 
 Giá trị:
 
 - `users.role = 1`
 - `users.company_id = 1`
-- `users.admin_scope = ROOT_COMPANY`
 
 Rule:
 
 - Là quản trị thuộc công ty root.
 - Được hiện dropdown `Quản trị` ở header.
 - Được đăng nhập khu Quản trị bằng `admin_password`.
-- Được cho qua các quyền user level 0.
-- Khi phân quyền thành viên cho tài khoản này, chỉ hiển thị nhóm quyền admin; không cần gán quyền user level 0 vì role admin đã mặc định qua.
-- Có thể quản lý khu admin theo các permission admin tương ứng.
+- Dùng các permission admin được gán trong `user_permissions`.
+- Khi phân quyền thành viên cho tài khoản này, chỉ hiển thị nhóm quyền admin; quyền user level 0 không áp dụng cho role này.
+- Không mặc định được cho qua quyền user level 0 như Quản lý doanh nghiệp.
 
-#### 2.3 Admin công ty thường
+#### 2.3 Quản lý doanh nghiệp
 
 Giá trị:
 
-- `users.role = 1`
-- `users.company_id != 1`
-- `users.admin_scope = COMPANY`
+- `users.role = 2`
+- `users.company_id` là công ty doanh nghiệp đang quản lý.
 
 Rule:
 
 - Là quản trị của một công ty khách hàng.
 - Không hiện dropdown `Quản trị` ở header.
 - Không đăng nhập khu Quản trị bằng `/auth/login-admin`.
-- Không có `admin_password`; nếu chuyển khỏi admin công ty root thì `admin_password` phải bị xóa.
+- Không có `admin_password`; nếu chuyển khỏi role quản trị hệ thống thì `admin_password` phải bị xóa.
 - Được cho qua các quyền user level 0.
 - Không cần insert `user_permissions` cho quyền level 0.
 - Được quản lý thành viên trong công ty mình theo các quyền `setting-member-*`.
-- Không được thao tác admin khác trong cùng công ty, trừ thao tác chính mình khi rule cho phép.
+- Không được thao tác Quản trị viên toàn quyền hoặc Quản trị viên hệ thống.
 
-#### 2.4 Nhân viên
+#### 2.4 Nhân viên doanh nghiệp
 
 Giá trị:
 
-- `users.role = 2`
-- `users.admin_scope = null`
+- `users.role = 3`
 - `users.admin_password = null`
 
 Rule:
@@ -109,10 +104,10 @@ Rule:
 - Không được vào khu Quản trị.
 - Có thể vào menu Thành viên nếu được cấp quyền `setting-member-list`.
 - Nếu thiếu quyền khi vào API, backend trả `403` kèm tên quyền thiếu.
-- Không được thao tác tài khoản admin/root.
+- Không được thao tác tài khoản quản lý hoặc quản trị.
 - Không được tự phân quyền cho chính mình.
 
-#### 2.5 Khách chưa đăng nhập
+#### 2.5 Người truy cập công khai
 
 Rule:
 
@@ -121,23 +116,23 @@ Rule:
 - Có thể tra cứu hóa đơn public theo rule của API public.
 - Không có quyền truy cập API nghiệp vụ dưới `/v1/**` nếu không có JWT.
 
-### 3. Admin scope
+### 3. Bảng role chuẩn
 
-`admin_scope` dùng để phân biệt phạm vi admin trong cùng `role = 1`.
+Hệ thống chỉ dùng `users.role` để phân biệt vai trò chính.
 
-| Giá trị | Ý nghĩa | Rule |
+| Role | Tên đọc | Rule chính |
 | --- | --- | --- |
-| `ROOT` | Tài khoản Root hệ thống | Chỉ dùng với `role = 0`. |
-| `ROOT_COMPANY` | Admin thuộc công ty root | `role = 1`, `company_id = 1`, có thể vào khu Quản trị nếu có `admin_password`. |
-| `COMPANY` | Admin công ty thường | `role = 1`, `company_id != 1`, không có quyền vào khu Quản trị. |
-| `null` | Nhân viên | Không có quyền admin mặc định. |
+| `0` | Quản trị viên toàn quyền | Toàn quyền hệ thống, được vào khu Quản trị bằng `admin_password`. |
+| `1` | Quản trị viên hệ thống | Thuộc công ty root, được vào khu Quản trị bằng `admin_password`, dùng permission admin được gán. |
+| `2` | Quản lý doanh nghiệp | Quản lý trong phạm vi công ty, mặc định qua quyền user level 0, không có `admin_password`. |
+| `3` | Nhân viên doanh nghiệp | Dùng quyền chi tiết được gán trong `user_permissions`, không có `admin_password`. |
 
 Rule chuẩn hóa:
 
-- Root giữ `admin_scope = ROOT`.
-- Role không phải admin/root thì xóa `admin_scope` và `admin_password`.
-- Admin công ty thường luôn xóa `admin_password`.
-- Admin công ty root chỉ cập nhật `admin_password` khi có payload gửi lên.
+- Không cho tạo thêm `role = 0` từ màn hình thành viên.
+- `role = 1` phải thuộc công ty root (`company_id = 1`).
+- `role = 2` và `role = 3` luôn xóa `admin_password`.
+- Quản trị viên hệ thống chỉ cập nhật `admin_password` khi có payload gửi lên.
 
 ### 4. JWT và đăng nhập
 
@@ -150,8 +145,6 @@ Các claim quan trọng:
 | `userId` | ID user. |
 | `role` | Role số của user. |
 | `companyId` | Công ty của user. |
-| `adminScope` | Phạm vi admin. |
-| `rootCompanyAdmin` | `true` nếu là admin công ty root. |
 | `adminAccess` | `true` nếu user có thể vào khu Quản trị. |
 | `sid` | ID phiên đăng nhập. |
 
@@ -169,7 +162,7 @@ Rule đăng nhập admin:
 
 - Endpoint: `/v1/auth/login-admin`.
 - User phải `status = 1`.
-- User phải `canAccessAdminArea() = true`, tức Root hoặc admin công ty root.
+- User phải `canAccessAdminArea() = true`, tức Quản trị viên toàn quyền hoặc Quản trị viên hệ thống.
 - Phải có `admin_password`.
 - Mật khẩu nhập vào là mật khẩu quản trị, không phải mật khẩu user thường.
 - IP phải hợp lệ nếu công ty bật bảo mật IP.
@@ -194,21 +187,18 @@ Rule token:
 
 Rule vào khu admin:
 
-- Frontend chỉ xem token admin hợp lệ khi:
-  - `role = 0`, hoặc
-  - `role = 1` và `rootCompanyAdmin = true`, hoặc
-  - `role = 1` và `companyId = 1`.
-- Admin công ty thường không được vào `/administrator`.
+- Frontend chỉ xem token admin hợp lệ khi `adminAccess = true` hoặc `role = 0` hoặc `role = 1`.
+- Quản lý doanh nghiệp không được vào `/administrator`.
 
 Rule menu header:
 
-- Dropdown `Quản trị` chỉ hiện với Root hoặc admin công ty root.
+- Dropdown `Quản trị` chỉ hiện với Quản trị viên toàn quyền hoặc Quản trị viên hệ thống.
 - Công ty chờ kích hoạt thì ẩn phần lớn nút nhanh, chỉ giữ luồng cần thiết.
 
 Rule màn Thành viên:
 
-- Không dùng router `role<2` để chặn nhân viên.
-- Nhân viên có quyền `setting-member-list` vẫn được vào và xem danh sách theo API.
+- Không dùng router `role<2` để chặn Nhân viên doanh nghiệp.
+- Nhân viên doanh nghiệp có quyền `setting-member-list` vẫn được vào và xem danh sách theo API.
 - Quyền thao tác chi tiết do backend kiểm tra bằng `setting-member-save` và `setting-member-manage`.
 
 ### 6. Permission level
@@ -217,15 +207,16 @@ Rule màn Thành viên:
 
 | Level | Ý nghĩa hiện hành |
 | --- | --- |
-| `0` | Quyền user/khách hàng. Nhân viên có thể được cấp các quyền này. Admin công ty được cho qua mặc định. |
+| `0` | Quyền user/doanh nghiệp. Nhân viên doanh nghiệp có thể được cấp các quyền này. Quản lý doanh nghiệp được cho qua mặc định. |
 | `1` | Quyền admin/quản trị hệ thống hoặc quyền không dành cho nhân viên thường. |
 | `2` | Quyền cao hơn, dùng cho nhóm quyền hệ thống nếu có cấu hình. |
 
 Rule kiểm tra:
 
-- Root (`role = 0`) qua tất cả.
-- Admin công ty (`role = 1`) qua các quyền `level = 0`.
-- Nhân viên (`role = 2`) phải có override `user_permissions.allowed = 1`.
+- Quản trị viên toàn quyền (`role = 0`) qua tất cả.
+- Quản trị viên hệ thống (`role = 1`) dùng permission admin được gán.
+- Quản lý doanh nghiệp (`role = 2`) qua các quyền `level = 0`.
+- Nhân viên doanh nghiệp (`role = 3`) phải có override `user_permissions.allowed = 1`.
 - Nếu user có override `allowed = 0` cho một quyền thì quyền đó bị từ chối.
 - Nếu key quyền không tồn tại trong bảng `permissions`, hệ thống từ chối và log cấu hình sai.
 - `permission("key-a|key-b")` nghĩa là chỉ cần có một trong các quyền.
@@ -234,11 +225,11 @@ Rule kiểm tra:
 Rule gán quyền:
 
 - Không được tự phân quyền cho tài khoản đang đăng nhập.
-- Không gán role Root từ màn thành viên.
-- Nhân viên chỉ được nhận quyền level 0.
-- Admin công ty thường full quyền user level 0 nên không cần insert `user_permissions`.
-- Admin công ty root khi phân quyền chỉ dùng nhóm quyền admin; quyền level 0 được bỏ qua khi lưu.
-- Khi tạo quyền mới trong màn quản trị quyền, hệ thống tự gán quyền đó cho toàn bộ Root.
+- Không gán role Quản trị viên toàn quyền từ màn thành viên.
+- Nhân viên doanh nghiệp chỉ được nhận quyền level 0.
+- Quản lý doanh nghiệp full quyền user level 0 nên không cần insert `user_permissions`.
+- Quản trị viên hệ thống khi phân quyền chỉ dùng nhóm quyền admin; quyền level 0 được bỏ qua khi lưu.
+- Khi tạo quyền mới trong màn quản trị quyền, hệ thống tự gán quyền đó cho toàn bộ Quản trị viên toàn quyền.
 
 ### 7. Danh sách permission key đang dùng
 
@@ -269,7 +260,7 @@ Rule riêng:
 
 Rule riêng:
 
-- Tờ khai chỉ được đọc/sửa trong công ty của user, trừ một số luồng Root/admin có xử lý riêng.
+- Tờ khai chỉ được đọc/sửa trong công ty của user, trừ một số luồng Quản trị viên toàn quyền hoặc Quản trị viên hệ thống có xử lý riêng.
 - Gửi tờ khai ghi nhận lịch sử tiếp nhận/chấp nhận/từ chối theo phản hồi mô phỏng hoặc tích hợp.
 
 #### Mẫu hóa đơn
@@ -333,10 +324,10 @@ Rule riêng:
 
 Rule riêng:
 
-- Danh sách thành viên của user không phải Root luôn ép `companyId = actor.companyId`.
-- Root có thể lọc công ty nếu API nhận companyId.
-- Admin không được thao tác admin khác, trừ thao tác chính mình khi rule cho phép.
-- Nhân viên chỉ được thao tác nhân viên cùng công ty khi API cho phép.
+- Danh sách thành viên của user không phải Quản trị viên toàn quyền luôn ép `companyId = actor.companyId`.
+- Quản trị viên toàn quyền có thể lọc công ty nếu API nhận companyId.
+- Quản trị viên hệ thống không được thao tác Quản trị viên hệ thống khác, trừ thao tác chính mình khi rule cho phép.
+- Nhân viên doanh nghiệp chỉ được thao tác Nhân viên doanh nghiệp cùng công ty khi API cho phép.
 - Gửi thông tin đăng nhập thành viên dùng email của `user.email` và template `ACCOUNT_INFO_MAIL`.
 
 #### Email
@@ -369,17 +360,17 @@ Rule riêng:
 - Sau thanh toán thành công, hệ thống tạo/cập nhật hạn mức hóa đơn và kích hoạt công ty nếu cần.
 - Mỗi công ty chỉ nên có một hạn mức mua hóa đơn active.
 
-#### Quản trị công ty
+#### Quản trị doanh nghiệp và hệ thống
 
 | Key | Ý nghĩa |
 | --- | --- |
 | `company-list` | Xem danh sách công ty và hồ sơ đăng ký. |
 | `company-save` | Thêm/sửa công ty. |
-| `company-manage` | Duyệt/từ chối đăng ký, đổi trạng thái công ty, gửi thông tin admin công ty. |
+| `company-manage` | Duyệt/từ chối đăng ký, đổi trạng thái công ty, gửi thông tin Quản lý doanh nghiệp. |
 
 Rule riêng:
 
-- Duyệt đăng ký tạo công ty và tài khoản admin công ty.
+- Duyệt đăng ký tạo công ty và tài khoản Quản lý doanh nghiệp.
 - Gửi thông tin đăng nhập lúc tạo/duyệt công ty dùng template đăng nhập công ty, khác với gửi tài khoản thành viên.
 
 #### Danh mục nền admin
@@ -412,8 +403,8 @@ Rule chung:
 
 - Không truyền `companyId` từ giao diện cho các màn khách hàng nếu backend có thể suy ra từ JWT.
 - Backend phải lấy `currentUser().getCompanyId()` làm nguồn tin cậy.
-- User không phải Root không được xem hoặc sửa dữ liệu công ty khác.
-- Khi API nhận `companyId` để lọc, nếu actor không phải Root thì phải ghi đè về `actor.companyId`.
+- User không phải Quản trị viên toàn quyền không được xem hoặc sửa dữ liệu công ty khác.
+- Khi API nhận `companyId` để lọc, nếu actor không phải Quản trị viên toàn quyền thì phải ghi đè về `actor.companyId`.
 - Nếu bản ghi có `companyId` khác user hiện tại thì trả `403` hoặc lỗi nghiệp vụ phù hợp.
 
 Các dữ liệu bắt buộc lọc theo công ty:
@@ -462,32 +453,32 @@ Rule công ty chờ kích hoạt:
 Rule danh sách:
 
 - `setting-member-list` là quyền xem danh sách thành viên.
-- Không phải Root thì danh sách luôn theo công ty đang đăng nhập.
-- Công ty thường không được thấy Root hoặc admin công ty root.
+- Không phải Quản trị viên toàn quyền thì danh sách luôn theo công ty đang đăng nhập.
+- Công ty thường không được thấy Quản trị viên toàn quyền hoặc Quản trị viên hệ thống.
 
 Rule thêm/sửa:
 
 - `setting-member-save` là quyền thêm/sửa thành viên.
-- User không phải Root không được tự chọn công ty khác; backend ghi đè `companyId` theo actor.
+- User không phải Quản trị viên toàn quyền không được tự chọn công ty khác; backend ghi đè `companyId` theo actor.
 - Khi tạo mới nếu không truyền username, hệ thống tạo username dạng `cp-<userId>`.
 - Không cho gán `role = 0`.
-- Nếu role không phải admin/root thì xóa `admin_scope` và `admin_password`.
+- Nếu role không phải Quản trị viên toàn quyền hoặc Quản trị viên hệ thống thì xóa `admin_password`.
 
 Rule quản lý:
 
 - `setting-member-manage` là quyền khóa/mở khóa, reset mật khẩu, gửi thông tin đăng nhập, xóa/rời công ty.
-- Không được thao tác tài khoản Root.
-- Admin không được thao tác admin khác.
-- Admin chỉ reset mật khẩu admin cho chính mình; với user khác chỉ reset nhân viên.
+- Không được thao tác tài khoản Quản trị viên toàn quyền.
+- Quản trị viên hệ thống không được thao tác Quản trị viên toàn quyền hoặc Quản trị viên hệ thống khác.
+- Quản lý doanh nghiệp chỉ reset mật khẩu chính mình hoặc Nhân viên doanh nghiệp trong công ty.
 - Gửi thông tin đăng nhập thành viên luôn reset mật khẩu mới và gửi đến `user.email`.
 
 Rule phân quyền:
 
 - `setting-member-save` cần để mở danh sách quyền và lưu phân quyền.
 - Không được tự phân quyền cho chính mình.
-- Nhân viên chỉ nhận quyền level 0.
-- Admin công ty thường không cần phân quyền level 0.
-- Admin công ty root chỉ hiển thị/nhận nhóm quyền admin.
+- Nhân viên doanh nghiệp chỉ nhận quyền level 0.
+- Quản lý doanh nghiệp không cần phân quyền level 0.
+- Quản trị viên hệ thống chỉ hiển thị/nhận nhóm quyền admin.
 
 ### 11. Rule khu Quản trị
 
@@ -495,9 +486,9 @@ Khu Quản trị gồm các route `/administrator/**` và API `/v1/administrator
 
 Rule truy cập:
 
-- Chỉ Root hoặc admin công ty root có token admin hợp lệ được vào.
-- Admin công ty thường không được vào.
-- Nhân viên không được vào.
+- Chỉ Quản trị viên toàn quyền hoặc Quản trị viên hệ thống có token admin hợp lệ được vào.
+- Quản lý doanh nghiệp không được vào.
+- Nhân viên doanh nghiệp không được vào.
 
 Các nhóm chức năng admin:
 
@@ -615,7 +606,7 @@ Rule template hệ thống:
 
 Rule gửi thông tin đăng nhập:
 
-- Tạo/duyệt công ty dùng luồng gửi thông tin admin công ty.
+- Tạo/duyệt công ty dùng luồng gửi thông tin Quản lý doanh nghiệp.
 - Gửi thông tin đăng nhập thành viên tại `/setting/member/list` dùng template `ACCOUNT_INFO_MAIL` và gửi đến `user.email`.
 
 Rule mail job:
@@ -652,7 +643,7 @@ Rule chung:
 Rule đặc biệt:
 
 - Mật khẩu user tối thiểu 8 ký tự ở các form đổi/reset/tạo thành viên.
-- Mật khẩu quản trị chỉ hiện và validate cho Root hoặc admin công ty root theo rule.
+- Mật khẩu quản trị chỉ hiện và validate cho Quản trị viên toàn quyền hoặc Quản trị viên hệ thống theo rule.
 - Email, số điện thoại, MST, website nên dùng helper trong `src/utils/validators.js`.
 
 ### 19. Checklist khi thêm API mới
@@ -661,8 +652,8 @@ Rule đặc biệt:
 2. API thuộc công ty nào? Nếu là nghiệp vụ khách hàng, lấy `companyId` từ `currentUser()`.
 3. API cần permission key nào? Tạo key trong `permissions` và gán `display_name` tiếng Việt.
 4. Permission key thuộc level nào? Quyền user thường là level 0.
-5. Admin công ty có được mặc định qua quyền này không?
-6. Nhân viên có thể được cấp quyền này không?
+5. Quản lý doanh nghiệp có được mặc định qua quyền này không?
+6. Nhân viên doanh nghiệp có thể được cấp quyền này không?
 7. API có dùng dữ liệu phụ không? Nếu là dữ liệu phụ, frontend cần xử lý thiếu quyền nhẹ nhàng.
 8. Lỗi thiếu quyền có trả message rõ chưa?
 9. Có nguy cơ công ty này thấy dữ liệu công ty khác không?
@@ -677,7 +668,7 @@ Rule đặc biệt:
 5. Form có `novalidate` và feedback BootstrapVue không?
 6. Toast có dùng Toastr không?
 7. Với màn công ty, có truyền `companyId` từ UI không? Nếu có, backend có ghi đè/kiểm tra actor không?
-8. Nhân viên có quyền thì vào được, thiếu quyền thì nhận thông báo rõ và quay về trang chủ theo interceptor.
+8. Nhân viên doanh nghiệp có quyền thì vào được, thiếu quyền thì nhận thông báo rõ và quay về trang chủ theo interceptor.
 
 ### 21. Nguồn code cần đối chiếu
 
@@ -807,9 +798,9 @@ Quy tắc chính:
 - Điện thoại và email không bắt buộc, nhưng nếu nhập thì phải đúng định dạng.
 - Khi tạo mới, mật khẩu bắt buộc, tối thiểu 8 ký tự và nhập lại phải khớp.
 - Khi cập nhật, mật khẩu không bắt buộc; nếu nhập thì vẫn phải tối thiểu 8 ký tự và khớp xác nhận.
-- Mật khẩu quản trị chỉ validate khi trường này được phép hiển thị cho tài khoản quản trị công ty root.
-- Tài khoản quản trị full quyền user nên không cần insert thêm `user_permissions` cho các quyền level 0.
-- Modal phân quyền chỉ phục vụ nhân viên. Với tài khoản quản trị công ty root chỉ hiển thị nhóm quyền admin; tài khoản quản trị công ty thường không hiện phân quyền thành viên.
+- Mật khẩu quản trị chỉ validate khi trường này được phép hiển thị cho Quản trị viên toàn quyền hoặc Quản trị viên hệ thống.
+- Quản lý doanh nghiệp có sẵn quyền user level 0 nên không cần insert thêm `user_permissions` cho các quyền level 0.
+- Modal phân quyền hiển thị nhóm quyền quản trị cho Quản trị viên hệ thống, không hiển thị quyền cho Quản lý doanh nghiệp và chỉ hiển thị quyền level 0 cho Nhân viên doanh nghiệp.
 - Danh sách quyền chỉ load khi user có quyền thao tác phù hợp, tránh nhân viên được quyền xem thành viên nhưng bị màn hình trống do thiếu quyền sửa.
 
 #### Danh mục khách hàng

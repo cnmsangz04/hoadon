@@ -26,7 +26,8 @@ public class JwtUtil {
 
     /**
      * Tạo JWT cho user.
-     * Quy ước role: 0 = Root, 1 = Quản trị công ty, 2 = Nhân viên.
+     * Quy ước role: 0 = Quản trị viên toàn quyền, 1 = Quản trị viên hệ thống,
+     * 2 = Quản lý doanh nghiệp, 3 = Nhân viên doanh nghiệp.
      */
     public String generateToken(UserEntity user) {
         return generateToken(user, null);
@@ -44,8 +45,6 @@ public class JwtUtil {
                 .claim("userId", user.getId())
                 .claim("role", role)
                 .claim("companyId", companyId)
-                .claim("adminScope", user.getAdminScope())
-                .claim("rootCompanyAdmin", user.isRootCompanyAdmin())
                 .claim("adminAccess", user.canAccessAdminArea())
                 .setIssuedAt(now)
                 .setExpiration(exp)
@@ -101,8 +100,4 @@ public class JwtUtil {
                 : null;
     }
 
-    public boolean isRootCompanyAdmin(String token) {
-        Object v = parseClaims(token).get("rootCompanyAdmin");
-        return Boolean.TRUE.equals(v);
-    }
 }

@@ -16,6 +16,7 @@ import vn.hoadon.entity.UserEntity;
 import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.UserRepository;
+import vn.hoadon.security.UserRoles;
 import vn.hoadon.services.CompanyService;
 import vn.hoadon.services.MailQueueService;
 
@@ -159,8 +160,9 @@ public class CompanyServiceImpl implements CompanyService {
         user.setCompanyId(company.getId());
         user.setUsername(generateTemporaryUsername());
         user.setName("Admin");
-        user.setRole(1); // Quản trị
-        user.setAdminScope(Long.valueOf(1L).equals(company.getId()) ? "ROOT_COMPANY" : "COMPANY");
+        user.setRole(Long.valueOf(1L).equals(company.getId())
+                ? UserRoles.SYSTEM_ADMIN
+                : UserRoles.COMPANY_MANAGER);
         user.setAdminPassword(null);
         user.setStatus((byte)1);
         String rawPassword = generateStrongPassword(14);
@@ -176,8 +178,11 @@ public class CompanyServiceImpl implements CompanyService {
         if (companyId == null) return Optional.empty();
         List<UserEntity> users = userRepository.findByCompanyId(companyId);
         if (users == null) return Optional.empty();
+        int expectedRole = Long.valueOf(1L).equals(companyId)
+                ? UserRoles.SYSTEM_ADMIN
+                : UserRoles.COMPANY_MANAGER;
         return users.stream()
-                .filter(u -> u != null && Integer.valueOf(1).equals(u.getRole()))
+                .filter(u -> u != null && Integer.valueOf(expectedRole).equals(u.getRole()))
                 .findFirst();
     }
 

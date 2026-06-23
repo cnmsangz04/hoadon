@@ -14,6 +14,7 @@ import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.entity.LoginHistoryEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.repositories.LoginHistoryRepository;
+import vn.hoadon.security.UserRoles;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -101,7 +102,7 @@ public class LoginHistoryController extends BaseController {
 
     private UserEntity requireSettingManager() {
         UserEntity actor = currentUser();
-        if (actor == null || actor.getRole() == null || actor.getRole() >= 2) {
+        if (actor == null || actor.getRole() == null || !UserRoles.hasCompanyManagerPrivileges(actor.getRole())) {
             throw new AccessDeniedException("Bạn không có quyền xem lịch sử đăng nhập");
         }
         permission("setting-login-history");
@@ -109,7 +110,7 @@ public class LoginHistoryController extends BaseController {
     }
 
     private boolean isRoot(UserEntity actor) {
-        return actor != null && actor.getRole() != null && actor.getRole() == 0;
+        return actor != null && UserRoles.isRoot(actor.getRole());
     }
 
     public static class LoginHistoryDto {

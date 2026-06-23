@@ -9,6 +9,7 @@ import vn.hoadon.dto.buyinvoice.BuyInvoiceListItemDTO;
 import vn.hoadon.dto.common.IdRequestDTO;
 import vn.hoadon.entity.BuyInvoiceEntity;
 import vn.hoadon.entity.UserEntity;
+import vn.hoadon.security.UserRoles;
 import vn.hoadon.services.BuyInvoiceHistoryService;
 import vn.hoadon.services.BuyInvoiceService;
 
@@ -41,12 +42,11 @@ public class BuyInvoiceController extends BaseController {
         int pageNum = page != null ? page : 0;
         int pageSize = size != null ? size : 25;
 
-        // Derive companyId from current user for non-root users
+        // Khu quản trị hệ thống xem toàn hệ thống; user thường chỉ xem công ty của mình.
         UserEntity user = currentUser();
         Long actorCompanyId = user != null ? user.getCompanyId() : null;
         Integer actorRole = user != null ? user.getRole() : null;
-        boolean isRoot = actorRole != null && actorRole == 0;
-        if (!isRoot) {
+        if (!UserRoles.canAccessAdminArea(actorRole)) {
             filter.setCompanyId(actorCompanyId);
         }
 
@@ -69,8 +69,7 @@ public class BuyInvoiceController extends BaseController {
 
         UserEntity user = currentUser();
         Integer actorRole = user != null ? user.getRole() : null;
-        boolean isRoot = actorRole != null && actorRole == 0;
-        if (!isRoot) {
+        if (!UserRoles.canAccessAdminArea(actorRole)) {
             filter.setCompanyId(user != null ? user.getCompanyId() : null);
         }
 

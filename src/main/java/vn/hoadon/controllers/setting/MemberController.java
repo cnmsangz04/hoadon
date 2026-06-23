@@ -18,6 +18,7 @@ import vn.hoadon.repositories.PermissionCategoryRepository;
 import vn.hoadon.repositories.PermissionRepository;
 import vn.hoadon.repositories.UserPermissionRepository;
 import vn.hoadon.repositories.UserRepository;
+import vn.hoadon.security.UserRoles;
 
 import java.util.HashMap;
 import java.util.List;
@@ -68,11 +69,11 @@ public class MemberController extends BaseController {
             @RequestParam(defaultValue = "10") int size
     ) {
         permission("setting-member-list");
-        // Suy ra companyId từ user đã xác thực cho user không phải root
+        // Suy ra companyId từ user đã xác thực cho user không phải Quản trị viên toàn quyền
         UserEntity user = currentUser();
         Long actorCompanyId = user != null ? user.getCompanyId() : null;
         Integer actorRole = user != null ? user.getRole() : null;
-        boolean isRoot = actorRole != null && actorRole == 0;
+        boolean isRoot = UserRoles.isRoot(actorRole);
         if (!isRoot || companyId == null) {
             companyId = actorCompanyId;
         }
@@ -92,11 +93,11 @@ public class MemberController extends BaseController {
             @RequestParam(defaultValue = "10") int size
     ) {
         permission("setting-member-list");
-        // Suy ra companyId từ user đã xác thực cho user không phải root
+        // Suy ra companyId từ user đã xác thực cho user không phải Quản trị viên toàn quyền
         UserEntity user = currentUser();
         Long actorCompanyId = user != null ? user.getCompanyId() : null;
         Integer actorRole = user != null ? user.getRole() : null;
-        boolean isRoot = actorRole != null && actorRole == 0;
+        boolean isRoot = UserRoles.isRoot(actorRole);
         if (!isRoot || companyId == null) {
             companyId = actorCompanyId;
         }
@@ -142,7 +143,6 @@ public class MemberController extends BaseController {
         dto.setAvatar(user.getAvatar());
         dto.setRole(user.getRole());
         dto.setStatus(user.getStatus());
-        dto.setAdminScope(user.getAdminScope());
         return dto;
     }
 
@@ -151,10 +151,10 @@ public class MemberController extends BaseController {
         permission("setting-member-save");
         UserEntity actor = currentUser();
         Integer actorRole = actor != null ? actor.getRole() : null;
-        boolean isRoot = actorRole != null && actorRole == 0;
+        boolean isRoot = UserRoles.isRoot(actorRole);
         
-        // Chỉ ghi đè companyId cho user không phải root
-        // User root (role=0) có thể quản lý user từ mọi công ty
+        // Chỉ ghi đè companyId cho user không phải Quản trị viên toàn quyền
+        // Quản trị viên toàn quyền (role=0) có thể quản lý user từ mọi công ty
         if (!isRoot) {
             Long companyId = actor != null ? actor.getCompanyId() : null;
             if (companyId != null) {
@@ -217,7 +217,6 @@ public class MemberController extends BaseController {
         private String avatar;
         private Integer role;
         private Byte status;
-        private String adminScope;
 
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
@@ -237,8 +236,6 @@ public class MemberController extends BaseController {
         public void setRole(Integer role) { this.role = role; }
         public Byte getStatus() { return status; }
         public void setStatus(Byte status) { this.status = status; }
-        public String getAdminScope() { return adminScope; }
-        public void setAdminScope(String adminScope) { this.adminScope = adminScope; }
     }
 
     @PostMapping("/{id}/lock")

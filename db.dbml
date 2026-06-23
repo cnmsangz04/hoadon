@@ -131,9 +131,8 @@ Table users {
   email varchar(255)
   password varchar(64) [not null]
   admin_password varchar(64)
-  admin_scope varchar(20)
   avatar varchar(255)
-  role int [not null, note: '0=root, 1=company admin, 2=staff']
+  role int [not null, note: '0=quản trị viên toàn quyền, 1=quản trị viên hệ thống, 2=quản lý doanh nghiệp, 3=nhân viên doanh nghiệp']
   phone varchar(32)
   status tinyint [not null]
   info nvarchar(max)

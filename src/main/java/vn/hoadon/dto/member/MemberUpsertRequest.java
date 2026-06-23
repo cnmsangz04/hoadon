@@ -11,7 +11,7 @@ public class MemberUpsertRequest {
     private String password;
     private String adminPassword;
     private String avatar;
-    private Integer role; // 0 root, 1 admin, 2 user
+    private Integer role; // 0 toàn quyền, 1 quản trị hệ thống, 2 quản lý DN, 3 nhân viên DN
     private String phone;
     private Byte status;
     private List<UserPermissionOverride> userPermissions;

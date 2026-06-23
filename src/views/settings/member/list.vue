@@ -182,9 +182,9 @@
           </b-col>
         </b-form-row>
 
-        <!-- Chỉ root được đặt vai trò Admin -->
-        <b-form-group v-if="canAssignAdminRole && !isEditingRootTarget" label="Đặt user này là Admin">
-          <b-form-checkbox v-model="form.isAdmin">Đặt làm Admin</b-form-checkbox>
+        <!-- Chỉ Quản trị viên toàn quyền được đặt vai trò quản trị/quản lý -->
+        <b-form-group v-if="canAssignAdminRole && !isEditingRootTarget" label="Vai trò quản lý">
+          <b-form-checkbox v-model="form.isAdmin">Đặt làm quản lý/quản trị</b-form-checkbox>
         </b-form-group>
 
         <b-form-row v-if="showAdminPasswordFields">
@@ -219,9 +219,9 @@
           </b-col>
         </b-form-row>
 
-        <!-- Ghi chú khi sửa tài khoản root -->
+        <!-- Ghi chú khi sửa tài khoản Quản trị viên toàn quyền -->
         <b-alert v-if="isEditingRootTarget" variant="info" class="mt-3">
-          Bạn đang chỉnh cập nhật tài khoản <strong>Root</strong>. Vai trò và quyền hạn của tài khoản này không thể thay đổi.
+          Bạn đang chỉnh cập nhật tài khoản <strong>Quản trị viên toàn quyền</strong>. Vai trò và quyền hạn của tài khoản này không thể thay đổi.
         </b-alert>
         <div class="text-right member-modal-actions">
           <b-button type="submit" variant="primary" :disabled="!canSubmitForm">Lưu</b-button>
@@ -394,16 +394,17 @@ export default {
         adminPasswordConfirm: ''
       },
       memberErrors: {},
-      permForm: { userId: null, companyId: null, username: '', name: '', role: null, status: null, email: '', phone: '', adminScope: '' },
+      permForm: { userId: null, companyId: null, username: '', name: '', role: null, status: null, email: '', phone: '' },
       permOverrides: {}
     }
   },
   computed: {
     userRoleFilterOptions() {
       return [
-        { value: 0, text: 'Root' },
-        { value: 1, text: 'Quản trị' },
-        { value: 2, text: 'Nhân viên' }
+        { value: 0, text: 'Quản trị viên toàn quyền' },
+        { value: 1, text: 'Quản trị viên hệ thống' },
+        { value: 2, text: 'Quản lý doanh nghiệp' },
+        { value: 3, text: 'Nhân viên doanh nghiệp' }
       ]
     },
     companyIdFromToken() {
@@ -523,25 +524,26 @@ export default {
       // Cơ bản: chỉ lấy trạng thái active hoặc không chỉ định
       let perms = (this.allPermissions || []).filter(p => Number(p.status) === 1 || p.status == null)
       const targetRole = Number(this.permForm?.role)
-      const targetCompanyId = Number(this.permForm?.companyId)
-      if (targetRole === 1 && targetCompanyId === 1) {
+      if (targetRole === 1) {
         return perms.filter(p => Number(p.level) !== 0)
       }
-      if (targetRole === 1 && targetCompanyId !== 1) {
+      if (targetRole === 2) {
         return []
       }
-      if (targetRole === 2) {
+      if (targetRole === 3) {
         perms = perms.filter(p => Number(p.level) === 0)
       }
       return perms
     },
     permHelpText() {
       const targetRole = Number(this.permForm?.role)
-      const targetCompanyId = Number(this.permForm?.companyId)
-      if (targetRole === 1 && targetCompanyId === 1) {
-        return 'Tài khoản quản trị đã có toàn bộ quyền user cấp 0; chỉ cấu hình quyền quản trị.'
+      if (targetRole === 1) {
+        return 'Tích chọn những quyền quản trị hệ thống mà tài khoản này được sử dụng.'
       }
       if (targetRole === 2) {
+        return 'Quản lý doanh nghiệp được mặc định sử dụng toàn bộ quyền nghiệp vụ cấp 0.'
+      }
+      if (targetRole === 3) {
         return 'Tích chọn những quyền cấp 0 mà nhân viên được sử dụng trong hệ thống.'
       }
       return 'Không có quyền phù hợp để cấu hình cho tài khoản này.'
@@ -619,10 +621,9 @@ export default {
       const n = Number(cid)
       return Number.isFinite(n) ? n : undefined
     },
-    isRootCompanyAdminAccount(item) {
+    isSystemAdminAccount(item) {
       const role = Number(item?.role ?? item?.user?.role)
-      const companyId = this.resolveItemCompanyId(item)
-      return role === 1 && companyId === 1
+      return role === 1
     },
     roleCodeToText(item) {
       let code = item?.user?.role
@@ -631,9 +632,10 @@ export default {
       const n = Number(code)
       if (Number.isNaN(n)) return '—'
       switch (n) {
-        case 0: return 'Root'
-        case 1: return 'Quản trị'
-        case 2: return 'Nhân viên'
+        case 0: return 'Quản trị viên toàn quyền'
+        case 1: return 'Quản trị viên hệ thống'
+        case 2: return 'Quản lý doanh nghiệp'
+        case 3: return 'Nhân viên doanh nghiệp'
         default: return '—'
       }
     },
@@ -708,11 +710,15 @@ export default {
         return meRole === 0 && meId != null && targetId != null && Number(meId) === Number(targetId)
       }
       if (meRole === 1 && targetRole === 1) {
-        // Admin chỉ thao tác trên chính mình, không thao tác admin khác
+        // Quản trị viên hệ thống chỉ thao tác trên chính mình, không thao tác quản trị viên hệ thống khác
         return meId != null && targetId != null && Number(meId) === Number(targetId)
       }
-      if (meRole === 2 && targetRole !== 2) {
-        // Nhân viên được cấp quyền thành viên chỉ thao tác trên nhóm nhân viên cùng công ty.
+      if (meRole === 2 && targetRole <= 2) {
+        // Quản lý doanh nghiệp không thao tác tài khoản quản trị/quản lý khác.
+        return meId != null && targetId != null && Number(meId) === Number(targetId)
+      }
+      if (meRole === 3 && targetRole !== 3) {
+        // Nhân viên doanh nghiệp được cấp quyền thành viên chỉ thao tác trên nhóm nhân viên cùng công ty.
         return false
       }
       return true
@@ -751,7 +757,7 @@ export default {
         phone: item.phone || '',
         email: item.email || '',
         password: '', passwordConfirm: '',
-        isAdmin: Number(item.role ?? item.user?.role) === 1,
+        isAdmin: [1, 2].includes(Number(item.role ?? item.user?.role)),
         adminPassword: '',
         adminPasswordConfirm: ''
       }
@@ -815,8 +821,7 @@ export default {
         role: Number(item.role ?? item.user?.role),
         status: Number(item.status ?? item.user?.status),
         email: item.email || item.user?.email || '',
-        phone: item.phone || item.user?.phone || '',
-        adminScope: item.adminScope || item.admin_scope || item.user?.adminScope || item.user?.admin_scope || ''
+        phone: item.phone || item.user?.phone || ''
       }
       this.loadUserPermissionOverrides(this.permForm.userId).then(() => {
         this.$refs.permissionModal.show()
@@ -879,12 +884,12 @@ export default {
         const meRole = this.currentRole
         const isSelf = this.currentUserId != null && Number(this.currentUserId) === Number(this.form.id)
         if (meRole === 1 && (targetRole === 0 || targetRole === 1) && !isSelf) {
-          window.alert('Bạn không có quyền chỉnh cập nhật tài khoản Root/Admin')
+          window.alert('Bạn không có quyền chỉnh cập nhật tài khoản quản trị')
           return
         }
       }
       const isEditingRoot = this.form.id && Number(this.list.data.find(x => x.id === this.form.id)?.role) === 0
-      const rolePayload = isEditingRoot ? undefined : (this.form.isAdmin ? 1 : 2)
+      const rolePayload = isEditingRoot ? undefined : (this.form.isAdmin ? (this.formCompanyId === 1 ? 1 : 2) : 3)
       const payload = {
         id: this.form.id || undefined,
         username: this.form.username || undefined,
@@ -937,7 +942,7 @@ export default {
       const meId = this.currentUserId
       const targetId = Number(item?.id ?? item?.user?.id)
       if (targetRole === 0) return false
-      if (targetRole === 1 && !this.isRootCompanyAdminAccount(item)) return false
+      if (targetRole === 2) return false
       if (meId != null && targetId != null && Number(meId) === Number(targetId)) return false
       return this.canOperateOn(item)
     },
@@ -946,8 +951,8 @@ export default {
       const meRole = Number(this.currentRole)
       const meId = this.currentUserId
       const targetId = Number(item?.id ?? item?.user?.id)
-      // Admin không thể tự khóa/mở khóa chính mình
-      if (meRole === 1 && meId != null && targetId != null && Number(meId) === Number(targetId)) return false
+      // Tài khoản quản trị/quản lý không thể tự khóa/mở khóa chính mình.
+      if ((meRole === 1 || meRole === 2) && meId != null && targetId != null && Number(meId) === Number(targetId)) return false
       return true
     },
     canResetPassword(item) {
@@ -956,11 +961,11 @@ export default {
       const meId = this.currentUserId
       const targetId = Number(item?.id ?? item?.user?.id)
       const targetRole = Number(item?.role ?? item?.user?.role)
-      // Admin có thể reset mật khẩu cho chính mình và nhân viên (đối tượng không phải admin)
-      if (meRole === 1) {
+      // Quản lý doanh nghiệp có thể reset mật khẩu cho chính mình và nhân viên.
+      if (meRole === 2) {
         const isSelf = meId != null && targetId != null && Number(meId) === Number(targetId)
-        const isTargetAdmin = targetRole === 1
-        return isSelf || !isTargetAdmin
+        const isTargetManagerOrAbove = targetRole <= 2
+        return isSelf || !isTargetManagerOrAbove
       }
       return true
     },

@@ -189,7 +189,7 @@ router.beforeEach((to, from, next) => {
 	if (needUser && !tokenUser) return next('/auth/login')
 	if (tokenUser && guestUser) return next('/')
 
-	// Hàm hỗ trợ kiểm tra token admin: Root hoặc Admin thuộc công ty root.
+	// Hàm hỗ trợ kiểm tra token admin: Quản trị viên toàn quyền hoặc Quản trị viên hệ thống.
 	function validateAdminToken(rawToken) {
 		if (!rawToken) return { valid: false, reason: 'missing' }
 		let payload
@@ -197,18 +197,14 @@ router.beforeEach((to, from, next) => {
 		const nowSec = Math.floor(Date.now() / 1000)
 		if (payload && typeof payload.exp === 'number' && payload.exp <= nowSec) return { valid: false, reason: 'expired' }
 		const roleNum = payload && typeof payload.role !== 'undefined' ? Number(payload.role) : NaN
-		const companyId = Number(payload?.companyId ?? payload?.company_id)
-		const rootCompanyClaim = payload?.rootCompanyAdmin ?? payload?.root_company_admin ?? payload?.isRootCompanyAdmin
+		const adminAccessClaim = payload?.adminAccess ?? payload?.admin_access
 		const isRoot = !Number.isNaN(roleNum) && roleNum === 0
-		const isRootCompanyAdmin = !Number.isNaN(roleNum) && roleNum === 1 && (
-			rootCompanyClaim === true ||
-			rootCompanyClaim === 'true' ||
-			companyId === 1
-		)
-		return { valid: isRoot || isRootCompanyAdmin, isRoot, isRootCompanyAdmin }
+		const isSystemAdmin = !Number.isNaN(roleNum) && roleNum === 1
+		const hasAdminAccess = adminAccessClaim === true || adminAccessClaim === 'true' || isRoot || isSystemAdmin
+		return { valid: hasAdminAccess, isRoot, isSystemAdmin }
 	}
 
-	// Quyền admin: yêu cầu token admin hợp lệ với Root hoặc Admin công ty root
+	// Quyền admin: yêu cầu token admin hợp lệ với Quản trị viên toàn quyền hoặc Quản trị viên hệ thống
 	if (needAdmin) {
 		const check = validateAdminToken(tokenAdmin)
 		if (!check.valid) {
@@ -217,7 +213,7 @@ router.beforeEach((to, from, next) => {
 		}
 	}
 
-	// Áp dụng rolePolicy tùy chọn cho route user (ví dụ quản lý thành viên cần role < 2)
+	// Áp dụng rolePolicy tùy chọn cho route user.
 	if (rolePolicy) {
 		const token = tokenUser || tokenAdmin
 		const payload = parseJwt(token)

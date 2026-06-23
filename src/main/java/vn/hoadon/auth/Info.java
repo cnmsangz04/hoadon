@@ -37,8 +37,6 @@ public class Info {
             u.put("avatar", user.getAvatar());
             u.put("role", user.getRole());
             u.put("companyId", user.getCompanyId());
-            u.put("adminScope", user.getAdminScope());
-            u.put("rootCompanyAdmin", user.isRootCompanyAdmin());
             u.put("adminAccess", user.canAccessAdminArea());
             resp.put("user", u);
         } else {

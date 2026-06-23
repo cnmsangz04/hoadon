@@ -22,6 +22,7 @@ import vn.hoadon.entity.UserEntity;
 import vn.hoadon.repositories.CompanyRegistrationRequestRepository;
 import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.UserRepository;
+import vn.hoadon.security.UserRoles;
 import vn.hoadon.services.CompanyService;
 
 import java.time.LocalDateTime;
@@ -182,8 +183,11 @@ public class CompanyRegistrationRequestController extends BaseController {
     private boolean hasCompanyAdmin(Long companyId) {
         if (companyId == null) return false;
         List<UserEntity> users = userRepository.findByCompanyId(companyId);
+        int expectedRole = Long.valueOf(1L).equals(companyId)
+                ? UserRoles.SYSTEM_ADMIN
+                : UserRoles.COMPANY_MANAGER;
         return users != null && users.stream()
-                .anyMatch(user -> user != null && Integer.valueOf(1).equals(user.getRole()));
+                .anyMatch(user -> user != null && Integer.valueOf(expectedRole).equals(user.getRole()));
     }
 
     private boolean sameText(String a, String b) {

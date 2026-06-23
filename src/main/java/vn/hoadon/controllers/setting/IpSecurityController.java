@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.entity.CompanyAllowedIpEntity;
 import vn.hoadon.entity.UserEntity;
+import vn.hoadon.security.UserRoles;
 import vn.hoadon.services.CompanyIpSecurityService;
 import vn.hoadon.util.ClientIpUtil;
 
@@ -99,7 +100,7 @@ public class IpSecurityController extends BaseController {
 
     private UserEntity requireSettingManager() {
         UserEntity actor = currentUser();
-        if (actor == null || actor.getRole() == null || actor.getRole() >= 2) {
+        if (actor == null || actor.getRole() == null || !UserRoles.hasCompanyManagerPrivileges(actor.getRole())) {
             throw new AccessDeniedException("Bạn không có quyền cấu hình bảo mật IP");
         }
         if (actor.getCompanyId() == null) {

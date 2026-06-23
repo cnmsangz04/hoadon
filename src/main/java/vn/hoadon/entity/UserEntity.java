@@ -9,6 +9,7 @@ import java.util.Set;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import vn.hoadon.security.UserRoles;
 
 @Entity
 @Table(name = "users",
@@ -41,9 +42,6 @@ public class UserEntity {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(name = "admin_password", length = 64)
     private String adminPassword;
-
-    @Column(name = "admin_scope", length = 20)
-    private String adminScope;
 
     @Column(length = 255)
     private String avatar;
@@ -152,14 +150,6 @@ public class UserEntity {
 
     public void setAdminPassword(String adminPassword) {
         this.adminPassword = adminPassword;
-    }
-
-    public String getAdminScope() {
-        return adminScope;
-    }
-
-    public void setAdminScope(String adminScope) {
-        this.adminScope = adminScope;
     }
 
     public String getAvatar() {
@@ -274,12 +264,8 @@ public class UserEntity {
         this.userPermissionOverrides = userPermissionOverrides;
     }
 
-    public boolean isRootCompanyAdmin() {
-        return Integer.valueOf(1).equals(this.role) && Long.valueOf(1L).equals(this.companyId);
-    }
-
     public boolean canAccessAdminArea() {
-        return Integer.valueOf(0).equals(this.role) || isRootCompanyAdmin();
+        return UserRoles.canAccessAdminArea(this.role);
     }
 
     // Tính quyền hiệu lực từ các quyền riêng của user.

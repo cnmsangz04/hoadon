@@ -101,15 +101,11 @@ export default {
         localStorage.setItem('token-admin', token)
         const payloadJwt = parseJwt(token)
         const role = Number(payloadJwt?.role)
-        const companyId = Number(payloadJwt?.companyId ?? payloadJwt?.company_id)
-        const rootCompanyClaim = payloadJwt?.rootCompanyAdmin ?? payloadJwt?.root_company_admin ?? payloadJwt?.isRootCompanyAdmin
+        const adminAccessClaim = payloadJwt?.adminAccess ?? payloadJwt?.admin_access
         const isRoot = role === 0
-        const isRootCompanyAdmin = role === 1 && (
-          rootCompanyClaim === true ||
-          rootCompanyClaim === 'true' ||
-          companyId === 1
-        )
-        if (!isRoot && !isRootCompanyAdmin) {
+        const isSystemAdmin = role === 1
+        const hasAdminAccess = adminAccessClaim === true || adminAccessClaim === 'true' || isRoot || isSystemAdmin
+        if (!hasAdminAccess) {
           localStorage.removeItem('token-admin')
           throw new Error('Tài khoản không có quyền vào khu Quản trị')
         }

@@ -100,7 +100,7 @@ Tài liệu này gợi ý các sơ đồ nên đưa vào báo cáo để ngườ
 | Sequence lập/phát hành hóa đơn | Mô tả luồng tạo hóa đơn, ký, gửi cơ quan thuế. | `docs/01_TONG_QUAN_HE_THONG.md` |
 | Sequence thanh toán gói hóa đơn | Mô tả luồng chọn gói, tạo giao dịch, mở cổng thanh toán, nhận callback và cộng hạn mức. | `docs/06_THANH_TOAN.md` |
 | Sequence báo cáo hóa đơn ngày | Mô tả scheduler, Telegram, mail job. | `docs/01_TONG_QUAN_HE_THONG.md`, `docs/API_01_TONG_QUAN_HE_THONG.md` |
-| Sơ đồ phân quyền | Mô tả Root, admin công ty, nhân viên và permission. | `04_PHAN_QUYEN_VA_VALIDATE.md` |
+| Sơ đồ phân quyền | Mô tả Quản trị viên toàn quyền, Quản trị viên hệ thống, Quản lý doanh nghiệp, Nhân viên doanh nghiệp và permission. | `04_PHAN_QUYEN_VA_VALIDATE.md` |
 
 ### Sơ đồ kiến trúc tổng thể
 

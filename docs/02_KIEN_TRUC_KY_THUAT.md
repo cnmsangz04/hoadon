@@ -126,7 +126,7 @@ Hệ thống dùng hai loại token lưu ở frontend:
 | `token` | Khu người dùng doanh nghiệp. |
 | `token-admin` | Khu quản trị. |
 
-Backend kiểm tra quyền bằng bảng `permissions`, `permission_categories`, `user_permissions` và các trường `role`, `admin_scope` trong bảng `users`.
+Backend kiểm tra quyền bằng bảng `permissions`, `permission_categories`, `user_permissions` và trường `role` trong bảng `users`.
 
 ### Tác vụ nền
 
@@ -269,7 +269,7 @@ Cập nhật: 19/06/2026.
 | `src/views/auth` | Đăng nhập, đăng ký, quên mật khẩu. |
 | `src/views/customers` | Dashboard, hóa đơn, báo cáo, danh mục, mua gói. |
 | `src/views/customers/imports` | Màn hình import hóa đơn, import khách hàng và import sản phẩm. |
-| `src/views/administrators` | Quản trị công ty, gói hóa đơn, danh mục nền, mail, Telegram, quyền. |
+| `src/views/administrators` | Quản trị hệ thống, gói hóa đơn, danh mục nền, mail, Telegram, quyền. |
 | `src/views/settings` | Hồ sơ công ty, thành viên, bảo mật IP, lịch sử đăng nhập. |
 | `src/views/public` | Trang công khai như tra cứu hóa đơn. |
 | `src/router/index.js` | Route chính và guard người dùng. |
@@ -347,7 +347,7 @@ Với import danh mục, `item_count` và `imported_item_ids` lưu số lượng
 ### Nguyên tắc nhiều công ty
 
 - Mọi dữ liệu nghiệp vụ của công ty thường phải truy vấn theo `company_id`.
-- Root chỉ được bỏ lọc công ty ở các màn hình quản trị có chủ đích.
+- Quản trị viên toàn quyền chỉ được bỏ lọc công ty ở các màn hình quản trị có chủ đích.
 - Khi tạo mail job cho báo cáo ngày, `company_id` phải là công ty nhận nội dung báo cáo để lịch sử không dồn về root.
 - Khi lấy XML ký hoặc XML gửi cơ quan thuế, cần kiểm tra cả hóa đơn, công ty và mã tra cứu để tránh trả nhầm XML.
 - Cấu hình Telegram và cấu hình lịch báo cáo hóa đơn ngày là hai nghiệp vụ khác nhau, nên lưu ở hai bảng khác nhau: `telegram_configs` và `daily_invoice_report_configs`.

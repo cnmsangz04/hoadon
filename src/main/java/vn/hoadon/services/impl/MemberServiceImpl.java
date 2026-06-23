@@ -19,6 +19,7 @@ import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.PermissionRepository;
 import vn.hoadon.repositories.UserRepository;
 import vn.hoadon.repositories.UserPermissionRepository;
+import vn.hoadon.security.UserRoles;
 import vn.hoadon.services.MailQueueService;
 import vn.hoadon.services.MemberService;
 
@@ -30,11 +31,7 @@ import java.util.Optional;
 @Service
 public class MemberServiceImpl implements MemberService {
 
-    private static final Long ROOT_COMPANY_ID = 1L;
     private static final String ACCOUNT_INFO_MAIL_TEMPLATE = "ACCOUNT_INFO_MAIL";
-    private static final String ADMIN_SCOPE_ROOT = "ROOT";
-    private static final String ADMIN_SCOPE_ROOT_COMPANY = "ROOT_COMPANY";
-    private static final String ADMIN_SCOPE_COMPANY = "COMPANY";
 
     @Autowired
     private UserRepository userRepository;
@@ -66,11 +63,8 @@ public class MemberServiceImpl implements MemberService {
             }
 
             if (companyId != null && companyId != 1L) {
-                preds.add(cb.notEqual(root.get("role"), 0));
-                preds.add(cb.not(cb.and(
-                        cb.equal(root.get("companyId"), 1L),
-                        cb.equal(root.get("role"), 1)
-                )));
+                preds.add(cb.notEqual(root.get("role"), UserRoles.ROOT));
+                preds.add(cb.notEqual(root.get("role"), UserRoles.SYSTEM_ADMIN));
             }
 
             if (keyword != null && !keyword.isBlank()) {
@@ -107,9 +101,9 @@ public class MemberServiceImpl implements MemberService {
 
         Integer actorRole = actor != null ? actor.getRole() : null;
         Long actorCompanyId = actor != null ? actor.getCompanyId() : null;
-        boolean isRoot = actorRole != null && actorRole == 0;
+        boolean isRoot = UserRoles.isRoot(actorRole);
 
-        // Xác định companyId mục tiêu: root có thể truyền rõ công ty, nếu không thì dùng công ty hiện tại.
+        // Xác định companyId mục tiêu: Quản trị viên toàn quyền có thể truyền rõ công ty, nếu không thì dùng công ty hiện tại.
         Long companyId = incoming.getCompanyId();
         if (!isRoot || companyId == null) {
             companyId = actorCompanyId;
@@ -117,13 +111,15 @@ public class MemberServiceImpl implements MemberService {
 
         // Kiểm tra thay đổi vai trò nếu payload có gửi.
         Integer role = incoming.getRole();
-        if (role != null && role == 0) {
-            throw new IllegalArgumentException("Không được gán role root");
+        if (role != null && UserRoles.isRoot(role)) {
+            throw new IllegalArgumentException("Không được gán vai trò Quản trị viên toàn quyền");
         }
-
         LocalDateTime now = LocalDateTime.now();
         UserEntity user;
         boolean isCreate = incoming.getId() == null;
+        if (!isRoot && isCreate && role != null && !UserRoles.isCompanyStaff(role)) {
+            throw new IllegalArgumentException("Chỉ Quản trị viên toàn quyền mới được gán vai trò quản trị/quản lý");
+        }
 
         if (isCreate) {
             // companyId bắt buộc có khi tạo mới (users.company_id NOT NULL)
@@ -155,7 +151,7 @@ public class MemberServiceImpl implements MemberService {
                 // Tạo username tạm, sẽ cập nhật sau khi lưu
                 user.setUsername("temp_" + System.currentTimeMillis());
             }
-            user.setRole(role != null ? role : 2);
+            user.setRole(role != null ? role : UserRoles.COMPANY_STAFF);
             user.setStatus(incoming.getStatus() != null ? incoming.getStatus() : (byte) 1);
         } else {
             user = userRepository.findById(incoming.getId())
@@ -166,13 +162,16 @@ public class MemberServiceImpl implements MemberService {
             if (incoming.getPassword() != null && !incoming.getPassword().isBlank()) {
                 user.setPassword(passwordEncoder.encode(incoming.getPassword()));
             }
-            // Root chỉ đổi companyId khi payload gửi rõ companyId.
+            // Quản trị viên toàn quyền chỉ đổi companyId khi payload gửi rõ companyId.
             if (isRoot && incoming.getCompanyId() != null) {
                 user.setCompanyId(incoming.getCompanyId());
             }
 
             // Chỉ cập nhật role nếu có truyền
             if (role != null) {
+                if (!isRoot && !role.equals(user.getRole())) {
+                    throw new IllegalArgumentException("Chỉ Quản trị viên toàn quyền mới được thay đổi vai trò");
+                }
                 user.setRole(role);
             }
 
@@ -205,6 +204,7 @@ public class MemberServiceImpl implements MemberService {
             user.setAvatar(incoming.getAvatar());
         }
 
+        validateRoleCompany(user.getRole(), user.getCompanyId());
         normalizeAdminAccess(user, incoming.getAdminPassword());
         user.setUpdatedAt(now);
 
@@ -224,18 +224,17 @@ public class MemberServiceImpl implements MemberService {
                 throw new IllegalArgumentException("Không được tự phân quyền cho tài khoản đang đăng nhập");
             }
             Integer targetRole = user.getRole();
-            boolean targetRootCompanyAdmin = user.isRootCompanyAdmin();
-            if (Integer.valueOf(1).equals(targetRole) && !targetRootCompanyAdmin) {
-                throw new IllegalArgumentException("Chỉ phân quyền quản trị cho tài khoản Admin thuộc công ty root");
-            }
             for (var up : incoming.getUserPermissions()) {
                 PermissionEntity p = permissionRepository.findById(up.getPermissionId())
                         .orElseThrow(() -> new IllegalArgumentException("Permission not found"));
                 int level = p.getLevel() != null ? p.getLevel() : 0;
-                if (targetRootCompanyAdmin && level == 0) {
+                if (UserRoles.isSystemAdmin(targetRole) && level == 0) {
                     continue;
                 }
-                if (Integer.valueOf(2).equals(targetRole) && level != 0) {
+                if (UserRoles.isCompanyManager(targetRole)) {
+                    continue;
+                }
+                if (UserRoles.isCompanyStaff(targetRole) && level != 0) {
                     continue;
                 }
                 UserPermissionEntity upe =
@@ -257,33 +256,21 @@ public class MemberServiceImpl implements MemberService {
         if (user == null) return;
 
         Integer role = user.getRole();
-        Long companyId = user.getCompanyId();
-        boolean isRoot = Integer.valueOf(0).equals(role);
-        boolean isAdmin = Integer.valueOf(1).equals(role);
-        boolean isRootCompanyAdmin = isAdmin && ROOT_COMPANY_ID.equals(companyId);
+        boolean canAccessAdminArea = UserRoles.canAccessAdminArea(role);
 
-        if (isRoot) {
-            user.setAdminScope(ADMIN_SCOPE_ROOT);
+        if (canAccessAdminArea) {
             if (rawAdminPassword != null) {
                 user.setAdminPassword(rawAdminPassword.isBlank() ? null : passwordEncoder.encode(rawAdminPassword));
             }
             return;
         }
 
-        if (!isAdmin) {
-            user.setAdminScope(null);
-            user.setAdminPassword(null);
-            return;
-        }
+        user.setAdminPassword(null);
+    }
 
-        user.setAdminScope(isRootCompanyAdmin ? ADMIN_SCOPE_ROOT_COMPANY : ADMIN_SCOPE_COMPANY);
-        if (!isRootCompanyAdmin) {
-            user.setAdminPassword(null);
-            return;
-        }
-
-        if (rawAdminPassword != null) {
-            user.setAdminPassword(rawAdminPassword.isBlank() ? null : passwordEncoder.encode(rawAdminPassword));
+    private void validateRoleCompany(Integer role, Long companyId) {
+        if (UserRoles.isSystemAdmin(role) && !Long.valueOf(1L).equals(companyId)) {
+            throw new IllegalArgumentException("Quản trị viên hệ thống phải thuộc công ty root");
         }
     }
 
@@ -294,6 +281,9 @@ public class MemberServiceImpl implements MemberService {
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         ensureCanManageTarget(actor, user, false);
+        if (actor != null && actor.getId() != null && actor.getId().equals(user.getId())) {
+            throw new IllegalArgumentException("Không được tự khóa/mở khóa chính mình");
+        }
         user.setStatus((byte) (lock ? 0 : 1));
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
@@ -307,16 +297,16 @@ public class MemberServiceImpl implements MemberService {
                 ? (UserEntity) auth.getPrincipal()
                 : null;
         Integer actorRole = actor != null ? actor.getRole() : null;
-        boolean isAdmin = actorRole != null && actorRole == 1;
+        boolean isCompanyManager = UserRoles.isCompanyManager(actorRole);
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         ensureCanManageTarget(actor, user, true);
-        // Admin chỉ được reset mật khẩu của chính mình hoặc nhân viên.
-        if (isAdmin) {
+        // Quản lý doanh nghiệp chỉ được reset mật khẩu của chính mình hoặc nhân viên.
+        if (isCompanyManager) {
             boolean isSelf = actor != null && actor.getId().equals(id);
-            boolean targetIsAdmin = user.getRole() != null && user.getRole() == 1;
-            if (!isSelf && targetIsAdmin) {
-                throw new IllegalArgumentException("Admin chỉ có thể Reset mật khẩu cho chính mình hoặc Nhân viên");
+            boolean targetIsManagerOrAbove = user.getRole() != null && user.getRole() <= UserRoles.COMPANY_MANAGER;
+            if (!isSelf && targetIsManagerOrAbove) {
+                throw new IllegalArgumentException("Quản lý doanh nghiệp chỉ có thể Reset mật khẩu cho chính mình hoặc Nhân viên doanh nghiệp");
             }
         }
         String newPass = "Reset@" + System.currentTimeMillis();
@@ -448,7 +438,7 @@ public class MemberServiceImpl implements MemberService {
             throw new IllegalArgumentException("Không xác định được người thao tác");
         }
         Integer actorRole = actor.getRole();
-        if (actorRole != null && actorRole == 0) {
+        if (UserRoles.isRoot(actorRole)) {
             return;
         }
         if (allowSelf && actor.getId() != null && actor.getId().equals(target.getId())) {
@@ -458,16 +448,19 @@ public class MemberServiceImpl implements MemberService {
                 || !actor.getCompanyId().equals(target.getCompanyId())) {
             throw new IllegalArgumentException("Không được thao tác thành viên của công ty khác");
         }
-        if (target.getRole() != null && target.getRole() == 0) {
-            throw new IllegalArgumentException("Không được thao tác tài khoản root");
+        if (UserRoles.isRoot(target.getRole())) {
+            throw new IllegalArgumentException("Không được thao tác tài khoản Quản trị viên toàn quyền");
         }
         boolean isSelf = actor.getId() != null && actor.getId().equals(target.getId());
         Integer targetRole = target.getRole();
-        if (Integer.valueOf(1).equals(actorRole) && Integer.valueOf(1).equals(targetRole) && !isSelf) {
-            throw new IllegalArgumentException("Admin không được thao tác tài khoản Admin khác");
+        if (UserRoles.isSystemAdmin(actorRole) && UserRoles.isSystemAdmin(targetRole) && !isSelf) {
+            throw new IllegalArgumentException("Quản trị viên hệ thống không được thao tác tài khoản Quản trị viên hệ thống khác");
         }
-        if (Integer.valueOf(2).equals(actorRole) && !Integer.valueOf(2).equals(targetRole)) {
-            throw new IllegalArgumentException("Nhân viên chỉ được thao tác tài khoản nhân viên cùng công ty");
+        if (UserRoles.isCompanyManager(actorRole) && targetRole != null && targetRole <= UserRoles.COMPANY_MANAGER && !isSelf) {
+            throw new IllegalArgumentException("Quản lý doanh nghiệp không được thao tác tài khoản quản trị/quản lý khác");
+        }
+        if (UserRoles.isCompanyStaff(actorRole) && !UserRoles.isCompanyStaff(targetRole)) {
+            throw new IllegalArgumentException("Nhân viên doanh nghiệp chỉ được thao tác tài khoản nhân viên cùng công ty");
         }
     }
 }

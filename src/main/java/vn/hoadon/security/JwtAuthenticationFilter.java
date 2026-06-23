@@ -171,12 +171,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         switch (role) {
-            case 0 -> {
+            case UserRoles.ROOT -> {
                 list.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
                 list.add(new SimpleGrantedAuthority("ROLE_USER"));
             }
-            case 1 -> list.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
-            case 2 -> list.add(new SimpleGrantedAuthority("ROLE_USER"));
+            case UserRoles.SYSTEM_ADMIN -> list.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+            case UserRoles.COMPANY_MANAGER, UserRoles.COMPANY_STAFF -> list.add(new SimpleGrantedAuthority("ROLE_USER"));
             default -> list.add(new SimpleGrantedAuthority("ROLE_USER"));
         }
 
@@ -233,11 +233,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 .orElse(false);
     }
 
-    private String mapRole(Integer role) {
-        return switch (role) {
-            case 0, 1 -> "ADMIN";
-            case 2 -> "USER";
-            default -> "USER";
-        };
-    }
 }
