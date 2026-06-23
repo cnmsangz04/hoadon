@@ -1,0 +1,56 @@
+@startuml
+title Sequence diagram lập hóa đơn GTGT
+
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #334155
+  LifeLineBorderColor #64748B
+  LifeLineBackgroundColor #F8FAFC
+  ParticipantBorderColor #334155
+  ParticipantBackgroundColor #F8FAFC
+  ActorBorderColor #334155
+  ActorBackgroundColor #FFFFFF
+}
+
+actor "Người dùng\ndoanh nghiệp" as User
+participant "Frontend" as FE
+participant "Invoice API" as API
+database "CSDL" as DB
+participant "XML ký" as XML
+
+User -> FE: Mở màn hình\nlập hóa đơn
+FE -> API: GET /invoices/prepare
+API -> DB: Kiểm tra mẫu hóa đơn\nvà tờ khai hợp lệ
+DB --> API: Kết quả chuẩn bị
+
+alt Chưa đủ điều kiện
+  API --> FE: Trả lỗi điều kiện
+  FE --> User: Hiển thị thông báo lỗi
+else Đủ điều kiện
+  API --> FE: Trả thông tin mẫu hóa đơn
+  User -> FE: Nhập khách hàng\nvà hàng hóa/dịch vụ
+  FE -> FE: Kiểm tra dữ liệu\nvà tính tổng tiền
+
+  alt Dữ liệu không hợp lệ
+    FE --> User: Hiển thị lỗi nhập liệu
+  else Dữ liệu hợp lệ
+    FE -> API: POST /invoices\nhoặc PUT /invoices/{id}
+    API -> DB: Kiểm tra quyền\nvà lưu hóa đơn nháp
+    DB --> API: ID hóa đơn
+    API --> FE: Trả kết quả lưu
+    FE --> User: Hiển thị hóa đơn\ntrong danh sách
+
+    opt Người dùng ký số
+      User -> FE: Chọn ký số hóa đơn
+      FE -> API: POST /invoices/{id}/sign
+      API -> DB: Kiểm tra gói hóa đơn\nvà cấp số hóa đơn
+      API -> XML: Sinh XML ký
+      XML --> API: XML đã ký
+      API -> DB: Lưu XML\nvà trạng thái Đã ký
+      API --> FE: Trả số hóa đơn\nvà trạng thái mới
+      FE --> User: Cập nhật hóa đơn Đã ký
+    end
+  end
+end
+
+@enduml

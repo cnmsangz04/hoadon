@@ -1,0 +1,47 @@
+@startuml
+title Activity diagram lập hóa đơn GTGT
+
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  ArrowColor #334155
+}
+
+start
+
+:Người dùng mở màn hình\nlập hóa đơn GTGT;
+
+:Frontend tải dữ liệu chuẩn bị\nmẫu hóa đơn và tờ khai hợp lệ;
+
+if (Đủ điều kiện lập hóa đơn?) then (Có)
+  :Người dùng nhập khách hàng\nvà hàng hóa/dịch vụ;
+  :Frontend kiểm tra dữ liệu\nvà tính tổng tiền;
+else (Không)
+  :Hiển thị lỗi điều kiện\nlập hóa đơn;
+  stop
+endif
+
+if (Dữ liệu hợp lệ?) then (Có)
+  :Backend kiểm tra quyền\nvà lưu hóa đơn nháp;
+else (Không)
+  :Hiển thị lỗi nhập liệu;
+  stop
+endif
+
+if (Lưu thành công?) then (Có)
+  :Hiển thị hóa đơn\ntrong danh sách;
+else (Không)
+  :Hiển thị lỗi lưu hóa đơn;
+  stop
+endif
+
+if (Người dùng ký số?) then (Có)
+  :Backend kiểm tra gói hóa đơn,\ncấp số và sinh XML ký;
+  :Cập nhật trạng thái\nĐã ký;
+else (Không)
+  :Giữ trạng thái nháp;
+endif
+
+stop
+@enduml

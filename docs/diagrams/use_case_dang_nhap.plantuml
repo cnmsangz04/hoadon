@@ -1,0 +1,49 @@
+@startuml
+!pragma layout smetana
+title Use case đăng nhập hệ thống
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #334155
+}
+skinparam usecase {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  ArrowColor #334155
+}
+skinparam rectangle {
+  BorderColor #64748B
+}
+
+actor "Người truy cập\ncông khai" as PublicUser
+actor "Người dùng\ndoanh nghiệp" as BusinessUser
+
+rectangle "Hệ thống quản lý hóa đơn điện tử" {
+  usecase "Đăng nhập\nngười dùng" as UC_UserLogin
+  usecase "Yêu cầu đặt lại\nmật khẩu" as UC_ForgotPassword
+  usecase "Đặt lại mật khẩu\nbằng link" as UC_ResetPassword
+  usecase "Đăng nhập\nkhu quản trị" as UC_AdminLogin
+}
+
+actor "Quản trị viên\nhệ thống" as SystemAdmin
+actor "Quản trị viên\ntoàn quyền" as FullAdmin
+
+PublicUser -right- UC_ForgotPassword
+PublicUser -right- UC_ResetPassword
+BusinessUser -right- UC_UserLogin
+
+UC_AdminLogin -right- SystemAdmin
+UC_AdminLogin -right- FullAdmin
+
+' Căn 2 actor bên trái và 2 actor bên phải thành hai cột đều nhau.
+PublicUser -[hidden]down- BusinessUser
+SystemAdmin -[hidden]down- FullAdmin
+
+' Căn nhóm use case ở giữa cho hình thoáng hơn.
+UC_UserLogin -[hidden]down- UC_AdminLogin
+UC_ForgotPassword -[hidden]down- UC_ResetPassword
+
+@enduml

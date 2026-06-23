@@ -1,0 +1,43 @@
+@startuml
+!pragma layout smetana
+title Use case import dữ liệu
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #334155
+}
+skinparam usecase {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  ArrowColor #334155
+}
+skinparam rectangle {
+  BorderColor #64748B
+}
+
+actor "Người dùng\ndoanh nghiệp" as BusinessUser
+
+rectangle "Hệ thống quản lý hóa đơn điện tử" {
+  usecase "Tải file mẫu\nExcel" as UC_DownloadTemplate
+  usecase "Import hóa đơn" as UC_ImportInvoice
+  usecase "Import khách hàng" as UC_ImportCustomer
+  usecase "Import sản phẩm" as UC_ImportProduct
+  usecase "Xem kết quả\nimport" as UC_ViewResult
+}
+
+BusinessUser -right- UC_DownloadTemplate
+BusinessUser -right- UC_ImportInvoice
+BusinessUser -right- UC_ImportCustomer
+BusinessUser -right- UC_ImportProduct
+BusinessUser -right- UC_ViewResult
+
+' Căn bố cục để hình không bị lệch.
+UC_DownloadTemplate -[hidden]down- UC_ImportInvoice
+UC_ImportInvoice -[hidden]down- UC_ImportCustomer
+UC_ImportCustomer -[hidden]down- UC_ImportProduct
+UC_ImportProduct -[hidden]down- UC_ViewResult
+
+@enduml

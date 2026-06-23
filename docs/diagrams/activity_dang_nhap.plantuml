@@ -1,0 +1,27 @@
+@startuml
+title Activity diagram đăng nhập
+
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  ArrowColor #334155
+}
+
+start
+
+:Người dùng nhập tài khoản,\nmật khẩu và bấm đăng nhập;
+
+:Frontend gửi request\nđăng nhập;
+
+:Backend kiểm tra tài khoản,\nmật khẩu, trạng thái tài khoản,\nIP và quyền đăng nhập;
+
+if (Thông tin hợp lệ?) then (Có)
+  :Tạo phiên đăng nhập,\nghi lịch sử và sinh JWT;
+  :Frontend lưu token\nvà điều hướng vào hệ thống;
+else (Không)
+  :Hiển thị thông báo lỗi;
+endif
+
+stop
+@enduml

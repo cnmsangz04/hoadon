@@ -1,0 +1,46 @@
+@startuml
+!pragma layout smetana
+title Use case lập hóa đơn GTGT
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #334155
+}
+skinparam usecase {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  ArrowColor #334155
+}
+skinparam rectangle {
+  BorderColor #64748B
+}
+
+actor "Người dùng\ndoanh nghiệp" as BusinessUser
+
+rectangle "Hệ thống quản lý hóa đơn điện tử" {
+  usecase "Lập hóa đơn\nGTGT" as UC_CreateInvoice
+  usecase "Cập nhật\nhóa đơn nháp" as UC_UpdateDraft
+  usecase "Phát hành\nhóa đơn" as UC_PublishInvoice
+  usecase "Gửi hóa đơn\ncho khách hàng" as UC_SendInvoice
+  usecase "Tra cứu\nhóa đơn" as UC_LookupInvoice
+}
+
+actor "Người nhận\nhóa đơn" as InvoiceReceiver
+
+BusinessUser -right- UC_CreateInvoice
+BusinessUser -right- UC_UpdateDraft
+BusinessUser -right- UC_PublishInvoice
+BusinessUser -right- UC_SendInvoice
+
+UC_LookupInvoice -right- InvoiceReceiver
+
+' Căn bố cục để hình không bị lệch.
+UC_CreateInvoice -[hidden]down- UC_UpdateDraft
+UC_UpdateDraft -[hidden]down- UC_PublishInvoice
+UC_PublishInvoice -[hidden]down- UC_SendInvoice
+UC_SendInvoice -[hidden]down- UC_LookupInvoice
+
+@enduml

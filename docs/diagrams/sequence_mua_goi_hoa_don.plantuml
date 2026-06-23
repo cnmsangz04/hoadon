@@ -1,0 +1,60 @@
+@startuml
+title Sequence diagram mua gói hóa đơn
+
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #334155
+  LifeLineBorderColor #64748B
+  LifeLineBackgroundColor #F8FAFC
+  ParticipantBorderColor #334155
+  ParticipantBackgroundColor #F8FAFC
+  ActorBorderColor #334155
+  ActorBackgroundColor #FFFFFF
+}
+
+actor "Người dùng\ndoanh nghiệp" as User
+participant "Frontend" as FE
+participant "Invoice Package API" as API
+database "CSDL" as DB
+participant "Cổng thanh toán" as Payment
+participant "Email Queue" as Mail
+
+User -> FE: Mở màn hình\ngói hóa đơn
+FE -> API: GET /invoice-packages
+API -> DB: Lấy danh sách gói\nđang kích hoạt
+DB --> API: Danh sách gói
+API --> FE: Trả danh sách gói
+FE --> User: Hiển thị gói hóa đơn
+
+User -> FE: Chọn gói\nvà phương thức thanh toán
+FE -> API: POST /invoice-packages/purchase
+API -> DB: Kiểm tra công ty,\ngói hóa đơn và tạo giao dịch
+
+alt Phương thức thanh toán online
+  API -> Payment: Tạo giao dịch\nMoMo/VNPAY/ZaloPay
+  Payment --> API: Pay URL/QR/Deep link
+  API --> FE: Trả thông tin thanh toán
+  FE --> User: Chuyển sang cổng thanh toán
+
+  Payment -> API: Gửi callback/IPN\nkết quả thanh toán
+  API -> DB: Xác thực giao dịch\nvà cập nhật trạng thái
+
+  alt Thanh toán thành công
+    API -> DB: Cập nhật hạn mức\nhóa đơn của công ty
+    API -> Mail: Tạo email thông báo\nmua gói thành công
+    Payment --> FE: Redirect về hệ thống
+    FE -> API: GET /invoice-packages/my-purchases
+    API --> FE: Trả lịch sử mua gói
+    FE --> User: Hiển thị giao dịch thành công
+  else Thanh toán thất bại
+    Payment --> FE: Redirect về hệ thống
+    FE --> User: Hiển thị thanh toán thất bại
+  end
+else Thanh toán giả lập
+  API -> DB: Cập nhật trạng thái thành công\nvà hạn mức hóa đơn
+  API -> Mail: Tạo email thông báo\nmua gói thành công
+  API --> FE: Trả giao dịch thành công
+  FE --> User: Hiển thị giao dịch thành công
+end
+
+@enduml

@@ -1,0 +1,51 @@
+@startuml
+!pragma layout smetana
+title Use case mua gói hóa đơn
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #334155
+}
+skinparam usecase {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  ArrowColor #334155
+}
+skinparam rectangle {
+  BorderColor #64748B
+}
+
+actor "Người dùng\ndoanh nghiệp" as BusinessUser
+
+rectangle "Hệ thống quản lý hóa đơn điện tử" {
+  usecase "Xem gói\nhóa đơn" as UC_ViewPackage
+  usecase "Tạo giao dịch\nmua gói" as UC_CreatePurchase
+  usecase "Thanh toán\ngói hóa đơn" as UC_Payment
+  usecase "Xem lịch sử\nmua gói" as UC_ViewHistory
+  usecase "Cập nhật hạn mức\nhóa đơn" as UC_UpdateQuota
+}
+
+actor "Cổng thanh toán" as PaymentGateway
+actor "Hệ thống nền" as BackgroundSystem
+
+BusinessUser -right- UC_ViewPackage
+BusinessUser -right- UC_CreatePurchase
+BusinessUser -right- UC_Payment
+BusinessUser -right- UC_ViewHistory
+
+UC_Payment -right- PaymentGateway
+UC_UpdateQuota -right- BackgroundSystem
+
+UC_Payment .> UC_UpdateQuota : <<include>>
+
+' Căn bố cục để hình không bị lệch.
+UC_ViewPackage -[hidden]down- UC_CreatePurchase
+UC_CreatePurchase -[hidden]down- UC_Payment
+UC_Payment -[hidden]down- UC_ViewHistory
+UC_ViewHistory -[hidden]down- UC_UpdateQuota
+PaymentGateway -[hidden]down- BackgroundSystem
+
+@enduml

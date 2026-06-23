@@ -1,0 +1,66 @@
+@startuml
+!pragma layout smetana
+title Use case tổng quát hệ thống quản lý hóa đơn điện tử
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #334155
+}
+skinparam usecase {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  ArrowColor #334155
+}
+skinparam rectangle {
+  BorderColor #64748B
+}
+
+actor "Người truy cập\ncông khai" as PublicUser
+actor "Nhân viên\ndoanh nghiệp" as CompanyStaff
+actor "Quản lý\ndoanh nghiệp" as CompanyManager
+
+rectangle "Hệ thống quản lý hóa đơn điện tử" {
+  usecase "Chức năng công khai\nĐăng ký, đăng nhập,\nquên mật khẩu, tra cứu" as UC_Public
+  usecase "Nghiệp vụ hóa đơn\nDanh mục, tờ khai, mẫu, hóa đơn" as UC_InvoiceBusiness
+  usecase "Import và báo cáo" as UC_ReportImport
+  usecase "Mua gói hóa đơn\nvà thanh toán" as UC_PackagePayment
+  usecase "Quản lý doanh nghiệp\nHồ sơ, thành viên, phân quyền" as UC_CompanyManagement
+  usecase "Quản trị hệ thống\nCông ty, danh mục nền,\ngói, email, Telegram, quyền" as UC_SystemAdmin
+  usecase "Tác vụ nền\nGửi mail, báo cáo ngày,\ncallback thanh toán" as UC_Background
+}
+
+actor "Quản trị viên\nhệ thống" as SystemAdmin
+actor "Quản trị viên\ntoàn quyền" as FullAdmin
+actor "Hệ thống nền" as BackgroundSystem
+
+' Bên trái: nhóm người dùng doanh nghiệp và công khai.
+PublicUser -right- UC_Public
+CompanyStaff -right- UC_InvoiceBusiness
+CompanyStaff -right- UC_ReportImport
+CompanyStaff -right- UC_PackagePayment
+CompanyManager -right- UC_CompanyManagement
+CompanyManager --|> CompanyStaff
+
+' Bên phải: nhóm quản trị và tiến trình nền.
+UC_SystemAdmin -right- SystemAdmin
+FullAdmin --|> SystemAdmin
+UC_Background -right- BackgroundSystem
+
+' Căn actor để hình nhìn cân hơn.
+PublicUser -[hidden]down- CompanyStaff
+CompanyStaff -[hidden]down- CompanyManager
+SystemAdmin -[hidden]down- FullAdmin
+FullAdmin -[hidden]down- BackgroundSystem
+
+legend bottom
+  |= Role |= Tên đọc |
+  | 0 | Quản trị viên toàn quyền |
+  | 1 | Quản trị viên hệ thống |
+  | 2 | Quản lý doanh nghiệp |
+  | 3 | Nhân viên doanh nghiệp |
+endlegend
+
+@enduml

@@ -1,0 +1,44 @@
+@startuml
+title Sequence diagram đăng nhập
+
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #334155
+  LifeLineBorderColor #64748B
+  LifeLineBackgroundColor #F8FAFC
+  ParticipantBorderColor #334155
+  ParticipantBackgroundColor #F8FAFC
+  ActorBorderColor #334155
+  ActorBackgroundColor #FFFFFF
+}
+
+actor "Người dùng" as User
+participant "Frontend" as FE
+participant "Auth API" as Auth
+database "CSDL" as DB
+participant "Kiểm tra IP" as IP
+participant "JWT" as JWT
+
+User -> FE: Nhập tài khoản, mật khẩu
+FE -> Auth: POST /auth/login\nhoặc /auth/login-admin
+
+Auth -> DB: Tìm tài khoản theo username
+DB --> Auth: Thông tin tài khoản
+
+Auth -> Auth: Kiểm tra mật khẩu,\ntrạng thái và quyền đăng nhập
+Auth -> IP: Kiểm tra IP đăng nhập
+IP --> Auth: Kết quả kiểm tra
+
+alt Thông tin không hợp lệ
+  Auth --> FE: Trả lỗi 401/403
+  FE --> User: Hiển thị thông báo lỗi
+else Thông tin hợp lệ
+  Auth -> DB: Tạo phiên đăng nhập\nvà ghi lịch sử
+  Auth -> JWT: Sinh token
+  JWT --> Auth: JWT
+  Auth --> FE: Trả token
+  FE -> FE: Lưu token
+  FE --> User: Điều hướng vào hệ thống
+end
+
+@enduml
