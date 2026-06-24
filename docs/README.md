@@ -15,6 +15,7 @@ Cập nhật: 2026-06-22.
 | [05_DINH_DANG_HOA_DON_VA_TO_KHAI.md](05_DINH_DANG_HOA_DON_VA_TO_KHAI.md) | Link tài liệu nguồn, định dạng hóa đơn điện tử và cấu trúc tờ khai XML. |
 | [06_THANH_TOAN.md](06_THANH_TOAN.md) | Tích hợp MoMo, VNPAY và ZaloPay. |
 | [07_BAO_CAO_VA_KIEM_THU.md](07_BAO_CAO_VA_KIEM_THU.md) | Hướng dẫn viết báo cáo, sơ đồ nên dùng và kiểm thử hệ thống. |
+| [08_TAI_LIEU_THAM_KHAO.md](08_TAI_LIEU_THAM_KHAO.md) | Danh mục tài liệu tham khảo có link: pháp lý hóa đơn điện tử, backend, frontend, database và tích hợp ngoài. |
 
 ## Chạy nhanh môi trường phát triển
 
