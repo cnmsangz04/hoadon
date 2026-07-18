@@ -84,8 +84,7 @@ public class MailWorker {
             if (opt.isPresent()) {
                 MailServerEntity cfg = opt.get();
                 JavaMailSender sender = mailServerController.buildSender(cfg);
-                String from = (cfg.getFromEmail() != null && !cfg.getFromEmail().isBlank())
-                        ? cfg.getFromEmail() : cfg.getUsername();
+                String from = cfg.getUsername();
                 String name = (cfg.getFromName() != null && !cfg.getFromName().isBlank())
                         ? cfg.getFromName() : from;
                 return new ResolvedSender(sender, from, name);

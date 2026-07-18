@@ -120,17 +120,6 @@
                 <b-form-invalid-feedback :state="state('fromName')">{{ errors.fromName }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
-            <b-col cols="12" md="6">
-              <b-form-group label="Địa chỉ email gửi (From)" label-class="font-weight-bold" :state="state('fromEmail')">
-                <b-form-input
-                  v-model.trim="form.fromEmail"
-                  type="email"
-                  placeholder="Nhập email hiển thị trong trường From của email gửi đi"
-                  :state="state('fromEmail')"
-                />
-                <b-form-invalid-feedback :state="state('fromEmail')">{{ errors.fromEmail }}</b-form-invalid-feedback>
-              </b-form-group>
-            </b-col>
           </b-row>
         </b-card-body>
       </b-card>
@@ -199,7 +188,6 @@ export default {
         username:   '',
         password:   '',
         fromName:   '',
-        fromEmail:  '',
         encryption: 0,
       },
       encryptionOptions: [
@@ -236,7 +224,6 @@ export default {
         username:   mail?.username   || '',
         password:   mail?.password   || '',
         fromName:   mail?.fromName   || company?.name  || '',
-        fromEmail:  mail?.fromEmail  || company?.invoiceEmail || company?.contactMail || company?.email || '',
         encryption: mail?.encryption != null ? mail.encryption : 1,
       }
       this.hasSaved = !!mail?.id
@@ -260,16 +247,12 @@ export default {
         ]),
         password: !this.hasSaved ? required(this.form.password, 'Vui lòng nhập mật khẩu ứng dụng') : null,
         fromName: required(this.form.fromName, 'Vui lòng nhập tên người gửi'),
-        fromEmail: firstError([
-          required(this.form.fromEmail, 'Vui lòng nhập email người gửi'),
-          email(this.form.fromEmail),
-        ]),
         testEmail: this.errors.testEmail || null,
       }
       Object.keys(this.errors).forEach(key => {
         if (!this.errors[key]) delete this.errors[key]
       })
-      return !['host', 'port', 'username', 'password', 'fromName', 'fromEmail'].some(key => this.errors[key])
+      return !['host', 'port', 'username', 'password', 'fromName'].some(key => this.errors[key])
     },
 
     validateTest() {

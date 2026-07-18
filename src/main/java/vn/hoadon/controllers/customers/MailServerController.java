@@ -60,9 +60,10 @@ public class MailServerController extends BaseController {
         entity.setCompanyId(companyId);
         entity.setHost(req.host != null ? req.host.trim() : "smtp.gmail.com");
         entity.setPort(req.port != null ? req.port : 587);
-        entity.setUsername(req.username != null ? req.username.trim() : "");
+        String username = req.username != null ? req.username.trim() : "";
+        entity.setUsername(username);
         entity.setFromName(req.fromName != null ? req.fromName.trim() : "");
-        entity.setFromEmail(req.fromEmail != null ? req.fromEmail.trim() : "");
+        entity.setFromEmail(username);
         entity.setEncryption(req.encryption != null ? req.encryption : (short) 1);
         entity.setStatus((short) 1);
 
@@ -111,8 +112,7 @@ public class MailServerController extends BaseController {
             org.springframework.mail.javamail.MimeMessageHelper helper =
                     new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
 
-            String fromAddr = (cfg.getFromEmail() != null && !cfg.getFromEmail().isBlank())
-                    ? cfg.getFromEmail() : cfg.getUsername();
+            String fromAddr = cfg.getUsername();
             String fromName = (cfg.getFromName() != null && !cfg.getFromName().isBlank())
                     ? cfg.getFromName() : fromAddr;
 
@@ -167,7 +167,7 @@ public class MailServerController extends BaseController {
         m.put("username",   e.getUsername());
         m.put("password",   "••••••••"); // never expose encrypted value
         m.put("fromName",   e.getFromName());
-        m.put("fromEmail",  e.getFromEmail());
+        m.put("fromEmail",  e.getUsername());
         m.put("encryption", e.getEncryption());
         m.put("status",     e.getStatus());
         return m;

@@ -816,7 +816,6 @@
                     :options="options.banks"
                     label="name"
                     placeholder="Chọn ngân hàng"
-                    :reduce="(bank) => bank.abbreviation"
                     append-to-body
                     :calculate-position="withPopper"
                     :class="{ 'is-invalid': state('bankName') === false }"
@@ -1127,7 +1126,7 @@ export default {
 
     editBank() {
       this.clearScopedErrors(["bankNo", "bankName", "bankBrand"]);
-      this.frmDataBank.bankName = this.frmData.bankAbbreviation || null;
+      this.frmDataBank.bankName = this.findBankOption(this.frmData.bankAbbreviation, this.frmData.bankName);
       this.frmDataBank.bankNo = this.frmData.bankNo || null;
       this.frmDataBank.bankAddress = this.frmData.bankAddress || null;
       this.frmDataBank.bankBrand = this.frmData.bankBrand || null;
@@ -1142,6 +1141,29 @@ export default {
       this.frmTaxAuthority.taxAuthorityCity = this.frmData.taxAuthorityCity || null;
       this.frmTaxAuthority.taxAuthorityName = this.frmData.taxAuthorityName || null;
       this.formTaxAuthority = true;
+    },
+
+    findBankOption(abbreviation, name) {
+      const code = this.trimValue(abbreviation);
+      const bankName = this.trimValue(name);
+      const banks = Array.isArray(this.options.banks) ? this.options.banks : [];
+
+      if (code) {
+        const byCode = banks.find(bank => this.trimValue(bank.abbreviation) === code);
+        if (byCode) return byCode;
+      }
+      if (bankName) {
+        const byName = banks.find(bank => this.trimValue(bank.name) === bankName);
+        if (byName) return byName;
+      }
+      return null;
+    },
+
+    bankAbbreviationValue(bank) {
+      if (bank && typeof bank === "object") {
+        return this.trimValue(bank.abbreviation);
+      }
+      return this.trimValue(bank);
     },
 
     // Tải tên cơ quan thuế theo mã tỉnh/thành
@@ -1436,7 +1458,7 @@ export default {
       if (!errors.bankNo && !this.isValidBankNo(this.frmDataBank.bankNo)) {
         errors.bankNo = ["Số tài khoản ngân hàng không hợp lệ"];
       }
-      if (this.isBlank(this.frmDataBank.bankName)) {
+      if (this.isBlank(this.bankAbbreviationValue(this.frmDataBank.bankName))) {
         errors.bankName = ["Vui lòng chọn tên ngân hàng"];
       }
       if (!this.isBlank(this.frmDataBank.bankBrand) && this.trimValue(this.frmDataBank.bankBrand).length > 255) {
@@ -1583,6 +1605,7 @@ export default {
       this.buttonBank = true;
       const payload = {
         ...this.frmDataBank,
+        bankName: this.bankAbbreviationValue(this.frmDataBank.bankName),
         bankNo: this.trimValue(this.frmDataBank.bankNo),
         bankBrand: this.trimValue(this.frmDataBank.bankBrand)
       };
