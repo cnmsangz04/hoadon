@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.hoadon.entity.InvoiceEntity;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
@@ -96,12 +95,10 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
     @Query("SELECT i.companyId AS companyId, i.status AS status, COUNT(i) AS total " +
             "FROM InvoiceEntity i " +
             "WHERE i.status IN :statuses " +
-            "AND i.updatedAt >= :fromTime " +
-            "AND i.updatedAt < :toTime " +
+            "AND i.dateExport = :reportDate " +
             "GROUP BY i.companyId, i.status")
-    List<InvoiceStatusCount> countStatusByUpdatedAtBetween(
+    List<InvoiceStatusCount> countStatusByDateExport(
             @Param("statuses") List<Short> statuses,
-            @Param("fromTime") LocalDateTime fromTime,
-            @Param("toTime") LocalDateTime toTime
+            @Param("reportDate") java.time.LocalDate reportDate
     );
 }

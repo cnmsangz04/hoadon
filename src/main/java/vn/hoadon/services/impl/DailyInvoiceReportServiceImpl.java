@@ -59,10 +59,8 @@ public class DailyInvoiceReportServiceImpl implements DailyInvoiceReportService 
     }
 
     private DailyInvoiceReportData loadReportData(LocalDate reportDate) {
-        LocalDateTime from = reportDate.atStartOfDay();
-        LocalDateTime to = reportDate.plusDays(1).atStartOfDay();
         List<InvoiceRepository.InvoiceStatusCount> counts =
-                invoiceRepository.countStatusByUpdatedAtBetween(REPORT_STATUSES, from, to);
+                invoiceRepository.countStatusByDateExport(REPORT_STATUSES, reportDate);
 
         Map<Integer, Map<Short, Long>> byCompany = new LinkedHashMap<>();
         if (counts != null) {
