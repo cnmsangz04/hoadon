@@ -10,7 +10,6 @@ import vn.hoadon.services.MailQueueService;
 import vn.hoadon.services.TelegramNotificationService;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,10 +31,9 @@ class DailyInvoiceReportServiceImplTest {
         CapturingMailQueueService mailQueueService = new CapturingMailQueueService();
 
         LocalDate reportDate = LocalDate.of(2026, 6, 17);
-        when(invoiceRepository.countStatusByUpdatedAtBetween(
+        when(invoiceRepository.countStatusByDateExport(
                 eq(List.of((short) 1, (short) 2, (short) 7)),
-                eq(LocalDateTime.of(2026, 6, 17, 0, 0)),
-                eq(LocalDateTime.of(2026, 6, 18, 0, 0))
+                eq(reportDate)
         )).thenReturn(List.of(
                 statusCount(21, (short) 1, 2L),
                 statusCount(21, (short) 7, 1L),
@@ -89,7 +87,7 @@ class DailyInvoiceReportServiceImplTest {
         DailyInvoiceReportConfigRepository configRepository = mock(DailyInvoiceReportConfigRepository.class);
         CapturingMailQueueService mailQueueService = new CapturingMailQueueService();
 
-        when(invoiceRepository.countStatusByUpdatedAtBetween(any(), any(), any())).thenReturn(List.of());
+        when(invoiceRepository.countStatusByDateExport(any(), any())).thenReturn(List.of());
 
         DailyInvoiceReportServiceImpl service = new DailyInvoiceReportServiceImpl(
                 invoiceRepository,
