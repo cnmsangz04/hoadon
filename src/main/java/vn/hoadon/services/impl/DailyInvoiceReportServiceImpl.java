@@ -125,25 +125,24 @@ public class DailyInvoiceReportServiceImpl implements DailyInvoiceReportService 
     @Scheduled(cron = "0 * * * * *", zone = "Asia/Ho_Chi_Minh")
     public void scheduledDailyReport() {
         DailyInvoiceReportConfigEntity config = dailyInvoiceReportConfigRepository.findTopByOrderByIdDesc().orElse(null);
-        if (!isDue(config)) return;
-        LocalDate reportDate = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).minusDays(1);
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        if (!isDue(config, now)) return;
+        LocalDate reportDate = now.toLocalDate().minusDays(1);
         log.info("Bắt đầu gửi tự động báo cáo hóa đơn ngày {}", reportDate.format(DATE_FORMAT));
         sendReport(reportDate);
         config.setLastReportDate(reportDate);
-        config.setLastSentAt(LocalDateTime.now());
+        config.setLastSentAt(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")));
         dailyInvoiceReportConfigRepository.save(config);
         log.info("Đã gửi tự động báo cáo hóa đơn ngày {}", reportDate.format(DATE_FORMAT));
     }
 
-    private boolean isDue(DailyInvoiceReportConfigEntity config) {
+    boolean isDue(DailyInvoiceReportConfigEntity config, LocalDateTime now) {
         if (config == null || !Boolean.TRUE.equals(config.getReportEnabled())) {
             return false;
         }
-        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
         int hour = config.getDailyHour() != null ? config.getDailyHour() : 1;
         int minute = config.getDailyMinute() != null ? config.getDailyMinute() : 0;
-        LocalDateTime scheduledAt = now.toLocalDate().atTime(hour, minute);
-        if (now.isBefore(scheduledAt)) {
+        if (now.getHour() != hour || now.getMinute() != minute) {
             return false;
         }
         LocalDate reportDate = now.toLocalDate().minusDays(1);

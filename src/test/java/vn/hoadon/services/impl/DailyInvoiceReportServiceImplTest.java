@@ -2,6 +2,7 @@ package vn.hoadon.services.impl;
 
 import org.junit.jupiter.api.Test;
 import vn.hoadon.entity.CompanyEntity;
+import vn.hoadon.entity.DailyInvoiceReportConfigEntity;
 import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.DailyInvoiceReportConfigRepository;
@@ -10,6 +11,7 @@ import vn.hoadon.services.MailQueueService;
 import vn.hoadon.services.TelegramNotificationService;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,6 +23,33 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class DailyInvoiceReportServiceImplTest {
+
+    @Test
+    void scheduleDoesNotSendAfterConfiguredTime() {
+        DailyInvoiceReportServiceImpl service = newService();
+        DailyInvoiceReportConfigEntity config = enabledConfig(10, 50);
+
+        assertThat(service.isDue(config, LocalDateTime.of(2026, 8, 11, 18, 59))).isFalse();
+    }
+
+    @Test
+    void scheduleSendsOnlyAtConfiguredHourAndMinute() {
+        DailyInvoiceReportServiceImpl service = newService();
+        DailyInvoiceReportConfigEntity config = enabledConfig(10, 50);
+
+        assertThat(service.isDue(config, LocalDateTime.of(2026, 8, 11, 10, 50))).isTrue();
+        assertThat(service.isDue(config, LocalDateTime.of(2026, 8, 11, 10, 49))).isFalse();
+        assertThat(service.isDue(config, LocalDateTime.of(2026, 8, 11, 10, 51))).isFalse();
+    }
+
+    @Test
+    void scheduleDoesNotSendSameReportTwice() {
+        DailyInvoiceReportServiceImpl service = newService();
+        DailyInvoiceReportConfigEntity config = enabledConfig(10, 50);
+        config.setLastReportDate(LocalDate.of(2026, 8, 10));
+
+        assertThat(service.isDue(config, LocalDateTime.of(2026, 8, 11, 10, 50))).isFalse();
+    }
 
     @Test
     void sendReportMailUsesMatchingCompanyRecipientAndContent() {
@@ -128,6 +157,24 @@ class DailyInvoiceReportServiceImplTest {
         company.setName(name);
         company.setEmail(email);
         return company;
+    }
+
+    private static DailyInvoiceReportServiceImpl newService() {
+        return new DailyInvoiceReportServiceImpl(
+                mock(InvoiceRepository.class),
+                mock(CompanyRepository.class),
+                mock(TelegramNotificationService.class),
+                mock(DailyInvoiceReportConfigRepository.class),
+                mock(MailQueueService.class)
+        );
+    }
+
+    private static DailyInvoiceReportConfigEntity enabledConfig(int hour, int minute) {
+        DailyInvoiceReportConfigEntity config = new DailyInvoiceReportConfigEntity();
+        config.setReportEnabled(true);
+        config.setDailyHour(hour);
+        config.setDailyMinute(minute);
+        return config;
     }
 
     private static class CapturingMailQueueService implements MailQueueService {
