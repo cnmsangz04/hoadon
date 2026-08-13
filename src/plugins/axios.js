@@ -2,6 +2,7 @@ import axios from 'axios'
 import toastr from 'toastr'
 import 'toastr/build/toastr.min.css'
 import { toastError, toastWarning, toastSuccess } from '@/utils/toast'
+import { getAuthToken, removeAuthToken } from '@/utils/authStorage'
 
 axios.defaults.baseURL = process.env.VUE_APP_API_BASE_URL || '/v1'
 
@@ -39,13 +40,7 @@ axios.interceptors.request.use(config => {
     if (!isPublic) {
       const admin = isAdminContext()
       const primaryKey = admin ? 'token-admin' : 'token'
-      let token = localStorage.getItem(primaryKey)
-
-      // Dự phòng: nếu thiếu token chính thì thử khóa token còn lại
-      if (!token) {
-        const altKey = admin ? 'token' : 'token-admin'
-        token = localStorage.getItem(altKey)
-      }
+      let token = getAuthToken(primaryKey)
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`
@@ -90,7 +85,7 @@ axios.interceptors.response.use(
       'Lỗi hệ thống'
 
     if (status === 401) {
-      localStorage.removeItem(key)
+      removeAuthToken(key)
       if (!suppressGlobal) toastWarning(message || 'Phiên đăng nhập đã hết hạn', 'HTTP_401')
       setTimeout(() => {
         window.location.href = admin ? '/auth/login-admin' : '/auth/login'

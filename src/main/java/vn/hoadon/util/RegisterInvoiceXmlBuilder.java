@@ -59,6 +59,24 @@ public final class RegisterInvoiceXmlBuilder {
                                        String taxAuthorityName,
                                        String companyName,
                                        String taxCode) {
+        return buildUnsigned(e, contactName, contactPhone, contactEmail, contactAddress, citizenId, passportNo,
+                dateOfBirth, gender, taxAuthorityCode, taxAuthorityName, companyName, taxCode, null);
+    }
+
+    public static String buildUnsigned(RegisterInvoiceEntity e,
+                                       String contactName,
+                                       String contactPhone,
+                                       String contactEmail,
+                                       String contactAddress,
+                                       String citizenId,
+                                       String passportNo,
+                                       String dateOfBirth,
+                                       String gender,
+                                       String taxAuthorityCode,
+                                       String taxAuthorityName,
+                                       String companyName,
+                                       String taxCode,
+                                       String createPlaceName) {
         if (e == null) return "";
         String id = UUID.randomUUID().toString().replace("-", "").toUpperCase();
         String pban = "2.1.0";
@@ -79,7 +97,7 @@ public final class RegisterInvoiceXmlBuilder {
         String dctdtu = nullToEmpty(contactEmail);
         String nlhe = nullToEmpty(contactName);
         String dtlhe = nullToEmpty(contactPhone);
-        String ddanh = nullToEmpty(e.getCreatePlace());
+        String ddanh = firstNonBlank(createPlaceName, e.getCreatePlace());
         String nlap = e.getDeclarationDate() != null ? e.getDeclarationDate().toString() : java.time.LocalDate.now().toString();
 
         // Chuyển các trường dạng danh sách từ entity
@@ -192,6 +210,10 @@ public final class RegisterInvoiceXmlBuilder {
         return "<" + name + ">" + escapeXml(value) + "</" + name + ">";
     }
     private static String nullToEmpty(String s) { return s == null ? "" : s; }
+    private static String firstNonBlank(String preferred, String fallback) {
+        if (preferred != null && !preferred.isBlank()) return preferred.trim();
+        return fallback == null ? "" : fallback.trim();
+    }
     private static String escapeXml(String s) {
         if (s == null) return "";
         return s

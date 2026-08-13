@@ -81,7 +81,7 @@
         <template #cell(key)="row">
           <div>
             <div class="text-mono font-weight-bold">{{ row.item.key }}</div>
-            <div v-if="row.item.system === 1" class="mt-1">
+            <div v-if="row.item.system === 0" class="mt-1">
               <b-badge variant="danger">Hệ thống</b-badge>
             </div>
             <div v-else class="mt-1">

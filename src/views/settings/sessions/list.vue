@@ -82,6 +82,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { getAuthToken, removeAuthToken } from '@/utils/authStorage'
 
 export default {
   name: 'SettingLoginSessions',
@@ -149,8 +150,8 @@ export default {
     },
     clearTokens() {
       try {
-        localStorage.removeItem('token')
-        localStorage.removeItem('token-admin')
+        removeAuthToken('token')
+        removeAuthToken('token-admin')
         localStorage.removeItem('last-account')
         localStorage.removeItem('last-admin-account')
       } catch {}
@@ -158,7 +159,7 @@ export default {
     isAdminContext() {
       try {
         const path = window.location?.pathname || ''
-        return path.startsWith('/administrator') || localStorage.getItem('token-admin')
+        return path.startsWith('/administrator') || !!getAuthToken('token-admin')
       } catch {
         return false
       }

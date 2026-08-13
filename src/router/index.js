@@ -8,6 +8,7 @@ import CustomerIndex from '@/views/customers/index.vue'
 import SettingsIndex from '@/views/settings/index.vue'
 import AdministratorsIndex from '@/views/administrators/index.vue'
 import { parseJwt } from '@/utils/jwt'
+import { getAuthToken, removeAuthToken } from '@/utils/authStorage'
 
 Vue.use(VueRouter)
 
@@ -178,24 +179,37 @@ const router = new VueRouter({
 
 router.beforeEach((to, from, next) => {
 
-	const tokenUser = localStorage.getItem('token')
-	const tokenAdmin = localStorage.getItem('token-admin')
+	const tokenUser = getAuthToken('token')
+	const tokenAdmin = getAuthToken('token-admin')
 	const needUser = to.matched.some(r => r.meta.requiresUser)
 	const needAdmin = to.matched.some(r => r.meta.requiresAdmin)
 	const guestUser = to.matched.some(r => r.meta.guestUser)
 	const guestAdmin = to.matched.some(r => r.meta.guestAdmin)
 	const rolePolicy = to.matched.find(r => r.meta && r.meta.rolePolicy)?.meta?.rolePolicy
 
-	if (needUser && !tokenUser) return next('/auth/login')
-	if (tokenUser && guestUser) return next('/')
+	function isExpired(rawToken) {
+		if (!rawToken) return true
+		try {
+			const payload = parseJwt(rawToken)
+			const nowSec = Math.floor(Date.now() / 1000)
+			return !!(payload && typeof payload.exp === 'number' && payload.exp <= nowSec)
+		} catch (e) {
+			return true
+		}
+	}
+
+	const userTokenExpired = tokenUser && isExpired(tokenUser)
+	if (userTokenExpired) removeAuthToken('token')
+
+	if (needUser && (!tokenUser || userTokenExpired)) return next('/auth/login')
+	if (tokenUser && !userTokenExpired && guestUser) return next('/')
 
 	// Hàm hỗ trợ kiểm tra token admin: Quản trị viên toàn quyền hoặc Quản trị viên hệ thống.
 	function validateAdminToken(rawToken) {
 		if (!rawToken) return { valid: false, reason: 'missing' }
 		let payload
 		try { payload = parseJwt(rawToken) } catch (e) { return { valid: false, reason: 'parse' } }
-		const nowSec = Math.floor(Date.now() / 1000)
-		if (payload && typeof payload.exp === 'number' && payload.exp <= nowSec) return { valid: false, reason: 'expired' }
+		if (isExpired(rawToken)) return { valid: false, reason: 'expired' }
 		const roleNum = payload && typeof payload.role !== 'undefined' ? Number(payload.role) : NaN
 		const adminAccessClaim = payload?.adminAccess ?? payload?.admin_access
 		const isRoot = !Number.isNaN(roleNum) && roleNum === 0
@@ -208,14 +222,14 @@ router.beforeEach((to, from, next) => {
 	if (needAdmin) {
 		const check = validateAdminToken(tokenAdmin)
 		if (!check.valid) {
-			try { localStorage.removeItem('token-admin') } catch (e) { }
+			removeAuthToken('token-admin')
 			return next('/auth/login-admin')
 		}
 	}
 
 	// Áp dụng rolePolicy tùy chọn cho route user.
 	if (rolePolicy) {
-		const token = tokenUser || tokenAdmin
+		const token = (!userTokenExpired ? tokenUser : '') || tokenAdmin
 		const payload = parseJwt(token)
 		const roleNum = payload && typeof payload.role !== 'undefined' ? Number(payload.role) : NaN
 		if (rolePolicy === 'role<2') {
@@ -230,7 +244,7 @@ router.beforeEach((to, from, next) => {
 		const check = validateAdminToken(tokenAdmin)
 		if (check.valid) return next('/administrator')
 		// Nếu có token không hợp lệ thì xóa và ở lại login-admin
-		if (tokenAdmin && !check.valid) { try { localStorage.removeItem('token-admin') } catch (e) { } }
+		if (tokenAdmin && !check.valid) removeAuthToken('token-admin')
 	}
 
 	next()

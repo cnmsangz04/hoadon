@@ -103,8 +103,10 @@ Vue.prototype.$app = Vue.observable({
 
 // Tải thông tin khi mở app để các component cùng dùng (chỉ khi token hợp lệ và chưa hết hạn)
 import axios from './plugins/axios'
+import { getAuthToken } from '@/utils/authStorage'
 ;(function () {
-  const token = localStorage.getItem('token') || localStorage.getItem('token-admin')
+  const path = window.location?.pathname || ''
+  const token = getAuthToken(/administrator|admin/.test(path) ? 'token-admin' : 'token')
   if (!token) return
   try {
     const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))

@@ -1294,7 +1294,7 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
         template.setKey(MAIL_KEY);
         template.setTitle("Thông báo mua gói hóa đơn thành công");
         template.setStatus((byte) 1);
-        template.setSystem((byte) 1);
+        template.setSystem((byte) 0);
         template.setContent(defaultMailTemplate());
         mailTemplateRepository.save(template);
     }

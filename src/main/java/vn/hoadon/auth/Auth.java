@@ -80,7 +80,7 @@ public class Auth {
 
         String sessionId = UUID.randomUUID().toString().replaceAll("-", "");
         LoginSessionEntity session = createSession(user, httpReq, ipAddress, "USER", sessionId);
-        String token = jwtUtil.generateToken(user, sessionId);
+        String token = jwtUtil.generateToken(user, sessionId, Boolean.TRUE.equals(req.getRemember()));
         session.setExpiresAt(jwtUtil.getExpiration(token));
         loginSessionRepository.save(session);
         recordLogin(user, httpReq, ipAddress, "USER");
@@ -122,7 +122,7 @@ public class Auth {
 
         String sessionId = UUID.randomUUID().toString().replaceAll("-", "");
         LoginSessionEntity session = createSession(user, httpReq, ipAddress, "ADMIN", sessionId);
-        String token = jwtUtil.generateToken(user, sessionId);
+        String token = jwtUtil.generateToken(user, sessionId, Boolean.TRUE.equals(req.getRemember()));
         session.setExpiresAt(jwtUtil.getExpiration(token));
         loginSessionRepository.save(session);
         recordLogin(user, httpReq, ipAddress, "ADMIN");

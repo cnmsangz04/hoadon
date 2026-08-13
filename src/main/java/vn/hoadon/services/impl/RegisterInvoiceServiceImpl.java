@@ -11,6 +11,7 @@ import vn.hoadon.entity.TaxAuthorityEntity;
 import vn.hoadon.entity.LegalRepresentativeEntity;
 import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.LegalRepresentativeRepository;
+import vn.hoadon.repositories.ProvinceRepository;
 import vn.hoadon.repositories.RegisterInvoiceRepository;
 import vn.hoadon.services.RegisterInvoiceService;
 import vn.hoadon.util.RegisterInvoiceXmlBuilder;
@@ -24,13 +25,16 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
     private final RegisterInvoiceRepository repository;
     private final CompanyRepository companyRepository;
     private final LegalRepresentativeRepository legalRepresentativeRepository;
+    private final ProvinceRepository provinceRepository;
 
     public RegisterInvoiceServiceImpl(RegisterInvoiceRepository repository,
                                       CompanyRepository companyRepository,
-                                      LegalRepresentativeRepository legalRepresentativeRepository) {
+                                      LegalRepresentativeRepository legalRepresentativeRepository,
+                                      ProvinceRepository provinceRepository) {
         this.repository = repository;
         this.companyRepository = companyRepository;
         this.legalRepresentativeRepository = legalRepresentativeRepository;
+        this.provinceRepository = provinceRepository;
     }
 
     @Override
@@ -181,6 +185,7 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
             dateOfBirth = legal.getDateOfBirth() != null ? legal.getDateOfBirth().toString() : null;
             gender = legal.getGender() != null ? String.valueOf(legal.getGender()) : null;
         }
+        String createPlaceName = resolveCreatePlaceName(entity.getCreatePlace());
         return RegisterInvoiceXmlBuilder.buildUnsigned(
                 entity,
                 contactName,
@@ -194,8 +199,27 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
                 taxAuthorityCode,
                 taxAuthorityName,
                 companyName,
-                taxCode
+                taxCode,
+                createPlaceName
         );
+    }
+
+    private String resolveCreatePlaceName(String createPlace) {
+        if (createPlace == null || createPlace.isBlank()) {
+            return "";
+        }
+        String value = createPlace.trim();
+        if (!value.matches("\\d+")) {
+            return value;
+        }
+        try {
+            Integer provinceId = Integer.valueOf(value);
+            return provinceRepository.findById(provinceId)
+                    .map(p -> p.getName() != null && !p.getName().isBlank() ? p.getName().trim() : value)
+                    .orElse(value);
+        } catch (NumberFormatException ex) {
+            return value;
+        }
     }
 
     @Override

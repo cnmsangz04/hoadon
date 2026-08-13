@@ -1,5 +1,7 @@
 package vn.hoadon.controllers;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -33,26 +35,38 @@ public class HistoryController extends BaseController {
         this.notificationReadRepository = notificationReadRepository;
     }
 
-    // GET /v1/history/notifications?limit=10&show_notify=1&status=1
+    // GET /v1/history/notifications?page=1&size=10&show_notify=1&status=1
     @GetMapping("/notifications")
-    public List<HistoryDto> notifications(
-            @RequestParam(name = "limit", required = false, defaultValue = "10") int limit,
+    public Map<String, Object> notifications(
+            @RequestParam(name = "page", required = false) Integer page,
+            @RequestParam(name = "size", required = false) Integer size,
+            @RequestParam(name = "limit", required = false) Integer limit,
             @RequestParam(name = "show_notify", required = false, defaultValue = "1") int showNotify,
             @RequestParam(name = "status", required = false, defaultValue = "1") int status
     ) {
         UserEntity user = currentUser();
         if (user == null || user.getCompanyId() == null) {
-            return List.of();
+            return Map.of(
+                    "items", List.of(),
+                    "current_page", 1,
+                    "per_page", 10,
+                    "total", 0L,
+                    "last_page", 0,
+                    "has_more", false,
+                    "unread_count", 0L
+            );
         }
-        // Lấy dữ liệu gần đây theo công ty, rồi lọc theo cờ hiển thị và giới hạn số lượng
-        List<HistoryDto> rows = historyService.listRecentByCompany(user.getCompanyId(), Math.max(1, limit));
-        List<HistoryDto> filtered = rows.stream()
-                .filter(h -> (h.getShowNotify() != null ? h.getShowNotify() : 0) == showNotify)
-                .filter(h -> (h.getStatus() != null ? h.getStatus() : 0) == status)
-                .limit(Math.max(1, limit))
-                .collect(Collectors.toList());
+        int currentPage = Math.max(1, page != null ? page : 1);
+        int pageSize = Math.max(1, Math.min(100, size != null ? size : (limit != null ? limit : 10)));
+        Page<HistoryDto> result = historyService.pageNotificationsByCompany(
+                user.getCompanyId(),
+                showNotify,
+                status,
+                PageRequest.of(currentPage - 1, pageSize)
+        );
+        List<HistoryDto> items = result.getContent();
 
-        Set<Long> ids = filtered.stream()
+        Set<Long> ids = items.stream()
                 .map(HistoryDto::getId)
                 .filter(id -> id != null)
                 .collect(Collectors.toSet());
@@ -62,8 +76,18 @@ public class HistoryController extends BaseController {
                         .stream()
                         .map(NotificationReadEntity::getHistoryId)
                         .collect(Collectors.toSet());
-        filtered.forEach(h -> h.setRead(h.getId() != null && readIds.contains(h.getId())));
-        return filtered;
+        items.forEach(h -> h.setRead(h.getId() != null && readIds.contains(h.getId())));
+        long unreadCount = historyService.countUnreadNotifications(user.getCompanyId(), user.getId(), showNotify, status);
+
+        return Map.of(
+                "items", items,
+                "current_page", result.getNumber() + 1,
+                "per_page", result.getSize(),
+                "total", result.getTotalElements(),
+                "last_page", result.getTotalPages(),
+                "has_more", result.hasNext(),
+                "unread_count", unreadCount
+        );
     }
 
     @PostMapping("/notifications/read")

@@ -175,7 +175,7 @@ export default {
         title: '',
         content: '',
         status: 1,
-        system: 1
+        system: 0
       },
 
       templateOptions: [
@@ -290,7 +290,7 @@ export default {
           title: '',
           content: '',
           status: 1,
-          system: 1
+          system: 0
         }
       }
     }

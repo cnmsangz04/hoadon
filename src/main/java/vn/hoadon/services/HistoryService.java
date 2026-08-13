@@ -1,5 +1,7 @@
 package vn.hoadon.services;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import vn.hoadon.dto.history.HistoryDto;
 
 import java.util.List;
@@ -15,4 +17,8 @@ public interface HistoryService {
 
     // Recent notifications by company (limit N)
     List<HistoryDto> listRecentByCompany(Long companyId, int limit);
+
+    Page<HistoryDto> pageNotificationsByCompany(Long companyId, int showNotify, int status, Pageable pageable);
+
+    long countUnreadNotifications(Long companyId, Long userId, int showNotify, int status);
 }

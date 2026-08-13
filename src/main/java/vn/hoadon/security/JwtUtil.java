@@ -21,6 +21,7 @@ public class JwtUtil {
         "hoadon-prod-jwt-secret-2025-!@#A9fKxQ2LmP8wZr7YHnC4E6S1VdB";
 
     private static final long EXPIRATION_MS = 1000L * 60 * 60 * 4; // 4 giờ
+    private static final long REMEMBER_EXPIRATION_MS = 1000L * 60 * 60 * 24 * 30; // 30 ngày
 
     private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
 
@@ -34,8 +35,12 @@ public class JwtUtil {
     }
 
     public String generateToken(UserEntity user, String sessionId) {
+        return generateToken(user, sessionId, false);
+    }
+
+    public String generateToken(UserEntity user, String sessionId, boolean remember) {
         Date now = new Date();
-        Date exp = new Date(now.getTime() + EXPIRATION_MS);
+        Date exp = new Date(now.getTime() + (remember ? REMEMBER_EXPIRATION_MS : EXPIRATION_MS));
 
         Long companyId = user.getCompanyId();
         Integer role = user.getRole();
@@ -46,6 +51,7 @@ public class JwtUtil {
                 .claim("role", role)
                 .claim("companyId", companyId)
                 .claim("adminAccess", user.canAccessAdminArea())
+                .claim("remember", remember)
                 .setIssuedAt(now)
                 .setExpiration(exp)
                 .signWith(key, SignatureAlgorithm.HS256);

@@ -345,13 +345,27 @@
         <b-row>
           <b-col cols="12" md="6">
             <b-form-group label="Thời gian từ ngày" label-for="signFromDate" :state="signatureState('signFromDate')">
-              <b-form-datepicker id="signFromDate" size="sm" v-model="signatureModal.signFromDate" :date-format-options="dateFmt" locale="vi" :state="signatureState('signFromDate')" />
+              <b-form-input
+                id="signFromDate"
+                v-model="signatureModal.signFromDate"
+                type="date"
+                size="sm"
+                :max="signatureModal.signToDate || undefined"
+                :state="signatureState('signFromDate')"
+              />
               <b-form-invalid-feedback :state="signatureState('signFromDate')">{{ signatureErrors.signFromDate }}</b-form-invalid-feedback>
             </b-form-group>
           </b-col>
           <b-col cols="12" md="6">
             <b-form-group label="Thời gian đến ngày" label-for="signToDate" :state="signatureState('signToDate')">
-              <b-form-datepicker id="signToDate" size="sm" v-model="signatureModal.signToDate" :date-format-options="dateFmt" locale="vi" :state="signatureState('signToDate')" />
+              <b-form-input
+                id="signToDate"
+                v-model="signatureModal.signToDate"
+                type="date"
+                size="sm"
+                :min="signatureModal.signFromDate || undefined"
+                :state="signatureState('signToDate')"
+              />
               <b-form-invalid-feedback :state="signatureState('signToDate')">{{ signatureErrors.signToDate }}</b-form-invalid-feedback>
             </b-form-group>
           </b-col>

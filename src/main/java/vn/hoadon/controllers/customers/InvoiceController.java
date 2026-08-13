@@ -807,6 +807,124 @@ public class InvoiceController extends BaseController {
         }
     }
 
+    private void addInvoiceZipAttachmentVars(java.util.Map<String, String> vars, InvoiceEntity inv) throws Exception {
+        if (vars == null || inv == null) return;
+        byte[] zipBytes = buildInvoiceIssueZip(inv);
+        vars.put("ATTACHMENT_ZIP_NAME", buildInvoiceAttachmentZipName(inv));
+        vars.put("ATTACHMENT_ZIP_BASE64", java.util.Base64.getEncoder().encodeToString(zipBytes));
+    }
+
+    private byte[] buildInvoiceIssueZip(InvoiceEntity inv) throws Exception {
+        String baseName = buildInvoiceAttachmentBaseName(inv);
+        String xml = buildInvoiceXmlContent(inv);
+        byte[] pdfBytes = buildInvoicePdfBytes(inv);
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (java.util.zip.ZipOutputStream zip = new java.util.zip.ZipOutputStream(out)) {
+            zip.putNextEntry(new java.util.zip.ZipEntry(baseName + ".pdf"));
+            zip.write(pdfBytes);
+            zip.closeEntry();
+
+            zip.putNextEntry(new java.util.zip.ZipEntry(baseName + ".xml"));
+            zip.write(xml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            zip.closeEntry();
+        }
+        return out.toByteArray();
+    }
+
+    private String buildInvoiceXmlContent(InvoiceEntity inv) {
+        FormInvoiceEntity form = resolveInvoiceForm(inv);
+        CompanyEntity company = resolveInvoiceCompany(inv, form);
+        CompanyBankEntity bank = resolveCompanyBank(company);
+        return getInvoiceXmlByStatus(inv, form, company, bank);
+    }
+
+    private byte[] buildInvoicePdfBytes(InvoiceEntity inv) throws Exception {
+        FormInvoiceEntity form = resolveInvoiceForm(inv);
+        CompanyEntity company = resolveInvoiceCompany(inv, form);
+        String xsltValue = form != null ? form.getFile() : null;
+        if (!org.springframework.util.StringUtils.hasText(xsltValue)) {
+            throw new IllegalStateException("Không tìm thấy tệp XSLT của mẫu hóa đơn");
+        }
+
+        boolean looksLikeXslt = looksLikeInlineXslt(xsltValue);
+        Path xsltFsPath = looksLikeXslt ? null : toFilesystemPath(xsltValue);
+        if (!looksLikeXslt && (xsltFsPath == null || !Files.exists(xsltFsPath))) {
+            throw new IllegalStateException("Không tồn tại tệp XSLT trên hệ thống");
+        }
+
+        CompanyBankEntity bank = resolveCompanyBank(company);
+        String xml = getInvoiceXmlByStatus(inv, form, company, bank);
+        TransformerFactory factory = TransformerFactory.newInstance();
+        try { factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true); } catch (Exception ignored) {}
+        try { factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "file"); } catch (Exception ignored) {}
+        StreamSource xsltSource = looksLikeXslt
+                ? new StreamSource(new StringReader(xsltValue))
+                : new StreamSource(xsltFsPath.toFile());
+        Transformer transformer = factory.newTransformer(xsltSource);
+        StreamSource xmlSource = new StreamSource(new StringReader(xml));
+        StringWriter outWriter = new StringWriter();
+        transformer.transform(xmlSource, new StreamResult(outWriter));
+
+        String html = outWriter.toString();
+        html = resolveNamedHtmlEntities(html);
+        html = ensureUtf8Meta(html);
+        html = forceReplaceFontFamilies(html);
+        html = normalizeToXhtml(html);
+        html = injectQrPlaceholder(html);
+        html = sanitizeImgSrcAttributes(html);
+        html = ensurePdfLayoutFallbackCss(html);
+        html = ensurePdfCss(html);
+        html = ensurePdfFontCss(html);
+        html = ensurePdfTypoCss(html);
+
+        ByteArrayOutputStream pdfOut = new ByteArrayOutputStream();
+        PdfRendererBuilder builder = new PdfRendererBuilder();
+        String baseUri = null;
+        if (!looksLikeXslt && xsltFsPath != null && xsltFsPath.getParent() != null) {
+            baseUri = xsltFsPath.getParent().toUri().toString();
+        }
+        builder.useFastMode();
+        try {
+            java.lang.reflect.Method m = PdfRendererBuilder.class.getMethod("useMediaType", String.class);
+            m.invoke(builder, "screen");
+        } catch (Exception ignore) {
+            try {
+                java.lang.reflect.Method m2 = PdfRendererBuilder.class.getMethod("useScreenMediaType", boolean.class);
+                m2.invoke(builder, true);
+            } catch (Exception ignore2) {}
+        }
+        builder.useUriResolver(new ClasspathFirstUriResolver());
+        registerAvailableUnicodeFonts(builder);
+        if (baseUri != null) builder.withHtmlContent(html, baseUri); else builder.withHtmlContent(html, null);
+        builder.toStream(pdfOut);
+        builder.run();
+        return pdfOut.toByteArray();
+    }
+
+    private FormInvoiceEntity resolveInvoiceForm(InvoiceEntity inv) {
+        if (inv == null || inv.getFormId() == null) return null;
+        try {
+            return formInvoiceRepository.findById(inv.getFormId().longValue()).orElse(null);
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    private String buildInvoiceAttachmentZipName(InvoiceEntity inv) {
+        return buildInvoiceAttachmentBaseName(inv) + ".zip";
+    }
+
+    private String buildInvoiceAttachmentBaseName(InvoiceEntity inv) {
+        String no = safeStr(inv != null ? inv.getNo() : null);
+        String lookup = inv != null && inv.getLookupCode() != null
+                ? inv.getLookupCode()
+                : safeStr(inv != null ? inv.getId() : null);
+        String raw = "hoa-don-" + (!no.isBlank() ? no : lookup);
+        String clean = raw.replaceAll("[^A-Za-z0-9._-]+", "-").replaceAll("^-+|-+$", "");
+        return clean.isBlank() ? "hoa-don" : clean;
+    }
+
     @PostMapping("/{id}/sign")
     @Transactional
     public ResponseEntity<?> sign(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
@@ -1825,6 +1943,16 @@ public class InvoiceController extends BaseController {
             // Lookup link uses lookupCode if available
             String lookupCode = inv.getLookupCode() != null ? inv.getLookupCode() : String.valueOf(inv.getId());
             String lookupLink = buildPublicLookupLink(lookupCode, sellerTaxcode);
+            String pdfLink = buildPublicInvoiceFileLink(lookupCode, "/download-pdf", sellerTaxcode);
+            String xmlLink = buildPublicInvoiceFileLink(lookupCode, "/download-xml", sellerTaxcode);
+            String formSerial = "";
+            FormInvoiceEntity mailForm = resolveInvoiceForm(inv);
+            if (mailForm != null) {
+                formSerial = safeStr(mailForm.getFormCode()) + safeStr(mailForm.getSerial());
+            }
+            String subject = "Thông báo phát hành hóa đơn số " + safeStr(inv.getNo())
+                    + (!formSerial.isEmpty() ? " (" + formSerial + ")" : "");
+            String html = buildEmailHtml(inv, formSerial, pdfLink, xmlLink, customerName);
 
             java.util.Map<String, String> vars = new java.util.HashMap<>();
             vars.put("SO_HOA_DON",   inv.getNo() != null ? String.valueOf(inv.getNo()) : "");
@@ -1835,14 +1963,20 @@ public class InvoiceController extends BaseController {
             vars.put("CUS_TAXCODE",  taxCode);
             vars.put("LOOKUP_LINK",  lookupLink);
             vars.put("LOOKUP_CODE",  lookupCode);
+            vars.put("PDF_LINK",     pdfLink);
+            vars.put("XML_LINK",     xmlLink);
             vars.put("COM_NAME",     companyName);
             vars.put("COM_HOTLINE",  hotline);
             vars.put("COM_EMAIL",    comEmail);
             vars.put("COM_WEBSITE",  website);
+            vars.put("SUBJECT",      subject);
+            vars.put("HTML_BODY",    html);
+            addInvoiceZipAttachmentVars(vars, inv);
 
             MailJobMessage msg = new MailJobMessage();
             msg.setTemplateKey("ISSUE_INVOICE_MAIL");
             msg.setCompanyId(companyId);
+            msg.setInvoiceId(inv.getId() != null ? inv.getId().longValue() : null);
             msg.setToEmail(toEmail);
             msg.setToName(customerName);
             msg.setVariables(vars);
@@ -2128,6 +2262,8 @@ public class InvoiceController extends BaseController {
             vars.put("CUS_TAXCODE", taxCode);
             vars.put("LOOKUP_LINK", buildPublicLookupLink(lookupCode, sellerTaxcode));
             vars.put("LOOKUP_CODE", lookupCode);
+            vars.put("PDF_LINK",    pdfLink);
+            vars.put("XML_LINK",    xmlLink);
             vars.put("COM_NAME",    companyName);
             vars.put("COM_HOTLINE", hotline);
             vars.put("COM_EMAIL",   comEmail);
@@ -2135,7 +2271,9 @@ public class InvoiceController extends BaseController {
             // Dự phòng nếu không tìm thấy template trong DB
             vars.put("SUBJECT",  subject);
             vars.put("HTML_BODY", html);
+            addInvoiceZipAttachmentVars(vars, inv);
             msg.setVariables(vars);
+            msg.setInvoiceId(inv.getId() != null ? inv.getId().longValue() : null);
 
             boolean sent = false;
             if (mailQueueService != null) {

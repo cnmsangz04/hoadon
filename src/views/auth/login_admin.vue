@@ -77,6 +77,7 @@
 <script>
 import axios from '@/plugins/axios'
 import { parseJwt } from '@/utils/jwt'
+import { removeAuthToken, setAuthToken } from '@/utils/authStorage'
 
 export default {
   data() {
@@ -89,16 +90,22 @@ export default {
       error: ''
     }
   },
+  created() {
+    try {
+      const lastAccount = localStorage.getItem('last-admin-account')
+      if (lastAccount) this.username = lastAccount
+    } catch {}
+  },
   methods: {
     async onSubmit() {
       if (!this.username || !this.password) return
       this.loading = true; this.error = ''
       try {
-        const payload = { username: this.username, password: this.password }
+        const payload = { username: this.username, password: this.password, remember: this.remember }
         const res = await axios.post('/auth/login-admin', payload, { meta: { suppressGlobalErrorToast: true } })
         const token = res.data?.token || res.data?.accessToken || res.data?.data?.token
         if (!token) throw new Error('Không tìm thấy token!')
-        localStorage.setItem('token-admin', token)
+        setAuthToken('token-admin', token, this.remember)
         const payloadJwt = parseJwt(token)
         const role = Number(payloadJwt?.role)
         const adminAccessClaim = payloadJwt?.adminAccess ?? payloadJwt?.admin_access
@@ -106,10 +113,11 @@ export default {
         const isSystemAdmin = role === 1
         const hasAdminAccess = adminAccessClaim === true || adminAccessClaim === 'true' || isRoot || isSystemAdmin
         if (!hasAdminAccess) {
-          localStorage.removeItem('token-admin')
+          removeAuthToken('token-admin')
           throw new Error('Tài khoản không có quyền vào khu Quản trị')
         }
         if (this.remember) localStorage.setItem('last-admin-account', this.username)
+        else localStorage.removeItem('last-admin-account')
         // Lấy thông tin app ngay cho ngữ cảnh admin
         try {
           const infoRes = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })

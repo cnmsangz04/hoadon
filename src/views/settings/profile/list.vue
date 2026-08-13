@@ -624,7 +624,7 @@
             <b-row class="pt-2 pb-2">
               <b-col cols="12" lg="6">
                 <b-row>
-                  <b-col cols="4" class="font-weight-bold">Phone:</b-col>
+                  <b-col cols="4" class="font-weight-bold">Điện thoại:</b-col>
                   <b-col cols="8">{{ frmData.contactPhone }}</b-col>
                 </b-row>
               </b-col>

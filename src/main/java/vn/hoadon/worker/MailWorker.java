@@ -31,7 +31,7 @@ import java.util.Optional;
  *
  * Thứ tự xác định mẫu email:
  *   1. Template riêng của công ty theo key và companyId.
- *   2. Template hệ thống theo key, system = 1.
+ *   2. Template hệ thống theo key, system = 0.
  *   3. HTML dự phòng tối thiểu.
  *
  * Thay biến: hỗ trợ cả dạng [KEY] và {{key}}.

@@ -24,7 +24,7 @@
 
       <!-- Chuông thông báo theo mẫu -->
       <li v-if="!isCompanyPending" class="nav-item bell-notify pl-0 pr-1">
-        <a href="javascript:void(0)" class="info-number circle-icon-top position-relative" v-b-toggle.sidebar-right @click="markNotificationsRead">
+        <a href="javascript:void(0)" class="info-number circle-icon-top position-relative" v-b-toggle.sidebar-right>
           <i :class="unreadNotificationCount > 0 ? 'far fa-bell text-danger' : 'far fa-bell text-muted'"></i>
           <span v-if="unreadNotificationCount > 0" class="badge badge-danger badge-pill notification-badge">
             {{ unreadNotificationCount > 9 ? '9+' : unreadNotificationCount }}
@@ -59,6 +59,8 @@
       title="Thông báo"
       right
       shadow
+      backdrop
+      backdrop-variant="transparent"
       @shown="handleNotificationsShown"
       @hidden="handleNotificationsHidden"
     >
@@ -72,7 +74,20 @@
           <small class="text-muted">{{ relativeTime(item.created_at) }}</small>
           <p class="mb-0">{{ item.title }}</p>
         </b-media>
-        <li v-if="list.length === 0" class="text-center text-muted py-2">Không có thông báo</li>
+        <li v-if="notificationsLoading && list.length === 0" class="text-center text-muted py-2">Đang tải thông báo...</li>
+        <li v-else-if="list.length === 0" class="text-center text-muted py-2">Không có thông báo</li>
+        <li v-if="list.length > 0 && notificationHasMore" class="notification-load-more">
+          <b-button
+            block
+            size="sm"
+            variant="outline-primary"
+            :disabled="notificationsLoadingMore"
+            @click="loadMoreNotifications"
+          >
+            <i :class="notificationsLoadingMore ? 'fas fa-spinner fa-spin' : 'fas fa-chevron-down'"></i>
+            {{ notificationsLoadingMore ? 'Đang tải...' : 'Xem thêm' }}
+          </b-button>
+        </li>
       </ul>
     </b-sidebar>
 
@@ -122,6 +137,7 @@
 <script>
 import { parseJwt } from '@/utils/jwt'
 import axios from '@/plugins/axios'
+import { getAuthToken, removeAuthToken } from '@/utils/authStorage'
 export default {
   name: "Header",
   data() {
@@ -142,6 +158,12 @@ export default {
       lastNotificationCount: 0,
       notificationsOpen: false,
       readNotificationKeys: [],
+      notificationPage: 1,
+      notificationSize: 10,
+      notificationHasMore: false,
+      notificationsLoading: false,
+      notificationsLoadingMore: false,
+      notificationUnreadTotal: null,
       limitReminder: {
         show: false,
         threshold: 0,
@@ -182,6 +204,10 @@ export default {
       return String(status) === '2'
     },
     unreadNotificationCount() {
+      if (this.notificationUnreadTotal != null) {
+        const total = Number(this.notificationUnreadTotal)
+        return Number.isFinite(total) ? Math.max(0, total) : 0
+      }
       return this.list.filter(item => !this.isNotificationRead(item)).length
     },
     sessionRoute() {
@@ -194,8 +220,7 @@ export default {
       const p = window.location?.pathname || ''
       const isAdmin = /administrator|admin/.test(p)
       const primaryKey = isAdmin ? 'token-admin' : 'token'
-      const altKey = isAdmin ? 'token' : 'token-admin'
-      let token = localStorage.getItem(primaryKey) || localStorage.getItem(altKey)
+      let token = getAuthToken(primaryKey)
       const payload = parseJwt(token)
       if (payload) {
         this.app.auth.username = payload.username || payload.user_name || payload.sub || this.app.auth.username || ''
@@ -249,7 +274,7 @@ export default {
 
     this.loadNotificationReadState()
 
-    // Lấy thông báo gần đây (tối đa 10) từ lịch sử theo điều kiện yêu cầu
+    // Lấy trang thông báo đầu tiên từ lịch sử theo điều kiện yêu cầu
     if (!this.isCompanyPending) this.fetchNotifications()
 
     // Mẫu realtime Echo: khi có tin nhắn thì hiện toast và tải lại thông báo
@@ -262,7 +287,7 @@ export default {
             vm.app._isRefresh = true
             const msg = data?.message?.message || ''
             if (msg) { window.toastr && toastr.success(msg) }
-            if (!vm.isCompanyPending) vm.fetchNotifications()
+            if (!vm.isCompanyPending && !vm.notificationsOpen) vm.fetchNotifications()
           })
       }
     } catch {}
@@ -438,24 +463,32 @@ export default {
       const isAdminPage = currentPath.startsWith('/administrator') || currentPath.startsWith('/auth/login-admin');
 
       if (isAdminPage) {
-        localStorage.removeItem('token-admin');
+        removeAuthToken('token-admin');
         localStorage.removeItem('last-admin-account');
         window.location.href = '/auth/login-admin';
       } else {
-        localStorage.removeItem('token');
+        removeAuthToken('token');
         localStorage.removeItem('last-account');
         localStorage.removeItem('company-status');
         this.clearInvoiceLimitPopupKeys();
         window.location.href = '/auth/login';
       }
     },
-    async fetchNotifications() {
+    async fetchNotifications(options = {}) {
       if (this.isCompanyPending) {
         this.list = []
+        this.notificationPage = 1
+        this.notificationHasMore = false
+        this.notificationUnreadTotal = null
         return
       }
+      const append = options.append === true
+      const page = Math.max(1, Number(options.page || (append ? this.notificationPage + 1 : 1)))
+      const size = Math.max(1, Number(options.size || this.notificationSize || 10))
+      if (append) this.notificationsLoadingMore = true
+      else this.notificationsLoading = true
       try {
-        const params = { limit: 10, show_notify: 1, status: 1 }
+        const params = { page, size, show_notify: 1, status: 1 }
         const res = await axios.get('/history/notifications', { params, meta: { suppressGlobalErrorToast: true } })
           .catch(err => {
             if (err?.response?.status === 401) this.stopPolling()
@@ -478,7 +511,7 @@ export default {
           : []
 
         const oldList = this.list
-        this.list = arr.map(r => {
+        const mapped = arr.map(r => {
           const created = r.createdAt ?? r.created_at ?? r.time ?? r.timestamp
           const title = r.title ?? r.message ?? r.description ?? ''
           const uname = r.username ?? r.userName ?? r.user_name ?? r.user ?? ''
@@ -495,6 +528,27 @@ export default {
             read: r.read === true || r.isRead === true,
           }
         })
+        const nextList = append ? [...this.list, ...mapped] : mapped
+        const seen = new Set()
+        this.list = nextList.filter(item => {
+          const key = this.normalizeNotificationKey(item)
+          if (!key || seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+
+        const currentPage = Number(payload?.current_page ?? payload?.page ?? page)
+        const lastPage = Number(payload?.last_page ?? payload?.lastPage ?? payload?.total_pages ?? payload?.totalPages ?? 0)
+        const hasMore = payload?.has_more ?? payload?.hasMore
+        this.notificationPage = Number.isFinite(currentPage) && currentPage > 0 ? currentPage : page
+        this.notificationHasMore = hasMore != null
+          ? hasMore === true || hasMore === 'true'
+          : (lastPage > 0 ? this.notificationPage < lastPage : mapped.length >= size)
+        const unreadTotal = payload?.unread_count ?? payload?.unreadCount
+        if (unreadTotal != null && Number.isFinite(Number(unreadTotal))) {
+          this.notificationUnreadTotal = Number(unreadTotal)
+        }
+
         const serverReadKeys = this.list
           .filter(item => item.read)
           .map(item => this.normalizeNotificationKey(item))
@@ -502,15 +556,15 @@ export default {
         if (serverReadKeys.length > 0) {
           this.saveNotificationReadState([...(this.readNotificationKeys || []), ...serverReadKeys])
         }
-        if (this.notificationsOpen) this.markNotificationsRead()
+        if (this.notificationsOpen || options.markAfterFetch) this.markNotificationsRead()
 
         // Kiểm tra có thông báo mới không (so sánh số lượng hoặc ID)
-        if (oldList.length > 0 && this.list.length > oldList.length) {
+        if (!append && oldList.length > 0 && this.list.length > oldList.length) {
           const newCount = this.list.length - oldList.length
           try { 
             window.toastr && toastr.info(`Bạn có ${newCount} thông báo mới`) 
           } catch {}
-        } else if (oldList.length > 0 && this.list.length > 0) {
+        } else if (!append && oldList.length > 0 && this.list.length > 0) {
           // Kiểm tra item đầu tiên có mới không (khác ID)
           const oldFirstId = oldList[0]?.id
           const newFirstId = this.list[0]?.id
@@ -523,8 +577,23 @@ export default {
       } catch (e) {
         // Bỏ qua lỗi âm thầm với request polling
         console.debug('Fetch notifications failed:', e)
-        this.list = []
+        if (!append) {
+          this.list = []
+          this.notificationHasMore = false
+          this.notificationUnreadTotal = null
+        }
+      } finally {
+        if (append) this.notificationsLoadingMore = false
+        else this.notificationsLoading = false
       }
+    },
+    loadMoreNotifications() {
+      if (this.notificationsLoading || this.notificationsLoadingMore || !this.notificationHasMore) return
+      this.fetchNotifications({
+        append: true,
+        page: this.notificationPage + 1,
+        markAfterFetch: true
+      })
     },
     resolveNotificationReadKey() {
       let tokenHash = ''
@@ -532,8 +601,7 @@ export default {
         const path = window.location?.pathname || ''
         const isAdmin = /administrator|admin/.test(path)
         const primaryKey = isAdmin ? 'token-admin' : 'token'
-        const altKey = isAdmin ? 'token' : 'token-admin'
-        const token = localStorage.getItem(primaryKey) || localStorage.getItem(altKey) || ''
+        const token = getAuthToken(primaryKey) || ''
         if (token) {
           let hash = 0
           for (let i = 0; i < token.length; i += 1) {
@@ -572,11 +640,15 @@ export default {
       return item?.read === true || (key ? this.readNotificationKeys.includes(key) : false)
     },
     markNotificationsRead() {
-      const currentKeys = this.list.map(item => this.normalizeNotificationKey(item)).filter(Boolean)
+      const unreadItems = this.list.filter(item => !this.isNotificationRead(item))
+      const currentKeys = unreadItems.map(item => this.normalizeNotificationKey(item)).filter(Boolean)
       if (currentKeys.length === 0) return
       this.list = this.list.map(item => ({ ...item, read: true }))
       this.saveNotificationReadState([...(this.readNotificationKeys || []), ...currentKeys])
-      const ids = this.list
+      if (this.notificationUnreadTotal != null) {
+        this.notificationUnreadTotal = Math.max(0, Number(this.notificationUnreadTotal || 0) - currentKeys.length)
+      }
+      const ids = unreadItems
         .map(item => Number(item.id))
         .filter(id => Number.isFinite(id) && id > 0)
       if (ids.length > 0) {
@@ -586,7 +658,7 @@ export default {
     },
     handleNotificationsShown() {
       this.notificationsOpen = true
-      this.markNotificationsRead()
+      this.fetchNotifications({ page: 1, reset: true, markAfterFetch: true })
     },
     handleNotificationsHidden() {
       this.notificationsOpen = false
@@ -602,7 +674,7 @@ export default {
           this.stopPolling()
           return
         }
-        this.fetchNotifications()
+        if (!this.notificationsOpen) this.fetchNotifications()
       }, 5000)
     },
     stopPolling() {
@@ -634,7 +706,7 @@ export default {
     resolveLoginKey(companyId, total, threshold) {
       let tokenHash = 'no-token'
       try {
-        const token = localStorage.getItem('token') || ''
+        const token = getAuthToken('token') || ''
         if (token) {
           let hash = 0
           for (let i = 0; i < token.length; i += 1) {
@@ -917,6 +989,15 @@ nav.d-flex.align-items-center {
   background: #f0f2f5;
 }
 
+#sidebar-right .notification-load-more {
+  padding: 8px 12px 12px;
+}
+
+#sidebar-right .notification-load-more .btn {
+  border-radius: 8px;
+  font-weight: 600;
+}
+
 /* Trạng thái rỗng */
 #sidebar-right .text-center.text-muted {
   color: #94a3b8 !important;
@@ -941,9 +1022,17 @@ nav.d-flex.align-items-center {
 
 <style>
 /* Ghi đè toàn cục cho sidebar BootstrapVue render trong body */
+.b-sidebar-backdrop {
+  right: 0;
+  width: auto;
+  max-width: none;
+}
+
 .b-sidebar#sidebar-right {
   height: 100vh;
   max-height: 100vh !important;
+  width: 320px;
+  max-width: 100%;
 }
 .b-sidebar#sidebar-right .b-sidebar-body {
   height: 100%;

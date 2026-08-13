@@ -83,6 +83,7 @@
 <script>
 import axios from '@/plugins/axios';
 import { parseJwt } from "@/utils/jwt";
+import { setAuthToken } from '@/utils/authStorage'
 
 export default {
   data() {
@@ -95,6 +96,12 @@ export default {
       error: "",
     };
   },
+  created() {
+    try {
+      const lastAccount = localStorage.getItem('last-account')
+      if (lastAccount) this.username = lastAccount
+    } catch {}
+  },
   methods: {
     async onSubmit() {
       if (!this.username || !this.password) return;
@@ -102,13 +109,14 @@ export default {
 
       try {
         // Đăng nhập bằng username
-        const payload = { username: this.username, password: this.password };
+        const payload = { username: this.username, password: this.password, remember: this.remember };
         const res = await axios.post("/auth/login", payload, { meta: { suppressGlobalErrorToast: true } });
         const token = res.data?.token || res.data?.accessToken || res.data?.data?.token;
         if (!token) throw new Error("Không tìm thấy token!");
-        localStorage.setItem("token", token);
+        setAuthToken("token", token, this.remember);
         parseJwt(token);
         if (this.remember) localStorage.setItem("last-account", this.username);
+        else localStorage.removeItem("last-account");
         // Lấy thông tin app ngay sau đăng nhập để nạp header/sidebar
         try {
           const infoRes = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })

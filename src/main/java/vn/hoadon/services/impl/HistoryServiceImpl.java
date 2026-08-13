@@ -1,5 +1,7 @@
 package vn.hoadon.services.impl;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import vn.hoadon.dto.history.HistoryDto;
 import vn.hoadon.entity.HistoryEntity;
@@ -175,5 +177,50 @@ public class HistoryServiceImpl implements HistoryService {
             dto.setUsername(userMap.getOrDefault(h.getUserId(), null));
             return dto;
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<HistoryDto> pageNotificationsByCompany(Long companyId, int showNotify, int status, Pageable pageable) {
+        if (companyId == null) {
+            return Page.empty(pageable);
+        }
+        Page<HistoryEntity> page = historyRepository.findByCompanyIdAndShowNotifyAndStatusOrderByCreatedAtDescIdDesc(
+                companyId,
+                showNotify,
+                status,
+                pageable
+        );
+        java.util.Set<Long> uids = page.getContent().stream()
+                .map(HistoryEntity::getUserId)
+                .filter(id -> id != null && id > 0)
+                .collect(java.util.stream.Collectors.toSet());
+        Map<Long, String> userMap = userRepository.findAllById(uids).stream()
+                .collect(Collectors.toMap(UserEntity::getId, u -> u.getUsername() != null ? u.getUsername() : ""));
+        return page.map(h -> toDto(h, userMap));
+    }
+
+    @Override
+    public long countUnreadNotifications(Long companyId, Long userId, int showNotify, int status) {
+        if (companyId == null || userId == null) return 0L;
+        return historyRepository.countUnreadNotifications(companyId, userId, showNotify, status);
+    }
+
+    private HistoryDto toDto(HistoryEntity h, Map<Long, String> userMap) {
+        HistoryDto dto = new HistoryDto();
+        dto.setId(h.getId());
+        dto.setCompanyId(h.getCompanyId());
+        dto.setUserId(h.getUserId());
+        dto.setTableName(h.getTableName());
+        dto.setTableId(h.getTableId());
+        dto.setTitle(h.getTitle());
+        dto.setDescription(h.getDescription());
+        dto.setShowNotify(h.getShowNotify());
+        dto.setStatus(h.getStatus());
+        dto.setType(h.getType());
+        dto.setXmlData(h.getXmlData());
+        dto.setCreatedAt(h.getCreatedAt());
+        dto.setUpdatedAt(h.getUpdatedAt());
+        dto.setUsername(userMap.getOrDefault(h.getUserId(), null));
+        return dto;
     }
 }

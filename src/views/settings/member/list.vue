@@ -338,6 +338,7 @@ import axios from '@/plugins/axios'
 import { pageFrom, pageItems, pageLast, pageNumber, pageSize, pageTo, pageTotal } from '@/utils/pagination'
 import PaginationBar from '@/views/components/pagination_bar.vue'
 import { parseJwt } from '@/utils/jwt'
+import { getAuthToken } from '@/utils/authStorage'
 import { email, phone, required } from '@/utils/validators'
 
 export default {
@@ -409,7 +410,7 @@ export default {
     },
     companyIdFromToken() {
       try {
-        const token = localStorage.getItem('token-admin') || localStorage.getItem('token')
+        const token = getAuthToken('token')
         const payload = parseJwt(token)
         let cid = (
           payload?.companyId ??
@@ -429,7 +430,7 @@ export default {
     },
     currentRole() {
       try {
-        const token = localStorage.getItem('token') || localStorage.getItem('token-admin')
+        const token = getAuthToken('token')
         const payload = parseJwt(token)
         const r = payload?.role
         return Number(r)
@@ -509,7 +510,7 @@ export default {
     },
     currentUserId() {
       try {
-        const token = localStorage.getItem('token-admin') || localStorage.getItem('token')
+        const token = getAuthToken('token')
         const p = parseJwt(token)
         const uid = p?.userId ?? p?.uid ?? p?.id
         return uid != null ? Number(uid) : undefined
