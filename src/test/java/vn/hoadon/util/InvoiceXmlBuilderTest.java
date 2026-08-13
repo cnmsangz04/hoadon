@@ -4,12 +4,40 @@ import org.junit.jupiter.api.Test;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.FormInvoiceEntity;
 import vn.hoadon.entity.InvoiceEntity;
+import vn.hoadon.entity.RegisterInvoiceEntity;
 
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class InvoiceXmlBuilderTest {
+
+    @Test
+    void registerInvoiceXmlUsesResolvedCreatePlaceNameForDeclarationPlace() {
+        RegisterInvoiceEntity registerInvoice = new RegisterInvoiceEntity();
+        registerInvoice.setCreatePlace("2");
+        registerInvoice.setDeclarationDate(LocalDate.of(2026, 6, 19));
+
+        String xml = RegisterInvoiceXmlBuilder.buildUnsigned(
+                registerInvoice,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "Cong ty test",
+                "0100000000",
+                "Hồ Chí Minh"
+        );
+
+        assertThat(xml).contains("<DDanh>Hồ Chí Minh</DDanh>");
+        assertThat(xml).doesNotContain("<DDanh>2</DDanh>");
+    }
 
     @Test
     void sampleInvoiceXmlDefaultsFinancialLeaseFlagToZero() {
