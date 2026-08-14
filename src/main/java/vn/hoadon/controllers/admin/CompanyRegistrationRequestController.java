@@ -85,7 +85,7 @@ public class CompanyRegistrationRequestController extends BaseController {
             CompanyEntity existingCompany = companyRepository.findByTaxcode(req.getTaxcode()).orElse(null);
             boolean resumePartialApproval = isPartialApprovalCompany(existingCompany, req);
             if (existingCompany != null && !resumePartialApproval) {
-                throw new IllegalArgumentException("Mã số thuế đã được sử dụng bởi công ty khác");
+                throw new IllegalArgumentException("Mã số thuế đã được sử dụng");
             }
 
             CompanyEntity saved = existingCompany != null ? existingCompany : companyService.saveOrUpdate(toCompany(req));

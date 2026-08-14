@@ -100,7 +100,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (isBusinessApi(uri) && isPendingCompany(user) && !isAllowedWhenCompanyPending(uri)) {
                 log.warn("Company is pending activation, blocked API access: user={}, uri={}", username, uri);
-                forbidden(response, "COMPANY_PENDING_ACTIVATION", "C\u00f4ng ty ch\u01b0a \u0111\u01b0\u1ee3c k\u00edch ho\u1ea1t");
+                forbidden(response, "COMPANY_PENDING_ACTIVATION", "Công ty chưa được kích hoạt");
                 return;
             }
 
@@ -108,20 +108,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (StringUtils.hasText(sessionId)) {
                 var sessionOpt = loginSessionRepository.findBySessionId(sessionId);
                 if (sessionOpt.isEmpty()) {
-                    unauthorized(response, "SESSION_NOT_FOUND", "Phi\u00ean \u0111\u0103ng nh\u1eadp kh\u00f4ng t\u1ed3n t\u1ea1i");
+                    unauthorized(response, "SESSION_NOT_FOUND", "Phiên đăng nhập không tồn tại");
                     return;
                 }
                 var session = sessionOpt.get();
                 if (session.getUserId() == null || !session.getUserId().equals(user.getId())) {
-                    unauthorized(response, "SESSION_USER_MISMATCH", "Phi\u00ean \u0111\u0103ng nh\u1eadp kh\u00f4ng kh\u1edbp ng\u01b0\u1eddi d\u00f9ng");
+                    unauthorized(response, "SESSION_USER_MISMATCH", "Phiên đăng nhập không khớp người dùng");
                     return;
                 }
                 if (session.getRevokedAt() != null) {
-                    unauthorized(response, "SESSION_REVOKED", "Phi\u00ean \u0111\u0103ng nh\u1eadp \u0111\u00e3 b\u1ecb \u0111\u0103ng xu\u1ea5t");
+                    unauthorized(response, "SESSION_REVOKED", "Phiên đăng nhập đã bị đăng xuất");
                     return;
                 }
                 if (session.getExpiresAt() != null && session.getExpiresAt().isBefore(LocalDateTime.now())) {
-                    unauthorized(response, "SESSION_EXPIRED", "Phi\u00ean \u0111\u0103ng nh\u1eadp \u0111\u00e3 h\u1ebft h\u1ea1n");
+                    unauthorized(response, "SESSION_EXPIRED", "Phiên đăng nhập đã hết hạn");
                     return;
                 }
                 session.setLastSeenAt(LocalDateTime.now());

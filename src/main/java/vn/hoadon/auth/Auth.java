@@ -162,17 +162,17 @@ public class Auth {
     public ResponseEntity<?> register(@RequestBody RegisterRequest req) {
         if (req == null || isBlank(req.getCompanyName()) || isBlank(req.getTaxcode())
                 || isBlank(req.getAddress()) || isBlank(req.getEmail())) {
-            return ResponseEntity.badRequest().body("Vui l\u00f2ng nh\u1eadp \u0111\u1ea7y \u0111\u1ee7 th\u00f4ng tin \u0111\u0103ng k\u00fd");
+            return ResponseEntity.badRequest().body("Vui lòng nhập đầy đủ thông tin đăng ký");
         }
 
         String email = req.getEmail().trim();
         String taxcode = req.getTaxcode().trim();
 
         if (companyRepository.existsByTaxcode(taxcode)) {
-            return ResponseEntity.status(400).body("M\u00e3 s\u1ed1 thu\u1ebf \u0111\u00e3 \u0111\u01b0\u1ee3c s\u1eed d\u1ee5ng b\u1edfi c\u00f4ng ty kh\u00e1c");
+            return ResponseEntity.status(400).body("Mã số thuế đã được sử dụng");
         }
         if (companyRegistrationRequestRepository.existsByTaxcodeAndStatus(taxcode, 0)) {
-            return ResponseEntity.status(400).body("H\u1ed3 s\u01a1 \u0111\u0103ng k\u00fd v\u1edbi m\u00e3 s\u1ed1 thu\u1ebf n\u00e0y \u0111ang ch\u1edd duy\u1ec7t");
+            return ResponseEntity.status(400).body("Hồ sơ đăng ký với mã số thuế này đang chờ duyệt");
         }
 
         CompanyRegistrationRequestEntity request = new CompanyRegistrationRequestEntity();
@@ -186,7 +186,7 @@ public class Auth {
         request = companyRegistrationRequestRepository.save(request);
 
         Map<String, Object> resp = new HashMap<>();
-        resp.put("message", "\u0110\u0103ng k\u00fd th\u00e0nh c\u00f4ng. H\u1ed3 s\u01a1 \u0111ang ch\u1edd qu\u1ea3n tr\u1ecb vi\u00ean duy\u1ec7t.");
+        resp.put("message", "Đăng ký thành công. Hồ sơ đang chờ quản trị viên duyệt.");
         resp.put("requestId", request.getId());
         return ResponseEntity.ok(resp);
     }
