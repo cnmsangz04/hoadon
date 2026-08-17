@@ -74,7 +74,7 @@
           </div>
 
           <div class="usage-number">
-            <strong>{{ usagePercentage }}%</strong>
+            <strong>{{ formatPercentage(usagePercentage) }}</strong>
             <span>đã sử dụng</span>
           </div>
 
@@ -196,11 +196,12 @@ export default {
     },
     usagePercentage() {
       if (this.totalInvoices <= 0) return 0
-      return Math.min(100, Math.round((this.usedInvoices / this.totalInvoices) * 100))
+      const percentage = (this.usedInvoices / this.totalInvoices) * 100
+      return Math.min(100, Math.max(0, Math.round(percentage * 100) / 100))
     },
     remainingPercentage() {
       if (this.totalInvoices <= 0) return 0
-      return Math.max(0, 100 - this.usagePercentage)
+      return Math.max(0, Math.round((100 - this.usagePercentage) * 100) / 100)
     },
     averageInvoiceValue() {
       const issued = Number(this.invoiceStats.issuedThisYear || 0)
@@ -245,7 +246,7 @@ export default {
         return {
           variant: 'warning',
           icon: 'fas fa-exclamation-circle',
-          text: `Hạn mức còn ${this.remainingPercentage}%. Hãy theo dõi để chủ động bổ sung khi cần.`,
+          text: `Hạn mức còn ${this.formatPercentage(this.remainingPercentage)}. Hãy theo dõi để chủ động bổ sung khi cần.`,
           action: false,
         }
       }
@@ -269,7 +270,7 @@ export default {
           key: 'used',
           label: 'Đã sử dụng',
           value: this.formatNumber(this.invoiceStats.usedInvoices),
-          note: `${this.usagePercentage}% tổng hạn mức`,
+          note: `${this.formatPercentage(this.usagePercentage)} tổng hạn mức`,
           icon: 'fas fa-check-circle',
           tone: 'tone-success',
         },
@@ -277,7 +278,7 @@ export default {
           key: 'remaining',
           label: 'Còn lại',
           value: this.formatNumber(this.invoiceStats.remainingInvoices),
-          note: `${this.remainingPercentage}% chưa dùng`,
+          note: `${this.formatPercentage(this.remainingPercentage)} chưa dùng`,
           icon: 'fas fa-wallet',
           tone: 'tone-warning',
         },
@@ -326,6 +327,13 @@ export default {
     },
     formatNumber(value) {
       return new Intl.NumberFormat('vi-VN').format(Number(value || 0))
+    },
+    formatPercentage(value) {
+      return new Intl.NumberFormat('vi-VN', {
+        style: 'percent',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(Number(value || 0) / 100)
     },
     formatCurrency(value) {
       return new Intl.NumberFormat('vi-VN', {
