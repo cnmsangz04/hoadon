@@ -125,7 +125,7 @@
             </template>
             <b-dropdown-item class="text-center" href="#" @click.prevent="openEdit(item)">Cập nhật</b-dropdown-item>
             <b-dropdown-item class="text-center" href="#" @click.prevent="downloadXml(item)">Tải XML</b-dropdown-item>
-            <b-dropdown-item v-if="Number(item.status) === 0" class="text-center" href="#" @click.prevent="onSignature(item)">Ký số</b-dropdown-item>
+            <b-dropdown-item v-if="Number(item.status) === 0" class="text-center" href="#" @click.prevent="onSignature(item, 'usb-token')">Ký USB token</b-dropdown-item>
             <b-dropdown-item v-if="canSendToTaxAuthority(item)" class="text-center" href="#" @click.prevent="sendToTaxAuthority(item)">Gửi CQT</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) > 1" class="text-center" href="#" @click.prevent="showHistory(item)">Lịch sử truyền nhận</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) === 0" class="text-center text-danger" href="#" @click.prevent="deleteItem(item)">Xóa tờ khai</b-dropdown-item>
@@ -513,8 +513,9 @@ export default {
         this.$bvToast && this.$bvToast.toast(msg, { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 4000 })
       }
     },
-    async onSignature(item) {
+    async onSignature(item, method = 'usb-token') {
       try {
+        if (method !== 'usb-token') throw new Error('Chưa hỗ trợ kiểu ký số này')
         const id = item.id || item.ID || item.Id
         if (!id) return
         let ok = true
@@ -522,7 +523,7 @@ export default {
           ok = await new Promise(resolve => {
             window.$.confirm({
               title: 'Xác nhận ký số',
-              content: `Bạn có chắc chắn muốn ký số tờ khai #${id}?`,
+              content: `Bạn có chắc chắn muốn ký số tờ khai #${id} bằng USB token?`,
               theme: 'bootstrap',
               type: 'blue',
               icon: 'fas fa-signature',
@@ -539,31 +540,41 @@ export default {
             })
           })
         } else {
-          ok = window.confirm(`Xác nhận ký số tờ khai #${id}?`)
+          ok = window.confirm(`Xác nhận ký số tờ khai #${id} bằng USB token?`)
         }
         if (!ok) return
-        const { data } = await axios.post(`/register-invoices/${id}/sign`, null, { successMessage: 'Đã ký số tờ khai thành công' })
-        // Cập nhật dòng hiện tại bằng dữ liệu trả về
-        const signatureName = data?.signatureInfo || data?.signature_info || null
-        const signDate = data?.signDate || data?.sign_date || new Date().toISOString()
-        const signedXml = data?.signedXml || data?.signed_xml || null
-        const updated = {
-          ...item,
-          signatureInfo: signatureName,
-          signature_info: signatureName,
-          signDate: signDate,
-          sign_date: signDate,
-          signedXml: signedXml,
-          signed_xml: signedXml,
-          status: 1 // Đồng bộ với create.vue: ký xong thì hiện nút "Gửi CQT"
-        }
-        const idx = this.list.data.findIndex(x => (x.id||x.ID||x.Id) === id)
-        if (idx >= 0) this.$set(this.list.data, idx, updated)
-        // Lưu trạng thái đã ký
-        await this.updateStatus(id, 1)
+        const { data: prepare } = await axios.post(`/register-invoices/${id}/sign-token/prepare`)
+        const hash = prepare?.hash || null
+        if (!hash) throw new Error('Không tạo được mã hash ký số')
+        this.launchPasigner(hash)
+        toastSuccess('Đã mở ứng dụng ký số USB token')
       } catch (e) {
-        // Lỗi đã được handler toàn cục xử lý
+        const message = e?.response?.data?.message || e?.message || 'Không thể ký số tờ khai bằng USB token'
+        toastError(message, 'REGISTER_TOKEN_SIGN')
       }
+    },
+    launchPasigner(hash) {
+      const pid = this.IdProcess(6)
+      const jsonData = {
+        src: 'web',
+        action: 'signature',
+        pid: pid,
+        data: {
+          hash: hash,
+          domain: window.location.hostname
+        }
+      }
+      location.href =
+        'pasigner://' +
+        encodeURIComponent(JSON.stringify(jsonData))
+    },
+    IdProcess(length) {
+      let result = ''
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+      for (let i = 0; i < length; i += 1) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length))
+      }
+      return result
     },
     async sendToTaxAuthority(item) {
       try {

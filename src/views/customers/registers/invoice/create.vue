@@ -288,7 +288,12 @@
             <div v-else>
               <i class="fas fa-signature"></i>
               <div class="d-inline-block" v-if="frmData.action === 'update'">
-                <b-button v-if="!btnSignature" class="text-decoration-none" @click="onSignature" variant="link">Thực hiện ký số</b-button>
+                <b-dropdown v-if="!btnSignature" size="sm" variant="link" toggle-class="text-decoration-none" text="Thực hiện ký số" boundary="window">
+                  <b-dropdown-item href="#" @click.prevent="onSignature('usb-token')">
+                    <i class="fas fa-usb mr-1"></i>
+                    Ký USB token
+                  </b-dropdown-item>
+                </b-dropdown>
                 <b-button class="text-decoration-none" variant="link" v-else>Đang thực hiện...</b-button>
               </div>
             </div>
@@ -967,17 +972,17 @@ export default {
         window.location.href = '/register/invoice/list'
       }
     },
-    async onSignature() {
+    async onSignature(method = 'usb-token') {
       try {
+        if (method !== 'usb-token') throw new Error('Chưa hỗ trợ kiểu ký số này')
         const id = this.$route?.params?.id
         if (!id) return
         let ok = true
         if (typeof window.$?.confirm === 'function') {
-          const vm = this
           ok = await new Promise(resolve => {
             window.$.confirm({
               title: 'Xác nhận ký số',
-              content: `Thông tin chữ ký và ngày ký sẽ được cập nhật lại. Bạn vẫn muốn tiếp tục ký tờ khai #${id}?`,
+              content: `Bạn có chắc chắn muốn ký số tờ khai #${id} bằng USB token?`,
               // Visual improvements
               theme: 'bootstrap',
               type: 'blue',
@@ -1006,20 +1011,44 @@ export default {
             })
           })
         } else {
-          ok = window.confirm(`Xác nhận ký số tờ khai #${id}?`)
+          ok = window.confirm(`Xác nhận ký số tờ khai #${id} bằng USB token?`)
         }
         if (!ok) return
         this.btnSignature = true
-        const { data } = await axios.post(`/register-invoices/${id}/sign`, null, { successMessage: 'Đã ký số tờ khai thành công' })
-        this.frmData.signed_xml = data?.signedXml || data?.signed_xml || this.frmData.signed_xml
-        this.frmData.date_sign = data?.signDate || data?.sign_date || new Date().toISOString()
-        this.frmData.signature = data?.signatureInfo ? { name: data.signatureInfo } : (data?.signature_info ? { name: data.signature_info } : this.frmData.signature)
-        // Sau khi ký số thành công, chuyển trạng thái để hiện "Gửi CQT" và ẩn "Cập nhật"
-        this.frmData.status = 1
+        const { data: prepare } = await axios.post(`/register-invoices/${id}/sign-token/prepare`)
+        const hash = prepare?.hash || null
+        if (!hash) throw new Error('Không tạo được mã hash ký số')
+        this.launchPasigner(hash)
+        toastSuccess('Đã mở ứng dụng ký số USB token')
       } catch (e) {
+        const message = e?.response?.data?.message || e?.message || 'Không thể ký số tờ khai bằng USB token'
+        toastError(message, 'REGISTER_TOKEN_SIGN')
       } finally {
         this.btnSignature = false
       }
+    },
+    launchPasigner(hash) {
+      const pid = this.IdProcess(6)
+      const jsonData = {
+        src: 'web',
+        action: 'signature',
+        pid: pid,
+        data: {
+          hash: hash,
+          domain: window.location.hostname
+        }
+      }
+      location.href =
+        'pasigner://' +
+        encodeURIComponent(JSON.stringify(jsonData))
+    },
+    IdProcess(length) {
+      let result = ''
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+      for (let i = 0; i < length; i += 1) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length))
+      }
+      return result
     },
     showSignatureModal(index) {
       if (index !== false && index != null) {

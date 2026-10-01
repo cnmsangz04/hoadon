@@ -20,6 +20,7 @@ import vn.hoadon.entity.UserEntity;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.CompanyBankEntity;
 import vn.hoadon.entity.BuyInvoiceEntity;
+import vn.hoadon.entity.HashInvoiceEntity;
 import vn.hoadon.repositories.FormInvoiceRepository;
 import vn.hoadon.repositories.InvoiceRepository;
 import vn.hoadon.repositories.RegisterInvoiceRepository;
@@ -28,6 +29,7 @@ import vn.hoadon.repositories.CompanyBankRepository;
 import vn.hoadon.repositories.InvoiceNumberRepository;
 import vn.hoadon.repositories.SignatureVatRepository;
 import vn.hoadon.repositories.BuyInvoiceRepository;
+import vn.hoadon.repositories.HashInvoiceRepository;
 import vn.hoadon.entity.InvoiceNumberEntity;
 import vn.hoadon.entity.SignatureVatEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -82,6 +84,7 @@ public class InvoiceController extends BaseController {
     @Autowired private InvoiceNumberRepository invoiceNumberRepository;
     @Autowired private SignatureVatRepository signatureVatRepository;
     @Autowired private BuyInvoiceRepository buyInvoiceRepository;
+    @Autowired private HashInvoiceRepository hashInvoiceRepository;
     @Autowired private HistoryService historyService;
     @Autowired private SignatureAuthoritiesTaxService signatureAuthoritiesTaxService;
     @Autowired private HistoryRepository historyRepository;
@@ -600,6 +603,7 @@ public class InvoiceController extends BaseController {
     }
 
     public static class CreateResponse { public Long id; public CreateResponse(Long id){ this.id = id; } }
+    public static class UsbTokenPrepareRequest { public java.util.List<Long> ids; }
 
     @GetMapping(value = "/{lookup}/view", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<?> viewByLookup(@PathVariable("lookup") String lookup,
@@ -927,57 +931,127 @@ public class InvoiceController extends BaseController {
 
     @PostMapping("/{id}/sign")
     @Transactional
-    public ResponseEntity<?> sign(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
+    public ResponseEntity<?> disabledLegacySign(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
+        return ResponseEntity.badRequest().body(new ErrorDTO("Chức năng ký giả lập đã tắt. Vui lòng ký số bằng USB token."));
+    }
+
+    @PostMapping("/sign-token/prepare")
+    @Transactional
+    public ResponseEntity<?> prepareUsbTokenSign(@RequestBody UsbTokenPrepareRequest req,
+                                                 @AuthenticationPrincipal UserEntity user) {
         permission("invoice-save");
-        if (id == null) {
-            return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu ID hóa đơn"));
+        try {
+            if (user == null || user.getCompanyId() == null) {
+                return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền ký số hóa đơn"));
+            }
+            java.util.List<Long> ids = normalizeIds(req != null ? req.ids : null);
+            if (ids.isEmpty()) {
+                return ResponseEntity.badRequest().body(new ErrorDTO("Vui lòng chọn hóa đơn cần ký"));
+            }
+
+            Long companyId = user.getCompanyId();
+            java.util.List<InvoiceEntity> invoices = loadInvoicesForUsbToken(ids, companyId);
+            int needNumber = 0;
+            for (InvoiceEntity inv : invoices) {
+                if (inv.getNo() == null || inv.getNo() < 1) needNumber++;
+            }
+            BuyInvoiceEntity buyInvoice = validateInvoicePackage(companyId, needNumber);
+            java.util.Map<Long, FormInvoiceEntity> forms = new java.util.HashMap<>();
+            for (InvoiceEntity inv : invoices) {
+                forms.put(inv.getId(), requireInvoiceForm(inv, companyId));
+            }
+            for (InvoiceEntity inv : invoices) {
+                FormInvoiceEntity form = forms.get(inv.getId());
+                if (inv.getNo() == null || inv.getNo() < 1) {
+                    assignInvoiceNo(inv, form, companyId);
+                }
+                inv.setUpdatedAt(java.time.LocalDateTime.now());
+                invoiceRepository.save(inv);
+            }
+
+            if (needNumber > 0 && buyInvoice != null) {
+                int amountUsed = buyInvoice.getAmountUsed() != null ? buyInvoice.getAmountUsed() : 0;
+                buyInvoice.setAmountUsed(amountUsed + needNumber);
+                buyInvoice.setUpdatedAt(java.time.LocalDateTime.now());
+                buyInvoiceRepository.save(buyInvoice);
+            }
+
+            HashInvoiceEntity hash = new HashInvoiceEntity();
+            hash.setCompanyId(companyId);
+            hash.setUserId(user.getId());
+            hash.setNameUser(user.getUsername());
+            hash.setHash(createHash(companyId));
+            hash.setIds(ids);
+            hash.setIdAttr("");
+            hash.setSignBy("NBan");
+            hash.setType("HDGTGT");
+            hashInvoiceRepository.save(hash);
+
+            java.util.Map<String,Object> resp = new java.util.LinkedHashMap<>();
+            resp.put("hash", hash.getHash());
+            resp.put("signBy", "NBan");
+            resp.put("total", ids.size());
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(new ErrorDTO(ex.getMessage()));
         }
-        if (user == null || user.getCompanyId() == null) {
-            return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền ký số hóa đơn"));
+    }
+
+    private java.util.List<Long> normalizeIds(java.util.List<Long> ids) {
+        if (ids == null) return java.util.Collections.emptyList();
+        java.util.LinkedHashSet<Long> unique = new java.util.LinkedHashSet<>();
+        for (Long id : ids) {
+            if (id != null && id > 0) unique.add(id);
         }
-        Optional<InvoiceEntity> optInv = invoiceRepository.findById(id);
-        InvoiceEntity inv = optInv.orElse(null);
-        if (inv == null) {
-            return ResponseEntity.badRequest().body(new ErrorDTO("Không tìm thấy hóa đơn"));
+        return new java.util.ArrayList<>(unique);
+    }
+
+    private java.util.List<InvoiceEntity> loadInvoicesForUsbToken(java.util.List<Long> ids, Long companyId) {
+        java.util.List<InvoiceEntity> invoices = new java.util.ArrayList<>();
+        for (Long invoiceId : ids) {
+            InvoiceEntity inv = invoiceRepository.findById(invoiceId).orElse(null);
+            if (inv == null) {
+                throw new IllegalArgumentException("Không tìm thấy hóa đơn #" + invoiceId);
+            }
+            Long invCompanyId = inv.getCompanyId() != null ? inv.getCompanyId().longValue() : null;
+            if (invCompanyId == null || !companyId.equals(invCompanyId)) {
+                throw new IllegalArgumentException("Không có quyền ký hóa đơn #" + invoiceId);
+            }
+            if (inv.getStatus() != null && inv.getStatus() != 0) {
+                throw new IllegalArgumentException("Chỉ được ký hóa đơn mới khởi tạo");
+            }
+            invoices.add(inv);
         }
-        Long uCompany = user.getCompanyId();
-        Long iCompany = inv.getCompanyId() != null ? inv.getCompanyId().longValue() : null;
-        if (iCompany == null || !uCompany.equals(iCompany)) {
-            return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền ký số hóa đơn của công ty khác"));
-        }
-        // 1) Ensure there is an active invoice_numbers row for this form_id; create if missing
-        Long companyId = inv.getCompanyId() != null ? inv.getCompanyId().longValue() : (user != null ? user.getCompanyId() : null);
-        if (companyId == null) {
-            return ResponseEntity.badRequest().body(new ErrorDTO("Không xác định được công ty của hóa đơn"));
-        }
+        return invoices;
+    }
+
+    private FormInvoiceEntity requireInvoiceForm(InvoiceEntity inv, Long companyId) {
         Long formId = inv.getFormId() != null ? inv.getFormId().longValue() : null;
         if (formId == null) {
-            return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu mẫu hóa đơn (form_id)"));
+            throw new IllegalArgumentException("Thiếu mẫu hóa đơn (form_id)");
         }
-        FormInvoiceEntity form = null;
-        try {
-            form = formInvoiceRepository.findById(formId).orElse(null);
-        } catch (Exception ignore) {}
+        FormInvoiceEntity form = formInvoiceRepository.findById(formId).orElse(null);
         if (form == null || form.getCompanyId() == null || !companyId.equals(form.getCompanyId())) {
-            return ResponseEntity.status(403).body(new ErrorDTO("Mẫu hóa đơn không thuộc công ty hiện tại"));
+            throw new IllegalArgumentException("Mẫu hóa đơn không thuộc công ty hiện tại");
         }
-        
-        // Check buy_invoices: must have active record with available invoices
-        Optional<BuyInvoiceEntity> optBuyInvoice = buyInvoiceRepository.findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, 1);
-        if (!optBuyInvoice.isPresent()) {
-            return ResponseEntity.badRequest().body(new ErrorDTO("Công ty chưa có gói hóa đơn được kích hoạt"));
+        return form;
+    }
+
+    private BuyInvoiceEntity validateInvoicePackage(Long companyId, int needNumber) {
+        if (needNumber < 1) return null;
+        BuyInvoiceEntity buyInvoice = buyInvoiceRepository
+                .findFirstByCompanyIdAndStatusOrderByIdDesc(companyId, 1)
+                .orElseThrow(() -> new IllegalArgumentException("Công ty chưa có gói hóa đơn được kích hoạt"));
+        int amount = buyInvoice.getAmount() != null ? buyInvoice.getAmount() : 0;
+        int amountUsed = buyInvoice.getAmountUsed() != null ? buyInvoice.getAmountUsed() : 0;
+        if (amountUsed + needNumber > amount) {
+            throw new IllegalArgumentException("Quý khách đã sử dụng hết số hóa đơn");
         }
-        BuyInvoiceEntity buyInvoice = optBuyInvoice.get();
-        
-        // Validate amount_used < amount
-        Integer amount = buyInvoice.getAmount() != null ? buyInvoice.getAmount() : 0;
-        Integer amountUsed = buyInvoice.getAmountUsed() != null ? buyInvoice.getAmountUsed() : 0;
-        
-        if (amountUsed >= amount) {
-            return ResponseEntity.badRequest().body(new ErrorDTO("Quý khách đã sử dụng hết số hóa đơn"));
-        }
-        
-        // Tìm bộ đếm số hóa đơn đang hoạt động cho loại VAT (1) với status = 1
+        return buyInvoice;
+    }
+
+    private void assignInvoiceNo(InvoiceEntity inv, FormInvoiceEntity form, Long companyId) {
+        Long formId = form.getId();
         java.util.List<InvoiceNumberEntity> counters = invoiceNumberRepository.findByCompanyIdAndFormId(companyId, formId);
         InvoiceNumberEntity counter = null;
         for (InvoiceNumberEntity c : counters) {
@@ -997,109 +1071,28 @@ public class InvoiceController extends BaseController {
             counter.setCreatedAt(java.time.LocalDateTime.now());
             counter = invoiceNumberRepository.save(counter);
         }
-        // Allocate next number: total + 1
         Integer nextNo = (counter.getTotal() != null ? counter.getTotal() : 0) + 1;
         counter.setTotal(nextNo);
         counter.setUpdatedAt(java.time.LocalDateTime.now());
         invoiceNumberRepository.save(counter);
-        
-        // Increment buy_invoice amount_used
-        buyInvoice.setAmountUsed(amountUsed + 1);
-        buyInvoice.setUpdatedAt(java.time.LocalDateTime.now());
-        buyInvoiceRepository.save(buyInvoice);
-        
-        // 2. Cập nhật hóa đơn: set invoice_number_id nếu thiếu, set no, set status = 1 (Đã ký)
+
         if (inv.getInvoiceNumberId() == null) {
             inv.setInvoiceNumberId(counter.getId().intValue());
         }
         inv.setNo(nextNo);
-        inv.setStatus((short)1);
-        inv.setUpdatedAt(java.time.LocalDateTime.now());
-        invoiceRepository.save(inv);
-        // 3. Tạo XML với thông tin công ty và ngân hàng, dùng mẫu hiện tại
-        CompanyEntity company = null; CompanyBankEntity bank = null;
-        if (form != null && form.getCompanyId() != null) {
-            company = companyRepository.findById(form.getCompanyId()).orElse(null);
-            if (company != null) {
-                java.util.List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
-                if (banks != null && !banks.isEmpty()) bank = banks.get(0);
-            }
-        } else {
-            // Dự phòng theo invoice.company_id
-            company = companyRepository.findById(companyId).orElse(null);
-            if (company != null) {
-                java.util.List<CompanyBankEntity> banks = companyBankRepository.findByCompany(company);
-                if (banks != null && !banks.isEmpty()) bank = banks.get(0);
-            }
-        }
-        String xml = buildInvoiceXml(inv, form, company, bank);
-        // Inject mock digital signature into <DSCKS><NBan>...</NBan></DSCKS>
-        xml = injectMockSignature(xml, company);
-        // 4) Persist signature_vats with xml
-        SignatureVatEntity sig = new SignatureVatEntity();
-        sig.setCompanyId(companyId.intValue());
-        sig.setInvoiceId(inv.getId().intValue());
-        sig.setXml(xml);
-        sig.setCreatedAt(java.time.LocalDateTime.now());
-        sig.setUpdatedAt(java.time.LocalDateTime.now());
-        signatureVatRepository.save(sig);
-        // Response: return new number
-        java.util.Map<String,Object> resp = new java.util.LinkedHashMap<>();
-        resp.put("id", inv.getId());
-        resp.put("no", nextNo);
-        resp.put("status", 1);
-        return ResponseEntity.ok(resp);
     }
 
-    // Tạo và chèn chữ ký XMLDSIG giả dưới <DSCKS><NBan>...</NBan></DSCKS>
-    private String injectMockSignature(String xml, CompanyEntity company) {
-        if (xml == null || xml.isBlank()) return xml;
-        String id = extractDlhDonId(xml);
-        if (id == null || id.isBlank()) {
-            id = java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
+    private String createHash(Long companyId) {
+        String raw = "PA@Hash:com" + companyId + "," + System.nanoTime() + "," + java.util.UUID.randomUUID();
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-1");
+            byte[] bytes = md.digest(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : bytes) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (Exception e) {
+            return java.util.UUID.randomUUID().toString().replace("-", "");
         }
-        String signingTimeId = "SigningTime-NNT-" + id;
-        String sigPropId = "SignatureProperty-" + id;
-        String now = java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-        String subjectName = buildX509SubjectName(company);
-        String certificate = SAMPLE_CERT_BASE64;
-        String signatureValue = SAMPLE_SIGNATURE_VALUE;
-        String digest1 = SAMPLE_DIGEST_VALUE_1;
-        String digest2 = SAMPLE_DIGEST_VALUE_2;
-        String dsig = "<Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\">" +
-                "<SignedInfo>" +
-                "<CanonicalizationMethod Algorithm=\"http://www.w3.org/TR/2001/REC-xml-c14n-20010315\"/>" +
-                "<SignatureMethod Algorithm=\"http://www.w3.org/2000/09/xmldsig#rsa-sha1\"/>" +
-                "<Reference URI=\"#" + escapeXml(id) + "\">" +
-                "<DigestMethod Algorithm=\"http://www.w3.org/2001/04/xmlenc#sha256\"/>" +
-                "<DigestValue>" + digest1 + "</DigestValue>" +
-                "</Reference>" +
-                "<Reference URI=\"#" + escapeXml(signingTimeId) + "\">" +
-                "<DigestMethod Algorithm=\"http://www.w3.org/2001/04/xmlenc#sha256\"/>" +
-                "<DigestValue>" + digest2 + "</DigestValue>" +
-                "</Reference>" +
-                "</SignedInfo>" +
-                "<SignatureValue>" + signatureValue + "</SignatureValue>" +
-                "<KeyInfo><X509Data>" +
-                "<X509SubjectName>" + escapeXml(subjectName) + "</X509SubjectName>" +
-                "<X509Certificate>" + certificate + "</X509Certificate>" +
-                "</X509Data></KeyInfo>" +
-                "<Object Id=\"" + escapeXml(signingTimeId) + "\">" +
-                "<SignatureProperties>" +
-                "<SignatureProperty Id=\"" + escapeXml(sigPropId) + "\" Target=\"#NNT-" + escapeXml(id) + "\">" +
-                "<SigningTime>" + escapeXml(now) + "</SigningTime>" +
-                "</SignatureProperty>" +
-                "</SignatureProperties>" +
-                "</Object>" +
-                "</Signature>";
-        String dscks = "<DSCKS><NBan>" + dsig + "</NBan><NMua/><CQT/><CCKSKhac/></DSCKS>";
-        // Replace existing DSCKS block if present; else insert before </HDon>
-        String replaced = xml.replaceFirst("(?is)<DSCKS>.*?</DSCKS>", java.util.regex.Matcher.quoteReplacement(dscks));
-        if (replaced.equals(xml)) {
-            // No DSCKS found, try to insert before closing tag
-            replaced = xml.replaceFirst("(?is)</HDon>\s*$", java.util.regex.Matcher.quoteReplacement(dscks) + "</HDon>");
-        }
-        return replaced;
     }
 
     private String extractDlhDonId(String xml) {
@@ -1110,23 +1103,10 @@ public class InvoiceController extends BaseController {
         return null;
     }
 
-    private String buildX509SubjectName(CompanyEntity company) {
-        String mst = company != null && company.getTaxcode() != null ? company.getTaxcode() : "MST:0000000000";
-        String cn = company != null && company.getName() != null ? company.getName() : "CONG TY";
-        // Keep it simple and deterministic for mock
-        return "UID=MST:" + mst + ",CN=" + cn + ",O=" + cn + ",C=VN";
-    }
-
     private String escapeXml(String s) {
         if (s == null) return "";
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;");
     }
-
-    // Static sample values for mock signature; not cryptographically valid but structurally similar
-    private static final String SAMPLE_SIGNATURE_VALUE = "dSPVczz7SoqFQeGu1BWW3SKj8Z2AFx0hIuDtk3mSxoP3wTov3pAvO3FBTFBozPe5Bbe0SEI8ePTFAHzwxy77tL9bMQDN6YQfK4re9G1G2QYuuvfOD7TuPp+B4jPKqTcCrPdQBDa5tZ64ZHZzrr2CcWFyGmE1x6lXwX3jACIhdfQ5e6BmL2P4Dnb5FnJlt2+vfQaRoP/29rVMbqv0KYOcNgUCF5LWbIVxIYvwkzNK6u80T9/izHzeukJAII465YQe+LW6w+CitXn1qwTgW4FRXbtrjGMP+u/O2yl4fBxIMMRJvfjsly78XtXTmqE4M4U22pZhzgik7IdT3/VxJl2SPA==";
-    private static final String SAMPLE_CERT_BASE64 = "MIIEwzCCA6ugAwIBAgIQVAESWO4VZZCsWne4hUUjfjANBgkqhkiG9w0BAQsFADArMQ0wCwYDVQQDDARJLUNBMQ0wCwYDVQQKDARJLUNBMQswCQYDVQQGEwJWTjAeFw0yNDAyMDIwNjU3MjJaFw0yNzAxMjQwODExNDlaMIG2MQswCQYDVQQGEwJWTjEXMBUGA1UECAwOSOG7kyBDaMOtIE1pbmgxEjAQBgNVBAcMCVF14bqtbiAxMDEqMCgGA1UECgwhQ8OUTkcgVFkgVE5ISCBQLkEgVknhu4ZUIE5BTSBURVNUMSowKAYDVQQDDCFDw5RORyBUYSBUTkhIIFAuQSBWSeG7hlQgTkFNIFRFU1QxIjAgBgoJkiaJk/IsZAEBDBJNU1Q6MDMwMjQzMTU5NS05OTkwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDLN2b9KzjCvOG3Kt/NQOv0Y9OKs837Rk2Z6VBU4Xj24xNy4kN5xiC/ZTMBveh7GvBybx4IIp2hTdHNHiSTSeiEP99JAt2FsvLaw2NGMnk7u16PPtzRjbF0IrlWtiOj8C1kGMo8/Lv6FXhL/DFc9ny6dIw1++Qq+UkHv3hJsT385Eyu+oTWojWzHLsCykzYY9LRKhfv0w0O0tPkskdXXD/5gsxgalnR7+CdDqnOLuXQKUx/OYHaD6Di+68qIe8wkrTrj6gB4pldvweVRKrT6JX+y950jLiROP2mQRthOi5r2ZonP4TRVH2ms+bxGZIBrftKcbuSCKsvc9DB438LGp2/AgMBAAGjggFVMIIBUTAMBgNVHRMBAf8EAjAAMB8GA1UdIwQYMBaAFMgnCWzCxN9H6hnydyl7Z1xDsSkrMIGVBggrBgEFBQcBAQSBiDCBhTAyBggrBgEFBQcwAoYmaHR0cHM6Ly9yb290Y2EuZ292LnZuL2NydC92bnJjYTI1Ni5wN2IwLgYIKwYBBQUHMAKGImh0dHBzOi8vcm9vdGNhLmdvdi52bi9jcnQvSS1DQS5wN2IwHwYIKwYBBQUHMAGGE2h0dHA6Ly9vY3NwLmktY2Eudm4wNAYDVR0lBC0wKwYIKwYBBQUHAwIGCCsGAQUFBwMEBgorBgEEAYI3CgMMBgkqhkiG9y8BAQUwIwYDVR0fBBwwGjAYoBagFIYSaHR0cDovL2NybC5pLWNhLnZuMB0GA1UdDgQWBBQWJU8iR6U+0upLf4/bUqYSa+a1UTAOBgNVHQ8BAf8EBAMCBPAwDQYJKoZIhvcNAQELBQADggEBAIbaPrHjDKCp2t4DcHa9763XghY0t5EYBVm2ek5MS3nIizxMqE1jwc5dTLe+HyBdiqwCEvQxI+y3tymnZRQjWCFpnXsWghURBERv9zw0y8nAnZk6Ajby9AZ077BbIb44EzsMPvAKEFHWfSic76zaPQ7fw0pGOWXJEaby0bC0l6ho5FgP7Kc9diIx5buGqTsatWz6ynC3JxAyLclzyyh9gcSgUamBj7yEQuROZg/dCgiRD6bUsmSpDR4cPP4rzhp3SA82Gkasg0AwZKd0G8KbBIP4Mot219h+PCi/SryHEMU12106WS/SZ1/Vqiac0sUTnPvyR4Xl4uUV2aKNm+pxiCU=";
-    private static final String SAMPLE_DIGEST_VALUE_1 = "BTWIVMXw2EXuSV7ThhJHGgSbbLcs2veOkk8oKwpgVzo=";
-    private static final String SAMPLE_DIGEST_VALUE_2 = "2pqCy/KvD9b88B4AWHNgxIFA9YTWbKOd8cHudzk1XwE=";
 
     /**
      * Chèn chữ ký CQT giả vào XML tại HDon/DSCKS/CQT

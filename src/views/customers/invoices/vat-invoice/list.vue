@@ -6,6 +6,17 @@
         <h4 class="mb-0 font-weight-bold">Danh sách hóa đơn giá trị gia tăng</h4>
       </div>
       <div>
+        <b-dropdown size="sm" variant="primary" class="mr-2" :disabled="!selectedIds.length || isBusy" right boundary="window">
+          <template #button-content>
+            <i class="fas fa-signature"></i>
+            Ký số
+            <span v-if="selectedIds.length">({{ selectedIds.length }})</span>
+          </template>
+          <b-dropdown-item href="#" @click.prevent="signSelectedInvoices('usb-token')">
+            <i class="fas fa-usb mr-1"></i>
+            Ký USB token
+          </b-dropdown-item>
+        </b-dropdown>
         <b-button size="sm" variant="outline-primary" class="mr-2" @click="reload">
           <i class="fas fa-sync-alt"></i>
           Làm mới
@@ -77,6 +88,24 @@
         :key="refreshKey"
         empty-text="Không có dữ liệu"
       >
+        <template #head(select)>
+          <b-form-checkbox
+            :checked="allVisibleSelected"
+            :indeterminate="selectedIds.length > 0 && !allVisibleSelected"
+            aria-label="Chọn tất cả hóa đơn có thể ký"
+            @change="toggleSelectAll"
+          />
+        </template>
+
+        <template #cell(select)="{ item }">
+          <b-form-checkbox
+            :checked="isSelected(item.id)"
+            :disabled="Number(item.status) !== 0"
+            aria-label="Chọn hóa đơn"
+            @change="checked => toggleRowSelection(item.id, checked)"
+          />
+        </template>
+
         <template #cell(index)="{ index }">
           {{ index + 1 + (list.current_page - 1) * list.per_page }}
         </template>
@@ -131,7 +160,7 @@
             <b-dropdown-item class="text-center" href="#" @click.prevent="cloneInvoice(item)">Sao chép</b-dropdown-item>
             <b-dropdown-item class="text-center" href="#" @click.prevent="viewInvoice(item)">Xem</b-dropdown-item>
 
-            <b-dropdown-item v-if="Number(item.status) === 0" class="text-center" href="#" @click.prevent="signInvoice(item)">Ký số</b-dropdown-item>
+            <b-dropdown-item v-if="Number(item.status) === 0" class="text-center" href="#" @click.prevent="signInvoice(item, 'usb-token')">Ký USB token</b-dropdown-item>
             <b-dropdown-item v-if="canSendToCqt(item)" class="text-center" href="#" @click.prevent="sendToCqt(item)">
               {{ Number(item.status) === 2 ? 'Gửi lại CQT' : 'Gửi CQT' }}
             </b-dropdown-item>
@@ -310,6 +339,7 @@ export default {
       isBusy: false,
       usersMap: {},
       refreshKey: 0,
+      selectedIds: [],
       sellerTaxcode: '',
       // iframe state for viewing invoice
       iframe: {
@@ -346,6 +376,7 @@ export default {
       // Hiển thị dd/mm/YYYY trong datepicker
       dateFormatOptions: { year: 'numeric', month: '2-digit', day: '2-digit' },
       fields: [
+        { key: 'select', label: '', thStyle: { width: '3%' }, tdClass: 'text-center' },
         { key: 'index', label: 'STT', thStyle: { width: '4%' } },
         { key: 'form_serial', label: 'Ký hiệu', thStyle: { width: '9%' } },
         { key: 'no', label: 'Số', thStyle: { width: '6%' } },
@@ -388,6 +419,18 @@ export default {
       this._pollTimers = {}
       this._pollAttempts = {}
     } catch {}
+  },
+  computed: {
+    signableVisibleIds () {
+      return (this.list.data || [])
+        .filter(item => Number(item.status) === 0)
+        .map(item => Number(item.id))
+        .filter(Boolean)
+    },
+    allVisibleSelected () {
+      const ids = this.signableVisibleIds
+      return ids.length > 0 && ids.every(id => this.selectedIds.includes(id))
+    },
   },
   methods: {
     closeModal(id) { this.$root.$emit('bv::hide::modal', id) },
@@ -496,6 +539,7 @@ export default {
         this.list.per_page = data.per_page || this.list.per_page
         this.list.current_page = data.current_page || this.list.current_page
         this.list.last_page = data.last_page || 1
+        this.selectedIds = this.selectedIds.filter(id => items.some(item => Number(item.id) === Number(id) && Number(item.status) === 0))
         const from = (this.list.current_page - 1) * this.list.per_page + (items.length ? 1 : 0)
         const to = from + (items.length ? (items.length - 1) : 0)
         this.list.from = from
@@ -601,6 +645,26 @@ export default {
     formatCurrency (v) {
       try { const n = Number(v || 0); return n.toLocaleString('vi-VN') } catch { return '0' }
     },
+    isSelected (id) {
+      return this.selectedIds.includes(Number(id))
+    },
+    toggleRowSelection (id, checked) {
+      const value = Number(id)
+      if (!value) return
+      if (checked && !this.selectedIds.includes(value)) {
+        this.selectedIds = [...this.selectedIds, value]
+      } else if (!checked) {
+        this.selectedIds = this.selectedIds.filter(x => x !== value)
+      }
+    },
+    toggleSelectAll (checked) {
+      const ids = this.signableVisibleIds
+      if (checked) {
+        this.selectedIds = Array.from(new Set([...this.selectedIds, ...ids]))
+      } else {
+        this.selectedIds = this.selectedIds.filter(id => !ids.includes(id))
+      }
+    },
 
     async cloneInvoice (item) {
       if (!item || !item.id) return
@@ -670,16 +734,27 @@ export default {
       }
     },
 
-    async signInvoice (item) {
+    async signInvoice (item, method = 'usb-token') {
+      const id = item && (item.id || item.ID || item.Id)
+      if (!id) return
+      await this.signInvoices([Number(id)], method)
+    },
+    async signSelectedInvoices (method = 'usb-token') {
+      await this.signInvoices(this.selectedIds, method)
+    },
+    async signInvoices (ids, method = 'usb-token') {
       try {
-        const id = item && (item.id || item.ID || item.Id)
-        if (!id) return
+        if (method !== 'usb-token') throw new Error('Chưa hỗ trợ kiểu ký số này')
+        const arrId = Array.from(new Set((ids || []).map(Number).filter(Boolean)))
+        if (!arrId.length) return
         let ok = true
         if (typeof window.$?.confirm === 'function') {
           ok = await new Promise(resolve => {
             window.$.confirm({
               title: 'Xác nhận ký số',
-              content: `Bạn có chắc chắn muốn ký số hóa đơn #${id}?`,
+              content: arrId.length > 1
+                ? `Bạn có chắc chắn muốn ký số ${arrId.length} hóa đơn bằng USB token?`
+                : `Bạn có chắc chắn muốn ký số hóa đơn #${arrId[0]} bằng USB token?`,
               theme: 'bootstrap',
               type: 'blue',
               icon: 'fas fa-signature',
@@ -696,26 +771,44 @@ export default {
             })
           })
         } else {
-          ok = window.confirm(`Xác nhận ký số hóa đơn #${id}?`)
+          ok = window.confirm(arrId.length > 1 ? `Xác nhận ký số ${arrId.length} hóa đơn bằng USB token?` : `Xác nhận ký số hóa đơn #${arrId[0]} bằng USB token?`)
         }
         if (!ok) return
         this.isBusy = true
-        const { data } = await axios.post(`/invoices/${id}/sign`, null, { successMessage: 'Đã ký số hóa đơn thành công' })
-        // Cập nhật local row fields: no and status
-        const newNo = data?.no ?? data?.No ?? null
-        const updated = { ...item, no: newNo, status: 1 }
-        const idx = this.list.data.findIndex(x => (x.id||x.ID||x.Id) === id)
-        if (idx >= 0) this.$set(this.list.data, idx, updated)
-        try {
-          window.dispatchEvent(new CustomEvent('invoice-limit-used', { detail: { invoiceId: id } }))
-        } catch {}
-        // Refresh list to reflect latest data
-        await this.fetchList()
+        const { data } = await axios.post('/invoices/sign-token/prepare', { ids: arrId })
+        const hash = data?.hash || null
+        if (!hash) throw new Error('Không tạo được mã hash ký số')
+        this.launchPasigner(hash)
+        toastSuccess('Đã mở ứng dụng ký số USB token')
       } catch (e) {
-        // Global axios plugin should show error toast
+        const message = e?.response?.data?.message || e?.message || 'Không thể ký số bằng USB token'
+        this.$bvToast && this.$bvToast.toast(message, { title: 'Lỗi ký số', variant: 'danger', solid: true, autoHideDelay: 5000 })
       } finally {
         this.isBusy = false
       }
+    },
+    launchPasigner (hash) {
+      const pid = this.IdProcess(6)
+      const jsonData = {
+        src: 'web',
+        action: 'signature',
+        pid: pid,
+        data: {
+          hash: hash,
+          domain: window.location.hostname
+        }
+      }
+      location.href =
+        'pasigner://' +
+        encodeURIComponent(JSON.stringify(jsonData))
+    },
+    IdProcess (length) {
+      let result = ''
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+      for (let i = 0; i < length; i += 1) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length))
+      }
+      return result
     },
     async sendToCqt (item) {
       try {

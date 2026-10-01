@@ -13,9 +13,11 @@ import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.dto.registerinvoice.RegisterInvoicePrefillDto;
 import vn.hoadon.dto.registerinvoice.RegisterInvoiceUpsertRequest;
 import vn.hoadon.entity.CompanyEntity;
+import vn.hoadon.entity.HashInvoiceEntity;
 import vn.hoadon.entity.RegisterInvoiceEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.repositories.CompanyRepository;
+import vn.hoadon.repositories.HashInvoiceRepository;
 import vn.hoadon.services.RegisterInvoiceService;
 import vn.hoadon.services.HistoryService;
 import vn.hoadon.dto.history.HistoryDto;
@@ -23,7 +25,6 @@ import vn.hoadon.util.RegisterInvoiceXmlTaxValidator;
 
 import java.net.URI;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -44,6 +45,7 @@ public class RegisterInvoiceController extends BaseController {
 
     private final RegisterInvoiceService service;
     private final CompanyRepository companyRepository;
+    @Autowired private HashInvoiceRepository hashInvoiceRepository;
     // Replace repository with service per 3-layer architecture
     @Autowired(required = false)
     private HistoryService historyService;
@@ -808,74 +810,48 @@ public class RegisterInvoiceController extends BaseController {
     }
 
     @PostMapping("/{id}/sign")
-    public ResponseEntity<RegisterInvoiceEntity> simulateSign(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> disabledLegacySign(@PathVariable Long id) {
+        return ResponseEntity.badRequest().body(Map.of("message", "Chức năng ký giả lập đã tắt. Vui lòng ký số bằng USB token."));
+    }
+
+    @PostMapping("/{id}/sign-token/prepare")
+    public ResponseEntity<Map<String, Object>> prepareUsbTokenSign(@PathVariable Long id) {
         permission("register-invoice-send");
         UserEntity user = currentUser();
         if (user == null) return ResponseEntity.status(403).build();
         Optional<RegisterInvoiceEntity> opt = service.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         RegisterInvoiceEntity entity = opt.get();
-        Integer role = user.getRole();
-        boolean isRoot = role != null && role == 0;
-        if (!isRoot) {
-            if (user.getCompanyId() == null || !user.getCompanyId().equals(entity.getCompanyId())) {
-                return ResponseEntity.status(403).build();
-            }
-        }
-        Optional<CompanyEntity> companyOpt = companyRepository.findById(entity.getCompanyId());
-        if (companyOpt.isEmpty()) return ResponseEntity.badRequest().build();
-        CompanyEntity company = companyOpt.get();
-        String companyName = company.getName() != null ? company.getName() : "";
-        String taxCode = company.getTaxcode() != null ? company.getTaxcode() : "";
+        if (!canAccessRegisterInvoice(user, entity)) return ResponseEntity.status(403).build();
 
-        String unsignedXml = service.buildUnsignedXml(entity);
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        String signedXml = injectSignatureIntoXml(unsignedXml, companyName, taxCode, now);
+        HashInvoiceEntity hash = new HashInvoiceEntity();
+        hash.setCompanyId(entity.getCompanyId());
+        hash.setUserId(user.getId());
+        hash.setNameUser(user.getUsername());
+        hash.setHash(createHash(entity.getCompanyId()));
+        hash.setIds(List.of(entity.getId()));
+        hash.setIdAttr(entity.getDeclarationCode() != null ? entity.getDeclarationCode() : String.valueOf(entity.getId()));
+        hash.setSignBy("NNT");
+        hash.setType("DKSD");
+        hashInvoiceRepository.save(hash);
 
-        // Per requirement: signature_info should display signer company name only
-        String signatureInfo = companyName;
-
-        Optional<RegisterInvoiceEntity> updated = service.attachSignedXml(id, signedXml, signatureInfo);
-        return updated.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("hash", hash.getHash());
+        resp.put("signBy", "NNT");
+        return ResponseEntity.ok(resp);
     }
 
-    // --- Helpers to inject a simulated signature block into XML ---
-    private String injectSignatureIntoXml(String xml, String companyName, String taxCode, java.time.LocalDateTime signedAt) {
-        if (xml == null) xml = "";
-        String safeCompany = escapeXml(companyName);
-        String safeTax = escapeXml(taxCode);
-        String ts = signedAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-        String sigVal = java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
-        String block = "<Signature>"
-                + tag("SignerName", safeCompany)
-                + tag("SignerTaxCode", safeTax)
-                + tag("SignedAt", ts)
-                + tag("SignatureValue", "SIMULATED-" + sigVal)
-                + "</Signature>";
-
-        // Try to insert into <DSCKS><NNT>...</NNT></DSCKS>
-        String marker = "<DSCKS><NNT>";
-        int idx = xml.indexOf(marker);
-        if (idx >= 0) {
-            int closeIdx = xml.indexOf("</NNT>", idx);
-            if (closeIdx >= 0) {
-                String prefix = xml.substring(0, idx + marker.length());
-                String suffix = xml.substring(closeIdx);
-                return prefix + block + suffix;
-            }
+    private String createHash(Long companyId) {
+        String raw = "PA@Hash:com" + companyId + "," + System.nanoTime() + "," + java.util.UUID.randomUUID();
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-1");
+            byte[] bytes = md.digest(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : bytes) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (Exception e) {
+            return java.util.UUID.randomUUID().toString().replace("-", "");
         }
-        // Dự phòng: thay NNT rỗng
-        String emptyNnt = "<NNT></NNT>";
-        if (xml.contains(emptyNnt)) {
-            return xml.replace(emptyNnt, "<NNT>" + block + "</NNT>");
-        }
-        // Last resort: append DSCKS at the end, before </TKhai>
-        int endIdx = xml.lastIndexOf("</TKhai>");
-        String dscks = "<DSCKS><NNT>" + block + "</NNT></DSCKS>";
-        if (endIdx > 0) {
-            return xml.substring(0, endIdx) + dscks + xml.substring(endIdx);
-        }
-        return xml + dscks;
     }
 
     private String escapeXml(String s) {
@@ -886,8 +862,6 @@ public class RegisterInvoiceController extends BaseController {
                 .replace("\"", "&quot;")
                 .replace("'", "&apos;");
     }
-
-    private String tag(String name, String value) { return "<" + name + ">" + (value == null ? "" : value) + "</" + name + ">"; }
 
     @GetMapping("/{id}/history")
     public ResponseEntity<List<HistoryDto>> getHistory(@PathVariable Long id) {
