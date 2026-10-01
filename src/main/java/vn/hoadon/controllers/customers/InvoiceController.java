@@ -37,7 +37,6 @@ import vn.hoadon.services.InvoiceService;
 import vn.hoadon.services.HistoryService;
 import vn.hoadon.services.SignatureAuthoritiesTaxService;
 import vn.hoadon.dto.history.HistoryDto;
-import vn.hoadon.dto.SignatureAuthoritiesTaxDTO;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpHeaders;
@@ -53,7 +52,6 @@ import java.io.StringWriter;
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.List;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
@@ -66,6 +64,9 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.services.MailQueueService;
+import vn.hoadon.services.patvan.PatvanMessageType;
+import vn.hoadon.services.patvan.PatvanPostResult;
+import vn.hoadon.services.patvan.PatvanTransmissionService;
 import vn.hoadon.util.InvoiceXmlTaxValidator;
 import vn.hoadon.worker.MailWorker;
 
@@ -91,8 +92,7 @@ public class InvoiceController extends BaseController {
     @Autowired(required = false) private JavaMailSender mailSender;
     @Autowired(required = false) private MailQueueService mailQueueService;
     @Autowired(required = false) private MailWorker mailWorker;
-
-    @Autowired @org.springframework.context.annotation.Lazy private InvoiceController self;
+    @Autowired private PatvanTransmissionService patvanTransmissionService;
 
     private static final Logger log = LoggerFactory.getLogger(InvoiceController.class);
 
@@ -1095,90 +1095,6 @@ public class InvoiceController extends BaseController {
         }
     }
 
-    private String extractDlhDonId(String xml) {
-        try {
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?is)<DLHDon\\s+Id=\\\"([A-Za-z0-9_-]+)\\\"").matcher(xml);
-            if (m.find()) return m.group(1);
-        } catch (Exception ignore) {}
-        return null;
-    }
-
-    private String escapeXml(String s) {
-        if (s == null) return "";
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;");
-    }
-
-    /**
-     * Chèn chữ ký CQT giả vào XML tại HDon/DSCKS/CQT
-     * Phần này mô phỏng việc cơ quan thuế ký hóa đơn.
-     */
-    private String injectCqtSignature(String xml) {
-        if (xml == null || xml.isBlank()) return xml;
-        
-        // Extract DLHDon Id for reference
-        String id = extractDlhDonId(xml);
-        if (id == null || id.isBlank()) {
-            id = java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
-        }
-        
-        // Generate unique IDs for CQT signature
-        String cqtSigId = "Tct-" + java.util.UUID.randomUUID().toString().replace("-", "");
-        String signingTimeId = "SigningTime-" + java.util.UUID.randomUUID().toString().replace("-", "");
-        String sigPropId = "Id-" + java.util.UUID.randomUUID().toString().replace("-", "");
-        String now = java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-        
-        // Tạo XML chữ ký CQT bằng mẫu người dùng cung cấp
-        String cqtSignature = "<CQT>" +
-            "<Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\" Id=\"" + escapeXml(cqtSigId) + "\">" +
-            "<SignedInfo>" +
-            "<CanonicalizationMethod Algorithm=\"http://www.w3.org/TR/2001/REC-xml-c14n-20010315\"/>" +
-            "<SignatureMethod Algorithm=\"http://www.w3.org/2001/04/xmldsig-more#rsa-sha256\"/>" +
-            "<Reference URI=\"#" + escapeXml(id) + "\">" +
-            "<DigestMethod Algorithm=\"http://www.w3.org/2001/04/xmlenc#sha256\"/>" +
-            "<DigestValue>u4Hn4j2TmvMXMptS8K3iVaAP6TqH2gXvJHcFSLm8EcQ=</DigestValue>" +
-            "</Reference>" +
-            "<Reference URI=\"#" + escapeXml(signingTimeId) + "\">" +
-            "<DigestMethod Algorithm=\"http://www.w3.org/2001/04/xmlenc#sha256\"/>" +
-            "<DigestValue>0zGKKJY1nVCsJ76w5q2MmD9u4X0Xi33ue0AwGUE7zjk=</DigestValue>" +
-            "</Reference>" +
-            "<Reference URI=\"#" + escapeXml(sigPropId) + "\">" +
-            "<DigestMethod Algorithm=\"http://www.w3.org/2001/04/xmlenc#sha256\"/>" +
-            "<DigestValue>BNH0+RWN+KX2GY4cJixbmuUIzLtyp56hWAwpbYwoKpU=</DigestValue>" +
-            "</Reference>" +
-            "</SignedInfo>" +
-            "<SignatureValue>PixoQvH7EQvaFKVUsjxZCC0tCkngY8a29XkPyS7ujw48QnMimjMLGkqq5JzBmZQ4GCQ+X4QsKGlcUG08l7b8DMPK/EOe/MMIZFnoHI1VKDGr8KLKItIOkNYLJoQ1zwQtpkLNToH6lzZN5GfjHGnyoM+jO+vNDyLQdjfeN0m04e9D13jeoBby9sxMSp0g0aW8LFpEVHMBrQGXkIIGNHCDl0o1NE0gMpUjwWklCGO4+GFbzCSprEngmcrdSvg0LpWxg7nCM7WMiSAismpe0aYcn5SK1P9087d7j8GulSH8CTTPeyD6VKCCfbn/v+OLkjtZnvzK+R8DDNA23sEnp6ApWt3ieBwfWOX+70r+KPotd09EaM7kf/8bZuFWp7VaUuA/cK9o344D3OfmH4oRI3SqkofllI0Fv9fD2wR2yrNW+siP9V+wbzLcwfoBGIncWGm37weCjXR2FLF8KsAkmISSSNICDpvsN1KgsvsTalKPqSFd7gNCWES6Y/v7Dh7HgIM8</SignatureValue>" +
-            "<KeyInfo>" +
-            "<X509Data>" +
-            "<X509SubjectName>CN=CỤC THUẾ,O=BỘ TÀI CHÍNH,L=Hà Nội,C=VN</X509SubjectName>" +
-            "<X509Certificate>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</X509Certificate>" +
-            "</X509Data>" +
-            "</KeyInfo>" +
-            "<Object Id=\"" + escapeXml(signingTimeId) + "\">" +
-            "<SignatureProperties>" +
-            "<SignatureProperty Target=\"signatureProperties\">" +
-            "<SigningTime>" + escapeXml(now) + "</SigningTime>" +
-            "</SignatureProperty>" +
-            "</SignatureProperties>" +
-            "</Object>" +
-            "</Signature>" +
-            "</CQT>";
-        
-        // Try to replace existing <CQT/> or <CQT></CQT> with the new signature
-        String replaced = xml.replaceFirst("(?is)<CQT\\s*/>", java.util.regex.Matcher.quoteReplacement(cqtSignature));
-        if (!replaced.equals(xml)) return replaced;
-        
-        replaced = xml.replaceFirst("(?is)<CQT>\\s*</CQT>", java.util.regex.Matcher.quoteReplacement(cqtSignature));
-        if (!replaced.equals(xml)) return replaced;
-        
-        // Nếu không tìm thấy thẻ CQT, thử chèn vào DSCKS trước </DSCKS>
-        replaced = xml.replaceFirst("(?is)</DSCKS>", java.util.regex.Matcher.quoteReplacement(cqtSignature) + "</DSCKS>");
-        if (!replaced.equals(xml)) return replaced;
-        
-        // Last resort: insert before </HDon>
-        replaced = xml.replaceFirst("(?is)</HDon>", java.util.regex.Matcher.quoteReplacement("<DSCKS><NBan/><NMua/>" + cqtSignature + "<CCKSKhac/></DSCKS>") + "</HDon>");
-        return replaced;
-    }
-
     // Helpers mirrored from FileController for HTML/XSLT processing and PDF generation
     private boolean looksLikeInlineXslt(String content) {
         if (content == null) return false;
@@ -1669,225 +1585,29 @@ public class InvoiceController extends BaseController {
         h.setXmlData(xmlToSend);
         try { historyService.save(h); } catch (Exception e) { log.warn("History save failed for invoice {}: {}", id, e.toString()); }
 
-        // Cập nhật invoice status to 2 (đã gửi thuế)
+        CompanyEntity company = companyRepository.findById(uCompany).orElse(null);
+        String taxCode = company != null ? company.getTaxcode() : null;
+        PatvanMessageType sendType = (have == null || have == 0) ? PatvanMessageType.HDKM : PatvanMessageType.HD;
+        PatvanPostResult patvanResult;
+        try {
+            patvanResult = patvanTransmissionService.postXml(sendType, xmlToSend, taxCode);
+        } catch (PatvanTransmissionService.PatvanException e) {
+            log.error("Send invoice {} to PATVAN UAT failed: {}", id, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(new ErrorDTO(e.getMessage()));
+        }
+
+        // Cập nhật invoice status to 2 (đã gửi thuế) và lưu mã thông điệp truyền nhận
+        inv.setCode(patvanResult.maThongdiep());
         inv.setStatus((short)2);
         inv.setUpdatedAt(java.time.LocalDateTime.now());
         invoiceRepository.save(inv);
 
-        // Simulate asynchronous CQT response (202 or 204) - use a separate method with proper transaction
-        Long finalInvoiceId = inv.getId();
-        Long finalCompanyId = uCompany;
-        Integer finalHave = have;
-        new Thread(() -> {
-            try {
-                Thread.sleep(1500L);
-                // Dùng self-injection để bảo đảm @Transactional hoạt động
-                if (self != null) {
-                    self.processCqtResponse(finalInvoiceId, finalCompanyId, finalHave);
-                } else {
-                    log.error("Self-injection failed, cannot process CQT response with transaction");
-                }
-            } catch (InterruptedException e) {
-                log.warn("CQT response thread interrupted: {}", e.toString());
-            }
-        }).start();
-
         java.util.Map<String, Object> resp = new java.util.LinkedHashMap<>();
         resp.put("id", inv.getId());
         resp.put("status", 2);
+        resp.put("maThongdiep", patvanResult.maThongdiep());
+        resp.put("message", patvanResult.message());
         return ResponseEntity.ok(resp);
-    }
-
-    // Process CQT response with proper transaction handling
-    @Transactional
-    public void processCqtResponse(Long invoiceId, Long companyId, Integer have) {
-        try {
-            InvoiceEntity inv = invoiceRepository.findById(invoiceId).orElse(null);
-            if (inv == null) {
-                log.warn("processCqtResponse: Invoice {} not found", invoiceId);
-                return;
-            }
-            Integer invoiceCompanyId = inv.getCompanyId();
-            Integer requestCompanyId = companyId != null ? companyId.intValue() : null;
-            if (invoiceCompanyId == null || requestCompanyId == null || !invoiceCompanyId.equals(requestCompanyId)) {
-                log.warn("processCqtResponse: Invoice {} does not belong to company {}", invoiceId, companyId);
-                return;
-            }
-            
-            // Ensure we have the latest tax upload xml
-            SignatureAuthoritiesTaxDTO lastTax = null;
-            try {
-                lastTax = signatureAuthoritiesTaxService
-                        .getLatestByInvoiceIdAndCompanyId(inv.getId().intValue(), requestCompanyId);
-            } catch (Exception ignore) {}
-            String xml = lastTax != null ? lastTax.xml : null;
-            if (!isXmlForInvoice(inv, xml)) {
-                xml = null;
-            }
-            if (xml == null || xml.isBlank()) {
-                SignatureVatEntity sig = signatureVatRepository
-                        .findTopByInvoiceIdAndCompanyIdOrderByIdDesc(inv.getId().intValue(), requestCompanyId)
-                        .orElse(null);
-                xml = sig != null ? sig.getXml() : null;
-                if (!isXmlForInvoice(inv, xml)) {
-                    xml = null;
-                }
-            }
-            if (xml == null || xml.isBlank()) {
-                log.warn("processCqtResponse: No XML found for invoice {}", invoiceId);
-                rejectInvoiceFromCqt(inv, companyId,
-                        "Hóa đơn số " + inv.getNo() + " bị từ chối từ CQT",
-                        "Không tìm thấy XML hóa đơn đã ký");
-                return;
-            }
-            xml = normalizeInvoiceXml(xml);
-            
-            boolean isCapMa = have != null && have == 1;
-            InvoiceXmlTaxValidator.Result validation = InvoiceXmlTaxValidator.validate(xml);
-
-            if (isCapMa) {
-                // Message 200: either accepted (202) or rejected (204)
-                boolean accepted = validation.isValid();
-                if (accepted) {
-                    // 202: Chấp nhận, generate MCCQT and update invoice
-                    String code = generateCqtCode(34);
-                    String xmlWithCode = insertMccqt(xml, code);
-                    
-                    // Add CQT signature to the XML (simulated)
-                    String xmlWithCqtSignature = injectCqtSignature(xmlWithCode);
-                    
-                    // Persist updated xml with CQT signature to signature_authorities_tax
-                    try {
-                        SignatureAuthoritiesTaxDTO a = new SignatureAuthoritiesTaxDTO();
-                        a.companyId = companyId != null ? companyId.intValue() : null;
-                        a.invoiceId = inv.getId().intValue();
-                        a.xml = xmlWithCqtSignature;
-                        signatureAuthoritiesTaxService.create(a);
-                    } catch (Exception e) { 
-                        log.error("Persist CQT xml failed for invoice {}: {}", invoiceId, e.toString()); 
-                    }
-                    
-                    // Cập nhật invoice code_cqt and status = 3 (Đã phát hành)
-                    try { inv.setCodeCqt(code); } catch (Exception ignore) {}
-                    inv.setStatus((short)3);
-                    inv.setUpdatedAt(java.time.LocalDateTime.now());
-                    invoiceRepository.save(inv);
-
-                    // Auto-send mail khi phát hành
-                    tryEnqueueInvoiceIssueMail(inv, companyId);
-
-                    // Lịch sử type = 202, user_id = 0
-                    HistoryDto h202 = new HistoryDto();
-                    h202.setCompanyId(companyId);
-                    h202.setUserId(0L);
-                    h202.setTableName("invoices");
-                    h202.setTableId(inv.getId().longValue());
-                    h202.setTitle("Hóa đơn số " + inv.getNo() + " đã được cấp mã từ CQT");
-                    h202.setDescription("Mã CQT: " + code);
-                    h202.setShowNotify(1);
-                    h202.setStatus(1);
-                    h202.setType(202);
-                    h202.setXmlData(xmlWithCqtSignature);
-                    
-                    try { 
-                        HistoryDto saved = historyService.save(h202);
-                        if (saved == null || saved.getId() == null) {
-                            log.error("History 202 save returned null for invoice {}", invoiceId);
-                        } else {
-                            log.info("History 202 saved successfully with ID {} for invoice {}", saved.getId(), invoiceId);
-                        }
-                    } catch (Exception e) { 
-                        log.error("History 202 save failed for invoice {}: {}", invoiceId, e.toString(), e); 
-                    }
-                } else {
-                    // 204: Từ chối cấp mã
-                    rejectInvoiceFromCqt(inv, companyId,
-                            "Hóa đơn số " + inv.getNo() + " bị từ chối cấp mã từ CQT",
-                            validation.getMessage());
-                }
-            } else {
-                // Message 203: CQT returns 204; LTBao=2 when XML is accepted.
-                boolean ltBao2 = validation.isValid();
-                if (ltBao2) {
-                    // Add CQT signature to the XML (simulated)
-                    String xmlWithCqtSignature = injectCqtSignature(xml);
-                    
-                    // Persist updated xml with CQT signature to signature_authorities_tax
-                    try {
-                        SignatureAuthoritiesTaxDTO a = new SignatureAuthoritiesTaxDTO();
-                        a.companyId = companyId != null ? companyId.intValue() : null;
-                        a.invoiceId = inv.getId().intValue();
-                        a.xml = xmlWithCqtSignature;
-                        signatureAuthoritiesTaxService.create(a);
-                    } catch (Exception e) { 
-                        log.error("Persist CQT xml with signature failed for invoice {}: {}", invoiceId, e.toString()); 
-                    }
-                    
-                    inv.setStatus((short)3); // Tiếp nhận/Chấp nhận
-                    inv.setUpdatedAt(java.time.LocalDateTime.now());
-                    invoiceRepository.save(inv);
-
-                    // Auto-send mail khi phát hành
-                    tryEnqueueInvoiceIssueMail(inv, companyId);
-
-                    HistoryDto h204acc = new HistoryDto();
-                    h204acc.setCompanyId(companyId);
-                    h204acc.setUserId(0L);
-                    h204acc.setTableName("invoices");
-                    h204acc.setTableId(inv.getId().longValue());
-                    h204acc.setTitle("Hóa đơn số " + inv.getNo() + " đã được chấp nhận từ CQT");
-                    h204acc.setDescription("Thông báo 204: Chấp nhận");
-                    h204acc.setShowNotify(1);
-                    h204acc.setStatus(1);
-                    h204acc.setType(204);
-                    h204acc.setXmlData(buildMock204ResponseXml(true, inv, null)); // LTBao==2
-                    
-                    try { 
-                        HistoryDto saved = historyService.save(h204acc);
-                        if (saved == null || saved.getId() == null) {
-                            log.error("History 204 accept save returned null for invoice {}", invoiceId);
-                        } else {
-                            log.info("History 204 accept saved successfully with ID {} for invoice {}", saved.getId(), invoiceId);
-                        }
-                    } catch (Exception e) { 
-                        log.error("History 204 accept save failed for invoice {}: {}", invoiceId, e.toString(), e); 
-                    }
-                } else {
-                    rejectInvoiceFromCqt(inv, companyId,
-                            "Hóa đơn số " + inv.getNo() + " bị từ chối từ CQT",
-                            validation.getMessage());
-                }
-            }
-        } catch (Exception e) {
-            log.error("processCqtResponse failed for invoice {}: {}", invoiceId, e.toString(), e);
-        }
-    }
-
-    private void rejectInvoiceFromCqt(InvoiceEntity inv, Long companyId, String title, String reason) {
-        if (inv == null) return;
-        String message = reason != null && !reason.trim().isEmpty() ? reason : "Hóa đơn không đủ điều kiện";
-        inv.setStatus((short)7);
-        inv.setUpdatedAt(java.time.LocalDateTime.now());
-        invoiceRepository.save(inv);
-
-        HistoryDto h204rej = new HistoryDto();
-        h204rej.setCompanyId(companyId);
-        h204rej.setUserId(0L);
-        h204rej.setTableName("invoices");
-        h204rej.setTableId(inv.getId().longValue());
-        h204rej.setTitle(title);
-        h204rej.setDescription(message);
-        h204rej.setShowNotify(1);
-        h204rej.setStatus(1);
-        h204rej.setType(204);
-        h204rej.setXmlData(buildMock204ResponseXml(false, inv, message));
-
-        try {
-            historyService.save(h204rej);
-            log.info("History 204 reject saved for invoice {}", inv.getId());
-        } catch (Exception e) {
-            log.error("History 204 reject save failed for invoice {}: {}", inv.getId(), e.toString(), e);
-        }
     }
 
     // Auto-send invoice issuance mail via queue
@@ -1977,50 +1697,6 @@ public class InvoiceController extends BaseController {
         } catch (Exception e) {
             log.error("Failed to enqueue ISSUE_INVOICE_MAIL for invoice {}: {}", inv.getId(), e.getMessage(), e);
         }
-    }
-
-    // Tạo payload phản hồi 204 tối thiểu với DLieu->TBao->DLTBao->LTBao
-    private String buildMock204ResponseXml(boolean accepted, InvoiceEntity inv, String extra) {
-        String ltBao = accepted ? "2" : "1"; // 2: accepted, others: rejected
-        String id = inv != null ? String.valueOf(inv.getId()) : "";
-        String no = inv != null && inv.getNo() != null ? String.valueOf(inv.getNo()) : "";
-        String codeCqt = inv != null ? safeStr(inv.getCodeCqt()) : "";
-        String now = java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-        String note = extra != null ? extra : (accepted ? "TBao: Chấp nhận" : "TBao: Từ chối");
-        return "<DLieu>" +
-                "<TBao>" +
-                "<TTChung>" +
-                "<TGian>" + escapeXml(now) + "</TGian>" +
-                "<IdHD>" + escapeXml(id) + "</IdHD>" +
-                "<SoHD>" + escapeXml(no) + "</SoHD>" +
-                (codeCqt.isEmpty() ? "" : ("<MCCQT>" + escapeXml(codeCqt) + "</MCCQT>")) +
-                "</TTChung>" +
-                "<DLTBao>" +
-                "<LTBao>" + ltBao + "</LTBao>" +
-                "<GChu>" + escapeXml(note) + "</GChu>" +
-                "</DLTBao>" +
-                "</TBao>" +
-                "</DLieu>";
-    }
-
-    // Generate random uppercase alphanumeric CQT code of given length
-    private String generateCqtCode(int len) {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        StringBuilder sb = new StringBuilder(len);
-        java.util.Random r = new java.util.Random();
-        for (int i = 0; i < len; i++) sb.append(chars.charAt(r.nextInt(chars.length())));
-        return sb.toString();
-    }
-
-    // Insert or replace <MCCQT> inside <DLHDon> in the signed XML
-    private String insertMccqt(String xml, String code) {
-        if (xml == null || xml.isBlank()) return xml;
-        String safeCode = escapeXml(code);
-        // Nếu MCCQT tồn tại thì thay nội dung
-        String replaced = xml.replaceFirst("(?is)(<MCCQT>)(.*?)(</MCCQT>)", "$1" + java.util.regex.Matcher.quoteReplacement(safeCode) + "$3");
-        if (!replaced.equals(xml)) return replaced;
-        // Else insert <MCCQT> before closing </HDon>
-        return xml.replaceFirst("(?is)</HDon>", "<MCCQT>" + java.util.regex.Matcher.quoteReplacement(safeCode) + "</MCCQT></HDon>");
     }
 
     private String safeStr(Object o) { return o == null ? "" : String.valueOf(o); }

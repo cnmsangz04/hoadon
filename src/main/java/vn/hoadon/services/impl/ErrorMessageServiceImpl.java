@@ -8,6 +8,9 @@ import vn.hoadon.dto.errormessage.*;
 import vn.hoadon.entity.*;
 import vn.hoadon.repositories.*;
 import vn.hoadon.services.ErrorMessageService;
+import vn.hoadon.services.patvan.PatvanMessageType;
+import vn.hoadon.services.patvan.PatvanPostResult;
+import vn.hoadon.services.patvan.PatvanTransmissionService;
 import vn.hoadon.util.ErrorMessageXmlBuilder;
 
 import java.time.LocalDate;
@@ -22,19 +25,22 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
     private final CompanyRepository companyRepository;
     private final ProvinceRepository provinceRepository;
     private final HistoryRepository historyRepository;
+    private final PatvanTransmissionService patvanTransmissionService;
 
     public ErrorMessageServiceImpl(ErrorMessageRepository repository,
                                    InvoiceRepository invoiceRepository,
                                    FormInvoiceRepository formInvoiceRepository,
                                    CompanyRepository companyRepository,
                                    ProvinceRepository provinceRepository,
-                                   HistoryRepository historyRepository) {
+                                   HistoryRepository historyRepository,
+                                   PatvanTransmissionService patvanTransmissionService) {
         this.repository = repository;
         this.invoiceRepository = invoiceRepository;
         this.formInvoiceRepository = formInvoiceRepository;
         this.companyRepository = companyRepository;
         this.provinceRepository = provinceRepository;
         this.historyRepository = historyRepository;
+        this.patvanTransmissionService = patvanTransmissionService;
     }
 
     @Override
@@ -100,11 +106,14 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
             if (existing.getSignedXml() == null || existing.getSignedXml().isBlank()) {
                 throw new IllegalArgumentException("Thông báo chưa được ký số");
             }
-            existing.setMessageCode("TBSS-" + companyId + "-" + id + "-" + System.currentTimeMillis());
+            CompanyEntity company = companyRepository.findById(companyId).orElse(null);
+            String taxCode = company != null ? company.getTaxcode() : null;
+            PatvanMessageType type = isCertificateErrorMessage(existing) ? PatvanMessageType.TBSS_CT : PatvanMessageType.TBSS;
+            PatvanPostResult patvanResult = patvanTransmissionService.postXml(type, existing.getSignedXml(), taxCode);
+            existing.setMessageCode(patvanResult.maThongdiep());
             existing.setStatus(2);
             ErrorMessageEntity saved = repository.save(existing);
             saveHistory(companyId, userId, id, 300, "Gửi thông báo hóa đơn sai sót lên cơ quan thuế", "Mã thông điệp 300", existing.getSignedXml(), 0);
-            simulateTaxResponses(saved);
             return saved;
         });
     }
@@ -252,21 +261,11 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
         return line;
     }
 
-    private void simulateTaxResponses(ErrorMessageEntity entity) {
-        Long id = entity.getId();
-        Long companyId = entity.getCompanyId();
-        new Thread(() -> {
-            try {
-                Thread.sleep(1500L);
-                repository.findById(id).ifPresent(current -> {
-                    current.setStatus(5);
-                    current.setTaxResponseNumber("TB-" + id + "-" + System.currentTimeMillis());
-                    current.setResponseReceiveFile("<TBao><TTChung><MLTDiep>301</MLTDiep></TTChung><DLieu><TBao><STBao><So>" + current.getTaxResponseNumber() + "</So></STBao></TBao></DLieu></TBao>");
-                    repository.save(current);
-                    saveHistory(companyId, current.getUserId(), id, 301, "Cơ quan thuế tiếp nhận thông báo sai sót", current.getTaxResponseNumber(), current.getResponseReceiveFile(), 1);
-                });
-            } catch (Exception ignored) {}
-        }).start();
+    private boolean isCertificateErrorMessage(ErrorMessageEntity entity) {
+        String documentType = entity != null ? entity.getDocumentType() : null;
+        if (documentType == null) return false;
+        String normalized = documentType.trim().toUpperCase(Locale.ROOT);
+        return normalized.contains("CT") || normalized.contains("CHUNG_TU") || normalized.contains("CHỨNG");
     }
 
     private void saveHistory(Long companyId, Long userId, Long tableId, Integer type, String title, String description, String xml, Integer showNotify) {

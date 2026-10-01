@@ -21,7 +21,9 @@ import vn.hoadon.repositories.HashInvoiceRepository;
 import vn.hoadon.services.RegisterInvoiceService;
 import vn.hoadon.services.HistoryService;
 import vn.hoadon.dto.history.HistoryDto;
-import vn.hoadon.util.RegisterInvoiceXmlTaxValidator;
+import vn.hoadon.services.patvan.PatvanMessageType;
+import vn.hoadon.services.patvan.PatvanPostResult;
+import vn.hoadon.services.patvan.PatvanTransmissionService;
 
 import java.net.URI;
 import java.time.LocalDate;
@@ -45,6 +47,7 @@ public class RegisterInvoiceController extends BaseController {
 
     private final RegisterInvoiceService service;
     private final CompanyRepository companyRepository;
+    private final PatvanTransmissionService patvanTransmissionService;
     @Autowired private HashInvoiceRepository hashInvoiceRepository;
     // Replace repository with service per 3-layer architecture
     @Autowired(required = false)
@@ -54,9 +57,12 @@ public class RegisterInvoiceController extends BaseController {
     @PersistenceContext
     private EntityManager entityManager;
 
-    public RegisterInvoiceController(RegisterInvoiceService service, CompanyRepository companyRepository) {
+    public RegisterInvoiceController(RegisterInvoiceService service,
+                                     CompanyRepository companyRepository,
+                                     PatvanTransmissionService patvanTransmissionService) {
         this.service = service;
         this.companyRepository = companyRepository;
+        this.patvanTransmissionService = patvanTransmissionService;
     }
 
     @GetMapping("/{id}")
@@ -205,7 +211,7 @@ public class RegisterInvoiceController extends BaseController {
     }
 
     @PostMapping("/{id}/send")
-    public ResponseEntity<Void> sendToCQT(@PathVariable Long id) {
+    public ResponseEntity<?> sendToCQT(@PathVariable Long id) {
         permission("register-invoice-send");
         UserEntity user = currentUser();
         if (user == null) return ResponseEntity.status(403).build();
@@ -224,20 +230,33 @@ public class RegisterInvoiceController extends BaseController {
         if (entity.getSignedXml() == null || entity.getSignedXml().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
+        CompanyEntity company = companyRepository.findById(entity.getCompanyId()).orElse(null);
+        String taxCode = company != null ? company.getTaxcode() : null;
+        PatvanPostResult patvanResult;
+        try {
+            patvanResult = patvanTransmissionService.postXml(PatvanMessageType.DKSD, entity.getSignedXml(), taxCode);
+        } catch (PatvanTransmissionService.PatvanException e) {
+            log.error("Send register invoice {} to PATVAN UAT failed: {}", id, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
         // 1) Insert history row
-        insertHistoryRow(user.getCompanyId(), user.getId(), "register_invoices", entity.getId(),
-                "Gửi Đăng ký/Thay đổi thông tin sử dụng hóa đơn điện tử", "Mã thông điệp 100", 1, 1, 100, "");
+        insertHistoryRow(entity.getCompanyId(), user.getId(), "register_invoices", entity.getId(),
+                "Gửi Đăng ký/Thay đổi thông tin sử dụng hóa đơn điện tử", "Mã thông điệp 100", 1, 1, 100, entity.getSignedXml());
         // 2. Cập nhật status = 2 (Đã ký) theo yêu cầu khi gửi thành công
         // Preserve all existing fields to avoid accidental data loss if update is a full overwrite
         RegisterInvoiceEntity patch = cloneEntityPreserveAll(entity);
         // Mutating fields only
+        patch.setDeclarationCode(patvanResult.maThongdiep());
         patch.setStatus(2);
         patch.setResponseReceiveFile(null);
         patch.setResponseAcceptFile(null);
         service.update(id, patch);
-        // 3) Simulate async tax responses
-        simulateAsyncTaxResponses(entity);
-        return ResponseEntity.accepted().build();
+        return ResponseEntity.accepted().body(Map.of(
+                "id", id,
+                "status", 2,
+                "maThongdiep", patvanResult.maThongdiep(),
+                "message", patvanResult.message()
+        ));
     }
 
     // Hàm hỗ trợ lưu lịch sử bằng JPA thay cho SQL thô
@@ -293,84 +312,6 @@ public class RegisterInvoiceController extends BaseController {
         // Status and any other fields
         e.setStatus(src.getStatus());
         return e;
-    }
-
-    private void simulateAsyncTaxResponses(RegisterInvoiceEntity entity) {
-        // Clone basic info needed
-        final Long id = entity.getId();
-        final Long companyId = entity.getCompanyId();
-        final RegisterInvoiceXmlTaxValidator.Result receiveValidation =
-                RegisterInvoiceXmlTaxValidator.validateForReceive(entity.getSignedXml());
-        final RegisterInvoiceXmlTaxValidator.Result acceptValidation =
-                RegisterInvoiceXmlTaxValidator.validate(entity.getSignedXml());
-        // Simulate 102 after ~2 seconds
-        new Thread(() -> {
-            try {
-                Thread.sleep(2000L);
-                boolean acceptedReceive = receiveValidation.isValid();
-                String reason = acceptedReceive ? null : receiveValidation.getMessage();
-                String xml = buildResponseXml(102, acceptedReceive ? 1 : 0, reason);
-                RegisterInvoiceEntity current = service.findById(id).orElse(entity);
-                RegisterInvoiceEntity patch = cloneEntityPreserveAll(current);
-                patch.setStatus(acceptedReceive ? 4 : 3);
-                patch.setResponseReceiveFile(xml);
-                service.update(id, patch);
-                // Insert history row for message 102
-                String desc102 = acceptedReceive ? "Mã thông điệp 102 đã tiếp nhận" : "Mã thông điệp 102 không tiếp nhận: " + reason;
-                insertHistoryRow(companyId, 0L, "register_invoices", id,
-                        "Thông điệp 102 tiếp nhận thông tin tờ khai hóa đơn điện tử", desc102, 1, 1, 102, xml);
-            } catch (Exception e) {
-                log.error("Không thể lưu phản hồi 102 cho tờ khai {}", id, e);
-            }
-        }).start();
-        // Simulate 103 after ~5 seconds
-        new Thread(() -> {
-            try {
-                Thread.sleep(5000L);
-                if (!receiveValidation.isValid()) return;
-                boolean accepted = acceptValidation.isValid();
-                String reason = accepted ? null : acceptValidation.getMessage();
-                String xml = buildResponseXml(103, accepted ? 1 : 0, reason);
-                RegisterInvoiceEntity current = service.findById(id).orElse(entity);
-                RegisterInvoiceEntity patch = cloneEntityPreserveAll(current);
-                patch.setStatus(accepted ? 6 : 5);
-                patch.setResponseAcceptFile(xml);
-                // Khi status = 6 (đã chấp nhận), set effectiveDate là thời gian hiện tại
-                if (accepted) {
-                    try { patch.setEffectiveDate(java.time.LocalDateTime.now()); } catch (Exception ignored) {}
-                }
-                service.update(id, patch);
-                // Insert history row for message 103
-                String desc103 = accepted ? "Mã thông điệp 103 đã chấp nhận" : "Mã thông điệp 103 không chấp nhận: " + reason;
-                insertHistoryRow(companyId, 0L, "register_invoices", id,
-                        "Thông điệp 103 tiếp nhận thông tin tờ khai hóa đơn điện tử", desc103, 1, 1, 103, xml);
-            } catch (Exception e) {
-                log.error("Không thể lưu phản hồi 103 cho tờ khai {}", id, e);
-            }
-        }).start();
-    }
-
-    private String buildResponseXml(int mltDiep, int flag) {
-        return buildResponseXml(mltDiep, flag, null);
-    }
-
-    private String buildResponseXml(int mltDiep, int flag, String note) {
-        // TTChung->MLTDiep and DLieu->TBao->DLTBao->THop or TTXNCQT per requirement
-        StringBuilder sb = new StringBuilder();
-        sb.append("<TBaoCQT>");
-        sb.append("<TTChung><MLTDiep>").append(mltDiep).append("</MLTDiep></TTChung>");
-        sb.append("<DLieu><TBao><DLTBao>");
-        if (mltDiep == 102) {
-            sb.append("<THop>").append(flag).append("</THop>");
-        } else {
-            sb.append("<TTXNCQT>").append(flag).append("</TTXNCQT>");
-        }
-        if (note != null && !note.isBlank()) {
-            sb.append("<GChu>").append(escapeXml(note)).append("</GChu>");
-        }
-        sb.append("</DLTBao></TBao></DLieu>");
-        sb.append("</TBaoCQT>");
-        return sb.toString();
     }
 
     @GetMapping("/list")
