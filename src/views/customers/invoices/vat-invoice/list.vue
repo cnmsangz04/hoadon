@@ -166,6 +166,7 @@
             </b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) === 3" class="text-center" href="#" @click.prevent="sendMail(item)">Gửi mail</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) > 1" class="text-center" href="#" @click.prevent="viewHistory(item)">Lịch sử truyền nhận</b-dropdown-item>
+            <b-dropdown-item v-if="Number(item.status) > 2" class="text-center" href="#" @click.prevent="createErrorMessage(item)">Lập TB sai sót</b-dropdown-item>
 
             <b-dropdown-item v-if="Number(item.status) === 0" class="text-center text-danger" href="#" @click.prevent="deleteItem(item)">Xóa hóa đơn</b-dropdown-item>
           </b-dropdown>
@@ -556,6 +557,10 @@ export default {
     reload () { this.fetchList() },
     goCreate () { this.$router.push({ name: 'CustomerVatInvoiceCreate' }) },
     goEdit (item) { this.$router.push({ name: 'CustomerVatInvoiceEdit', params: { id: item.id } }) },
+    createErrorMessage (item) {
+      if (!item || !item.id) return
+      this.$router.push({ name: 'CustomerErrorMessageCreate', query: { ids: String(item.id) } })
+    },
 
     onPageSizeChange (size) {
       this.list.per_page = Number(size) || this.list.per_page

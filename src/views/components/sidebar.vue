@@ -97,6 +97,7 @@ export default {
           title: 'Xử lý hóa đơn',
           icon: 'fas fa-tasks',
           children: [
+            { title: 'Thông báo hóa đơn sai sót', icon: 'fas fa-exclamation-triangle', to: '/error-message/list' },
             { title: 'Hóa đơn thay thế', icon: 'fas fa-exchange-alt', to: '/invoice/replace' },
             { title: 'Hóa đơn điều chỉnh', icon: 'fas fa-sliders-h', to: '/invoice/adjust' },
           ],

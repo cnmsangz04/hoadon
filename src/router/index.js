@@ -115,6 +115,24 @@ const router = new VueRouter({
 					meta: { requiresUser: true, title: 'Hóa đơn điều chỉnh', processingMode: 'adjust' }
 				},
 				{
+					path: '/error-message/list',
+					name: 'CustomerErrorMessageList',
+					component: () => import('@/views/customers/error-messages/list.vue'),
+					meta: { requiresUser: true, title: 'Danh sách thông báo hóa đơn sai sót' }
+				},
+				{
+					path: '/error-message/create',
+					name: 'CustomerErrorMessageCreate',
+					component: () => import('@/views/customers/error-messages/create.vue'),
+					meta: { requiresUser: true, title: 'Lập thông báo hóa đơn sai sót' }
+				},
+				{
+					path: '/error-message/:id/edit',
+					name: 'CustomerErrorMessageEdit',
+					component: () => import('@/views/customers/error-messages/create.vue'),
+					meta: { requiresUser: true, title: 'Cập nhật thông báo hóa đơn sai sót' }
+				},
+				{
 					path: '/invoice/:id/edit',
 					name: 'CustomerVatInvoiceEdit',
 					component: () => import('@/views/customers/invoices/vat-invoice/create.vue'),

@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.hoadon.entity.HistoryEntity;
 
+import java.util.List;
+
 public interface HistoryRepository extends JpaRepository<HistoryEntity, Long> {
     Page<HistoryEntity> findByCompanyIdAndShowNotifyAndStatusOrderByCreatedAtDescIdDesc(
             Long companyId,
@@ -32,4 +34,11 @@ public interface HistoryRepository extends JpaRepository<HistoryEntity, Long> {
                                   @Param("userId") Long userId,
                                   @Param("showNotify") Integer showNotify,
                                   @Param("status") Integer status);
+
+    List<HistoryEntity> findByCompanyIdAndTableNameAndTableIdAndStatusOrderByCreatedAtDescIdDesc(
+            Long companyId,
+            String tableName,
+            Long tableId,
+            Integer status
+    );
 }

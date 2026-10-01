@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import vn.hoadon.entity.*;
 import vn.hoadon.repositories.*;
+import vn.hoadon.services.ErrorMessageService;
 import vn.hoadon.services.RegisterInvoiceService;
 import vn.hoadon.util.InvoiceXmlBuilder;
 
@@ -29,6 +30,8 @@ public class PasignerHashController {
     private final SignatureVatRepository signatureVatRepository;
     private final RegisterInvoiceRepository registerInvoiceRepository;
     private final RegisterInvoiceService registerInvoiceService;
+    private final ErrorMessageRepository errorMessageRepository;
+    private final ErrorMessageService errorMessageService;
 
     public PasignerHashController(HashInvoiceRepository hashInvoiceRepository,
                                   InvoiceRepository invoiceRepository,
@@ -37,7 +40,9 @@ public class PasignerHashController {
                                   CompanyBankRepository companyBankRepository,
                                   SignatureVatRepository signatureVatRepository,
                                   RegisterInvoiceRepository registerInvoiceRepository,
-                                  RegisterInvoiceService registerInvoiceService) {
+                                  RegisterInvoiceService registerInvoiceService,
+                                  ErrorMessageRepository errorMessageRepository,
+                                  ErrorMessageService errorMessageService) {
         this.hashInvoiceRepository = hashInvoiceRepository;
         this.invoiceRepository = invoiceRepository;
         this.formInvoiceRepository = formInvoiceRepository;
@@ -46,6 +51,8 @@ public class PasignerHashController {
         this.signatureVatRepository = signatureVatRepository;
         this.registerInvoiceRepository = registerInvoiceRepository;
         this.registerInvoiceService = registerInvoiceService;
+        this.errorMessageRepository = errorMessageRepository;
+        this.errorMessageService = errorMessageService;
     }
 
     @PostMapping({"/getHashV2", "/get-hash", "/getHash"})
@@ -85,6 +92,17 @@ public class PasignerHashController {
                         valueOrDefault(item.getSignBy(), "NBan")
                 ));
             }
+        } else if ("TBSS".equals(item.getType())) {
+            for (Long id : item.getIds()) {
+                ErrorMessageEntity message = errorMessageRepository.findById(id).orElse(null);
+                if (message == null || !Objects.equals(message.getCompanyId(), item.getCompanyId())) continue;
+                data.add(hashInvoiceRow(
+                        message.getId(),
+                        errorMessageService.buildUnsignedXml(message),
+                        message.getIdAttr() != null ? message.getIdAttr() : String.valueOf(message.getId()),
+                        valueOrDefault(item.getSignBy(), "NNT")
+                ));
+            }
         }
 
         Map<String, Object> resp = new LinkedHashMap<>();
@@ -117,6 +135,12 @@ public class PasignerHashController {
                 if (!isSignedRegisterXml(signedXml)) continue;
                 String cert = req.has("certificate") ? req.get("certificate").toString() : resolveCompanyName(item.getCompanyId());
                 if (registerInvoiceService.attachSignedXml(id, signedXml, cert).isPresent()) signed++;
+            } else if ("TBSS".equals(item.getType())) {
+                ErrorMessageEntity message = errorMessageRepository.findById(id).orElse(null);
+                if (message == null || !Objects.equals(message.getCompanyId(), item.getCompanyId())) continue;
+                if (!isSignedErrorMessageXml(signedXml)) continue;
+                String cert = req.has("certificate") ? req.get("certificate").toString() : resolveCompanyName(item.getCompanyId());
+                if (errorMessageService.attachSignedXml(id, signedXml, cert).isPresent()) signed++;
             } else if ("HDGTGT".equals(item.getType())) {
                 InvoiceEntity invoice = invoiceRepository.findById(id).orElse(null);
                 if (invoice == null || invoice.getCompanyId() == null || !Objects.equals(invoice.getCompanyId().longValue(), item.getCompanyId())) continue;
@@ -264,6 +288,10 @@ public class PasignerHashController {
 
     private boolean isSignedRegisterXml(String xml) {
         return xml != null && xml.contains("<TKhai") && xml.contains("<Signature");
+    }
+
+    private boolean isSignedErrorMessageXml(String xml) {
+        return xml != null && xml.contains("<TBao") && xml.contains("<Signature");
     }
 
     private String resolveCompanyName(Long companyId) {
