@@ -190,6 +190,7 @@
 import axios from '@/plugins/axios'
 import PaginationBar from '@/views/components/pagination_bar.vue'
 import { toastError, toastSuccess, toastWarning } from '@/utils/toast'
+import { confirmUsbTokenSignature, startSignaturePolling } from '@/utils/pasigner'
 
 export default {
   name: 'RegisterInvoiceList',
@@ -197,6 +198,7 @@ export default {
   data() {
     return {
       isBusy: false,
+      signaturePollCancel: null,
       list: {
         current_page: 1,
         data: [],
@@ -246,6 +248,9 @@ export default {
   },
   created() {
     this.fetchList()
+  },
+  beforeDestroy() {
+    if (this.signaturePollCancel) this.signaturePollCancel()
   },
   methods: {
     formatDate(d) {
@@ -518,36 +523,14 @@ export default {
         if (method !== 'usb-token') throw new Error('Chưa hỗ trợ kiểu ký số này')
         const id = item.id || item.ID || item.Id
         if (!id) return
-        let ok = true
-        if (typeof window.$?.confirm === 'function') {
-          ok = await new Promise(resolve => {
-            window.$.confirm({
-              title: 'Xác nhận ký số',
-              content: `Bạn có chắc chắn muốn ký số tờ khai #${id} bằng USB token?`,
-              theme: 'bootstrap',
-              type: 'blue',
-              icon: 'fas fa-signature',
-              animation: 'zoom',
-              closeAnimation: 'scale',
-              boxWidth: '420px',
-              useBootstrap: true,
-              backgroundDismiss: true,
-              escapeKey: 'cancel',
-              buttons: {
-                cancel: { text: 'Hủy', btnClass: 'btn-light', action: function(){ resolve(false) } },
-                ok: { text: 'Đồng ý', btnClass: 'btn-primary', action: function(){ resolve(true) } }
-              }
-            })
-          })
-        } else {
-          ok = window.confirm(`Xác nhận ký số tờ khai #${id} bằng USB token?`)
-        }
+        const ok = await confirmUsbTokenSignature(`Bạn có chắc chắn muốn ký số tờ khai #${id} bằng USB token?`)
         if (!ok) return
         const { data: prepare } = await axios.post(`/register-invoices/${id}/sign-token/prepare`)
         const hash = prepare?.hash || null
         if (!hash) throw new Error('Không tạo được mã hash ký số')
         this.launchPasigner(hash)
-        toastSuccess('Đã mở ứng dụng ký số USB token')
+        toastSuccess('Đã gửi yêu cầu đến ứng dụng ký số USB token')
+        this.pollSignatureResult(hash, id)
       } catch (e) {
         const message = e?.response?.data?.message || e?.message || 'Không thể ký số tờ khai bằng USB token'
         toastError(message, 'REGISTER_TOKEN_SIGN')
@@ -567,6 +550,31 @@ export default {
       location.href =
         'pasigner://' +
         encodeURIComponent(JSON.stringify(jsonData))
+    },
+    pollSignatureResult(hash, id) {
+      if (this.signaturePollCancel) this.signaturePollCancel()
+      this.signaturePollCancel = startSignaturePolling({
+        checkStatus: async () => {
+          const { data } = await axios.get(`/register-invoices/${id}/sign-token/status`, {
+            params: { hash },
+            meta: { suppressGlobalErrorToast: true }
+          })
+          return data
+        },
+        onSigned: async () => {
+          this.signaturePollCancel = null
+          toastSuccess('Ký số tờ khai thành công')
+          await this.refreshRow(id)
+        },
+        onFailed: () => {
+          this.signaturePollCancel = null
+          toastWarning('P.A Signer không trả về dữ liệu tờ khai hợp lệ. Vui lòng ký lại.')
+        },
+        onTimeout: () => {
+          this.signaturePollCancel = null
+          toastWarning('Chưa nhận được dữ liệu ký tờ khai. Hãy kiểm tra P.A Signer hoặc thử lại.')
+        }
+      })
     },
     IdProcess(length) {
       let result = ''

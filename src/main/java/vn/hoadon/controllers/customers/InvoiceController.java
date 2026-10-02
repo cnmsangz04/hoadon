@@ -929,12 +929,6 @@ public class InvoiceController extends BaseController {
         return clean.isBlank() ? "hoa-don" : clean;
     }
 
-    @PostMapping("/{id}/sign")
-    @Transactional
-    public ResponseEntity<?> disabledLegacySign(@PathVariable("id") Long id, @AuthenticationPrincipal UserEntity user) {
-        return ResponseEntity.badRequest().body(new ErrorDTO("Chức năng ký giả lập đã tắt. Vui lòng ký số bằng USB token."));
-    }
-
     @PostMapping("/sign-token/prepare")
     @Transactional
     public ResponseEntity<?> prepareUsbTokenSign(@RequestBody UsbTokenPrepareRequest req,
@@ -995,6 +989,39 @@ public class InvoiceController extends BaseController {
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(new ErrorDTO(ex.getMessage()));
         }
+    }
+
+    @GetMapping("/sign-token/status")
+    public ResponseEntity<?> usbTokenSignStatus(@RequestParam("hash") String hash,
+                                                @RequestParam("ids") java.util.List<Long> requestedIds,
+                                                @AuthenticationPrincipal UserEntity user) {
+        permission("invoice-save");
+        if (user == null || user.getCompanyId() == null) {
+            return ResponseEntity.status(403).body(new ErrorDTO("Không có quyền kiểm tra trạng thái ký số"));
+        }
+
+        java.util.List<Long> ids = normalizeIds(requestedIds);
+        if (hash == null || hash.isBlank() || ids.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu thông tin phiên ký số"));
+        }
+
+        int signed = 0;
+        for (Long id : ids) {
+            InvoiceEntity invoice = invoiceRepository.findById(id).orElse(null);
+            if (invoice == null || invoice.getCompanyId() == null
+                    || !user.getCompanyId().equals(invoice.getCompanyId().longValue())) {
+                return ResponseEntity.status(404).body(new ErrorDTO("Không tìm thấy hóa đơn trong phiên ký"));
+            }
+            if (invoice.getStatus() != null && invoice.getStatus() == 1) signed++;
+        }
+
+        boolean pending = hashInvoiceRepository.findByHashAndCompanyId(hash, user.getCompanyId()).isPresent();
+        String state = signed == ids.size() ? "signed" : (pending ? "pending" : "failed");
+        java.util.Map<String, Object> response = new java.util.LinkedHashMap<>();
+        response.put("state", state);
+        response.put("signed", signed);
+        response.put("total", ids.size());
+        return ResponseEntity.ok(response);
     }
 
     private java.util.List<Long> normalizeIds(java.util.List<Long> ids) {

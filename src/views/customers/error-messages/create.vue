@@ -210,7 +210,8 @@ import axios from '@/plugins/axios'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import { required, hasErrors, firstError } from '@/utils/validators'
-import { toastError, toastSuccess } from '@/utils/toast'
+import { toastError, toastSuccess, toastWarning } from '@/utils/toast'
+import { confirmUsbTokenSignature, startSignaturePolling } from '@/utils/pasigner'
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10)
@@ -239,6 +240,7 @@ export default {
     return {
       btnLoading: false,
       btnSignature: false,
+      signaturePollCancel: null,
       invoiceBusy: false,
       provinces: [],
       company: {},
@@ -288,6 +290,9 @@ export default {
     }
   },
   created() { this.bootstrap() },
+  beforeDestroy() {
+    if (this.signaturePollCancel) this.signaturePollCancel()
+  },
   watch: {
     '$route.params.id'(id, oldId) {
       this.errors = {}
@@ -430,16 +435,42 @@ export default {
     addBlankLine() { this.frm.invoices.push(this.normalizeLine({})) },
     async signData() {
       try {
-        const ok = await this.$bvModal.msgBoxConfirm('Ký số thông báo bằng USB token?', { title: 'Xác nhận ký số', okTitle: 'Ký', cancelTitle: 'Hủy', okVariant: 'primary' })
+        const ok = await confirmUsbTokenSignature(`Bạn có chắc chắn muốn ký số thông báo sai sót #${this.$route.params.id} bằng USB token?`)
         if (!ok) return
         this.btnSignature = true
         const { data } = await axios.post(`/error-messages/${this.$route.params.id}/sign-token/prepare`)
         if (!data?.hash) throw new Error('Không tạo được mã hash ký số')
         location.href = 'pasigner://' + encodeURIComponent(JSON.stringify({ src: 'web', action: 'signature', pid: Math.random().toString(36).slice(2, 8), data: { hash: data.hash, domain: window.location.hostname } }))
-        toastSuccess('Đã mở ứng dụng ký số USB token')
+        toastSuccess('Đã gửi yêu cầu đến ứng dụng ký số USB token')
+        this.pollSignatureResult(data.hash, this.$route.params.id)
       } catch (e) {
         toastError(e?.response?.data?.message || e?.message || 'Không thể ký số')
       } finally { this.btnSignature = false }
+    },
+    pollSignatureResult(hash, id) {
+      if (this.signaturePollCancel) this.signaturePollCancel()
+      this.signaturePollCancel = startSignaturePolling({
+        checkStatus: async () => {
+          const { data } = await axios.get(`/error-messages/${id}/sign-token/status`, {
+            params: { hash },
+            meta: { suppressGlobalErrorToast: true }
+          })
+          return data
+        },
+        onSigned: async () => {
+          this.signaturePollCancel = null
+          toastSuccess('Ký số thông báo sai sót thành công')
+          await this.loadDetail(id)
+        },
+        onFailed: () => {
+          this.signaturePollCancel = null
+          toastWarning('P.A Signer không trả về dữ liệu thông báo hợp lệ. Vui lòng ký lại.')
+        },
+        onTimeout: () => {
+          this.signaturePollCancel = null
+          toastWarning('Chưa nhận được dữ liệu ký thông báo. Hãy kiểm tra P.A Signer hoặc thử lại.')
+        }
+      })
     },
     async sendData() {
       const ok = await this.$bvModal.msgBoxConfirm('Gửi thông báo sai sót lên Cơ quan thuế?', { title: 'Xác nhận gửi CQT', okTitle: 'Gửi', cancelTitle: 'Hủy', okVariant: 'success' })

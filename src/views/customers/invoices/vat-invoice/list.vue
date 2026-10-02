@@ -331,6 +331,7 @@
 import axios from '@/plugins/axios'
 import PaginationBar from '@/views/components/pagination_bar.vue'
 import { toastSuccess, toastWarning } from '@/utils/toast'
+import { confirmUsbTokenSignature } from '@/utils/pasigner'
 
 export default {
   name: 'VatInvoiceList',
@@ -401,8 +402,8 @@ export default {
         { value: 7, text: 'Không đủ điều kiện' },
       ],
       // Poll trackers to cancel on component destroy
-      _pollTimers: {},
-      _pollAttempts: {},
+      pollTimers: {},
+      pollAttempts: {},
       // Trạng thái hộp thoại lịch sử
       historyBusy: false,
       historyRows: [],
@@ -416,9 +417,9 @@ export default {
   beforeDestroy () {
     // Clear all pending poll timers
     try {
-      Object.values(this._pollTimers || {}).forEach(t => clearTimeout(t))
-      this._pollTimers = {}
-      this._pollAttempts = {}
+      Object.values(this.pollTimers || {}).forEach(t => clearTimeout(t))
+      this.pollTimers = {}
+      this.pollAttempts = {}
     } catch {}
   },
   computed: {
@@ -752,39 +753,17 @@ export default {
         if (method !== 'usb-token') throw new Error('Chưa hỗ trợ kiểu ký số này')
         const arrId = Array.from(new Set((ids || []).map(Number).filter(Boolean)))
         if (!arrId.length) return
-        let ok = true
-        if (typeof window.$?.confirm === 'function') {
-          ok = await new Promise(resolve => {
-            window.$.confirm({
-              title: 'Xác nhận ký số',
-              content: arrId.length > 1
-                ? `Bạn có chắc chắn muốn ký số ${arrId.length} hóa đơn bằng USB token?`
-                : `Bạn có chắc chắn muốn ký số hóa đơn #${arrId[0]} bằng USB token?`,
-              theme: 'bootstrap',
-              type: 'blue',
-              icon: 'fas fa-signature',
-              animation: 'zoom',
-              closeAnimation: 'scale',
-              boxWidth: '420px',
-              useBootstrap: true,
-              backgroundDismiss: true,
-              escapeKey: 'cancel',
-              buttons: {
-                cancel: { text: 'Hủy', btnClass: 'btn-light', action: function(){ resolve(false) } },
-                ok: { text: 'Đồng ý', btnClass: 'btn-primary', action: function(){ resolve(true) } }
-              }
-            })
-          })
-        } else {
-          ok = window.confirm(arrId.length > 1 ? `Xác nhận ký số ${arrId.length} hóa đơn bằng USB token?` : `Xác nhận ký số hóa đơn #${arrId[0]} bằng USB token?`)
-        }
+        const ok = await confirmUsbTokenSignature(arrId.length > 1
+          ? `Bạn có chắc chắn muốn ký số ${arrId.length} hóa đơn bằng USB token?`
+          : `Bạn có chắc chắn muốn ký số hóa đơn #${arrId[0]} bằng USB token?`)
         if (!ok) return
         this.isBusy = true
         const { data } = await axios.post('/invoices/sign-token/prepare', { ids: arrId })
         const hash = data?.hash || null
         if (!hash) throw new Error('Không tạo được mã hash ký số')
         this.launchPasigner(hash)
-        toastSuccess('Đã mở ứng dụng ký số USB token')
+        toastSuccess('Đã gửi yêu cầu đến ứng dụng ký số USB token')
+        this.pollSignatureResult(hash, arrId)
       } catch (e) {
         const message = e?.response?.data?.message || e?.message || 'Không thể ký số bằng USB token'
         this.$bvToast && this.$bvToast.toast(message, { title: 'Lỗi ký số', variant: 'danger', solid: true, autoHideDelay: 5000 })
@@ -807,9 +786,54 @@ export default {
         'pasigner://' +
         encodeURIComponent(JSON.stringify(jsonData))
     },
+    pollSignatureResult (hash, ids) {
+      const key = `signature:${hash}`
+      const intervalMs = 1200
+      const maxAttempts = 100
+      try { clearTimeout(this.pollTimers[key]) } catch {}
+      this.pollAttempts[key] = 0
+
+      const check = async () => {
+        try {
+          const { data } = await axios.get('/invoices/sign-token/status', {
+            params: { hash, ids: ids.join(',') },
+            meta: { suppressGlobalErrorToast: true }
+          })
+          if (data?.state === 'signed') {
+            clearTimeout(this.pollTimers[key])
+            delete this.pollTimers[key]
+            delete this.pollAttempts[key]
+            toastSuccess(`Ký số thành công ${data.signed || ids.length} hóa đơn`)
+            await this.fetchList()
+            return
+          }
+          if (data?.state === 'failed') {
+            clearTimeout(this.pollTimers[key])
+            delete this.pollTimers[key]
+            delete this.pollAttempts[key]
+            toastWarning('Ứng dụng ký số không trả về dữ liệu hợp lệ. Vui lòng ký lại.')
+            return
+          }
+        } catch (e) {
+          // Lỗi mạng ngắn hạn không làm mất phiên ký; tiếp tục kiểm tra đến khi hết thời gian.
+        }
+
+        const attempts = (this.pollAttempts[key] || 0) + 1
+        this.pollAttempts[key] = attempts
+        if (attempts >= maxAttempts) {
+          delete this.pollTimers[key]
+          delete this.pollAttempts[key]
+          toastWarning('Chưa nhận được dữ liệu ký số. Hãy kiểm tra P.A Signer hoặc thử ký lại.')
+          return
+        }
+        this.pollTimers[key] = setTimeout(check, intervalMs)
+      }
+
+      this.pollTimers[key] = setTimeout(check, intervalMs)
+    },
     IdProcess (length) {
       let result = ''
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
       for (let i = 0; i < length; i += 1) {
         result += chars.charAt(Math.floor(Math.random() * chars.length))
       }
@@ -940,11 +964,11 @@ export default {
     // Theo dõi lịch sử để thông báo sau khi backend lưu kết quả
     async pollHistoryAndNotify (invoiceId) {
       if (!invoiceId && invoiceId !== 0) return
-      if (!this._pollTimers || typeof this._pollTimers !== 'object') this._pollTimers = {}
-      if (!this._pollAttempts || typeof this._pollAttempts !== 'object') this._pollAttempts = {}
+      if (!this.pollTimers || typeof this.pollTimers !== 'object') this.pollTimers = {}
+      if (!this.pollAttempts || typeof this.pollAttempts !== 'object') this.pollAttempts = {}
       const key = String(invoiceId)
-      try { clearTimeout(this._pollTimers[key]) } catch {}
-      this._pollAttempts[key] = 0
+      try { clearTimeout(this.pollTimers[key]) } catch {}
+      this.pollAttempts[key] = 0
       const maxAttempts = 30
       const intervalMs = 1500
       const check = async () => {
@@ -979,22 +1003,22 @@ export default {
             }
             // Đồng bộ lại dữ liệu mới nhất từ backend
             await this.fetchList()
-            try { clearTimeout(this._pollTimers[key]) } catch {}
-            delete this._pollTimers[key]
-            delete this._pollAttempts[key]
+            try { clearTimeout(this.pollTimers[key]) } catch {}
+            delete this.pollTimers[key]
+            delete this.pollAttempts[key]
             return
           }
         } catch (e) {}
-        const attempts = (this._pollAttempts[key] || 0) + 1
-        this._pollAttempts[key] = attempts
+        const attempts = (this.pollAttempts[key] || 0) + 1
+        this.pollAttempts[key] = attempts
         if (attempts >= maxAttempts) {
-          delete this._pollTimers[key]
-          delete this._pollAttempts[key]
+          delete this.pollTimers[key]
+          delete this.pollAttempts[key]
           return
         }
-        this._pollTimers[key] = setTimeout(check, intervalMs)
+        this.pollTimers[key] = setTimeout(check, intervalMs)
       }
-      this._pollTimers[key] = setTimeout(check, 800)
+      this.pollTimers[key] = setTimeout(check, 800)
     },
 
     formatDateTime(d) {

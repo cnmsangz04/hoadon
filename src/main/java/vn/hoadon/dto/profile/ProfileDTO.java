@@ -23,6 +23,8 @@ public class ProfileDTO {
 
     // invoice
     public String invoiceEmail;
+    public String invoiceEmailCc;
+    public String invoiceEmailBcc;
     public String invoicePhone;
     public String invoiceFax;
     public String invoiceWebsite;

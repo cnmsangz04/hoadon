@@ -169,6 +169,8 @@ public class ProfileController extends BaseController {
             dto.companyFavicon = company.getFavicon();
 
             dto.invoiceEmail = company.getInvoiceEmail();
+            dto.invoiceEmailCc = company.getInvoiceEmailCc();
+            dto.invoiceEmailBcc = company.getInvoiceEmailBcc();
             dto.invoicePhone = company.getInvoicePhone();
             dto.invoiceFax = company.getInvoiceFax();
             dto.invoiceWebsite = company.getInvoiceWebsite();
@@ -395,11 +397,19 @@ public class ProfileController extends BaseController {
             return ResponseEntity.notFound().build();
         }
         String invoiceEmail = trim(body.get("invoiceEmail"));
+        String invoiceEmailCc = trim(body.get("invoiceEmailCc"));
+        String invoiceEmailBcc = trim(body.get("invoiceEmailBcc"));
         String invoicePhone = trim(body.get("invoicePhone"));
         String invoiceFax = trim(body.get("invoiceFax"));
         String invoiceWebsite = trim(body.get("invoiceWebsite"));
 
         Map<String, List<String>> errors = new HashMap<>();
+        if (!invoiceEmailCc.isBlank() && !isValidEmail(invoiceEmailCc)) {
+            errors.put("invoiceEmailCc", Collections.singletonList("Email Cc không hợp lệ"));
+        }
+        if (!invoiceEmailBcc.isBlank() && !isValidEmail(invoiceEmailBcc)) {
+            errors.put("invoiceEmailBcc", Collections.singletonList("Email Bcc không hợp lệ"));
+        }
         addRequired(errors, "invoiceEmail", invoiceEmail, "email");
         if (!errors.containsKey("invoiceEmail") && !isValidEmail(invoiceEmail)) {
             errors.put("invoiceEmail", Collections.singletonList("Email không hợp lệ"));
@@ -422,6 +432,8 @@ public class ProfileController extends BaseController {
 
         vn.hoadon.entity.CompanyEntity company = companyOpt.get();
         company.setInvoiceEmail(invoiceEmail);
+        company.setInvoiceEmailCc(invoiceEmailCc.isBlank() ? null : invoiceEmailCc);
+        company.setInvoiceEmailBcc(invoiceEmailBcc.isBlank() ? null : invoiceEmailBcc);
         company.setInvoicePhone(invoicePhone);
         company.setInvoiceFax(invoiceFax);
         company.setInvoiceWebsite(invoiceWebsite);

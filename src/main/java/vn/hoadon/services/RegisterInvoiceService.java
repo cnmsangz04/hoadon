@@ -22,6 +22,8 @@ public interface RegisterInvoiceService {
     Page<vn.hoadon.entity.RegisterInvoiceEntity> pageAll(Pageable pageable);
     /** Build unsigned XML from entity */
     String buildUnsignedXml(RegisterInvoiceEntity entity);
+    /** Build unsigned XML using the exact DLTKhai/@Id expected by the signer. */
+    String buildUnsignedXml(RegisterInvoiceEntity entity, String documentId);
     /** Get XML for download: if status == 0, return unsigned; else return signed_xml */
     Optional<String> getXmlForDownload(Long id);
     /** Delete a register invoice by id */

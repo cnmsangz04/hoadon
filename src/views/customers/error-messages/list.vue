@@ -60,9 +60,7 @@
           <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret boundary="window">
             <template #button-content><i class="fas fa-ellipsis-h"></i></template>
             <b-dropdown-item class="text-center" href="#" @click.prevent="openEdit(item)">Cập nhật</b-dropdown-item>
-            <b-dropdown-item class="text-center" href="#" @click.prevent="viewItem(item)">Xem / In</b-dropdown-item>
-            <b-dropdown-item class="text-center" href="#" @click.prevent="downloadXml(item)">Tải XML</b-dropdown-item>
-            <b-dropdown-item class="text-center" href="#" @click.prevent="downloadPdf(item)">Tải PDF</b-dropdown-item>
+            <b-dropdown-item class="text-center" href="#" @click.prevent="viewItem(item)">Xem</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) === 0" class="text-center" href="#" @click.prevent="signItem(item)">Ký USB token</b-dropdown-item>
             <b-dropdown-item v-if="canSend(item)" class="text-center" href="#" @click.prevent="sendItem(item)">Gửi CQT</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) > 1" class="text-center" href="#" @click.prevent="showHistory(item)">Lịch sử truyền nhận</b-dropdown-item>
@@ -73,11 +71,36 @@
       <pagination-bar :current.sync="list.current_page" :size.sync="list.per_page" :total="list.total" :sizes="pageSizes" @page-change="onPageChange" @size-change="onPageSizeChange" />
     </b-card>
 
-    <b-modal ref="viewModal" size="xl" title="Thông báo hóa đơn sai sót" body-class="p-0">
-      <iframe v-if="previewHtml" class="preview-frame" :srcdoc="previewHtml"></iframe>
+    <b-modal ref="viewModal" size="xl" title="Xem thông báo sai sót" body-class="invoice-preview-body">
+      <iframe
+        v-if="previewHtml"
+        id="viewErrorMessage"
+        class="invoice-preview-frame error-message-preview-frame"
+        :srcdoc="previewHtml"
+      ></iframe>
       <template #modal-footer>
-        <b-button size="sm" variant="light" @click="$refs.viewModal.hide()">Đóng</b-button>
-        <b-button size="sm" variant="primary" @click="printPreview">In</b-button>
+        <div class="modal-footer-spread">
+          <b-button size="sm" variant="light" @click="$refs.viewModal.hide()">Đóng</b-button>
+          <div class="modal-footer-actions">
+            <b-dropdown
+              id="ddown-right-error-message"
+              text="Tải xuống"
+              extra-toggle-classes="nav-link-custom"
+              variant="success"
+              size="sm"
+            >
+              <b-dropdown-item href="#" @click.prevent="downloadPdf(previewId)">
+                <i class="fas fa-file-pdf mr-1"></i> Tải PDF
+              </b-dropdown-item>
+              <b-dropdown-item href="#" @click.prevent="downloadXml(previewId)">
+                <i class="fas fa-file-code mr-1"></i> Tải XML
+              </b-dropdown-item>
+            </b-dropdown>
+            <b-button size="sm" variant="info" @click="printPreview">
+              <i class="fas fa-print mr-1"></i> In thông báo
+            </b-button>
+          </div>
+        </div>
       </template>
     </b-modal>
 
@@ -99,7 +122,8 @@
 <script>
 import axios from '@/plugins/axios'
 import PaginationBar from '@/views/components/pagination_bar.vue'
-import { toastError, toastSuccess } from '@/utils/toast'
+import { toastError, toastSuccess, toastWarning } from '@/utils/toast'
+import { confirmUsbTokenSignature, startSignaturePolling } from '@/utils/pasigner'
 
 export default {
   name: 'ErrorMessageList',
@@ -107,6 +131,7 @@ export default {
   data() {
     return {
       isBusy: false,
+      signaturePollCancel: null,
       previewId: null,
       previewHtml: '',
       historyRows: [],
@@ -139,6 +164,9 @@ export default {
     }
   },
   created() { this.fetchList() },
+  beforeDestroy() {
+    if (this.signaturePollCancel) this.signaturePollCancel()
+  },
   methods: {
     async fetchList() {
       this.isBusy = true
@@ -180,32 +208,56 @@ export default {
     canSend(item) { return [1, 3, 4].includes(Number(item?.status)) },
     openEdit(item) { this.$router.push({ name: 'CustomerErrorMessageEdit', params: { id: item.id } }) },
     async viewItem(item) {
-      this.previewId = item.id
-      const { data } = await axios.get(`/error-messages/${item.id}/view`, { responseType: 'text', headers: { Accept: 'text/html' } })
-      this.previewHtml = data || ''
-      this.$refs.viewModal.show()
+      try {
+        this.previewId = item.id
+        this.previewHtml = ''
+        const { data } = await axios.get(`/error-messages/${item.id}/view`, { responseType: 'text', headers: { Accept: 'text/html' } })
+        this.previewHtml = data || ''
+        this.$refs.viewModal.show()
+      } catch (e) {
+        toastError(e?.response?.data?.message || 'Không thể xem thông báo sai sót')
+      }
     },
     printPreview() {
-      const frame = this.$el.querySelector('.preview-frame')
-      if (frame && frame.contentWindow) frame.contentWindow.print()
+      try {
+        const frame = document.getElementById('viewErrorMessage')
+        if (!frame || !frame.contentWindow) throw new Error('Nội dung thông báo chưa sẵn sàng')
+        frame.contentWindow.focus()
+        frame.contentWindow.print()
+      } catch (e) {
+        toastError(e?.message || 'Không thể in thông báo sai sót')
+      }
     },
     async signItem(item) {
       try {
-        const ok = await this.confirm('Xác nhận ký số', `Ký số thông báo #${item.id} bằng USB token?`, 'Ký')
+        const ok = await confirmUsbTokenSignature(`Bạn có chắc chắn muốn ký số thông báo sai sót #${item.id} bằng USB token?`)
         if (!ok) return
         const { data } = await axios.post(`/error-messages/${item.id}/sign-token/prepare`)
         if (!data?.hash) throw new Error('Không tạo được mã hash ký số')
         this.launchPasigner(data.hash)
-        toastSuccess('Đã mở ứng dụng ký số USB token')
+        toastSuccess('Đã gửi yêu cầu đến ứng dụng ký số USB token')
+        this.pollSignatureResult(data.hash, item.id)
       } catch (e) { toastError(e?.response?.data?.message || e?.message || 'Không thể ký số') }
     },
-    async downloadXml(item) {
-      const { data } = await axios.get(`/error-messages/${item.id}/download-xml`, { responseType: 'text', headers: { Accept: 'application/xml' } })
-      this.downloadBlob(data, `thong-bao-sai-sot-${item.id}.xml`, 'application/xml;charset=utf-8')
+    async downloadXml(itemOrId) {
+      const id = typeof itemOrId === 'object' ? itemOrId?.id : itemOrId
+      if (!id) return
+      try {
+        const { data } = await axios.get(`/error-messages/${id}/download-xml`, { responseType: 'text', headers: { Accept: 'application/xml' } })
+        this.downloadBlob(data, `thong-bao-sai-sot-${id}.xml`, 'application/xml;charset=utf-8')
+      } catch (e) {
+        toastError(e?.response?.data?.message || 'Không thể tải XML thông báo sai sót')
+      }
     },
-    async downloadPdf(item) {
-      const { data } = await axios.get(`/error-messages/${item.id}/download-pdf`, { responseType: 'blob', headers: { Accept: 'application/pdf' } })
-      this.downloadBlob(data, `thong-bao-sai-sot-${item.id}.pdf`, 'application/pdf')
+    async downloadPdf(itemOrId) {
+      const id = typeof itemOrId === 'object' ? itemOrId?.id : itemOrId
+      if (!id) return
+      try {
+        const { data } = await axios.get(`/error-messages/${id}/download-pdf`, { responseType: 'blob', headers: { Accept: 'application/pdf' } })
+        this.downloadBlob(data, `thong-bao-sai-sot-${id}.pdf`, 'application/pdf')
+      } catch (e) {
+        toastError('Không thể tải PDF thông báo sai sót')
+      }
     },
     downloadBlob(data, filename, type) {
       const blob = data instanceof Blob ? data : new Blob([data], { type })
@@ -238,6 +290,31 @@ export default {
       const pid = Math.random().toString(36).slice(2, 8)
       location.href = 'pasigner://' + encodeURIComponent(JSON.stringify({ src: 'web', action: 'signature', pid, data: { hash, domain: window.location.hostname } }))
     },
+    pollSignatureResult(hash, id) {
+      if (this.signaturePollCancel) this.signaturePollCancel()
+      this.signaturePollCancel = startSignaturePolling({
+        checkStatus: async () => {
+          const { data } = await axios.get(`/error-messages/${id}/sign-token/status`, {
+            params: { hash },
+            meta: { suppressGlobalErrorToast: true }
+          })
+          return data
+        },
+        onSigned: async () => {
+          this.signaturePollCancel = null
+          toastSuccess('Ký số thông báo sai sót thành công')
+          await this.fetchList()
+        },
+        onFailed: () => {
+          this.signaturePollCancel = null
+          toastWarning('P.A Signer không trả về dữ liệu thông báo hợp lệ. Vui lòng ký lại.')
+        },
+        onTimeout: () => {
+          this.signaturePollCancel = null
+          toastWarning('Chưa nhận được dữ liệu ký thông báo. Hãy kiểm tra P.A Signer hoặc thử lại.')
+        }
+      })
+    },
     confirm(title, content, okTitle, variant = 'primary') {
       return this.$bvModal.msgBoxConfirm(content, { title, size: 'sm', buttonSize: 'sm', okTitle, cancelTitle: 'Hủy', okVariant: variant })
     }
@@ -249,5 +326,5 @@ export default {
 .error-messages::v-deep .table { table-layout: fixed; }
 .error-messages::v-deep th,
 .error-messages::v-deep td { overflow-wrap: anywhere; vertical-align: middle; }
-.preview-frame { width: 100%; height: 75vh; border: 0; display: block; }
+.error-message-preview-frame { height: 70vh; overflow: auto; }
 </style>

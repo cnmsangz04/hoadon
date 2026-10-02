@@ -40,6 +40,21 @@ class InvoiceXmlBuilderTest {
     }
 
     @Test
+    void registerInvoiceXmlUsesProvidedSignerDocumentId() {
+        RegisterInvoiceEntity registerInvoice = new RegisterInvoiceEntity();
+        registerInvoice.setDeclarationDate(LocalDate.of(2026, 10, 2));
+
+        String xml = RegisterInvoiceXmlBuilder.buildUnsigned(
+                registerInvoice,
+                null, null, null, null, null, null, null, null,
+                null, null, "Cong ty test", "0100000000", "Hồ Chí Minh",
+                "SIGN_TARGET_123"
+        );
+
+        assertThat(xml).contains("<DLTKhai Id=\"SIGN_TARGET_123\">");
+    }
+
+    @Test
     void sampleInvoiceXmlDefaultsFinancialLeaseFlagToZero() {
         String xml = SampleInvoiceXmlBuilder.build();
 

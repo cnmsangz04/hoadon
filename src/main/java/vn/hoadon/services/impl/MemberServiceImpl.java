@@ -396,7 +396,7 @@ public class MemberServiceImpl implements MemberService {
         vars.put("COMPANY", companyName);
         vars.put("CUS_COM_NAME", vars.get("COMPANY"));
         vars.put("COM_NAME", resolveLoginMailSenderCompanyName());
-        vars.put("LINK", "http://localhost:8080/login");
+        vars.put("LINK", "http://hoadon2er.id.vn/login");
         vars.put("USERNAME", user.getUsername() != null ? user.getUsername() : "");
         vars.put("PASSWORD", rawPassword != null ? rawPassword : "");
 

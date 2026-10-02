@@ -55,6 +55,12 @@ public class CompanyEntity {
     @Column(name = "invoice_email", columnDefinition = "NVARCHAR(255)")
     private String invoiceEmail;
 
+    @Column(name = "invoice_email_cc", columnDefinition = "NVARCHAR(255)")
+    private String invoiceEmailCc;
+
+    @Column(name = "invoice_email_bcc", columnDefinition = "NVARCHAR(255)")
+    private String invoiceEmailBcc;
+
     @Column(name = "invoice_fax", columnDefinition = "NVARCHAR(255)")
     private String invoiceFax;
 
@@ -162,6 +168,12 @@ public class CompanyEntity {
 
     public String getInvoiceEmail() { return invoiceEmail; }
     public void setInvoiceEmail(String invoiceEmail) { this.invoiceEmail = invoiceEmail; }
+
+    public String getInvoiceEmailCc() { return invoiceEmailCc; }
+    public void setInvoiceEmailCc(String invoiceEmailCc) { this.invoiceEmailCc = invoiceEmailCc; }
+
+    public String getInvoiceEmailBcc() { return invoiceEmailBcc; }
+    public void setInvoiceEmailBcc(String invoiceEmailBcc) { this.invoiceEmailBcc = invoiceEmailBcc; }
 
     public String getInvoiceFax() { return invoiceFax; }
     public void setInvoiceFax(String invoiceFax) { this.invoiceFax = invoiceFax; }

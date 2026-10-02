@@ -41,6 +41,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/get-hash-v2", "/api/update-hash-v2").permitAll()
                         .requestMatchers(
                                 "/uploads/**",
                                 "/v1/auth/**",
@@ -80,7 +81,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:8080"));
+        config.setAllowedOrigins(List.of(
+                "http://hoadon2er.id.vn",
+                "https://hoadon2er.id.vn",
+                "http://localhost",
+                "http://localhost:8080",
+                "http://127.0.0.1",
+                "http://127.0.0.1:8080"
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

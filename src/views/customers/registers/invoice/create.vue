@@ -399,6 +399,7 @@ import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import { firstError, hasErrors, required } from '@/utils/validators'
 import { toastError, toastSuccess, toastWarning } from '@/utils/toast'
+import { confirmUsbTokenSignature, startSignaturePolling } from '@/utils/pasigner'
 
 export default {
   name: 'RegisterInvoiceCreate',
@@ -409,6 +410,7 @@ export default {
     return {
       btnLoading: false,
       btnSignature: false,
+      signaturePollCancel: null,
       sendToggleA: false,
       sendToggleB: false,
       sendToggleC: false,
@@ -477,6 +479,9 @@ export default {
   },
   created() {
     this.bootstrap()
+  },
+  beforeDestroy() {
+    if (this.signaturePollCancel) this.signaturePollCancel()
   },
   watch: {
     // Parent A toggled: apply to children
@@ -821,7 +826,14 @@ export default {
       const createPlaceRaw = val(data, ['create_place','createPlace'], '')
       const createPlaceNum = createPlaceRaw === '' || createPlaceRaw == null ? '' : Number(createPlaceRaw)
       const sigInfo = val(data, ['signature','signatureInfo','signature_info'], null)
-      const signatureObj = (sigInfo && typeof sigInfo === 'object' && sigInfo.name) ? sigInfo : (sigInfo ? { name: String(sigInfo) } : null)
+      let signatureData = sigInfo
+      if (typeof signatureData === 'string') {
+        try { signatureData = JSON.parse(signatureData) } catch { /* giữ chuỗi cũ nếu không phải JSON */ }
+      }
+      const signatureName = signatureData && typeof signatureData === 'object'
+        ? (signatureData.name || signatureData.orgName || signatureData.taxcode || signatureData.taxCode || '')
+        : String(signatureData || '')
+      const signatureObj = signatureName ? { name: signatureName } : null
       const dateSign = val(data, ['date_sign','dateSign','signatureDate','signDate','sign_date'], null)
       this.frmData = {
         ...this.frmData,
@@ -977,49 +989,15 @@ export default {
         if (method !== 'usb-token') throw new Error('Chưa hỗ trợ kiểu ký số này')
         const id = this.$route?.params?.id
         if (!id) return
-        let ok = true
-        if (typeof window.$?.confirm === 'function') {
-          ok = await new Promise(resolve => {
-            window.$.confirm({
-              title: 'Xác nhận ký số',
-              content: `Bạn có chắc chắn muốn ký số tờ khai #${id} bằng USB token?`,
-              // Visual improvements
-              theme: 'bootstrap',
-              type: 'blue',
-              icon: 'fas fa-signature',
-              animation: 'zoom',
-              closeAnimation: 'scale',
-              animateFromElement: false,
-              boxWidth: '420px',
-              useBootstrap: true,
-              // Layout tweaks
-              columnClass: 'col-md-6 offset-md-3',
-              backgroundDismiss: true,
-              escapeKey: 'cancel',
-              buttons: {
-                cancel: {
-                  text: 'Hủy',
-                  btnClass: 'btn-light',
-                  action: function () { resolve(false) }
-                },
-                ok: {
-                  text: 'Đồng ý',
-                  btnClass: 'btn-primary',
-                  action: function () { resolve(true) }
-                }
-              }
-            })
-          })
-        } else {
-          ok = window.confirm(`Xác nhận ký số tờ khai #${id} bằng USB token?`)
-        }
+        const ok = await confirmUsbTokenSignature(`Bạn có chắc chắn muốn ký số tờ khai #${id} bằng USB token?`)
         if (!ok) return
         this.btnSignature = true
         const { data: prepare } = await axios.post(`/register-invoices/${id}/sign-token/prepare`)
         const hash = prepare?.hash || null
         if (!hash) throw new Error('Không tạo được mã hash ký số')
         this.launchPasigner(hash)
-        toastSuccess('Đã mở ứng dụng ký số USB token')
+        toastSuccess('Đã gửi yêu cầu đến ứng dụng ký số USB token')
+        this.pollSignatureResult(hash, id)
       } catch (e) {
         const message = e?.response?.data?.message || e?.message || 'Không thể ký số tờ khai bằng USB token'
         toastError(message, 'REGISTER_TOKEN_SIGN')
@@ -1041,6 +1019,31 @@ export default {
       location.href =
         'pasigner://' +
         encodeURIComponent(JSON.stringify(jsonData))
+    },
+    pollSignatureResult(hash, id) {
+      if (this.signaturePollCancel) this.signaturePollCancel()
+      this.signaturePollCancel = startSignaturePolling({
+        checkStatus: async () => {
+          const { data } = await axios.get(`/register-invoices/${id}/sign-token/status`, {
+            params: { hash },
+            meta: { suppressGlobalErrorToast: true }
+          })
+          return data
+        },
+        onSigned: async () => {
+          this.signaturePollCancel = null
+          toastSuccess('Ký số tờ khai thành công')
+          await this.loadDetail(id)
+        },
+        onFailed: () => {
+          this.signaturePollCancel = null
+          toastWarning('P.A Signer không trả về dữ liệu tờ khai hợp lệ. Vui lòng ký lại.')
+        },
+        onTimeout: () => {
+          this.signaturePollCancel = null
+          toastWarning('Chưa nhận được dữ liệu ký tờ khai. Hãy kiểm tra P.A Signer hoặc thử lại.')
+        }
+      })
     },
     IdProcess(length) {
       let result = ''
@@ -1095,10 +1098,6 @@ export default {
       if (n === 2) return 'Gia hạn'
       if (n === 3) return 'Ngừng sử dụng'
       return '—'
-    },
-    mockDetail(id) {
-      // Không còn dùng dữ liệu giả, dữ liệu được lấy từ backend
-      return { id }
     },
   }
 }

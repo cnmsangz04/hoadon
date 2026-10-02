@@ -146,6 +146,11 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
 
     @Override
     public String buildUnsignedXml(RegisterInvoiceEntity entity) {
+        return buildUnsignedXml(entity, null);
+    }
+
+    @Override
+    public String buildUnsignedXml(RegisterInvoiceEntity entity, String documentId) {
         String contactName = null;
         String contactPhone = null;
         String contactEmail = null;
@@ -200,7 +205,8 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
                 taxAuthorityName,
                 companyName,
                 taxCode,
-                createPlaceName
+                createPlaceName,
+                documentId
         );
     }
 

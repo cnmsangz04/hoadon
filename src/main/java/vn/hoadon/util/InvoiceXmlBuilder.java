@@ -29,7 +29,9 @@ public final class InvoiceXmlBuilder {
     public static String build(InvoiceEntity inv, FormInvoiceEntity form, CompanyEntity company, CompanyBankEntity bank,
                                InvoiceEntity relatedInvoice, FormInvoiceEntity relatedForm) {
         if (inv == null) return "";
-        String id = java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
+        String id = hasText(inv.getIdAttr())
+                ? inv.getIdAttr()
+                : java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
         String pban = "2.1.0";
         String thdon = nullToEmpty(inv.getName());
         String khmshdon = form != null && form.getFormCode() != null ? form.getFormCode() : "";

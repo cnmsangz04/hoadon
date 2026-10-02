@@ -3,7 +3,6 @@ package vn.hoadon.util;
 import vn.hoadon.entity.ErrorMessageEntity;
 import vn.hoadon.entity.ErrorMessageInvoiceEntity;
 
-import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 public final class ErrorMessageXmlBuilder {
@@ -50,44 +49,6 @@ public final class ErrorMessageXmlBuilder {
         sb.append("</DLTBao>");
         sb.append("<DSCKS><NNT></NNT></DSCKS>");
         sb.append("</TBao>");
-        return sb.toString();
-    }
-
-    public static String buildHtml(ErrorMessageEntity e) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<!doctype html><html><head><meta charset=\"UTF-8\"/>")
-          .append("<style>body{font-family:DejaVu Sans,Arial,sans-serif;font-size:12px;color:#111;padding:24px}")
-          .append("h1{text-align:center;font-size:18px;margin:10px 0 16px} .center{text-align:center}.bold{font-weight:700}")
-          .append("table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #333;padding:6px;vertical-align:top}th{background:#f1f5f9}")
-          .append(".sign{margin-top:28px;text-align:right;padding-right:60px}</style></head><body>");
-        sb.append("<div class=\"center bold\">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>");
-        sb.append("<div class=\"center\">Độc lập - Tự do - Hạnh phúc</div>");
-        sb.append("<h1>THÔNG BÁO HÓA ĐƠN ĐIỆN TỬ CÓ SAI SÓT</h1>");
-        sb.append("<p><b>Mẫu số:</b> ").append(xml(e.getFormPattern())).append("</p>");
-        sb.append("<p><b>Loại thông báo:</b> ").append(e.getNotificationType() != null && e.getNotificationType() == 2 ? "Giải trình theo thông báo của CQT" : "Thông báo của NNT").append("</p>");
-        sb.append("<p><b>Cơ quan thuế:</b> ").append(xml(e.getTaxAuthorityName())).append(" (").append(xml(e.getTaxAuthorityCode())).append(")</p>");
-        sb.append("<p><b>Người nộp thuế:</b> ").append(xml(e.getTaxpayerName())).append(" - <b>MST:</b> ").append(xml(e.getTaxCode())).append("</p>");
-        sb.append("<p><b>Địa danh:</b> ").append(xml(e.getCreatePlace())).append(" - <b>Ngày lập:</b> ").append(e.getNoticeDate() != null ? e.getNoticeDate() : "").append("</p>");
-        sb.append("<table><thead><tr><th>STT</th><th>Mã CQT</th><th>Mẫu số</th><th>Ký hiệu</th><th>Số HĐ</th><th>Ngày HĐ</th><th>Loại</th><th>Lý do</th></tr></thead><tbody>");
-        int i = 1;
-        if (e.getInvoices() != null) {
-            for (ErrorMessageInvoiceEntity line : e.getInvoices()) {
-                sb.append("<tr><td class=\"center\">").append(i++).append("</td>")
-                  .append("<td>").append(xml(line.getTaxCode())).append("</td>")
-                  .append("<td>").append(xml(line.getFormSymbol())).append("</td>")
-                  .append("<td>").append(xml(line.getSerial())).append("</td>")
-                  .append("<td>").append(xml(line.getInvoiceNo())).append("</td>")
-                  .append("<td>").append(line.getInvoiceDate() != null ? line.getInvoiceDate() : "").append("</td>")
-                  .append("<td>").append(line.getInvoiceType() != null ? line.getInvoiceType() : "").append("</td>")
-                  .append("<td>").append(xml(line.getReason())).append("</td></tr>");
-            }
-        }
-        sb.append("</tbody></table>");
-        sb.append("<div class=\"sign\"><b>Người nộp thuế</b><br/><i>Chữ ký số, chữ ký điện tử</i>");
-        if (e.getSignDate() != null) {
-            sb.append("<br/>Đã ký: ").append(e.getSignDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
-        }
-        sb.append("</div></body></html>");
         return sb.toString();
     }
 

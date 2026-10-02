@@ -750,11 +750,6 @@ public class RegisterInvoiceController extends BaseController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{id}/sign")
-    public ResponseEntity<Map<String, Object>> disabledLegacySign(@PathVariable Long id) {
-        return ResponseEntity.badRequest().body(Map.of("message", "Chức năng ký giả lập đã tắt. Vui lòng ký số bằng USB token."));
-    }
-
     @PostMapping("/{id}/sign-token/prepare")
     public ResponseEntity<Map<String, Object>> prepareUsbTokenSign(@PathVariable Long id) {
         permission("register-invoice-send");
@@ -764,6 +759,9 @@ public class RegisterInvoiceController extends BaseController {
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         RegisterInvoiceEntity entity = opt.get();
         if (!canAccessRegisterInvoice(user, entity)) return ResponseEntity.status(403).build();
+        if (entity.getStatus() != null && entity.getStatus() != 0) {
+            return ResponseEntity.badRequest().body(Map.<String, Object>of("message", "Chỉ được ký tờ khai mới khởi tạo"));
+        }
 
         HashInvoiceEntity hash = new HashInvoiceEntity();
         hash.setCompanyId(entity.getCompanyId());
@@ -771,7 +769,7 @@ public class RegisterInvoiceController extends BaseController {
         hash.setNameUser(user.getUsername());
         hash.setHash(createHash(entity.getCompanyId()));
         hash.setIds(List.of(entity.getId()));
-        hash.setIdAttr(entity.getDeclarationCode() != null ? entity.getDeclarationCode() : String.valueOf(entity.getId()));
+        hash.setIdAttr(UUID.randomUUID().toString().replace("-", "").toUpperCase());
         hash.setSignBy("NNT");
         hash.setType("DKSD");
         hashInvoiceRepository.save(hash);
@@ -780,6 +778,25 @@ public class RegisterInvoiceController extends BaseController {
         resp.put("hash", hash.getHash());
         resp.put("signBy", "NNT");
         return ResponseEntity.ok(resp);
+    }
+
+    @GetMapping("/{id}/sign-token/status")
+    public ResponseEntity<Map<String, Object>> usbTokenSignStatus(@PathVariable Long id,
+                                                                  @RequestParam("hash") String hash) {
+        permission("register-invoice-send");
+        UserEntity user = currentUser();
+        if (user == null) return ResponseEntity.status(403).build();
+        Optional<RegisterInvoiceEntity> opt = service.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        RegisterInvoiceEntity entity = opt.get();
+        if (!canAccessRegisterInvoice(user, entity)) return ResponseEntity.status(403).build();
+
+        boolean signed = entity.getStatus() != null && entity.getStatus() > 0
+                && entity.getSignedXml() != null && entity.getSignedXml().contains("<Signature");
+        boolean pending = hash != null && !hash.isBlank()
+                && hashInvoiceRepository.findByHashAndCompanyId(hash, entity.getCompanyId()).isPresent();
+        String state = signed ? "signed" : (pending ? "pending" : "failed");
+        return ResponseEntity.ok(Map.of("state", state, "signed", signed));
     }
 
     private String createHash(Long companyId) {

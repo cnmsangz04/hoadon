@@ -489,6 +489,20 @@
                 </b-row>
               </b-col>
             </b-row>
+            <b-row class="pt-2 pb-2">
+              <b-col cols="12" lg="6">
+                <b-row>
+                  <b-col cols="4" class="font-weight-bold">Email Cc:</b-col>
+                  <b-col cols="8">{{ frmData.invoiceEmailCc }}</b-col>
+                </b-row>
+              </b-col>
+              <b-col cols="12" md="6">
+                <b-row>
+                  <b-col cols="4" class="font-weight-bold">Email Bcc:</b-col>
+                  <b-col cols="8">{{ frmData.invoiceEmailBcc }}</b-col>
+                </b-row>
+              </b-col>
+            </b-row>
           </div>
 
           <!-- Chế độ sửa -->
@@ -575,6 +589,37 @@
                   />
                   <b-form-invalid-feedback :state="state('invoiceWebsite')">
                     {{ invalidFeedback('invoiceWebsite') }}
+                  </b-form-invalid-feedback>
+                </b-form-group>
+              </b-col>
+            </b-row>
+
+            <b-row>
+              <b-col cols="12" md="6">
+                <b-form-group label="Email Cc" label-for="invoice-email-cc" :state="state('invoiceEmailCc')">
+                  <b-form-input
+                    id="invoice-email-cc"
+                    type="email"
+                    placeholder="Nhập email Cc"
+                    v-model.trim="frmDataInvoice.invoiceEmailCc"
+                    :state="state('invoiceEmailCc')"
+                  />
+                  <b-form-invalid-feedback :state="state('invoiceEmailCc')">
+                    {{ invalidFeedback('invoiceEmailCc') }}
+                  </b-form-invalid-feedback>
+                </b-form-group>
+              </b-col>
+              <b-col cols="12" md="6">
+                <b-form-group label="Email Bcc" label-for="invoice-email-bcc" :state="state('invoiceEmailBcc')">
+                  <b-form-input
+                    id="invoice-email-bcc"
+                    type="email"
+                    placeholder="Nhập email Bcc"
+                    v-model.trim="frmDataInvoice.invoiceEmailBcc"
+                    :state="state('invoiceEmailBcc')"
+                  />
+                  <b-form-invalid-feedback :state="state('invoiceEmailBcc')">
+                    {{ invalidFeedback('invoiceEmailBcc') }}
                   </b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
@@ -1106,8 +1151,10 @@ export default {
     },
 
     editInfoInvoice() {
-      this.clearScopedErrors(["invoiceEmail", "invoicePhone", "invoiceFax", "invoiceWebsite"]);
+      this.clearScopedErrors(["invoiceEmail", "invoiceEmailCc", "invoiceEmailBcc", "invoicePhone", "invoiceFax", "invoiceWebsite"]);
       this.frmDataInvoice.invoiceEmail = this.frmData.invoiceEmail || "";
+      this.frmDataInvoice.invoiceEmailCc = this.frmData.invoiceEmailCc || "";
+      this.frmDataInvoice.invoiceEmailBcc = this.frmData.invoiceEmailBcc || "";
       this.frmDataInvoice.invoicePhone = this.frmData.invoicePhone || "";
       this.frmDataInvoice.invoiceFax = this.frmData.invoiceFax || "";
       this.frmDataInvoice.invoiceWebsite = this.frmData.invoiceWebsite || "";
@@ -1217,7 +1264,7 @@ export default {
         case "formInvoice":
           this.formInvoice = false;
           this.frmDataInvoice = {};
-          this.clearScopedErrors(["invoiceEmail", "invoicePhone", "invoiceFax", "invoiceWebsite"]);
+          this.clearScopedErrors(["invoiceEmail", "invoiceEmailCc", "invoiceEmailBcc", "invoicePhone", "invoiceFax", "invoiceWebsite"]);
           break;
         case "formContact":
           this.formContact = false
@@ -1414,11 +1461,17 @@ export default {
     },
 
     validateInvoiceForm() {
-      const fields = ["invoiceEmail", "invoicePhone", "invoiceFax", "invoiceWebsite"];
+      const fields = ["invoiceEmail", "invoiceEmailCc", "invoiceEmailBcc", "invoicePhone", "invoiceFax", "invoiceWebsite"];
       const errors = {};
       this.addRequiredError(errors, "invoiceEmail", this.frmDataInvoice.invoiceEmail, "email");
       if (!errors.invoiceEmail && !this.isValidEmail(this.frmDataInvoice.invoiceEmail)) {
         errors.invoiceEmail = ["Email không hợp lệ"];
+      }
+      if (this.trimValue(this.frmDataInvoice.invoiceEmailCc) && !this.isValidEmail(this.frmDataInvoice.invoiceEmailCc)) {
+        errors.invoiceEmailCc = ["Email Cc không hợp lệ"];
+      }
+      if (this.trimValue(this.frmDataInvoice.invoiceEmailBcc) && !this.isValidEmail(this.frmDataInvoice.invoiceEmailBcc)) {
+        errors.invoiceEmailBcc = ["Email Bcc không hợp lệ"];
       }
       this.addRequiredError(errors, "invoicePhone", this.frmDataInvoice.invoicePhone, "số điện thoại");
       if (!errors.invoicePhone && !this.isValidPhone(this.frmDataInvoice.invoicePhone)) {
@@ -1555,6 +1608,8 @@ export default {
       this.buttonInfoInvoice = true;
       const payload = {
         invoiceEmail: this.trimValue(this.frmDataInvoice.invoiceEmail),
+        invoiceEmailCc: this.trimValue(this.frmDataInvoice.invoiceEmailCc),
+        invoiceEmailBcc: this.trimValue(this.frmDataInvoice.invoiceEmailBcc),
         invoicePhone: this.trimValue(this.frmDataInvoice.invoicePhone),
         invoiceFax: this.trimValue(this.frmDataInvoice.invoiceFax),
         invoiceWebsite: this.trimValue(this.frmDataInvoice.invoiceWebsite)

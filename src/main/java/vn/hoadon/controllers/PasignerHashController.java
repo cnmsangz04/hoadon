@@ -3,6 +3,7 @@ package vn.hoadon.controllers;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.core.JsonGenerator;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -18,9 +19,16 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @RestController
-@RequestMapping({"/v1/auth/pasigner", "/v1/auth"})
+@RequestMapping("/api")
 public class PasignerHashController {
     private static final ObjectMapper JSON = new ObjectMapper();
+
+    static {
+        // Laravel's json_encode escapes non-ASCII characters by default. Keep the
+        // P.A Signer response ASCII-safe as well because older signer versions
+        // otherwise decode UTF-8 response bytes as ISO-8859-1/Windows-1252.
+        JSON.getFactory().configure(JsonGenerator.Feature.ESCAPE_NON_ASCII, true);
+    }
 
     private final HashInvoiceRepository hashInvoiceRepository;
     private final InvoiceRepository invoiceRepository;
@@ -55,13 +63,13 @@ public class PasignerHashController {
         this.errorMessageService = errorMessageService;
     }
 
-    @PostMapping({"/getHashV2", "/get-hash", "/getHash"})
+    @PostMapping("/get-hash-v2")
     public ResponseEntity<?> getHashV2(@RequestBody(required = false) String body) {
         JsonNode req = parseBody(body);
         String hash = text(req, "hash");
         Optional<HashInvoiceEntity> opt = hashInvoiceRepository.findByHash(hash);
         if (opt.isEmpty()) {
-            return ResponseEntity.status(404).body(Map.of("status", 404, "message", "Hash code not found in server."));
+            return jsonResponse(404, Map.of("status", 404, "message", "Hash code not found in server."));
         }
 
         HashInvoiceEntity item = opt.get();
@@ -72,10 +80,11 @@ public class PasignerHashController {
             for (Long id : item.getIds()) {
                 RegisterInvoiceEntity register = registerInvoiceRepository.findById(id).orElse(null);
                 if (register == null || !Objects.equals(register.getCompanyId(), item.getCompanyId())) continue;
+                String documentId = valueOrDefault(item.getIdAttr(), String.valueOf(register.getId()));
                 data.add(hashInvoiceRow(
                         register.getId(),
-                        registerInvoiceService.buildUnsignedXml(register),
-                        register.getDeclarationCode() != null ? register.getDeclarationCode() : String.valueOf(register.getId()),
+                        registerInvoiceService.buildUnsignedXml(register, documentId),
+                        documentId,
                         valueOrDefault(item.getSignBy(), "NNT")
                 ));
             }
@@ -109,17 +118,17 @@ public class PasignerHashController {
         resp.put("taxCode", company != null ? company.getTaxcode() : "");
         resp.put("status", 200);
         resp.put("invoices", data);
-        return ResponseEntity.ok(resp);
+        return jsonResponse(200, resp);
     }
 
-    @PostMapping({"/updateHashV2", "/update-hash", "/updateHash"})
+    @PostMapping("/update-hash-v2")
     @Transactional
     public ResponseEntity<?> updateHashV2(@RequestBody(required = false) String body) {
         JsonNode req = parseBody(body);
         String hash = text(req, "hash");
         Optional<HashInvoiceEntity> opt = hashInvoiceRepository.findByHash(hash);
         if (opt.isEmpty()) {
-            return ResponseEntity.status(404).body(Map.of("status", 404, "message", "Hash code not found in server"));
+            return jsonResponse(404, Map.of("status", 404, "message", "Hash code not found in server"));
         }
 
         HashInvoiceEntity item = opt.get();
@@ -164,10 +173,10 @@ public class PasignerHashController {
         }
 
         if (signed == 0) {
-            return ResponseEntity.status(500).body(Map.of("status", 500, "message", "Error"));
+            return jsonResponse(500, Map.of("status", 500, "message", "Error"));
         }
         hashInvoiceRepository.delete(item);
-        return ResponseEntity.ok(Map.of("status", 200, "message", "Successful!", "numOfSigned", signed));
+        return jsonResponse(200, Map.of("status", 200, "message", "Successful!", "numOfSigned", signed));
     }
 
     private JsonNode parseBody(String body) {
@@ -175,15 +184,27 @@ public class PasignerHashController {
         if (raw.isBlank()) return JSON.createObjectNode();
 
         try {
-            return JSON.readTree(raw);
-        } catch (Exception ignored) {}
-
-        try {
             String decoded = URLDecoder.decode(raw, StandardCharsets.UTF_8);
             return JSON.readTree(decoded);
         } catch (Exception ignored) {}
 
+        try {
+            return JSON.readTree(raw);
+        } catch (Exception ignored) {}
+
         return parseFormBody(raw);
+    }
+
+    private ResponseEntity<String> jsonResponse(int status, Object value) {
+        try {
+            return ResponseEntity.status(status)
+                    .header("Content-Type", "application/json;charset=UTF-8")
+                    .body(JSON.writeValueAsString(value));
+        } catch (Exception ex) {
+            return ResponseEntity.internalServerError()
+                    .header("Content-Type", "application/json;charset=UTF-8")
+                    .body("{\"status\":500,\"message\":\"JSON serialization error\"}");
+        }
     }
 
     private JsonNode parseFormBody(String body) {

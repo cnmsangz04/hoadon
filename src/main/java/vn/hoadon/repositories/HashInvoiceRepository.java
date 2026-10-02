@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface HashInvoiceRepository extends JpaRepository<HashInvoiceEntity, Long> {
     Optional<HashInvoiceEntity> findByHash(String hash);
+    Optional<HashInvoiceEntity> findByHashAndCompanyId(String hash, Long companyId);
 }

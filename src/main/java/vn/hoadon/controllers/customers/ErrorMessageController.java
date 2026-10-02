@@ -12,7 +12,7 @@ import vn.hoadon.dto.errormessage.ErrorMessageUpsertRequest;
 import vn.hoadon.entity.*;
 import vn.hoadon.repositories.*;
 import vn.hoadon.services.ErrorMessageService;
-import vn.hoadon.util.ErrorMessageXmlBuilder;
+import vn.hoadon.util.ErrorMessageXsltRenderer;
 
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
@@ -134,6 +134,21 @@ public class ErrorMessageController extends BaseController {
         return ResponseEntity.ok(Map.<String, Object>of("hash", hash.getHash(), "signBy", "NNT"));
     }
 
+    @GetMapping("/{id}/sign-token/status")
+    public ResponseEntity<Map<String, Object>> usbTokenSignStatus(@PathVariable Long id,
+                                                                  @RequestParam("hash") String hash) {
+        permission("invoice-save");
+        ErrorMessageEntity entity = service.findByIdAndCompany(id, requireCompanyId()).orElse(null);
+        if (entity == null) return ResponseEntity.notFound().build();
+
+        boolean signed = entity.getStatus() != null && entity.getStatus() > 0
+                && entity.getSignedXml() != null && entity.getSignedXml().contains("<Signature");
+        boolean pending = hash != null && !hash.isBlank()
+                && hashInvoiceRepository.findByHashAndCompanyId(hash, entity.getCompanyId()).isPresent();
+        String state = signed ? "signed" : (pending ? "pending" : "failed");
+        return ResponseEntity.ok(Map.of("state", state, "signed", signed));
+    }
+
     @PostMapping("/{id}/send")
     public ResponseEntity<ErrorMessageDto> send(@PathVariable Long id) {
         permission("invoice-send|invoice-save");
@@ -167,10 +182,11 @@ public class ErrorMessageController extends BaseController {
     @GetMapping(value = "/{id}/view", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> viewHtml(@PathVariable Long id) {
         permission("invoice-list");
-        return service.findByIdAndCompany(id, requireCompanyId())
-                .map(ErrorMessageXmlBuilder::buildHtml)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        ErrorMessageEntity entity = service.findByIdAndCompany(id, requireCompanyId()).orElse(null);
+        if (entity == null) return ResponseEntity.notFound().build();
+        String xml = service.getXmlForDownload(id).orElse("");
+        boolean signed = entity.getSignedXml() != null && !entity.getSignedXml().isBlank();
+        return ResponseEntity.ok(ErrorMessageXsltRenderer.render(xml, signed));
     }
 
     @GetMapping(value = "/{id}/download-pdf", produces = MediaType.APPLICATION_PDF_VALUE)
@@ -178,7 +194,9 @@ public class ErrorMessageController extends BaseController {
         permission("invoice-list");
         ErrorMessageEntity entity = service.findByIdAndCompany(id, requireCompanyId()).orElse(null);
         if (entity == null) return ResponseEntity.notFound().build();
-        byte[] pdf = renderPdf(ErrorMessageXmlBuilder.buildHtml(entity));
+        String xml = service.getXmlForDownload(id).orElse("");
+        boolean signed = entity.getSignedXml() != null && !entity.getSignedXml().isBlank();
+        byte[] pdf = renderPdf(ErrorMessageXsltRenderer.render(xml, signed));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=thong-bao-sai-sot-" + id + ".pdf")
                 .body(pdf);

@@ -8,15 +8,15 @@ module.exports = {
 
   // Cấu hình dev server
   devServer: {
-    host: '0.0.0.0',   // lắng nghe trên mọi interface để chấp nhận hoadon.vn (map về 127.0.0.1)
-    port: 8080,            // chuyển dev server frontend sang 8080 để tránh trùng với Tomcat 8080
+    host: '0.0.0.0',   // lắng nghe trên mọi interface để chấp nhận domain ảo (map về 127.0.0.1)
+    port: 80,              // frontend: http://hoadon2er.id.vn
     hot: true,           // bật hot reload
     watchFiles: ['src/**/*'], // theo dõi tất cả file trong src
     headers: {
       'Access-Control-Allow-Origin': '*',
     },
 	historyApiFallback: true,
-    // Chấp nhận request từ hostname bên ngoài (ví dụ hoadon.vn) khi dùng host mapping
+    // Chấp nhận request từ hostname bên ngoài khi dùng host mapping
     // Tránh bị từ chối host header gây ERR_CONNECTION_REFUSED trong một số môi trường
     allowedHosts: 'all',
     // Proxy các lệnh gọi API sang backend server ở cổng 8081
