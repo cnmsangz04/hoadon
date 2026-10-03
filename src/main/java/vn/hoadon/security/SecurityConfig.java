@@ -41,6 +41,15 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(
+                                "/",
+                                "/home",
+                                "/index.html",
+                                "/js/**",
+                                "/css/**",
+                                "/assets/**",
+                                "/favicon.ico"
+                        ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/get-hash-v2", "/api/update-hash-v2").permitAll()
                         .requestMatchers(
                                 "/uploads/**",
@@ -63,6 +72,8 @@ public class SecurityConfig {
                         .requestMatchers("/v1/administrator/**").authenticated()
                         .requestMatchers("/v1/setting/**").authenticated()
                         .requestMatchers("/v1/**").authenticated()
+                        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/admin/**").authenticated()
 
                         .anyRequest().authenticated()
                 )
