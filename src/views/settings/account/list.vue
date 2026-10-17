@@ -250,7 +250,7 @@ export default {
       try {
         // Nếu URL tuyệt đối trỏ về backend local thì đổi sang đường dẫn tương đối để proxy dev xử lý
         const u = new URL(src, window.location.origin)
-        if (['localhost', '127.0.0.1', 'hoadon2er.id.vn'].includes(u.hostname) && u.port === '8081' && u.pathname.startsWith('/uploads/')) {
+        if (['localhost', '127.0.0.1', 'hoadon2er.local.vn'].includes(u.hostname) && u.port === '8081' && u.pathname.startsWith('/uploads/')) {
           return u.pathname + u.search
         }
         return src

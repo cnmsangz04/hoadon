@@ -25,6 +25,7 @@ import vn.hoadon.repositories.CustomerRepository;
 import vn.hoadon.repositories.InvoiceImportRepository;
 import vn.hoadon.repositories.ProductRepository;
 import vn.hoadon.services.CatalogImportService;
+import vn.hoadon.util.UploadPath;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -548,7 +549,7 @@ public class CatalogImportServiceImpl implements CatalogImportService {
     }
 
     private Path resolveImportDir(Long companyId, CatalogType type) throws java.io.IOException {
-        Path dir = Path.of("uploads", String.valueOf(companyId), type.uploadDir);
+        Path dir = UploadPath.basePath().resolve(Path.of(String.valueOf(companyId), type.uploadDir)).normalize();
         Files.createDirectories(dir);
         return dir;
     }

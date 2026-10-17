@@ -9,7 +9,7 @@ module.exports = {
   // Cấu hình dev server
   devServer: {
     host: '0.0.0.0',   // lắng nghe trên mọi interface để chấp nhận domain ảo (map về 127.0.0.1)
-    port: 80,              // frontend: http://hoadon2er.id.vn
+    port: 80,              // frontend local: http://hoadon2er.local.vn
     hot: true,           // bật hot reload
     watchFiles: ['src/**/*'], // theo dõi tất cả file trong src
     headers: {

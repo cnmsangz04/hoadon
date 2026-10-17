@@ -25,6 +25,7 @@ import vn.hoadon.repositories.InvoiceRepository;
 import vn.hoadon.repositories.RegisterInvoiceRepository;
 import vn.hoadon.services.FormInvoiceService;
 import vn.hoadon.services.InvoiceNumberService;
+import vn.hoadon.util.UploadPath;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -488,26 +489,30 @@ public class FormInvoiceController extends BaseController {
     /** Resolve a public uploads path like "/uploads/{companyId}/..." to a filesystem path. */
     private Path toFilesystemPath(String publicPath) {
         if (!StringUtils.hasText(publicPath)) return null;
-        String p = publicPath.trim();
+        String p = publicPath.trim().replace('\\', '/');
         if (p.startsWith("/")) p = p.substring(1);
-        // Base dir is application working directory
-        Path base = Paths.get(System.getProperty("user.dir"));
-        return base.resolve(p);
+        if (!p.startsWith("uploads/")) return null;
+
+        Path base = UploadPath.basePath();
+        Path resolved = base.resolve(p.substring("uploads/".length())).normalize();
+        return resolved.startsWith(base) ? resolved : null;
     }
 
-    /** Convert a filesystem path under the application's working dir to a public uploads path starting with "/uploads/". */
+    /** Convert a filesystem path under the configured uploads dir to a public path starting with "/uploads/". */
     private String toPublicPath(Path fsPath) {
-        Path base = Paths.get(System.getProperty("user.dir"));
-        Path rel = base.relativize(fsPath);
+        Path base = UploadPath.basePath();
+        Path normalized = fsPath.toAbsolutePath().normalize();
+        if (!normalized.startsWith(base)) {
+            throw new IllegalArgumentException("File is outside the uploads directory");
+        }
+        Path rel = base.relativize(normalized);
         String s = rel.toString().replace('\\', '/');
-        if (!s.startsWith("uploads/")) s = "uploads/" + s;
-        return "/" + s;
+        return "/uploads/" + s;
     }
 
     /** Get the company's uploads directory for a given subfolder. */
     private Path getCompanyUploadsDir(Long companyId, String subfolder) {
-        Path base = Paths.get(System.getProperty("user.dir"));
-        return base.resolve(Paths.get("uploads", String.valueOf(companyId), subfolder));
+        return UploadPath.basePath().resolve(Paths.get(String.valueOf(companyId), subfolder)).normalize();
     }
 
     /** Extract file extension without dot. */

@@ -1,5 +1,6 @@
 package vn.hoadon.security;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -13,11 +14,15 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    @Value("${app.cors.allowed-origins:http://hoadon2er.local.vn}")
+    private String corsAllowedOrigins;
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter(
@@ -48,7 +53,21 @@ public class SecurityConfig {
                                 "/js/**",
                                 "/css/**",
                                 "/assets/**",
-                                "/favicon.ico"
+                                "/favicon.ico",
+                                "/favicon.svg",
+                                "/lookup-invoice",
+                                "/auth/**",
+                                "/register/**",
+                                "/form-invoice/**",
+                                "/invoice/**",
+                                "/invoice-packages/**",
+                                "/error-message/**",
+                                "/imports/**",
+                                "/categories/**",
+                                "/reports/**",
+                                "/email/**",
+                                "/setting/**",
+                                "/administrator/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/get-hash-v2", "/api/update-hash-v2").permitAll()
                         .requestMatchers(
@@ -92,14 +111,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
-                "http://hoadon2er.id.vn",
-                "https://hoadon2er.id.vn",
-                "http://localhost",
-                "http://localhost:8080",
-                "http://127.0.0.1",
-                "http://127.0.0.1:8080"
-        ));
+        config.setAllowedOrigins(Arrays.stream(corsAllowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

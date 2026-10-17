@@ -1,6 +1,7 @@
 package vn.hoadon.services.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -50,6 +51,9 @@ public class MemberServiceImpl implements MemberService {
 
     @Autowired
     private MailQueueService mailQueueService;
+
+    @Value("${app.frontend-url:http://hoadon2er.local.vn}")
+    private String frontendUrl;
 
     @Override
     public Page<UserEntity> list(String keyword, Long roleId, Byte status, Long companyId, Integer role, Pageable pageable) {
@@ -396,7 +400,8 @@ public class MemberServiceImpl implements MemberService {
         vars.put("COMPANY", companyName);
         vars.put("CUS_COM_NAME", vars.get("COMPANY"));
         vars.put("COM_NAME", resolveLoginMailSenderCompanyName());
-        vars.put("LINK", "http://hoadon2er.id.vn/login");
+        String loginBaseUrl = frontendUrl == null ? "" : frontendUrl.trim().replaceAll("/+$", "");
+        vars.put("LINK", loginBaseUrl + "/login");
         vars.put("USERNAME", user.getUsername() != null ? user.getUsername() : "");
         vars.put("PASSWORD", rawPassword != null ? rawPassword : "");
 
