@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import vn.hoadon.dto.auth.AuthRequest;
 import vn.hoadon.dto.auth.AuthResponse;
 import vn.hoadon.entity.CompanyEntity;
@@ -50,7 +49,7 @@ public class Auth {
     @Autowired private LoginSessionRepository loginSessionRepository;
     @Autowired private CompanyIpSecurityService companyIpSecurityService;
 
-    @Value("${app.frontend-url:http://localhost:8080}")
+    @Value("${app.frontend-url}")
     private String frontendUrl;
 
     @PostMapping("/login")
@@ -262,17 +261,7 @@ public class Auth {
     }
 
     private String buildResetLink(HttpServletRequest httpReq, String token) {
-        String baseUrl = frontendUrl;
-        if (baseUrl == null || baseUrl.isBlank()) {
-            baseUrl = ServletUriComponentsBuilder.fromRequestUri(httpReq)
-                    .replacePath(null)
-                    .build()
-                    .toUriString();
-        }
-        if (baseUrl == null || baseUrl.isBlank()) {
-            baseUrl = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
-        }
-        return baseUrl.replaceAll("/+$", "") + "/auth/reset-password/" + token;
+        return frontendUrl.trim().replaceAll("/+$", "") + "/auth/reset-password/" + token;
     }
 
     private boolean enqueueResetPasswordMail(UserEntity user, String resetLink) {

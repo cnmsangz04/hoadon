@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import vn.hoadon.entity.UserEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -17,13 +18,17 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    private static final String SECRET =
-        "hoadon-prod-jwt-secret-2025-!@#A9fKxQ2LmP8wZr7YHnC4E6S1VdB";
-
     private static final long EXPIRATION_MS = 1000L * 60 * 60 * 4; // 4 giờ
     private static final long REMEMBER_EXPIRATION_MS = 1000L * 60 * 60 * 24 * 30; // 30 ngày
 
-    private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
+    private final Key key;
+
+    public JwtUtil(@Value("${jwt.secret}") String secret) {
+        if (secret == null || secret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("JWT_SECRET phải có ít nhất 32 byte");
+        }
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
 
     /**
      * Tạo JWT cho user.

@@ -27,7 +27,10 @@ public class AesEncryptor {
 
     private final SecretKey secretKey;
 
-    public AesEncryptor(@Value("${app.encryption.key:DefaultEncryptionKey1234567890ABCD}") String rawKey) {
+    public AesEncryptor(@Value("${app.encryption.key}") String rawKey) {
+        if (rawKey == null || rawKey.isBlank()) {
+            throw new IllegalStateException("APP_ENCRYPTION_KEY chưa được cấu hình");
+        }
         byte[] keyBytes = prepareKey(rawKey);
         this.secretKey = new SecretKeySpec(keyBytes, "AES");
     }

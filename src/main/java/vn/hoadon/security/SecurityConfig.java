@@ -21,7 +21,7 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Value("${app.cors.allowed-origins:http://hoadon2er.local.vn}")
+    @Value("${app.cors.allowed-origins}")
     private String corsAllowedOrigins;
 
     @Bean

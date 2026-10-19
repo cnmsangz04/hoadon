@@ -12,7 +12,7 @@ class JwtUtilTest {
 
     @Test
     void rememberTokenUsesLongerExpirationAndClaim() {
-        JwtUtil jwtUtil = new JwtUtil();
+        JwtUtil jwtUtil = new JwtUtil("test-jwt-secret-at-least-32-bytes-long");
         UserEntity user = new UserEntity();
         user.setId(1L);
         user.setCompanyId(1L);

@@ -52,7 +52,7 @@ public class MemberServiceImpl implements MemberService {
     @Autowired
     private MailQueueService mailQueueService;
 
-    @Value("${app.frontend-url:http://hoadon2er.local.vn}")
+    @Value("${app.frontend-url}")
     private String frontendUrl;
 
     @Override
@@ -401,7 +401,7 @@ public class MemberServiceImpl implements MemberService {
         vars.put("CUS_COM_NAME", vars.get("COMPANY"));
         vars.put("COM_NAME", resolveLoginMailSenderCompanyName());
         String loginBaseUrl = frontendUrl == null ? "" : frontendUrl.trim().replaceAll("/+$", "");
-        vars.put("LINK", loginBaseUrl + "/login");
+        vars.put("LINK", loginBaseUrl + "/auth/login");
         vars.put("USERNAME", user.getUsername() != null ? user.getUsername() : "");
         vars.put("PASSWORD", rawPassword != null ? rawPassword : "");
 

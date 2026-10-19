@@ -58,6 +58,8 @@
 
 
 <script>
+import { appResourceUrl } from '@/utils/appUrl'
+
 export default {
   name: "sidebar_administrator",
 
@@ -76,7 +78,7 @@ export default {
         { title: 'Thuế suất', icon: 'fas fa-percent', to: '/administrator/vat-rate/list' },
         { title: 'Email template', icon: 'fas fa-envelope', to: '/administrator/email-template/list' },
         { title: 'Lịch sử gửi mail', icon: 'fas fa-history', to: '/administrator/email/mail-history' },
-        { title: 'Telegram', icon: 'fab fa-telegram-plane', to: '/administrator/telegram/config' },
+        { title: 'Telegram', icon: 'fas fa-paper-plane', to: '/administrator/telegram/config' },
         { title: 'Báo cáo hóa đơn ngày', icon: 'fas fa-calendar-check', to: '/administrator/daily-invoice-report/config' },
         { title: 'Phiên đăng nhập', icon: 'fas fa-desktop', to: '/administrator/sessions/list' },
         {
@@ -96,7 +98,7 @@ export default {
       try {
         const logo = this.$app?.info?.company?.logo
         if (logo && typeof logo === 'string' && logo.trim() !== '') {
-          return logo
+          return appResourceUrl(logo)
         }
       } catch { }
       return require('@/assets/images/logo/logo-hoadon.png')

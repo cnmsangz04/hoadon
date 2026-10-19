@@ -30,7 +30,7 @@ public class MomoPaymentServiceImpl implements MomoPaymentService {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
-    @Value("${app.backend-url:http://localhost:8081}")
+    @Value("${app.backend-url}")
     private String backendUrl;
 
     public MomoPaymentServiceImpl(MomoProperties properties, ObjectMapper objectMapper) {

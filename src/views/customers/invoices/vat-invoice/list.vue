@@ -13,7 +13,7 @@
             <span v-if="selectedIds.length">({{ selectedIds.length }})</span>
           </template>
           <b-dropdown-item href="#" @click.prevent="signSelectedInvoices('usb-token')">
-            <i class="fas fa-usb mr-1"></i>
+            <i class="fas fa-plug mr-1"></i>
             Ký USB token
           </b-dropdown-item>
         </b-dropdown>

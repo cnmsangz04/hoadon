@@ -37,22 +37,22 @@ public class PatvanTransmissionService {
     @Value("${patvan.uat.oauth-ct-url:https://ote-tvan-chungtu.hoadon30s.vn/token}")
     private String oauthCtUrl;
 
-    @Value("${patvan.uat.client-id:030243159520220324}")
+    @Value("${patvan.uat.client-id:}")
     private String clientId;
 
-    @Value("${patvan.uat.client-secret:db1fe1933e2d3076eb52564ebe585d388cf88204f25ee353fc0c1fab56e5101d}")
+    @Value("${patvan.uat.client-secret:}")
     private String clientSecret;
 
-    @Value("${patvan.uat.client-mtt-id:030243159520220324}")
+    @Value("${patvan.uat.client-mtt-id:}")
     private String clientMttId;
 
-    @Value("${patvan.uat.client-mtt-secret:db1fe1933e2d3076eb52564ebe585d388cf88204f25ee353fc0c1fab56e5101d}")
+    @Value("${patvan.uat.client-mtt-secret:}")
     private String clientMttSecret;
 
-    @Value("${patvan.uat.client-ct-id:030243159520220324}")
+    @Value("${patvan.uat.client-ct-id:}")
     private String clientCtId;
 
-    @Value("${patvan.uat.client-ct-secret:db1fe1933e2d3076eb52564ebe585d388cf88204f25ee353fc0c1fab56e5101d}")
+    @Value("${patvan.uat.client-ct-secret:}")
     private String clientCtSecret;
 
     @Value("${patvan.uat.hd-url:https://ote-tvan.hoadon30s.vn/hoa-don-co-ma}")

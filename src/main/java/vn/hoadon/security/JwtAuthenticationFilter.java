@@ -69,15 +69,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (!header.startsWith("Bearer ")) {
-            log.warn("Invalid Authorization header format: {}", header);
+            log.warn("Invalid Authorization header format for {} {}", method, uri);
             unauthorized(response, "INVALID_HEADER",
                     "Authorization header must start with Bearer");
             return;
         }
 
         String token = header.substring(7);
-        log.debug("Extracted JWT token: {}", token);
-
         try {
             String username = jwtUtil.getUsername(token);
             log.debug("Decoded username from JWT: {}", username);

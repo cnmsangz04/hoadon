@@ -30,7 +30,7 @@ public class VnpayPaymentServiceImpl implements VnpayPaymentService {
 
     private final VnpayProperties properties;
 
-    @Value("${app.backend-url:http://localhost:8081}")
+    @Value("${app.backend-url}")
     private String backendUrl;
 
     public VnpayPaymentServiceImpl(VnpayProperties properties) {
@@ -63,14 +63,11 @@ public class VnpayPaymentServiceImpl implements VnpayPaymentService {
         SignedQuery signedQuery = buildSignedQuery(params);
         String secureHash = hmacSha512(signedQuery.hashData());
         log.debug(
-                "VNPAY payment url: txnRef={}, tmnCode={}, amount={}, returnUrl={}, hashData={}, secureHash={}, secretTail={}",
+                "VNPAY payment url: txnRef={}, tmnCode={}, amount={}, returnUrl={}",
                 request.txnRef(),
                 properties.getTmnCode(),
                 request.amount(),
-                returnUrl,
-                signedQuery.hashData(),
-                secureHash,
-                secretTail()
+                returnUrl
         );
         String query = signedQuery.query() + "&vnp_SecureHash=" + secureHash;
         return new CreatePaymentResponse(trimTrailingSlash(properties.getPayUrl()) + "?" + query, "Đã tạo URL thanh toán VNPAY");
@@ -202,14 +199,6 @@ public class VnpayPaymentServiceImpl implements VnpayPaymentService {
             return "127.0.0.1";
         }
         return ip;
-    }
-
-    private String secretTail() {
-        String secret = firstNotBlank(properties.getHashSecret());
-        if (secret.length() <= 4) {
-            return "****";
-        }
-        return "****" + secret.substring(secret.length() - 4);
     }
 
     private String firstNotBlank(String... values) {

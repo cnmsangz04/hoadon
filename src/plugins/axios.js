@@ -4,7 +4,7 @@ import 'toastr/build/toastr.min.css'
 import { toastError, toastWarning, toastSuccess } from '@/utils/toast'
 import { getAuthToken, removeAuthToken } from '@/utils/authStorage'
 
-axios.defaults.baseURL = process.env.VUE_APP_API_BASE_URL || '/v1'
+axios.defaults.baseURL = '/v1'
 
 function isAdminContext() {
   try {

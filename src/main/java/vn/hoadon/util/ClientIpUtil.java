@@ -9,21 +9,6 @@ public final class ClientIpUtil {
 
     public static String resolve(HttpServletRequest request) {
         if (request == null) return "";
-        String[] headers = {
-                "X-Forwarded-For",
-                "X-Real-IP",
-                "Proxy-Client-IP",
-                "WL-Proxy-Client-IP",
-                "HTTP_CLIENT_IP",
-                "HTTP_X_FORWARDED_FOR"
-        };
-        for (String header : headers) {
-            String value = request.getHeader(header);
-            String ip = firstIp(value);
-            if (ip != null && !ip.isBlank() && !"unknown".equalsIgnoreCase(ip)) {
-                return normalize(ip);
-            }
-        }
         return normalize(request.getRemoteAddr());
     }
 

@@ -1,7 +1,6 @@
 package vn.hoadon.services.impl;
 
 import jakarta.persistence.criteria.Predicate;
-import jakarta.servlet.http.HttpServletRequest;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -48,6 +47,7 @@ import vn.hoadon.services.MomoPaymentService;
 import vn.hoadon.services.VnpayPaymentService;
 import vn.hoadon.services.ZaloPayPaymentService;
 import vn.hoadon.util.SystemMail;
+import vn.hoadon.util.ClientIpUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
@@ -93,10 +93,10 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
     @Autowired private ZaloPayProperties zaloPayProperties;
     @Autowired private ObjectMapper objectMapper;
 
-    @Value("${app.frontend-url:http://localhost:8080}")
+    @Value("${app.frontend-url}")
     private String frontendUrl;
 
-    @Value("${app.backend-url:http://localhost:8081}")
+    @Value("${app.backend-url}")
     private String backendUrl;
 
     @Override
@@ -995,18 +995,8 @@ public class InvoicePackageServiceImpl implements InvoicePackageService {
 
     private String currentRequestIp() {
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs) {
-            HttpServletRequest request = attrs.getRequest();
-            String forwarded = request.getHeader("X-Forwarded-For");
-            if (forwarded != null && !forwarded.isBlank()) {
-                return forwarded.split(",")[0].trim();
-            }
-            String realIp = request.getHeader("X-Real-IP");
-            if (realIp != null && !realIp.isBlank()) {
-                return realIp.trim();
-            }
-            if (request.getRemoteAddr() != null && !request.getRemoteAddr().isBlank()) {
-                return request.getRemoteAddr();
-            }
+            String resolved = ClientIpUtil.resolve(attrs.getRequest());
+            if (!resolved.isBlank()) return resolved;
         }
         return "127.0.0.1";
     }

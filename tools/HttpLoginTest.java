@@ -5,7 +5,9 @@ import java.time.Duration;
 
 public class HttpLoginTest {
     public static void main(String[] args) throws Exception {
-        String url = args.length > 0 ? args[0] : "http://127.0.0.1:8080/api/auth/login";
+        String backendUrl = System.getenv().getOrDefault("APP_BACKEND_URL", "http://127.0.0.1:8081")
+                .replaceAll("/+$", "");
+        String url = args.length > 0 ? args[0] : backendUrl + "/v1/auth/login";
         String payload = args.length > 1 ? args[1] : "{\"username\":\"admin\",\"password\":\"wrongpassword\"}";
 
         HttpClient client = HttpClient.newBuilder()

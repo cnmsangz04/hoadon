@@ -11,7 +11,7 @@
     <b-card class="shadow-sm">
       <b-card no-body class="mb-3">
         <b-card-header class="bg-light font-weight-bold">
-          <i class="fab fa-telegram-plane mr-1"></i>
+          <i class="fas fa-paper-plane mr-1"></i>
           Thông tin kết nối Telegram
         </b-card-header>
         <b-card-body>

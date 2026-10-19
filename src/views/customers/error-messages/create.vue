@@ -154,7 +154,7 @@
               <div class="d-inline-block" v-if="isEdit">
                 <b-dropdown v-if="!btnSignature" size="sm" variant="link" toggle-class="text-decoration-none" text="Thực hiện ký số" boundary="window">
                   <b-dropdown-item href="#" @click.prevent="signData">
-                    <i class="fas fa-usb mr-1"></i>
+                    <i class="fas fa-plug mr-1"></i>
                     Ký USB token
                   </b-dropdown-item>
                 </b-dropdown>

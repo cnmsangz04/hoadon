@@ -9,13 +9,13 @@ public class ZaloPayProperties {
 
     private boolean enabled = true;
     private String appId = "2553";
-    private String key1 = "PcY4iZIKFCIdgZvA6ueMcMHHUbRLYjPL";
-    private String key2 = "kLtgPl8HHhfvMuDHPwKfgfsY4Ydm9eIz";
+    private String key1 = "";
+    private String key2 = "";
     private String createOrderUrl = "https://sb-openapi.zalopay.vn/v2/create";
     private String queryOrderUrl = "https://sb-openapi.zalopay.vn/v2/query";
     private String bankListUrl = "https://sbgateway.zalopay.vn/api/getlistmerchantbanks";
     private String bankListAppId = "2553";
-    private String bankListKey1 = "PcY4iZIKFCIdgZvA6ueMcMHHUbRLYjPL";
+    private String bankListKey1 = "";
     private String redirectUrl = "";
     private String callbackUrl = "";
     private String appUser = "hoadon";

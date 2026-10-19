@@ -221,6 +221,7 @@
 import axios from '@/plugins/axios'
 import { Cropper } from 'vue-advanced-cropper'
 import { email, phone, required } from '@/utils/validators'
+import { appResourceUrl } from '@/utils/appUrl'
 
 export default {
   name: 'YourAccount',
@@ -245,19 +246,7 @@ export default {
   },
   computed: {
     avatarSrc() {
-      const src = this.account?.avatar
-      if (!src) return null
-      try {
-        // Nếu URL tuyệt đối trỏ về backend local thì đổi sang đường dẫn tương đối để proxy dev xử lý
-        const u = new URL(src, window.location.origin)
-        if (['localhost', '127.0.0.1', 'hoadon2er.local.vn'].includes(u.hostname) && u.port === '8081' && u.pathname.startsWith('/uploads/')) {
-          return u.pathname + u.search
-        }
-        return src
-      } catch {
-        // Nếu parse lỗi thì giữ nguyên giá trị
-        return src
-      }
+      return appResourceUrl(this.account?.avatar) || null
     },
     canSubmitPassword() {
       const cur = (this.frmPassword.current || '').trim()

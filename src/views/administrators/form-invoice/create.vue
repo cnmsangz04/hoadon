@@ -5,7 +5,7 @@
         <div class="card form-panel shadow-sm">
             <div class="card-header form-panel-header">
                 <h4 class="card-title mb-0">
-                    <i class="fa fa-file-text-o"></i> Thông tin mẫu hóa đơn
+                    <i class="fas fa-file-alt"></i> Thông tin mẫu hóa đơn
                 </h4>
             </div>
             <div class="card-body">
@@ -81,7 +81,7 @@
                             />
                             <div class="file-upload-block">
                                 <b-button variant="outline-success" size="sm" @click="$refs.fileInput.click()">
-                                    <i class="fa fa-file-code-o"></i> Chọn file
+                                    <i class="fas fa-file-code"></i> Chọn file
                                 </b-button>
                                 <span class="file-name-text ml-2">{{ fileName || 'Chưa chọn file' }}</span>
                                 <b-button
@@ -105,7 +105,7 @@
                                 </template>
                                 <template v-else>
                                     <div class="file-info-box">
-                                        <i class="fa fa-file-text-o fa-2x text-muted"></i>
+                                        <i class="fas fa-file-alt fa-2x text-muted"></i>
                                         <div class="ml-3">
                                             <div class="filename-display">{{ fileName }}</div>
                                             <a href="#" @click.prevent="previewFile('file')" class="text-primary small">

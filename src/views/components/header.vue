@@ -138,6 +138,7 @@
 import { parseJwt } from '@/utils/jwt'
 import axios from '@/plugins/axios'
 import { getAuthToken, removeAuthToken } from '@/utils/authStorage'
+import { appResourceUrl } from '@/utils/appUrl'
 export default {
   name: "Header",
   data() {
@@ -193,11 +194,11 @@ export default {
       try {
         const dbAvatar = this.$app?.info?.user?.avatar
         if (dbAvatar && typeof dbAvatar === 'string' && dbAvatar.trim() !== '') {
-          return dbAvatar
+          return appResourceUrl(dbAvatar)
         }
       } catch {}
       // Dự phòng dùng app.auth.avatar local
-      return this.app.auth.avatar || ''
+      return appResourceUrl(this.app.auth.avatar || '')
     },
     isCompanyPending() {
       const status = this.$app?.info?.company?.status ?? localStorage.getItem('company-status')

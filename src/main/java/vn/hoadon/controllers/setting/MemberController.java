@@ -249,13 +249,12 @@ public class MemberController extends BaseController {
         permission("setting-member-manage");
         String tempPassword = service.resetPassword(id);
         
-        // Ghi log reset mật khẩu kèm chi tiết user
         UserEntity user = userRepository.findById(id).orElse(null);
         if (user != null) {
-            log.info("Password reset for userId={}, username={}, email={}, newPassword={}", 
-                     id, user.getUsername(), user.getEmail(), tempPassword);
+            log.info("Password reset for userId={}, username={}, email={}",
+                     id, user.getUsername(), user.getEmail());
         } else {
-            log.info("Password reset for userId={}, newPassword={}", id, tempPassword);
+            log.info("Password reset for userId={}", id);
         }
         
         Map<String, Object> res = new HashMap<>();
@@ -286,11 +285,10 @@ public class MemberController extends BaseController {
         String email = user != null ? user.getEmail() : "unknown";
         
         // Gửi thông tin đăng nhập (sẽ reset mật khẩu nội bộ và trả về mật khẩu)
-        String newPassword = service.sendCredentials(id);
+        service.sendCredentials(id);
         
-        // Ghi log tài khoản và mật khẩu được gửi
-        log.info("Sending credentials to userId={}, username={}, email={}, newPassword={} (by actorId={}, actorUsername={})", 
-                 id, username, email, newPassword, actor.getId(), actor.getUsername());
+        log.info("Sent credentials to userId={}, username={}, email={} (by actorId={}, actorUsername={})",
+                 id, username, email, actor.getId(), actor.getUsername());
         
         Map<String, Object> res = new HashMap<>();
         res.put("message", "Đã gửi thông tin tài khoản tới email thành viên");

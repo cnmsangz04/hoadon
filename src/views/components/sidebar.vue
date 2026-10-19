@@ -60,6 +60,8 @@
 </template>
 
 <script>
+import { appResourceUrl } from '@/utils/appUrl'
+
 export default {
   name: 'Sidebar',
   data() {
@@ -144,7 +146,7 @@ export default {
     logoSrc() {
       try {
         const logo = this.$app?.info?.company?.logo
-        if (logo && typeof logo === 'string' && logo.trim() !== '') return logo
+        if (logo && typeof logo === 'string' && logo.trim() !== '') return appResourceUrl(logo)
       } catch {}
       return require('@/assets/images/logo/logo-hoadon.png')
     },

@@ -44,7 +44,7 @@ public class CompanyServiceImpl implements CompanyService {
     @Autowired
     private MailQueueService mailQueueService;
 
-    @Value("${app.frontend-url:http://localhost:8080}")
+    @Value("${app.frontend-url}")
     private String frontendUrl;
 
     public CompanyServiceImpl(CompanyRepository repo) {
@@ -290,8 +290,7 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     private String buildLoginLink() {
-        String base = frontendUrl != null && !frontendUrl.isBlank() ? frontendUrl.trim() : "http://localhost:8080";
-        return base.replaceAll("/+$", "") + "/auth/login";
+        return frontendUrl.trim().replaceAll("/+$", "") + "/auth/login";
     }
 
     private String firstNotBlank(String... values) {
