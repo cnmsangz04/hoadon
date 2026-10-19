@@ -64,6 +64,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import vn.hoadon.messaging.MailJobMessage;
 import vn.hoadon.services.MailQueueService;
+import vn.hoadon.services.patvan.PatvanCallbackService;
 import vn.hoadon.services.patvan.PatvanMessageType;
 import vn.hoadon.services.patvan.PatvanPostResult;
 import vn.hoadon.services.patvan.PatvanTransmissionService;
@@ -93,6 +94,7 @@ public class InvoiceController extends BaseController {
     @Autowired(required = false) private MailQueueService mailQueueService;
     @Autowired(required = false) private MailWorker mailWorker;
     @Autowired private PatvanTransmissionService patvanTransmissionService;
+    @Autowired private PatvanCallbackService patvanCallbackService;
 
     private static final Logger log = LoggerFactory.getLogger(InvoiceController.class);
 
@@ -1616,11 +1618,16 @@ public class InvoiceController extends BaseController {
         String taxCode = company != null ? company.getTaxcode() : null;
         PatvanMessageType sendType = (have == null || have == 0) ? PatvanMessageType.HDKM : PatvanMessageType.HD;
         PatvanPostResult patvanResult;
-        try {
-            patvanResult = patvanTransmissionService.postXml(sendType, xmlToSend, taxCode);
-        } catch (PatvanTransmissionService.PatvanException e) {
-            log.error("Send invoice {} to PATVAN UAT failed: {}", id, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new ErrorDTO(e.getMessage()));
+        if (patvanCallbackService.isLocalSimulation()) {
+            String localMessageCode = "LOCAL-" + java.util.UUID.randomUUID().toString().replace("-", "");
+            patvanResult = new PatvanPostResult(200, "Giả lập truyền nhận local", localMessageCode, "");
+        } else {
+            try {
+                patvanResult = patvanTransmissionService.postXml(sendType, xmlToSend, taxCode);
+            } catch (PatvanTransmissionService.PatvanException e) {
+                log.error("Send invoice {} to PATVAN UAT failed: {}", id, e.getMessage(), e);
+                return ResponseEntity.badRequest().body(new ErrorDTO(e.getMessage()));
+            }
         }
 
         // Cập nhật invoice status to 2 (đã gửi thuế) và lưu mã thông điệp truyền nhận
@@ -1628,6 +1635,12 @@ public class InvoiceController extends BaseController {
         inv.setStatus((short)2);
         inv.setUpdatedAt(java.time.LocalDateTime.now());
         invoiceRepository.save(inv);
+
+        // Local tự sinh callback CQT sau khi mã thông điệp đã được lưu. Production mặc định tắt.
+        if (patvanCallbackService.isLocalSimulation()) {
+            patvanCallbackService.simulateInvoiceResult(
+                    patvanResult.maThongdiep(), taxCode, have != null && have == 1, xmlToSend);
+        }
 
         java.util.Map<String, Object> resp = new java.util.LinkedHashMap<>();
         resp.put("id", inv.getId());

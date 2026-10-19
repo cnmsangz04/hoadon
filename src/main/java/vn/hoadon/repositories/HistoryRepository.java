@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import vn.hoadon.entity.HistoryEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface HistoryRepository extends JpaRepository<HistoryEntity, Long> {
     Page<HistoryEntity> findByCompanyIdAndShowNotifyAndStatusOrderByCreatedAtDescIdDesc(
@@ -40,5 +41,12 @@ public interface HistoryRepository extends JpaRepository<HistoryEntity, Long> {
             String tableName,
             Long tableId,
             Integer status
+    );
+
+    Optional<HistoryEntity> findFirstByCompanyIdAndTableNameAndTableIdAndTypeOrderByIdDesc(
+            Long companyId,
+            String tableName,
+            Long tableId,
+            Integer type
     );
 }

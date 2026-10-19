@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import vn.hoadon.entity.InvoiceEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
 
@@ -37,6 +38,10 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
     java.util.Optional<InvoiceEntity> findByLookupCode(String lookupCode);
 
     java.util.Optional<InvoiceEntity> findFirstByCompanyIdAndNoOrderByIdDesc(Integer companyId, Integer no);
+
+    List<InvoiceEntity> findByCode(String code);
+
+    Optional<InvoiceEntity> findFirstByCodeAndCompanyIdOrderByIdDesc(String code, Integer companyId);
 
     @Query("SELECT i FROM InvoiceEntity i JOIN FormInvoiceEntity f ON i.formId = f.id " +
             "WHERE (:companyId IS NULL OR i.companyId = :companyId) " +

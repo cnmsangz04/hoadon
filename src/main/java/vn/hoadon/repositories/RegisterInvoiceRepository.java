@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import vn.hoadon.entity.RegisterInvoiceEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RegisterInvoiceRepository extends JpaRepository<RegisterInvoiceEntity, Long> {
@@ -29,4 +30,8 @@ public interface RegisterInvoiceRepository extends JpaRepository<RegisterInvoice
     // Deterministic latest accepted: order by effectiveDate DESC, createdAt DESC, use Pageable to limit
     @Query("SELECT r FROM RegisterInvoiceEntity r WHERE r.companyId = :companyId AND r.status = 6 ORDER BY CASE WHEN r.effectiveDate IS NULL THEN 1 ELSE 0 END, r.effectiveDate DESC, r.createdAt DESC")
     List<RegisterInvoiceEntity> findLatestAccepted(@Param("companyId") Long companyId, Pageable pageable);
+
+    List<RegisterInvoiceEntity> findByDeclarationCode(String declarationCode);
+
+    Optional<RegisterInvoiceEntity> findFirstByDeclarationCodeAndCompanyIdOrderByIdDesc(String declarationCode, Long companyId);
 }

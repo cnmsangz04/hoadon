@@ -8,10 +8,15 @@ import org.springframework.data.repository.query.Param;
 import vn.hoadon.entity.ErrorMessageEntity;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface ErrorMessageRepository extends JpaRepository<ErrorMessageEntity, Long> {
     Optional<ErrorMessageEntity> findByIdAndCompanyId(Long id, Long companyId);
+
+    List<ErrorMessageEntity> findByMessageCode(String messageCode);
+
+    Optional<ErrorMessageEntity> findFirstByMessageCodeAndCompanyIdOrderByIdDesc(String messageCode, Long companyId);
 
     @Query("""
             SELECT e
