@@ -56,6 +56,7 @@ public class SecurityConfig {
                                 "/favicon.ico",
                                 "/favicon.svg",
                                 "/lookup-invoice",
+                                "/womens-day",
                                 "/auth/**",
                                 "/register/**",
                                 "/form-invoice/**",
