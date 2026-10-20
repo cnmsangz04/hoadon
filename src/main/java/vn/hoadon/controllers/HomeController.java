@@ -15,6 +15,7 @@ public class HomeController {
             "/",
             "/home",
             "/lookup-invoice",
+            "/womens-day",
             "/auth/**",
             "/register/**",
             "/form-invoice/**",

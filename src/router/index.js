@@ -22,6 +22,12 @@ const router = new VueRouter({
 			meta: { public: true, title: 'Tra cứu hóa đơn' }
 		},
 		{
+			path: '/womens-day',
+			name: 'WomensDayGreeting',
+			component: () => import('@/views/public/womens_day.vue'),
+			meta: { public: true, title: 'Một món quà nhỏ dành cho bạn' }
+		},
+		{
 			path: '/',
 			component: () => import('@/views/customers/page.vue'),
 			meta: { requiresUser: true },
