@@ -152,6 +152,8 @@ export default {
       heartInterval: null,
       musicOn: false,
       musicAudio: null,
+      musicStartTimer: null,
+      musicFadeTimer: null,
       musicUnlockHandler: null,
       sparks: Array.from({ length: 34 }, (_, id) => ({
         id,
@@ -215,10 +217,9 @@ export default {
     document.title = `Một món quà nhỏ dành cho ${this.displayName}`
     this.bonusWish = this.pickBonusWish()
     this.startSequence()
-    this.startMusic()
-    this.musicUnlockHandler = () => {
-      if (!this.musicOn || !this.musicAudio || !this.musicAudio.paused) return
-      this.musicAudio.play().catch(() => {})
+    this.musicUnlockHandler = (event) => {
+      if (event.target && event.target.closest && event.target.closest('.music-button')) return
+      if (!this.musicOn) this.startMusic()
     }
     window.addEventListener('pointerdown', this.musicUnlockHandler, { passive: true })
     window.addEventListener('keydown', this.musicUnlockHandler, { passive: true })
@@ -230,6 +231,8 @@ export default {
       window.removeEventListener('keydown', this.musicUnlockHandler)
     }
     if (this.musicAudio) {
+      window.clearTimeout(this.musicStartTimer)
+      window.clearTimeout(this.musicFadeTimer)
       this.musicAudio.pause()
       this.musicAudio.currentTime = 0
     }
@@ -335,14 +338,29 @@ export default {
         this.musicAudio = new Audio(this.musicSource)
         this.musicAudio.loop = true
         this.musicAudio.preload = 'auto'
-        this.musicAudio.volume = 0.42
       }
       this.musicOn = true
-      this.musicAudio.play().catch(() => {})
+      window.clearTimeout(this.musicStartTimer)
+      window.clearTimeout(this.musicFadeTimer)
+      this.musicAudio.volume = 0.0001
+      this.musicStartTimer = window.setTimeout(() => {
+        this.musicAudio.play().then(() => {
+          const startedAt = performance.now()
+          const fadeIn = () => {
+            if (!this.musicOn || !this.musicAudio || this.musicAudio.paused) return
+            const progress = Math.min(1, (performance.now() - startedAt) / 2200)
+            this.musicAudio.volume = 0.0001 + (0.42 - 0.0001) * progress
+            if (progress < 1) this.musicFadeTimer = window.setTimeout(fadeIn, 80)
+          }
+          fadeIn()
+        }).catch(() => {})
+      }, 900)
     },
     toggleMusic () {
       if (this.musicOn) {
         this.musicOn = false
+        window.clearTimeout(this.musicStartTimer)
+        window.clearTimeout(this.musicFadeTimer)
         if (this.musicAudio) this.musicAudio.pause()
         return
       }
