@@ -25,7 +25,7 @@ const router = new VueRouter({
 			path: '/womens-day',
 			name: 'WomensDayGreeting',
 			component: () => import('@/views/public/womens_day.vue'),
-			meta: { public: true, title: 'Một món quà nhỏ dành cho bạn' }
+			meta: { public: true, title: 'Một món quà nhỏ dành riêng' }
 		},
 		{
 			path: '/',

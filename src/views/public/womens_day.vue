@@ -31,8 +31,8 @@
             <div class="intro-copy">
               <div class="date-monogram" aria-hidden="true"><b>20</b><i></i><b>10</b></div>
               <span class="eyebrow"><i></i>Một món quà nhỏ<i></i></span>
-              <h1>Điều <em>dịu dàng</em><br>này dành cho bạn.</h1>
-              <p>Gửi riêng <strong>{{ displayName }}</strong> trong ngày Phụ nữ Việt Nam.</p>
+              <h1>Điều <em>dịu dàng</em><br>này dành riêng cho {{ recipientLabel }}.</h1>
+              <p>Gửi riêng <strong>{{ recipientLabel }}</strong> trong ngày Phụ nữ Việt Nam.</p>
             </div>
 
             <div class="envelope-stage" aria-label="Phong bì đang tự động mở">
@@ -45,7 +45,7 @@
                 <span class="envelope-back"></span>
                 <span class="letter-preview">
                   <small>Gửi tặng</small>
-                  <b>{{ displayName }}</b>
+                  <b>{{ recipientLabel }}</b>
                   <i>♡</i>
                 </span>
                 <span class="envelope-front"></span>
@@ -55,7 +55,7 @@
             </div>
           </div>
 
-          <div class="auto-note intro-progress"><span></span><small>Đang mở món quà cho {{ displayName }}</small></div>
+          <div class="auto-note intro-progress" style="--progress-duration: 5s"><span></span><small>Đang mở món quà cho {{ recipientLabel }}</small></div>
         </div>
 
         <div v-else-if="step === 'flowers'" key="flowers" class="scene flowers-scene">
@@ -73,14 +73,14 @@
             <div class="flower-copy">
               <span class="eyebrow"><i></i>20 · 10 · 2026<i></i></span>
               <p class="flower-kicker">Happy Vietnamese Women's Day</p>
-              <h2>Một bó hoa<br><span>dành riêng cho</span><br><em>{{ displayName }}</em></h2>
+              <h2>Một bó hoa<br><span>dành riêng cho</span><br><em>{{ recipientLabel }}</em></h2>
               <div class="flower-message">
                 <span>“</span>
-                <p>Mong mọi điều đẹp đẽ sẽ luôn tìm thấy bạn,<br>theo cách dịu dàng nhất.</p>
+              <p>Mong mọi điều đẹp đẽ sẽ luôn tìm thấy {{ wishTarget }},<br>theo cách dịu dàng nhất.</p>
               </div>
             </div>
           </div>
-          <div class="auto-note flower-progress"><span></span><small>Lời chúc đang đến</small></div>
+          <div class="auto-note flower-progress" style="--progress-duration: 8s"><span></span><small>Lời chúc đang đến</small></div>
         </div>
 
         <div v-else key="letter" class="scene letter-scene">
@@ -93,12 +93,12 @@
             </header>
 
             <div class="letter-content">
-              <p class="recipient">Gửi {{ displayName }},</p>
-              <h2>Chúc bạn luôn<br><em>rạng rỡ.</em></h2>
+              <p class="recipient">Gửi {{ recipientLabel }},</p>
+              <h2>{{ letterTitleLead }}<br><em>rạng rỡ.</em></h2>
 
               <div class="wish-list">
                 <p v-for="(line, index) in visibleMessages" :key="index">{{ line }}</p>
-                <i v-if="visibleMessages.length < messages.length" class="typing-dot"></i>
+                <i v-if="visibleMessages.length < messageLines.length" class="typing-dot"></i>
               </div>
 
               <transition name="sign">
@@ -128,12 +128,7 @@
 
 <script>
 import bouquetImage from '@/assets/images/womens-day-bouquet.webp'
-
-const bonusWishes = [
-  'Bạn xứng đáng với tất cả những điều dịu dàng nhất.',
-  'Mong nụ cười của bạn luôn rực rỡ hơn những vì sao.',
-  'Chúc mỗi ngày của bạn đều có hoa, có nắng và yêu thương.'
-]
+import musicFile from '@/assets/audio/womens-day-original.wav'
 
 export default {
   name: 'WomensDay',
@@ -141,21 +136,23 @@ export default {
     const rawName = new URLSearchParams(window.location.search).get('to') || ''
     return {
       bouquetImage,
+      musicSource: musicFile,
       recipient: String(rawName).replace(/[<>"']/g, '').trim().slice(0, 32),
+      relationshipKey: String(new URLSearchParams(window.location.search).get('c') || '').toLowerCase(),
       step: 'intro',
       pageReady: false,
       envelopeOpen: false,
       visibleMessages: [],
       letterComplete: false,
       bonusVisible: false,
-      bonusWish: bonusWishes[Math.floor(Math.random() * bonusWishes.length)],
+      bonusWish: '',
       hearts: [],
       confetti: [],
       timers: [],
       heartInterval: null,
       musicOn: false,
-      musicTimer: null,
-      audioContext: null,
+      musicAudio: null,
+      musicUnlockHandler: null,
       sparks: Array.from({ length: 34 }, (_, id) => ({
         id,
         style: {
@@ -176,16 +173,39 @@ export default {
           '--scale': 0.55 + Math.random() * 0.7
         }
       })),
-      messages: [
-        'Chúc bạn luôn xinh đẹp, rạng rỡ và hạnh phúc.',
-        'Mong mỗi ngày trôi qua đều mang đến thật nhiều niềm vui, những điều ngọt ngào và những khoảnh khắc đáng nhớ.',
-        'Không chỉ riêng ngày 20/10, hy vọng bạn sẽ luôn được yêu thương, trân trọng và mỉm cười mỗi ngày. ❤️'
-      ]
     }
   },
   computed: {
     displayName () {
-      return this.recipient || 'bạn'
+      return this.recipient || 'người đặc biệt'
+    },
+    addressWord () {
+      return { c: 'chị', b: 'bạn', e: 'em', m: 'má mi' }[this.relationshipKey] || ''
+    },
+    addressCapitalized () {
+      const word = this.addressWord || 'người đặc biệt'
+      return word.charAt(0).toUpperCase() + word.slice(1)
+    },
+    recipientLabel () {
+      if (this.recipient) return this.addressWord ? `${this.addressWord} ${this.recipient}` : this.recipient
+      return this.addressWord || 'người đặc biệt'
+    },
+    wishTarget () {
+      return this.addressWord || 'người đặc biệt'
+    },
+    letterTitleLead () {
+      return this.addressWord ? `Chúc ${this.addressWord} luôn` : 'Chúc ngày 20/10 thật'
+    },
+    messageLines () {
+      return [
+        this.addressWord
+          ? `Chúc ${this.addressWord} luôn xinh đẹp, rạng rỡ và hạnh phúc.`
+          : 'Chúc ngày 20/10 thật xinh đẹp, rạng rỡ và hạnh phúc.',
+        'Mong mỗi ngày trôi qua đều mang đến thật nhiều niềm vui, những điều ngọt ngào và những khoảnh khắc đáng nhớ.',
+        this.addressWord
+          ? `Không chỉ riêng ngày 20/10, hy vọng ${this.addressWord} sẽ luôn được yêu thương, trân trọng và mỉm cười mỗi ngày. ❤️`
+          : 'Không chỉ riêng ngày 20/10, hy vọng mỗi ngày đều được yêu thương, trân trọng và ngập tràn nụ cười. ❤️'
+      ]
     },
     sceneNumber () {
       return this.step === 'intro' ? '01' : this.step === 'flowers' ? '02' : '03'
@@ -193,12 +213,26 @@ export default {
   },
   mounted () {
     document.title = `Một món quà nhỏ dành cho ${this.displayName}`
+    this.bonusWish = this.pickBonusWish()
     this.startSequence()
+    this.startMusic()
+    this.musicUnlockHandler = () => {
+      if (!this.musicOn || !this.musicAudio || !this.musicAudio.paused) return
+      this.musicAudio.play().catch(() => {})
+    }
+    window.addEventListener('pointerdown', this.musicUnlockHandler, { passive: true })
+    window.addEventListener('keydown', this.musicUnlockHandler, { passive: true })
   },
   beforeDestroy () {
     this.clearSequence()
-    if (this.musicTimer) window.clearInterval(this.musicTimer)
-    if (this.audioContext) this.audioContext.close()
+    if (this.musicUnlockHandler) {
+      window.removeEventListener('pointerdown', this.musicUnlockHandler)
+      window.removeEventListener('keydown', this.musicUnlockHandler)
+    }
+    if (this.musicAudio) {
+      this.musicAudio.pause()
+      this.musicAudio.currentTime = 0
+    }
   },
   methods: {
     later (callback, delay) {
@@ -228,31 +262,40 @@ export default {
       this.later(() => {
         this.step = 'flowers'
         this.burstConfetti(42)
-      }, 3900)
-      this.later(() => { this.openLetter() }, 8200)
+      }, 5000)
+      this.later(() => { this.openLetter() }, 13000)
     },
     openLetter () {
       this.step = 'letter'
       this.visibleMessages = []
-      this.messages.forEach((line, index) => {
-        this.later(() => { this.visibleMessages.push(line) }, 700 + index * 820)
+      this.messageLines.forEach((line, index) => {
+        const delays = [800, 3200, 5600]
+        this.later(() => { this.visibleMessages.push(line) }, delays[index])
       })
       this.later(() => {
         this.letterComplete = true
         this.sendHearts()
-      }, 3350)
+      }, 6900)
       this.later(() => {
         this.bonusVisible = true
         this.burstConfetti(34)
-      }, 4300)
+      }, 8500)
       this.heartInterval = window.setInterval(() => {
         if (this.step === 'letter') this.sendHearts()
       }, 7000)
     },
     restart () {
-      this.bonusWish = bonusWishes[Math.floor(Math.random() * bonusWishes.length)]
+      this.bonusWish = this.pickBonusWish()
       window.scrollTo({ top: 0, behavior: 'smooth' })
       this.startSequence()
+    },
+    pickBonusWish () {
+      const wishes = [
+        `${this.addressCapitalized} xứng đáng với tất cả những điều dịu dàng nhất.`,
+        `Mong nụ cười của ${this.wishTarget} luôn rực rỡ hơn những vì sao.`,
+        `Chúc mỗi ngày của ${this.wishTarget} đều có hoa, có nắng và yêu thương.`
+      ]
+      return wishes[Math.floor(Math.random() * wishes.length)]
     },
     sendHearts () {
       const stamp = Date.now()
@@ -287,35 +330,23 @@ export default {
       }))
       this.later(() => { this.confetti = [] }, 3600)
     },
+    startMusic () {
+      if (!this.musicAudio) {
+        this.musicAudio = new Audio(this.musicSource)
+        this.musicAudio.loop = true
+        this.musicAudio.preload = 'auto'
+        this.musicAudio.volume = 0.42
+      }
+      this.musicOn = true
+      this.musicAudio.play().catch(() => {})
+    },
     toggleMusic () {
       if (this.musicOn) {
         this.musicOn = false
-        window.clearInterval(this.musicTimer)
-        this.musicTimer = null
+        if (this.musicAudio) this.musicAudio.pause()
         return
       }
-      const AudioCtx = window.AudioContext || window.webkitAudioContext
-      if (!AudioCtx) return
-      this.audioContext = this.audioContext || new AudioCtx()
-      if (this.audioContext.state === 'suspended') this.audioContext.resume()
-      this.musicOn = true
-      const notes = [261.63, 329.63, 392, 493.88, 392, 329.63, 293.66]
-      let index = 0
-      const play = () => {
-        if (!this.musicOn) return
-        const oscillator = this.audioContext.createOscillator()
-        const gain = this.audioContext.createGain()
-        oscillator.type = 'sine'
-        oscillator.frequency.value = notes[index++ % notes.length]
-        gain.gain.setValueAtTime(0.0001, this.audioContext.currentTime)
-        gain.gain.exponentialRampToValueAtTime(0.028, this.audioContext.currentTime + 0.09)
-        gain.gain.exponentialRampToValueAtTime(0.0001, this.audioContext.currentTime + 1.35)
-        oscillator.connect(gain).connect(this.audioContext.destination)
-        oscillator.start()
-        oscillator.stop(this.audioContext.currentTime + 1.4)
-      }
-      play()
-      this.musicTimer = window.setInterval(play, 1280)
+      this.startMusic()
     }
   }
 }
@@ -375,12 +406,12 @@ export default {
 .wax-seal { z-index: 5; left: calc(50% - 23px); bottom: 50px; display: grid !important; place-items: center; width: 46px; height: 46px; border: 1px solid rgba(255,255,255,.22); border-radius: 50%; color: #ffe9e1; background: linear-gradient(145deg,#c6547b,#87304f); box-shadow: 0 7px 15px rgba(72,17,42,.36), inset 0 0 0 4px rgba(255,255,255,.05); font: italic 19px Georgia,serif; transition: opacity .3s ease .1s, transform .45s ease; }
 .envelope-open .envelope-flap { z-index: 1; transform: rotateX(180deg); }.envelope-open .letter-preview { transform: translateY(-105px); }.envelope-open .wax-seal { opacity: 0; transform: scale(.5); }
 .envelope-spark { position: absolute; z-index: 6; color: var(--gold); text-shadow: 0 0 18px rgba(255,220,145,.7); animation: sparkle 2.2s ease-in-out infinite; }.spark-one { top: 88px; right: 72px; font-size: 25px; }.spark-two { bottom: 92px; left: 72px; color: #ffc7d8; font-size: 17px; animation-delay: -.8s; }
-.auto-note { grid-area: note; align-self: start; width: 210px; margin-top: -75px; text-align: left; }.auto-note > span { position: relative; display: block; height: 1px; overflow: hidden; background: rgba(255,255,255,.12); }.auto-note > span:after { position: absolute; inset: 0; background: linear-gradient(90deg,var(--gold),#f59abb); content: ''; transform-origin: left; animation: auto-progress 3.75s linear .15s both; }.auto-note small { display: block; margin-top: 11px; color: rgba(255,255,255,.4); font-size: 8px; font-weight: 700; letter-spacing: .17em; text-transform: uppercase; }
+.auto-note { grid-area: note; align-self: start; width: 210px; margin-top: -75px; text-align: left; }.auto-note > span { position: relative; display: block; height: 1px; overflow: hidden; background: rgba(255,255,255,.12); }.auto-note > span:after { position: absolute; inset: 0; background: linear-gradient(90deg,var(--gold),#f59abb); content: ''; transform-origin: left; animation: auto-progress var(--progress-duration, 3.75s) linear 0s both; }.auto-note small { display: block; margin-top: 11px; color: rgba(255,255,255,.4); font-size: 8px; font-weight: 700; letter-spacing: .17em; text-transform: uppercase; }
 
 .flowers-scene { display: flex; flex-direction: column; align-items: center; padding: 4px 0 16px; }.flower-heading { position: relative; z-index: 5; }.flower-heading h2 { margin: 10px 0 -36px !important; color: var(--cream) !important; font-family: Georgia,serif !important; font-size: clamp(49px,5vw,70px) !important; font-weight: 400 !important; letter-spacing: -.055em !important; line-height: 1 !important; }.flower-heading h2 em { color: #ffc4d4; font-weight: 400; }
 .bouquet-stage { position: relative; display: grid; place-items: center; width: 520px; height: 445px; }.bouquet-stage img { position: relative; z-index: 4; width: 420px; height: auto; filter: drop-shadow(0 35px 35px rgba(0,0,0,.28)); animation: bouquet-in 1.25s cubic-bezier(.18,.8,.28,1) both, bouquet-float 4.6s ease-in-out 1.25s infinite; }.bouquet-aura { position: absolute; width: 330px; height: 330px; border-radius: 50%; background: radial-gradient(circle,rgba(240,135,171,.25),rgba(116,56,124,.08) 52%,transparent 72%); box-shadow: 0 0 95px rgba(232,106,154,.14); }.bouquet-ring { position: absolute; width: 350px; height: 350px; border: 1px solid rgba(244,214,153,.11); border-radius: 50%; }.ring-one { animation: rotate 24s linear infinite; }.ring-two { width: 285px; height: 285px; border-style: dashed; border-color: rgba(255,205,219,.11); animation: rotate 18s linear infinite reverse; }
 .bouquet-shine { position: absolute; z-index: 6; color: var(--gold); text-shadow: 0 0 18px rgba(255,217,145,.8); animation: sparkle 2.2s ease-in-out infinite; }.shine-one { left: 40px; top: 118px; font-size: 26px; }.shine-two { right: 48px; top: 77px; color: #ffd1df; font-size: 19px; animation-delay: -.7s; }.shine-three { right: 53px; bottom: 88px; font-size: 15px; animation-delay: -1.2s; }
-.flower-note { position: relative; z-index: 5; margin: -17px 0 12px; color: rgba(255,244,235,.67); font-family: Georgia,serif; font-size: 13px; line-height: 1.7; }.flower-progress { width: 170px; margin: 0; text-align: center; }.flower-progress > span:after { animation-duration: 4.2s; animation-delay: 0s; }.flower-progress small { margin-top: 9px; }
+.flower-note { position: relative; z-index: 5; margin: -17px 0 12px; color: rgba(255,244,235,.67); font-family: Georgia,serif; font-size: 13px; line-height: 1.7; }.flower-progress { width: 170px; margin: 0; text-align: center; }.flower-progress > span:after { animation-duration: var(--progress-duration, 15s); animation-delay: 0s; }.flower-progress small { margin-top: 9px; }
 
 /* Cinematic layouts: every text block owns its space, with no negative spacing. */
 .intro-scene { display: flex; flex-direction: column; align-items: center; max-width: 1040px; opacity: 0; transform: translateY(12px); transition: .8s ease; }
