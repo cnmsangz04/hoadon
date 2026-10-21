@@ -97,6 +97,13 @@
       meta: { requiresAdmin: true, title: "Phiên đăng nhập" },
     },
     {
+      path: "database",
+      name: "admin-database",
+      component: () =>
+        import("../../views/administrators/database/index.vue"),
+      meta: { requiresAdmin: true, title: "Dữ liệu database" },
+    },
+    {
       path: "form-invoice/list",
       name: "admin-form-invoice-list",
       component: () =>

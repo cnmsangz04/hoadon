@@ -109,6 +109,10 @@
           </b-badge>
         </template>
 
+        <template #cell(code)="{ item }">
+          <code class="text-wrap-anywhere">{{ item.code || '—' }}</code>
+        </template>
+
         <template #cell(invoice_forms)="{ item }">
           <span class="text-muted" v-if="!item.invoice_forms">—</span>
           <span v-else class="text-wrap-anywhere">{{ summarizeInvoiceForms(item.invoice_forms) }}</span>
@@ -223,6 +227,7 @@ export default {
         { key: 'form_pattern', label: 'Mẫu số', thStyle: { width: '13%' } },
         { key: 'declaration_date', label: 'Ngày lập', thStyle: { width: '11%' } },
         { key: 'declaration_type', label: 'Hình thức tờ khai', thStyle: { width: '13%' } },
+        { key: 'code', label: 'Mã thông điệp', thStyle: { width: '18%' } },
         { key: 'invoice_forms', label: 'Hình thức hóa đơn', thStyle: { width: '37%' } },
         { key: 'status', label: 'Trạng thái', thStyle: { width: '10%' } },
         { key: 'option', label: 'Chức năng', thStyle: { width: '12%' } }
@@ -329,6 +334,7 @@ export default {
         formPattern: 'form_pattern',
         declarationDate: 'declaration_date',
         declarationType: 'declaration_type',
+        code: 'code',
         invoiceForms: 'invoice_forms',
         invoiceTypes: 'invoice_types',
         sendMethods: 'send_methods',

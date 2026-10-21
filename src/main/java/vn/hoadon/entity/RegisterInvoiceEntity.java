@@ -24,6 +24,12 @@ public class RegisterInvoiceEntity {
     @Column(name = "declaration_code", length = 100)
     private String declarationCode;
 
+    @Column(name = "id_attr", length = 100)
+    private String idAttr;
+
+    @Column(name = "code", length = 100)
+    private String code;
+
     @Column(name = "declaration_type", nullable = false)
     private Integer declarationType = 1; // 1: ĐK mới, 2: Thay đổi
 
@@ -105,6 +111,10 @@ public class RegisterInvoiceEntity {
     public void setUserId(Long userId) { this.userId = userId; }
     public String getDeclarationCode() { return declarationCode; }
     public void setDeclarationCode(String declarationCode) { this.declarationCode = declarationCode; }
+    public String getIdAttr() { return idAttr; }
+    public void setIdAttr(String idAttr) { this.idAttr = idAttr; }
+    public String getCode() { return code; }
+    public void setCode(String code) { this.code = code; }
     public Integer getDeclarationType() { return declarationType; }
     public void setDeclarationType(Integer declarationType) { this.declarationType = declarationType; }
     public String getFormPattern() { return formPattern; }

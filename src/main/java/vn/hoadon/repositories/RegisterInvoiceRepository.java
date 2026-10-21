@@ -34,4 +34,8 @@ public interface RegisterInvoiceRepository extends JpaRepository<RegisterInvoice
     List<RegisterInvoiceEntity> findByDeclarationCode(String declarationCode);
 
     Optional<RegisterInvoiceEntity> findFirstByDeclarationCodeAndCompanyIdOrderByIdDesc(String declarationCode, Long companyId);
+
+    List<RegisterInvoiceEntity> findByCode(String code);
+
+    Optional<RegisterInvoiceEntity> findFirstByCodeAndCompanyIdOrderByIdDesc(String code, Long companyId);
 }

@@ -25,6 +25,7 @@ import vn.hoadon.repositories.InvoiceRepository;
 import vn.hoadon.repositories.RegisterInvoiceRepository;
 import vn.hoadon.repositories.SignatureAuthoritiesTaxRepository;
 import vn.hoadon.util.InvoiceXmlTaxValidator;
+import vn.hoadon.util.RegisterInvoiceXmlTaxValidator;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -115,6 +116,50 @@ public class PatvanCallbackService {
             log.warn("Local PATVAN callback simulation interrupted: reference={}", messageReference);
         } catch (Exception e) {
             log.error("Local PATVAN callback simulation failed: reference={}, error={}",
+                    messageReference, e.getMessage(), e);
+        }
+    }
+
+    @Async
+    @Transactional
+    public void simulateRegisterResult(String messageReference, String taxpayerTaxCode, String signedXml) {
+        if (!appEnvironment.isLocal()) return;
+        try {
+            Thread.sleep(1500L);
+            RegisterInvoiceXmlTaxValidator.Result receive =
+                    RegisterInvoiceXmlTaxValidator.validateForReceive(signedXml);
+            process(providerTaxCode, taxpayerTaxCode,
+                    registerCallbackXml(102, messageReference, receive.isValid(), receive.getMessage()));
+            if (!receive.isValid()) return;
+
+            Thread.sleep(2500L);
+            RegisterInvoiceXmlTaxValidator.Result accepted = RegisterInvoiceXmlTaxValidator.validate(signedXml);
+            process(providerTaxCode, taxpayerTaxCode,
+                    registerCallbackXml(103, messageReference, accepted.isValid(), accepted.getMessage()));
+            log.info("Local PATVAN register callback simulated: reference={}, accepted={}",
+                    messageReference, accepted.isValid());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Local PATVAN register callback simulation interrupted: reference={}", messageReference);
+        } catch (Exception e) {
+            log.error("Local PATVAN register callback simulation failed: reference={}, error={}",
+                    messageReference, e.getMessage(), e);
+        }
+    }
+
+    @Async
+    @Transactional
+    public void simulateErrorMessageResult(String messageReference, String taxpayerTaxCode) {
+        if (!appEnvironment.isLocal()) return;
+        try {
+            Thread.sleep(1500L);
+            process(providerTaxCode, taxpayerTaxCode, errorMessageCallbackXml(messageReference));
+            log.info("Local PATVAN error-message callback simulated: reference={}", messageReference);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Local PATVAN error-message callback simulation interrupted: reference={}", messageReference);
+        } catch (Exception e) {
+            log.error("Local PATVAN error-message callback simulation failed: reference={}, error={}",
                     messageReference, e.getMessage(), e);
         }
     }
@@ -310,6 +355,8 @@ public class PatvanCallbackService {
         invoiceRepository.findByCode(reference).stream()
                 .map(InvoiceEntity::getCompanyId).filter(id -> id != null)
                 .map(Integer::longValue).forEach(matchedCompanyIds::add);
+        registerInvoiceRepository.findByCode(reference).stream()
+                .map(RegisterInvoiceEntity::getCompanyId).filter(id -> id != null).forEach(matchedCompanyIds::add);
         registerInvoiceRepository.findByDeclarationCode(reference).stream()
                 .map(RegisterInvoiceEntity::getCompanyId).filter(id -> id != null).forEach(matchedCompanyIds::add);
         errorMessageRepository.findByMessageCode(reference).stream()
@@ -344,8 +391,31 @@ public class PatvanCallbackService {
     }
 
     private RegisterInvoiceEntity findRegister(String reference, long companyId) {
-        return registerInvoiceRepository.findFirstByDeclarationCodeAndCompanyIdOrderByIdDesc(reference, companyId)
+        return registerInvoiceRepository.findFirstByCodeAndCompanyIdOrderByIdDesc(reference, companyId)
+                .or(() -> registerInvoiceRepository.findFirstByDeclarationCodeAndCompanyIdOrderByIdDesc(reference, companyId))
                 .orElseThrow(() -> new CallbackException("Không tìm thấy tờ khai theo MTDTChieu " + reference));
+    }
+
+    private static String registerCallbackXml(int messageType, String reference, boolean accepted, String reason) {
+        String resultTag = messageType == 102 ? "THop" : "TTXNCQT";
+        String result = accepted ? "1" : "0";
+        String noticeNumber = "LOCAL-" + messageType + "-" + UUID.randomUUID().toString().replace("-", "");
+        String detail = accepted ? "" : "<KHLKhac>" + escapeXml(reason) + "</KHLKhac>";
+        String acceptNumber = messageType == 103
+                ? "<STBao><So>" + escapeXml(noticeNumber) + "</So></STBao>"
+                : "";
+        return "<TDiep><TTChung><MLTDiep>" + messageType + "</MLTDiep><MTDTChieu>"
+                + escapeXml(reference) + "</MTDTChieu></TTChung><DLieu><TBao><DLTBao><"
+                + resultTag + ">" + result + "</" + resultTag + ">"
+                + (messageType == 102 ? "<MSo>" + escapeXml(noticeNumber) + "</MSo>" : acceptNumber)
+                + detail + "</DLTBao></TBao></DLieu></TDiep>";
+    }
+
+    private static String errorMessageCallbackXml(String reference) {
+        String noticeNumber = "LOCAL-301-" + UUID.randomUUID().toString().replace("-", "");
+        return "<TDiep><TTChung><MLTDiep>301</MLTDiep><MTDTChieu>"
+                + escapeXml(reference) + "</MTDTChieu></TTChung><DLieu><TBao><STBao><So>"
+                + escapeXml(noticeNumber) + "</So></STBao></TBao></DLieu></TDiep>";
     }
 
     private void saveAuthorityTaxXml(InvoiceEntity invoice, String returnedInvoiceXml) {

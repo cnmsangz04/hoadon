@@ -11,6 +11,7 @@ import vn.hoadon.services.ErrorMessageService;
 import vn.hoadon.services.patvan.PatvanMessageType;
 import vn.hoadon.services.patvan.PatvanPostResult;
 import vn.hoadon.services.patvan.PatvanTransmissionService;
+import vn.hoadon.services.patvan.PatvanCallbackService;
 import vn.hoadon.util.ErrorMessageXmlBuilder;
 
 import java.time.LocalDate;
@@ -26,6 +27,7 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
     private final ProvinceRepository provinceRepository;
     private final HistoryRepository historyRepository;
     private final PatvanTransmissionService patvanTransmissionService;
+    private final PatvanCallbackService patvanCallbackService;
 
     public ErrorMessageServiceImpl(ErrorMessageRepository repository,
                                    InvoiceRepository invoiceRepository,
@@ -33,7 +35,8 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
                                    CompanyRepository companyRepository,
                                    ProvinceRepository provinceRepository,
                                    HistoryRepository historyRepository,
-                                   PatvanTransmissionService patvanTransmissionService) {
+                                   PatvanTransmissionService patvanTransmissionService,
+                                   PatvanCallbackService patvanCallbackService) {
         this.repository = repository;
         this.invoiceRepository = invoiceRepository;
         this.formInvoiceRepository = formInvoiceRepository;
@@ -41,6 +44,7 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
         this.provinceRepository = provinceRepository;
         this.historyRepository = historyRepository;
         this.patvanTransmissionService = patvanTransmissionService;
+        this.patvanCallbackService = patvanCallbackService;
     }
 
     @Override
@@ -109,11 +113,20 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
             CompanyEntity company = companyRepository.findById(companyId).orElse(null);
             String taxCode = company != null ? company.getTaxcode() : null;
             PatvanMessageType type = isCertificateErrorMessage(existing) ? PatvanMessageType.TBSS_CT : PatvanMessageType.TBSS;
-            PatvanPostResult patvanResult = patvanTransmissionService.postXml(type, existing.getSignedXml(), taxCode);
+            PatvanPostResult patvanResult;
+            if (patvanCallbackService.isLocalSimulation()) {
+                String localMessageCode = "LOCAL-TBSS-" + UUID.randomUUID().toString().replace("-", "");
+                patvanResult = new PatvanPostResult(200, "Giả lập truyền nhận local", localMessageCode, "");
+            } else {
+                patvanResult = patvanTransmissionService.postXml(type, existing.getSignedXml(), taxCode);
+            }
             existing.setMessageCode(patvanResult.maThongdiep());
             existing.setStatus(2);
             ErrorMessageEntity saved = repository.save(existing);
             saveHistory(companyId, userId, id, 300, "Gửi thông báo hóa đơn sai sót lên cơ quan thuế", "Mã thông điệp 300", existing.getSignedXml(), 0);
+            if (patvanCallbackService.isLocalSimulation()) {
+                patvanCallbackService.simulateErrorMessageResult(patvanResult.maThongdiep(), taxCode);
+            }
             return saved;
         });
     }

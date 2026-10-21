@@ -81,6 +81,7 @@ export default {
         { title: 'Telegram', icon: 'fas fa-paper-plane', to: '/administrator/telegram/config' },
         { title: 'Báo cáo hóa đơn ngày', icon: 'fas fa-calendar-check', to: '/administrator/daily-invoice-report/config' },
         { title: 'Phiên đăng nhập', icon: 'fas fa-desktop', to: '/administrator/sessions/list' },
+        { title: 'Dữ liệu database', icon: 'fas fa-database', to: '/administrator/database' },
         {
           title: 'Phân quyền',
           icon: 'fas fa-user-shield',

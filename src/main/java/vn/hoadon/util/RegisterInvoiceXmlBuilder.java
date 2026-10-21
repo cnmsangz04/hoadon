@@ -99,7 +99,9 @@ public final class RegisterInvoiceXmlBuilder {
         if (e == null) return "";
         String id = documentId != null && !documentId.isBlank()
                 ? documentId.trim()
-                : UUID.randomUUID().toString().replace("-", "").toUpperCase();
+                : e.getIdAttr() != null && !e.getIdAttr().isBlank()
+                    ? e.getIdAttr().trim()
+                    : UUID.randomUUID().toString().replace("-", "").toUpperCase();
         String pban = "2.1.0";
         String mso = e.getFormPattern() != null ? e.getFormPattern() : "01/ĐKTĐ-HĐĐT";
         String ten = "Tờ khai đăng ký/thay đổi thông tin sử dụng hóa đơn điện tử";

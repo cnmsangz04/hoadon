@@ -24,6 +24,7 @@ import vn.hoadon.dto.history.HistoryDto;
 import vn.hoadon.services.patvan.PatvanMessageType;
 import vn.hoadon.services.patvan.PatvanPostResult;
 import vn.hoadon.services.patvan.PatvanTransmissionService;
+import vn.hoadon.services.patvan.PatvanCallbackService;
 
 import java.net.URI;
 import java.time.LocalDate;
@@ -48,6 +49,7 @@ public class RegisterInvoiceController extends BaseController {
     private final RegisterInvoiceService service;
     private final CompanyRepository companyRepository;
     private final PatvanTransmissionService patvanTransmissionService;
+    private final PatvanCallbackService patvanCallbackService;
     @Autowired private HashInvoiceRepository hashInvoiceRepository;
     // Replace repository with service per 3-layer architecture
     @Autowired(required = false)
@@ -59,10 +61,12 @@ public class RegisterInvoiceController extends BaseController {
 
     public RegisterInvoiceController(RegisterInvoiceService service,
                                      CompanyRepository companyRepository,
-                                     PatvanTransmissionService patvanTransmissionService) {
+                                     PatvanTransmissionService patvanTransmissionService,
+                                     PatvanCallbackService patvanCallbackService) {
         this.service = service;
         this.companyRepository = companyRepository;
         this.patvanTransmissionService = patvanTransmissionService;
+        this.patvanCallbackService = patvanCallbackService;
     }
 
     @GetMapping("/{id}")
@@ -150,6 +154,8 @@ public class RegisterInvoiceController extends BaseController {
         entity.setCompanyId(user.getCompanyId());
         entity.setUserId(user.getId());
         entity.setDeclarationCode(null);
+        entity.setIdAttr(UUID.randomUUID().toString().replace("-", "").toUpperCase());
+        entity.setCode(null);
         entity.setDeclarationType(req.getDeclarationType() != null ? req.getDeclarationType() : 1);
         entity.setFormPattern(req.getFormPattern() != null ? req.getFormPattern() : "01/ĐKTĐ-HĐĐT");
         entity.setDeclarationDate(parseDate(req.getDeclarationDate(), LocalDate.now()));
@@ -188,6 +194,8 @@ public class RegisterInvoiceController extends BaseController {
         patch.setCompanyId(existing.getCompanyId());
         patch.setUserId(existing.getUserId() != null ? existing.getUserId() : user.getId());
         patch.setDeclarationCode(existing.getDeclarationCode());
+        patch.setIdAttr(existing.getIdAttr());
+        patch.setCode(existing.getCode());
         patch.setDeclarationType(req.getDeclarationType() != null ? req.getDeclarationType() : existing.getDeclarationType());
         patch.setFormPattern(req.getFormPattern() != null ? req.getFormPattern() : existing.getFormPattern());
         patch.setDeclarationDate(parseDate(req.getDeclarationDate(), existing.getDeclarationDate()));
@@ -233,11 +241,16 @@ public class RegisterInvoiceController extends BaseController {
         CompanyEntity company = companyRepository.findById(entity.getCompanyId()).orElse(null);
         String taxCode = company != null ? company.getTaxcode() : null;
         PatvanPostResult patvanResult;
-        try {
-            patvanResult = patvanTransmissionService.postXml(PatvanMessageType.DKSD, entity.getSignedXml(), taxCode);
-        } catch (PatvanTransmissionService.PatvanException e) {
-            log.error("Send register invoice {} to PATVAN UAT failed: {}", id, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        if (patvanCallbackService.isLocalSimulation()) {
+            String localMessageCode = "LOCAL-DKSD-" + UUID.randomUUID().toString().replace("-", "");
+            patvanResult = new PatvanPostResult(200, "Giả lập truyền nhận local", localMessageCode, "");
+        } else {
+            try {
+                patvanResult = patvanTransmissionService.postXml(PatvanMessageType.DKSD, entity.getSignedXml(), taxCode);
+            } catch (PatvanTransmissionService.PatvanException e) {
+                log.error("Send register invoice {} to PATVAN UAT failed: {}", id, e.getMessage(), e);
+                return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+            }
         }
         // 1) Insert history row
         insertHistoryRow(entity.getCompanyId(), user.getId(), "register_invoices", entity.getId(),
@@ -246,11 +259,14 @@ public class RegisterInvoiceController extends BaseController {
         // Preserve all existing fields to avoid accidental data loss if update is a full overwrite
         RegisterInvoiceEntity patch = cloneEntityPreserveAll(entity);
         // Mutating fields only
-        patch.setDeclarationCode(patvanResult.maThongdiep());
+        patch.setCode(patvanResult.maThongdiep());
         patch.setStatus(2);
         patch.setResponseReceiveFile(null);
         patch.setResponseAcceptFile(null);
         service.update(id, patch);
+        if (patvanCallbackService.isLocalSimulation()) {
+            patvanCallbackService.simulateRegisterResult(patvanResult.maThongdiep(), taxCode, entity.getSignedXml());
+        }
         return ResponseEntity.accepted().body(Map.of(
                 "id", id,
                 "status", 2,
@@ -289,6 +305,8 @@ public class RegisterInvoiceController extends BaseController {
         e.setCompanyId(src.getCompanyId());
         e.setUserId(src.getUserId());
         e.setDeclarationCode(src.getDeclarationCode());
+        e.setIdAttr(src.getIdAttr());
+        e.setCode(src.getCode());
         e.setDeclarationType(src.getDeclarationType());
         e.setFormPattern(src.getFormPattern());
         e.setDeclarationDate(src.getDeclarationDate());
@@ -371,7 +389,10 @@ public class RegisterInvoiceController extends BaseController {
                         CompanyEntity c = map.get(e.getCompanyId());
                         String name = c != null && c.getName() != null ? c.getName().toLowerCase() : "";
                         String tax = c != null && c.getTaxcode() != null ? c.getTaxcode().toLowerCase() : "";
-                        return name.contains(kw) || tax.contains(kw);
+                        String code = e.getCode() != null ? e.getCode().toLowerCase() : "";
+                        String declarationCode = e.getDeclarationCode() != null ? e.getDeclarationCode().toLowerCase() : "";
+                        return name.contains(kw) || tax.contains(kw)
+                                || code.contains(kw) || declarationCode.contains(kw);
                     })
                     .toList();
             p = new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
@@ -769,7 +790,14 @@ public class RegisterInvoiceController extends BaseController {
         hash.setNameUser(user.getUsername());
         hash.setHash(createHash(entity.getCompanyId()));
         hash.setIds(List.of(entity.getId()));
-        hash.setIdAttr(UUID.randomUUID().toString().replace("-", "").toUpperCase());
+        String documentId = entity.getIdAttr();
+        if (documentId == null || documentId.isBlank()) {
+            documentId = UUID.randomUUID().toString().replace("-", "").toUpperCase();
+            RegisterInvoiceEntity patch = cloneEntityPreserveAll(entity);
+            patch.setIdAttr(documentId);
+            service.update(id, patch);
+        }
+        hash.setIdAttr(documentId);
         hash.setSignBy("NNT");
         hash.setType("DKSD");
         hashInvoiceRepository.save(hash);

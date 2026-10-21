@@ -64,6 +64,8 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
     public Optional<RegisterInvoiceEntity> update(Long id, RegisterInvoiceEntity patch) {
         return repository.findById(id).map(existing -> {
             existing.setDeclarationCode(patch.getDeclarationCode());
+            existing.setIdAttr(patch.getIdAttr());
+            existing.setCode(patch.getCode());
             existing.setDeclarationType(patch.getDeclarationType());
             existing.setFormPattern(patch.getFormPattern());
             existing.setDeclarationDate(patch.getDeclarationDate());
