@@ -182,12 +182,12 @@
             <b-row>
               <b-col cols="12" md="6">
                 <b-form-checkbox class="mb-2" value="HDGTGT">Hóa đơn GTGT</b-form-checkbox>
-                <b-form-checkbox class="mb-2" value="HDGTGT_BienLai">Hóa đơn GTGT tích hợp biên lai thu thuế, phí, lệ phí</b-form-checkbox>
+                <b-form-checkbox class="mb-2" value="HDGTGTTHBLai">Hóa đơn GTGT tích hợp biên lai thu thuế, phí, lệ phí</b-form-checkbox>
                 <b-form-checkbox class="mb-2" value="HDBHang">Hóa đơn bán hàng</b-form-checkbox>
-                <b-form-checkbox class="mb-2" value="HDBHang_BienLai">Hóa đơn bán hàng tích hợp biên lai thu thuế, phí, lệ phí</b-form-checkbox>
+                <b-form-checkbox class="mb-2" value="HDBHTHBLai">Hóa đơn bán hàng tích hợp biên lai thu thuế, phí, lệ phí</b-form-checkbox>
               </b-col>
               <b-col cols="12" md="6">
-                <b-form-checkbox class="mb-2" value="HDThuongMai">Hóa đơn thương mại</b-form-checkbox>
+                <b-form-checkbox class="mb-2" value="HDTMai">Hóa đơn thương mại</b-form-checkbox>
                 <b-form-checkbox class="mb-2" value="HDBTSCong">Hóa đơn bán tài sản công</b-form-checkbox>
                 <b-form-checkbox class="mb-2" value="HDBHDTQGia">Hóa đơn bán hàng dự trữ quốc gia</b-form-checkbox>
                 <b-form-checkbox class="mb-2" value="HDKhac">Hóa đơn khác</b-form-checkbox>
@@ -245,6 +245,100 @@
                 </b-tr>
                 <b-tr v-if="!frmData.digital_certificates || frmData.digital_certificates.length < 1">
                   <b-td colspan="7" class="text-center">Không có dữ liệu</b-td>
+                </b-tr>
+              </b-tbody>
+            </b-table-simple>
+          </div>
+        </b-col>
+      </b-row>
+
+      <!-- 6. Danh sách tổ chức cung cấp giải pháp -->
+      <b-row class="pt-2 pb-2">
+        <b-col cols="12">
+          <div class="provider-section-heading">
+            <label class="font-weight-bold">6. Danh sách tổ chức cung cấp giải pháp</label>
+            <b-button type="button" variant="link" class="provider-add-btn" @click="showProviderModal('solution', false)">
+              <i class="fas fa-plus mr-1"></i> Thêm tổ chức cung cấp giải pháp
+            </b-button>
+          </div>
+          <div class="provider-table-wrap">
+            <b-table-simple class="provider-table" bordered small show-empty empty-text="Không có dữ liệu để hiển thị">
+              <b-thead>
+                <b-tr>
+                  <b-th rowspan="2" class="text-center align-middle provider-col-index">STT</b-th>
+                  <b-th rowspan="2" class="text-center align-middle provider-col-name">Tên tổ chức cung cấp giải pháp</b-th>
+                  <b-th rowspan="2" class="text-center align-middle provider-col-tax">Mã số thuế</b-th>
+                  <b-th colspan="2" class="text-center align-middle provider-col-period">Thời gian sử dụng</b-th>
+                  <b-th rowspan="2" class="text-center align-middle provider-col-actions">Thao tác</b-th>
+                </b-tr>
+                <b-tr>
+                  <b-th class="text-center align-middle provider-col-date">Từ ngày</b-th>
+                  <b-th class="text-center align-middle provider-col-date">Đến ngày</b-th>
+                </b-tr>
+              </b-thead>
+              <b-tbody>
+                <b-tr v-for="(value, index) in frmData.solution_providers" :key="`solution-${index}`">
+                  <b-td class="text-center">{{ index + 1 }}</b-td>
+                  <b-td class="provider-text-cell">{{ value.orgName }}</b-td>
+                  <b-td class="text-center">{{ value.taxCode }}</b-td>
+                  <b-td class="text-center">{{ formatDate(value.fromDate) }}</b-td>
+                  <b-td class="text-center">{{ formatDate(value.toDate) }}</b-td>
+                  <b-td class="text-center">
+                    <div class="provider-table-actions">
+                      <b-button type="button" variant="link" size="sm" title="Cập nhật" @click="showProviderModal('solution', index)"><i class="far fa-edit"></i></b-button>
+                      <b-button type="button" variant="link" size="sm" title="Xóa" @click="onDeleteProvider('solution', index)"><i class="far fa-trash-alt"></i></b-button>
+                    </div>
+                  </b-td>
+                </b-tr>
+                <b-tr v-if="!frmData.solution_providers.length">
+                  <b-td colspan="6" class="text-center">Không có dữ liệu để hiển thị</b-td>
+                </b-tr>
+              </b-tbody>
+            </b-table-simple>
+          </div>
+        </b-col>
+      </b-row>
+
+      <!-- 7. Danh sách tổ chức truyền nhận -->
+      <b-row class="pt-2 pb-2">
+        <b-col cols="12">
+          <div class="provider-section-heading">
+            <label class="font-weight-bold">7. Danh sách tổ chức truyền nhận</label>
+            <b-button type="button" variant="link" class="provider-add-btn" @click="showProviderModal('transmit', false)">
+              <i class="fas fa-plus mr-1"></i> Thêm tổ chức truyền nhận
+            </b-button>
+          </div>
+          <div class="provider-table-wrap">
+            <b-table-simple class="provider-table" bordered small show-empty empty-text="Không có dữ liệu để hiển thị">
+              <b-thead>
+                <b-tr>
+                  <b-th rowspan="2" class="text-center align-middle provider-col-index">STT</b-th>
+                  <b-th rowspan="2" class="text-center align-middle provider-col-name">Tên tổ chức truyền nhận</b-th>
+                  <b-th rowspan="2" class="text-center align-middle provider-col-tax">Mã số thuế</b-th>
+                  <b-th colspan="2" class="text-center align-middle provider-col-period">Thời gian sử dụng</b-th>
+                  <b-th rowspan="2" class="text-center align-middle provider-col-actions">Thao tác</b-th>
+                </b-tr>
+                <b-tr>
+                  <b-th class="text-center align-middle provider-col-date">Từ ngày</b-th>
+                  <b-th class="text-center align-middle provider-col-date">Đến ngày</b-th>
+                </b-tr>
+              </b-thead>
+              <b-tbody>
+                <b-tr v-for="(value, index) in frmData.transmit_providers" :key="`transmit-${index}`">
+                  <b-td class="text-center">{{ index + 1 }}</b-td>
+                  <b-td class="provider-text-cell">{{ value.orgName }}</b-td>
+                  <b-td class="text-center">{{ value.taxCode }}</b-td>
+                  <b-td class="text-center">{{ formatDate(value.fromDate) }}</b-td>
+                  <b-td class="text-center">{{ formatDate(value.toDate) }}</b-td>
+                  <b-td class="text-center">
+                    <div class="provider-table-actions">
+                      <b-button type="button" variant="link" size="sm" title="Cập nhật" @click="showProviderModal('transmit', index)"><i class="far fa-edit"></i></b-button>
+                      <b-button type="button" variant="link" size="sm" title="Xóa" @click="onDeleteProvider('transmit', index)"><i class="far fa-trash-alt"></i></b-button>
+                    </div>
+                  </b-td>
+                </b-tr>
+                <b-tr v-if="!frmData.transmit_providers.length">
+                  <b-td colspan="6" class="text-center">Không có dữ liệu để hiển thị</b-td>
                 </b-tr>
               </b-tbody>
             </b-table-simple>
@@ -390,6 +484,69 @@
         </div>
       </template>
     </b-modal>
+
+    <!-- Hộp thoại tổ chức cung cấp giải pháp/truyền nhận -->
+    <b-modal ref="modalProvider" size="lg" hide-header-close @hidden="onProviderModalHidden">
+      <template #modal-title>
+        <div class="modal-title">{{ providerModal.index !== false ? 'Cập nhật' : 'Thêm' }} {{ providerModal.type === 'solution' ? 'tổ chức giải pháp' : 'tổ chức truyền nhận' }}</div>
+      </template>
+      <b-form>
+        <b-row>
+          <b-col cols="12" md="8">
+            <b-form-group :label="providerModal.type === 'solution' ? 'Tổ chức cung cấp giải pháp' : 'Tổ chức truyền nhận'" label-for="providerSelect" :state="providerState('provider')">
+              <v-select
+                id="providerSelect"
+                v-model="providerModal.provider"
+                :options="providerOptionsForModal"
+                label="label"
+                placeholder="Chọn tổ chức"
+                @input="onProviderSelected"
+              />
+              <b-form-invalid-feedback :state="providerState('provider')">{{ providerErrors.provider }}</b-form-invalid-feedback>
+            </b-form-group>
+          </b-col>
+          <b-col cols="12" md="4">
+            <b-form-group label="Mã số thuế" label-for="providerTaxCode">
+              <b-form-input id="providerTaxCode" v-model.trim="providerModal.taxCode" readonly />
+            </b-form-group>
+          </b-col>
+        </b-row>
+        <b-row>
+          <b-col cols="12" md="6">
+            <b-form-group label="Thời gian từ ngày" label-for="providerFromDate" :state="providerState('fromDate')">
+              <b-form-input
+                id="providerFromDate"
+                v-model="providerModal.fromDate"
+                type="date"
+                size="sm"
+                :max="providerModal.toDate || undefined"
+                :state="providerState('fromDate')"
+              />
+              <b-form-invalid-feedback :state="providerState('fromDate')">{{ providerErrors.fromDate }}</b-form-invalid-feedback>
+            </b-form-group>
+          </b-col>
+          <b-col cols="12" md="6">
+            <b-form-group label="Thời gian đến ngày" label-for="providerToDate" :state="providerState('toDate')">
+              <b-form-input
+                id="providerToDate"
+                v-model="providerModal.toDate"
+                type="date"
+                size="sm"
+                :min="providerModal.fromDate || undefined"
+                :state="providerState('toDate')"
+              />
+              <b-form-invalid-feedback :state="providerState('toDate')">{{ providerErrors.toDate }}</b-form-invalid-feedback>
+            </b-form-group>
+          </b-col>
+        </b-row>
+      </b-form>
+      <template #modal-footer>
+        <div class="modal-footer-actions">
+          <b-button size="sm" variant="light" @click="closeProviderModal">Hủy</b-button>
+          <b-button type="button" size="sm" variant="primary" @click="onSubmitProvider">{{ providerModal.index !== false ? 'Cập nhật' : 'Thêm mới' }}</b-button>
+        </div>
+      </template>
+    </b-modal>
   </div>
 </template>
 
@@ -400,6 +557,7 @@ import 'vue-select/dist/vue-select.css'
 import { firstError, hasErrors, required } from '@/utils/validators'
 import { toastError, toastSuccess, toastWarning } from '@/utils/toast'
 import { confirmUsbTokenSignature, startSignaturePolling } from '@/utils/pasigner'
+import { org_solutions, org_transmits } from '@/utils/registerProviders'
 
 export default {
   name: 'RegisterInvoiceCreate',
@@ -414,7 +572,9 @@ export default {
       sendToggleA: false,
       sendToggleB: false,
       sendToggleC: false,
-      dateFmt: { year: 'numeric', month: 'numeric', day: 'numeric' },
+      dateFmt: { year: 'numeric', month: '2-digit', day: '2-digit' },
+      solutionProviderOptions: org_solutions,
+      transmitProviderOptions: org_transmits,
       app: { provinces: [] },
       company: { address: '', email: '', name: '', tax_code: '' },
       legalRep: { fullname: '', phone: '', citizen_id: '', passport_no: '', date_of_birth: null, gender: null },
@@ -440,6 +600,8 @@ export default {
         transfer_methods: [],
         invoice_types: [],
         digital_certificates: [],
+        solution_providers: [],
+        transmit_providers: [],
         create_place: '',
         signature: null,
         signed_xml: null,
@@ -454,6 +616,16 @@ export default {
         signToDate: null,
         sigRegMethod: 1 // default: Thêm mới
       },
+      providerModal: {
+        type: 'solution',
+        index: false,
+        provider: null,
+        orgName: '',
+        taxCode: '',
+        fromDate: null,
+        toDate: null
+      },
+      providerErrors: {},
       declarationTypeOptions: [
         { value: 1, text: 'Đăng ký mới' },
         { value: 2, text: 'Thay đổi thông tin' }
@@ -475,6 +647,16 @@ export default {
     },
     canSendToTaxAuthority() {
       return this.frmData.action === 'update' && [1, 3, 4, 5].includes(Number(this.frmData.status))
+    },
+    providerOptionsForModal() {
+      const options = this.providerModal.type === 'solution'
+        ? [...this.solutionProviderOptions]
+        : [...this.transmitProviderOptions]
+      const current = this.providerModal.provider
+      if (current && current.code && !options.some(item => item.code === current.code)) {
+        options.unshift(current)
+      }
+      return options
     }
   },
   created() {
@@ -603,6 +785,19 @@ export default {
         return String(d)
       }
     },
+    normalizeDateInput(value) {
+      if (!value) return null
+      const text = String(value).trim()
+      const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/)
+      if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`
+
+      const vietnamese = text.match(/^(\d{1,2})[\\/.\-](\d{1,2})[\\/.\-](\d{4})$/)
+      if (vietnamese) {
+        return `${vietnamese[3]}-${vietnamese[2].padStart(2, '0')}-${vietnamese[1].padStart(2, '0')}`
+      }
+
+      return null
+    },
     genderText(v) {
       if (v === null || v === undefined) return ''
       const map = { 'M': 'Nam', 'F': 'Nữ', 'O': 'Khác', 1: 'Nam', 0: 'Nữ' }
@@ -686,8 +881,10 @@ export default {
     },
     normalizeInvoiceTypes(raw) {
       const dict = {
-        HDGTGT: 'HDGTGT', HDGTGT_BienLai: 'HDGTGT_BienLai', HDBHang: 'HDBHang', HDBHang_BienLai: 'HDBHang_BienLai',
-        HDThuongMai: 'HDThuongMai', HDBTSCong: 'HDBTSCong', HDBHDTQGia: 'HDBHDTQGia', HDKhac: 'HDKhac', CTu: 'CTu'
+        HDGTGT: 'HDGTGT', HDGTGTTHBLai: 'HDGTGTTHBLai', HDGTGT_BienLai: 'HDGTGTTHBLai',
+        HDBHang: 'HDBHang', HDBHTHBLai: 'HDBHTHBLai', HDBHang_BienLai: 'HDBHTHBLai',
+        HDTMai: 'HDTMai', HDThuongMai: 'HDTMai', HDBTSCong: 'HDBTSCong',
+        HDBHDTQGia: 'HDBHDTQGia', HDKhac: 'HDKhac', CTu: 'CTu'
       }
       return Array.from(new Set(this.normalizeArray(raw, dict)))
     },
@@ -741,8 +938,8 @@ export default {
         // Xử lý cả camelCase và snake_case, kèm các key sai định dạng
         const orgName = x.orgName || x.org_name || x.organizationName || x.organization_name || ''
         const serialNo = x.serialNo || x.serial_no || x.serial || x.serialNumber || ''
-        const signFromDate = x.signFromDate || x.sign_from_date || x.from || x.fromDate || null
-        const signToDate = x.signToDate || x.sign_to_date || x.to || x.toDate || null
+        const signFromDate = this.normalizeDateInput(x.signFromDate || x.sign_from_date || x.from || x.fromDate || null)
+        const signToDate = this.normalizeDateInput(x.signToDate || x.sign_to_date || x.to || x.toDate || null)
         
         // Xử lý sigRegMethod với nhiều định dạng
         let sigRegMethod = x.sigRegMethod || x.sig_reg_method || x.method || x.regMethod || 1
@@ -766,6 +963,35 @@ export default {
       
       console.log('normalizeDigitalCertificates result:', result)
       return result
+    },
+    normalizeProviders(raw) {
+      let arr = []
+      if (Array.isArray(raw)) {
+        arr = raw.map(item => {
+          if (typeof item !== 'string') return item
+          try { return JSON.parse(item) } catch { return this.parseKeyValueString(item) }
+        })
+      } else if (typeof raw === 'string' && raw.trim()) {
+        try {
+          const parsed = JSON.parse(raw)
+          arr = Array.isArray(parsed) ? parsed : [parsed]
+        } catch {
+          arr = [this.parseKeyValueString(raw)]
+        }
+      } else if (raw && typeof raw === 'object') {
+        arr = [raw]
+      }
+
+      return arr.map(item => {
+        if (!item || typeof item !== 'object') return null
+        return {
+          orgName: item.orgName || item.organName || item.name || item.label || '',
+          taxCode: item.taxCode || item.organTaxCode || item.code || item.MSTTCGP || item.MSTTCTN || '',
+          fromDate: this.normalizeDateInput(item.fromDate || item.organFromDate || item.from || item.TNgay),
+          toDate: this.normalizeDateInput(item.toDate || item.organToDate || item.to || item.DNgay),
+          note: item.note || item.GChu || ''
+        }
+      }).filter(item => item && (item.orgName || item.taxCode))
     },
     parseKeyValueString(str) {
       console.log('parseKeyValueString input:', str)
@@ -849,6 +1075,8 @@ export default {
         transfer_methods: this.normalizeTransferMethods(val(data, ['transfer_methods','transferMethods'], [])),
         invoice_types: this.normalizeInvoiceTypes(val(data, ['invoice_types','invoiceTypes'], [])),
         digital_certificates: this.normalizeDigitalCertificates(val(data, ['digital_certificates','digitalCertificates'], [])),
+        solution_providers: this.normalizeProviders(val(data, ['solution_providers','solutionProviders'], [])),
+        transmit_providers: this.normalizeProviders(val(data, ['transmit_providers','transmitProviders'], [])),
         create_place: createPlaceNum,
         signature: signatureObj,
         signed_xml: val(data, ['signed_xml','signedXml'], null),
@@ -884,6 +1112,13 @@ export default {
         signToDate: x.signToDate,
         sigRegMethod: (typeof x.sigRegMethod === 'number' ? x.sigRegMethod : parseInt(x.sigRegMethod) || 1)
       }))
+      const mapProvider = x => ({
+        organName: x.orgName,
+        organTaxCode: x.taxCode,
+        organFromDate: x.fromDate,
+        organToDate: x.toDate || null,
+        note: x.note || ''
+      })
       return {
         declarationType: this.frmData.declaration_type,
         formPattern: this.frmData.form_pattern,
@@ -894,8 +1129,8 @@ export default {
         sendMethods: { a: this.frmData.send_methods_a, b: this.frmData.send_methods_b, c: this.sendToggleC ? ['CQT'] : [] },
         transferMethods: this.frmData.transfer_methods,
         digitalCertificates,
-        solutionProviders: null,
-        transmitProviders: null
+        solutionProviders: (this.frmData.solution_providers || []).map(mapProvider),
+        transmitProviders: (this.frmData.transmit_providers || []).map(mapProvider)
       }
     },
     async sendData() {
@@ -1078,8 +1313,8 @@ export default {
       const entry = {
         orgName: payload.orgName,
         serialNo: payload.serialNo,
-        signFromDate: payload.signFromDate,
-        signToDate: payload.signToDate,
+        signFromDate: this.normalizeDateInput(payload.signFromDate),
+        signToDate: this.normalizeDateInput(payload.signToDate),
         sigRegMethod: (typeof payload.sigRegMethod === 'number' ? payload.sigRegMethod : parseInt(payload.sigRegMethod) || 1)
       }
       if (payload.index !== false && payload.index != null) {
@@ -1091,6 +1326,82 @@ export default {
     },
     onDeleteSignature(index) {
       this.frmData.digital_certificates.splice(index, 1)
+    },
+    providerState(field) {
+      return this.providerErrors[field] ? false : null
+    },
+    showProviderModal(type, index) {
+      const rows = type === 'solution' ? this.frmData.solution_providers : this.frmData.transmit_providers
+      if (index !== false && index != null) {
+        const row = rows[index]
+        const selected = (type === 'solution' ? this.solutionProviderOptions : this.transmitProviderOptions)
+          .find(item => item.code === row.taxCode) || { label: row.orgName, code: row.taxCode }
+        this.providerModal = {
+          type,
+          index,
+          provider: selected,
+          orgName: row.orgName,
+          taxCode: row.taxCode,
+          fromDate: row.fromDate,
+          toDate: row.toDate
+        }
+      } else {
+        this.providerModal = {
+          type,
+          index: false,
+          provider: null,
+          orgName: '',
+          taxCode: '',
+          fromDate: null,
+          toDate: null
+        }
+      }
+      this.providerErrors = {}
+      this.$refs.modalProvider.show()
+    },
+    onProviderSelected(provider) {
+      this.providerModal.orgName = provider ? provider.label : ''
+      this.providerModal.taxCode = provider ? provider.code : ''
+    },
+    validateProviderForm() {
+      const from = this.providerModal.fromDate ? new Date(this.providerModal.fromDate) : null
+      const to = this.providerModal.toDate ? new Date(this.providerModal.toDate) : null
+      this.providerErrors = {
+        provider: required(this.providerModal.provider || this.providerModal.orgName, 'Vui lòng chọn tổ chức'),
+        fromDate: required(this.providerModal.fromDate, 'Vui lòng chọn ngày bắt đầu'),
+        toDate: from && to && from > to ? 'Ngày kết thúc phải sau ngày bắt đầu' : null
+      }
+      Object.keys(this.providerErrors).forEach(key => {
+        if (!this.providerErrors[key]) delete this.providerErrors[key]
+      })
+      return !hasErrors(this.providerErrors)
+    },
+    onSubmitProvider() {
+      if (!this.validateProviderForm()) return
+      const entry = {
+        orgName: this.providerModal.orgName,
+        taxCode: this.providerModal.taxCode,
+        fromDate: this.normalizeDateInput(this.providerModal.fromDate),
+        toDate: this.normalizeDateInput(this.providerModal.toDate),
+        note: ''
+      }
+      const rows = this.providerModal.type === 'solution' ? this.frmData.solution_providers : this.frmData.transmit_providers
+      if (this.providerModal.index !== false && this.providerModal.index != null) {
+        this.$set(rows, this.providerModal.index, entry)
+      } else {
+        rows.push(entry)
+      }
+      this.closeProviderModal()
+    },
+    closeProviderModal() {
+      this.$refs.modalProvider.hide()
+    },
+    onProviderModalHidden() {
+      this.providerErrors = {}
+    },
+    onDeleteProvider(type, index) {
+      const rows = type === 'solution' ? this.frmData.solution_providers : this.frmData.transmit_providers
+      rows.splice(index, 1)
     },
     getNameRegMethod(code) {
       const n = (typeof code === 'number' || /^\d+$/.test(String(code))) ? Number(code) : null
@@ -1128,6 +1439,70 @@ export default {
 .signature-add-btn {
   text-decoration: none;
   white-space: nowrap;
+}
+
+.provider-section-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.provider-section-heading label {
+  margin-bottom: 0;
+}
+
+.provider-add-btn {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.provider-table-wrap {
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+#app .register-invoice-create .provider-table {
+  margin-bottom: 0;
+  min-width: 900px;
+  table-layout: fixed;
+}
+
+#app .register-invoice-create .provider-table th,
+#app .register-invoice-create .provider-table td {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: break-word;
+}
+
+#app .register-invoice-create .provider-table th {
+  line-height: 1.35;
+  padding: 10px 8px;
+}
+
+.provider-col-index { width: 54px; }
+.provider-col-name { width: 290px; }
+.provider-col-tax { width: 180px; }
+.provider-col-period { width: 220px; }
+.provider-col-date { width: 110px; }
+.provider-col-actions { width: 100px; }
+.provider-text-cell { min-width: 0; }
+
+.provider-table-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: 2px;
+  justify-content: center;
+}
+
+#app .register-invoice-create .provider-table-actions .btn {
+  min-width: 32px;
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 .signature-table-wrap {
@@ -1207,6 +1582,15 @@ export default {
   }
 
   .signature-add-btn {
+    text-align: left;
+  }
+
+  .provider-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .provider-add-btn {
     text-align: left;
   }
 }

@@ -7,10 +7,46 @@ import vn.hoadon.entity.InvoiceEntity;
 import vn.hoadon.entity.RegisterInvoiceEntity;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class InvoiceXmlBuilderTest {
+
+    @Test
+    void registerInvoiceXmlUsesOfficialTagsAndDateTimeForCertificates() {
+        RegisterInvoiceEntity registerInvoice = new RegisterInvoiceEntity();
+        registerInvoice.setInvoiceTypes(List.of("HDGTGT_BienLai", "HDBHang_BienLai", "HDThuongMai"));
+        registerInvoice.setDigitalCertificates(List.of(
+                "{\"orgName\":\"i-ca corp\",\"serialNo\":\"SERIAL\",\"signFromDate\":\"2026-10-01\",\"signToDate\":\"2027-10-27\",\"sigRegMethod\":1}"
+        ));
+
+        String xml = RegisterInvoiceXmlBuilder.buildUnsigned(registerInvoice);
+
+        assertThat(xml).contains("<HDGTGTTHBLai>1</HDGTGTTHBLai>");
+        assertThat(xml).contains("<HDBHTHBLai>1</HDBHTHBLai>");
+        assertThat(xml).contains("<HDTMai>1</HDTMai>");
+        assertThat(xml).contains("<TNgay>2026-10-01T00:00:00</TNgay>");
+        assertThat(xml).contains("<DNgay>2027-10-27T00:00:00</DNgay>");
+        assertThat(xml).doesNotContain("HDGTGT_BienLai", "HDBHang_BienLai", "HDThuongMai");
+        assertThat(xml).doesNotContain("<TTTCGP>", "<TTTCTN>");
+    }
+
+    @Test
+    void registerInvoiceXmlRendersConfiguredProviderLists() {
+        RegisterInvoiceEntity registerInvoice = new RegisterInvoiceEntity();
+        registerInvoice.setSolutionProviders(List.of(
+                "{\"organName\":\"Công ty cung cấp giải pháp\",\"organTaxCode\":\"0100000000\",\"organFromDate\":\"2021-02-14\"}"
+        ));
+        registerInvoice.setTransmitProviders(List.of(
+                "{\"organName\":\"Công ty truyền nhận\",\"organTaxCode\":\"0200000000\",\"organFromDate\":\"2022-02-14\"}"
+        ));
+
+        String xml = RegisterInvoiceXmlBuilder.buildUnsigned(registerInvoice);
+
+        assertThat(xml).contains("<TTTCGP><TCGP><STT>1</STT><TTCGP>Công ty cung cấp giải pháp</TTCGP><MSTTCGP>0100000000</MSTTCGP><TNgay>2021-02-14</TNgay>");
+        assertThat(xml).contains("<TTTCTN><TCTN><STT>1</STT><TTCTN>Công ty truyền nhận</TTCTN><MSTTCTN>0200000000</MSTTCTN><TNgay>2022-02-14</TNgay>");
+    }
 
     @Test
     void registerInvoiceXmlUsesResolvedCreatePlaceNameForDeclarationPlace() {

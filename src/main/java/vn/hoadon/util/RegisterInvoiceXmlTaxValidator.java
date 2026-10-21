@@ -138,12 +138,14 @@ public final class RegisterInvoiceXmlTaxValidator {
                 "TKhai/DLTKhai/NDTKhai/PThuc", true, "CDDu", "CBTHop");
         validateFlagGroup(errors, requireChild(errors, ndTkhai, "TKhai/DLTKhai/NDTKhai", "LHDSDung"),
                 "TKhai/DLTKhai/NDTKhai/LHDSDung", true,
-                "HDGTGT", "HDGTGT_BienLai", "HDBHang", "HDBHang_BienLai", "HDThuongMai",
+                "HDGTGT", "HDGTGTTHBLai", "HDBHang", "HDBHTHBLai", "HDTMai",
                 "HDBTSCong", "HDBHDTQGia", "HDKhac", "CTu");
 
         validateCertificates(errors, requireChild(errors, ndTkhai, "TKhai/DLTKhai/NDTKhai", "DSCTSSDung"));
-        validateSolutionProviders(errors, requireChild(errors, ndTkhai, "TKhai/DLTKhai/NDTKhai", "TTTCGP"));
-        validateTransmitProviders(errors, requireChild(errors, ndTkhai, "TKhai/DLTKhai/NDTKhai", "TTTCTN"));
+        Element solutionProviders = child(ndTkhai, "TTTCGP");
+        if (solutionProviders != null) validateSolutionProviders(errors, solutionProviders);
+        Element transmitProviders = child(ndTkhai, "TTTCTN");
+        if (transmitProviders != null) validateTransmitProviders(errors, transmitProviders);
     }
 
     private static void validateFlagGroup(List<String> errors, Element group, String path, boolean requireAnySelected, String... tags) {
@@ -194,9 +196,9 @@ public final class RegisterInvoiceXmlTaxValidator {
             index++;
             String path = "TKhai/DLTKhai/NDTKhai/TTTCGP/TCGP[" + index + "]";
             optionalNumber(errors, row, path, "STT", 3, 0);
-            requireTagThenOptionalLength(errors, row, path, "TTCGP", 400);
-            requireTagThenOptionalLength(errors, row, path, "MSTTCGP", 14);
-            requireTagThenOptionalDate(errors, row, path, "TNgay");
+            requireText(errors, row, path, "TTCGP", 400);
+            requireText(errors, row, path, "MSTTCGP", 14);
+            requireDate(errors, row, path, "TNgay");
             optionalDate(errors, row, path, "DNgay");
             optionalLength(errors, row, path, "GChu", 255);
         }
@@ -214,9 +216,9 @@ public final class RegisterInvoiceXmlTaxValidator {
             index++;
             String path = "TKhai/DLTKhai/NDTKhai/TTTCTN/TCTN[" + index + "]";
             optionalNumber(errors, row, path, "STT", 3, 0);
-            requireTagThenOptionalLength(errors, row, path, "TTCTN", 400);
-            requireTagThenOptionalLength(errors, row, path, "MSTTCTN", 14);
-            requireTagThenOptionalDate(errors, row, path, "TNgay");
+            requireText(errors, row, path, "TTCTN", 400);
+            requireText(errors, row, path, "MSTTCTN", 14);
+            requireDate(errors, row, path, "TNgay");
             optionalDate(errors, row, path, "DNgay");
             optionalLength(errors, row, path, "GChu", 255);
         }

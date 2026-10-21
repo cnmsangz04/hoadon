@@ -174,10 +174,10 @@ public final class RegisterInvoiceXmlBuilder {
           .append("</PThuc>");
         sb.append("<LHDSDung>")
           .append(tag("HDGTGT", flag(invoiceTypes, "HDGTGT")))
-          .append(tag("HDGTGT_BienLai", flag(invoiceTypes, "HDGTGT_BienLai")))
+          .append(tag("HDGTGTTHBLai", flag(invoiceTypes, "HDGTGTTHBLai", "HDGTGT_BienLai")))
           .append(tag("HDBHang", flag(invoiceTypes, "HDBHang")))
-          .append(tag("HDBHang_BienLai", flag(invoiceTypes, "HDBHang_BienLai")))
-          .append(tag("HDThuongMai", flag(invoiceTypes, "HDThuongMai")))
+          .append(tag("HDBHTHBLai", flag(invoiceTypes, "HDBHTHBLai", "HDBHang_BienLai")))
+          .append(tag("HDTMai", flag(invoiceTypes, "HDTMai", "HDThuongMai")))
           .append(tag("HDBTSCong", flag(invoiceTypes, "HDBTSCong")))
           .append(tag("HDBHDTQGia", flag(invoiceTypes, "HDBHDTQGia")))
           .append(tag("HDKhac", flag(invoiceTypes, "HDKhac")))
@@ -193,35 +193,15 @@ public final class RegisterInvoiceXmlBuilder {
                   .append(tag("STT", String.valueOf(stt++)))
                   .append(tag("TTChuc", nullToEmpty(c.orgName)))
                   .append(tag("Seri", nullToEmpty(c.serialNo)))
-                  .append(tag("TNgay", nullToEmpty(c.signFromDate)))
-                  .append(tag("DNgay", nullToEmpty(c.signToDate)))
+                  .append(tag("TNgay", xmlDateTime(c.signFromDate)))
+                  .append(tag("DNgay", xmlDateTime(c.signToDate)))
                   .append(tag("HThuc", nullToEmpty(c.sigRegMethod)))
                   .append("</CTS>");
             }
         }
         sb.append("</DSCTSSDung>");
 
-        // Keep placeholders for providers (not requested to change)
-        sb.append("<TTTCGP>");
-        sb.append("<TCGP>")
-          .append(tag("STT", "1"))
-          .append(tag("TTCGP", ""))
-          .append(tag("MSTTCGP", ""))
-          .append(tag("TNgay", e.getEffectiveDate() != null ? e.getEffectiveDate().toString() : ""))
-          .append(tag("DNgay", ""))
-          .append(tag("GChu", ""))
-          .append("</TCGP>");
-        sb.append("</TTTCGP>");
-        sb.append("<TTTCTN>");
-        sb.append("<TCTN>")
-          .append(tag("STT", "1"))
-          .append(tag("TTCTN", ""))
-          .append(tag("MSTTCTN", ""))
-          .append(tag("TNgay", e.getEffectiveDate() != null ? e.getEffectiveDate().toString() : ""))
-          .append(tag("DNgay", ""))
-          .append(tag("GChu", ""))
-          .append("</TCTN>");
-        sb.append("</TTTCTN>");
+        appendProviderGroups(sb, e);
         sb.append("</NDTKhai>");
         sb.append("</DLTKhai>");
         sb.append("<DSCKS><NNT></NNT></DSCKS>");
@@ -233,6 +213,47 @@ public final class RegisterInvoiceXmlBuilder {
         return "<" + name + ">" + escapeXml(value) + "</" + name + ">";
     }
     private static String nullToEmpty(String s) { return s == null ? "" : s; }
+
+    private static String xmlDateTime(String value) {
+        String normalized = nullToEmpty(value).trim();
+        if (normalized.isEmpty()) return "";
+        if (normalized.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            return normalized + "T00:00:00";
+        }
+        if (normalized.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) {
+            return normalized.replace(' ', 'T');
+        }
+        return normalized;
+    }
+
+    private static void appendProviderGroups(StringBuilder sb, RegisterInvoiceEntity e) {
+        List<ProviderRow> solutionProviders = parseProviders(e.getSolutionProviders());
+        if (!solutionProviders.isEmpty()) {
+            appendProviderGroup(sb, "TTTCGP", "TCGP", solutionProviders, true);
+        }
+
+        List<ProviderRow> transmitProviders = parseProviders(e.getTransmitProviders());
+        if (!transmitProviders.isEmpty()) {
+            appendProviderGroup(sb, "TTTCTN", "TCTN", transmitProviders, false);
+        }
+    }
+
+    private static void appendProviderGroup(StringBuilder sb, String groupTag, String rowTag,
+                                            List<ProviderRow> rows, boolean solutionProvider) {
+        sb.append('<').append(groupTag).append('>');
+        int index = 1;
+        for (ProviderRow row : rows) {
+            sb.append('<').append(rowTag).append('>')
+              .append(tag("STT", String.valueOf(index++)))
+              .append(tag(solutionProvider ? "TTCGP" : "TTCTN", nullToEmpty(row.name)))
+              .append(tag(solutionProvider ? "MSTTCGP" : "MSTTCTN", nullToEmpty(row.taxCode)))
+              .append(tag("TNgay", nullToEmpty(row.fromDate)))
+              .append(tag("DNgay", nullToEmpty(row.toDate)))
+              .append(tag("GChu", nullToEmpty(row.note)))
+              .append("</").append(rowTag).append('>');
+        }
+        sb.append("</").append(groupTag).append('>');
+    }
     private static String firstNonBlank(String preferred, String fallback) {
         if (preferred != null && !preferred.isBlank()) return preferred.trim();
         return fallback == null ? "" : fallback.trim();
@@ -271,6 +292,43 @@ public final class RegisterInvoiceXmlBuilder {
         String signFromDate;
         String signToDate;
         String sigRegMethod;
+    }
+
+    private static class ProviderRow {
+        String name;
+        String taxCode;
+        String fromDate;
+        String toDate;
+        String note;
+    }
+
+    private static List<ProviderRow> parseProviders(List<String> list) {
+        List<ProviderRow> result = new ArrayList<>();
+        if (list == null || list.isEmpty()) return result;
+
+        for (String item : list) {
+            if (item == null || item.trim().isEmpty()) continue;
+            try {
+                JsonNode node = MAPPER.readTree(item);
+                ProviderRow row = new ProviderRow();
+                row.name = getJsonString(node, "organName", "TTCGP", "TTCTN", "name");
+                row.taxCode = getJsonString(node, "organTaxCode", "MSTTCGP", "MSTTCTN", "taxCode");
+                row.fromDate = getJsonString(node, "organFromDate", "fromDate", "TNgay");
+                row.toDate = getJsonString(node, "organToDate", "toDate", "DNgay");
+                row.note = getJsonString(node, "note", "GChu");
+                if (hasProviderData(row)) result.add(row);
+            } catch (JsonProcessingException ignored) {}
+        }
+        return result;
+    }
+
+    private static boolean hasProviderData(ProviderRow row) {
+        return row != null && (hasText(row.name) || hasText(row.taxCode) || hasText(row.fromDate)
+                || hasText(row.toDate) || hasText(row.note));
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     private static List<CertificateRow> parseCertificates(List<String> list) {
