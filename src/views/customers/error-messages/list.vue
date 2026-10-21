@@ -36,10 +36,10 @@
       </b-row>
       <b-row class="mt-2">
         <b-col md="3" class="mb-2">
-          <b-form-datepicker v-model="filters.dateFrom" :max="filters.dateTo || undefined" placeholder="Từ ngày" size="sm" locale="vi" :date-format-options="dateFmt" />
+          <manual-date-picker v-model="filters.dateFrom" :max="filters.dateTo || undefined" placeholder="Từ ngày" size="sm" />
         </b-col>
         <b-col md="3" class="mb-2">
-          <b-form-datepicker v-model="filters.dateTo" :min="filters.dateFrom || undefined" placeholder="Đến ngày" size="sm" locale="vi" :date-format-options="dateFmt" />
+          <manual-date-picker v-model="filters.dateTo" :min="filters.dateFrom || undefined" placeholder="Đến ngày" size="sm" />
         </b-col>
         <b-col md="6" class="text-right">
           <b-button size="sm" variant="outline-secondary" class="mr-2" @click="resetFilters">Xóa lọc</b-button>

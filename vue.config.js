@@ -5,13 +5,14 @@ module.exports = {
   outputDir: path.resolve(__dirname, 'src/main/resources/static'),
   assetsDir: 'js',           // JS/CSS sẽ vào static/js
   indexPath: 'index.html',   // index.html nằm trong static root
+  productionSourceMap: false,
+  parallel: false,
 
   // Cấu hình dev server
   devServer: {
     host: '0.0.0.0',   // lắng nghe trên mọi interface để chấp nhận domain ảo (map về 127.0.0.1)
     port: 80,              // frontend local: http://hoadon2er.local.vn
     hot: true,           // bật hot reload
-    watchFiles: ['src/**/*'], // theo dõi tất cả file trong src
     headers: {
       'Access-Control-Allow-Origin': '*',
     },

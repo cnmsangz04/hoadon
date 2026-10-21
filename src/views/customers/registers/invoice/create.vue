@@ -30,7 +30,7 @@
             </b-col>
             <b-col cols="12" md="6">
               <b-form-group label="Ngày lập" label-class="font-weight-bold">
-                <b-form-datepicker v-model="frmData.declaration_date" :date-format-options="dateFmt" locale="vi" :state="state('declaration_date')" />
+                <manual-date-picker v-model="frmData.declaration_date" :state="state('declaration_date')" />
                 <b-form-invalid-feedback :state="state('declaration_date')">{{ invalidFeedback('declaration_date') }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
@@ -444,27 +444,13 @@
         <b-row>
           <b-col cols="12" md="6">
             <b-form-group label="Thời gian từ ngày" label-for="signFromDate" :state="signatureState('signFromDate')">
-              <b-form-input
-                id="signFromDate"
-                v-model="signatureModal.signFromDate"
-                type="date"
-                size="sm"
-                :max="signatureModal.signToDate || undefined"
-                :state="signatureState('signFromDate')"
-              />
+              <manual-date-picker id="signFromDate" v-model="signatureModal.signFromDate" :max="signatureModal.signToDate || undefined" :state="signatureState('signFromDate')" />
               <b-form-invalid-feedback :state="signatureState('signFromDate')">{{ signatureErrors.signFromDate }}</b-form-invalid-feedback>
             </b-form-group>
           </b-col>
           <b-col cols="12" md="6">
             <b-form-group label="Thời gian đến ngày" label-for="signToDate" :state="signatureState('signToDate')">
-              <b-form-input
-                id="signToDate"
-                v-model="signatureModal.signToDate"
-                type="date"
-                size="sm"
-                :min="signatureModal.signFromDate || undefined"
-                :state="signatureState('signToDate')"
-              />
+              <manual-date-picker id="signToDate" v-model="signatureModal.signToDate" :min="signatureModal.signFromDate || undefined" :state="signatureState('signToDate')" />
               <b-form-invalid-feedback :state="signatureState('signToDate')">{{ signatureErrors.signToDate }}</b-form-invalid-feedback>
             </b-form-group>
           </b-col>
@@ -514,27 +500,13 @@
         <b-row>
           <b-col cols="12" md="6">
             <b-form-group label="Thời gian từ ngày" label-for="providerFromDate" :state="providerState('fromDate')">
-              <b-form-input
-                id="providerFromDate"
-                v-model="providerModal.fromDate"
-                type="date"
-                size="sm"
-                :max="providerModal.toDate || undefined"
-                :state="providerState('fromDate')"
-              />
+              <manual-date-picker id="providerFromDate" v-model="providerModal.fromDate" :max="providerModal.toDate || undefined" :state="providerState('fromDate')" />
               <b-form-invalid-feedback :state="providerState('fromDate')">{{ providerErrors.fromDate }}</b-form-invalid-feedback>
             </b-form-group>
           </b-col>
           <b-col cols="12" md="6">
             <b-form-group label="Thời gian đến ngày" label-for="providerToDate" :state="providerState('toDate')">
-              <b-form-input
-                id="providerToDate"
-                v-model="providerModal.toDate"
-                type="date"
-                size="sm"
-                :min="providerModal.fromDate || undefined"
-                :state="providerState('toDate')"
-              />
+              <manual-date-picker id="providerToDate" v-model="providerModal.toDate" :min="providerModal.fromDate || undefined" :state="providerState('toDate')" />
               <b-form-invalid-feedback :state="providerState('toDate')">{{ providerErrors.toDate }}</b-form-invalid-feedback>
             </b-form-group>
           </b-col>
@@ -1291,9 +1263,23 @@ export default {
     showSignatureModal(index) {
       if (index !== false && index != null) {
         const v = this.frmData.digital_certificates[index]
-        this.signatureModal = { index, orgName: v.orgName, serialNo: v.serialNo, signFromDate: v.signFromDate, signToDate: v.signToDate, sigRegMethod: (typeof v.sigRegMethod === 'number' ? v.sigRegMethod : parseInt(v.sigRegMethod) || 1) }
+        this.signatureModal = {
+          index,
+          orgName: v.orgName,
+          serialNo: v.serialNo,
+          signFromDate: v.signFromDate,
+          signToDate: v.signToDate,
+          sigRegMethod: (typeof v.sigRegMethod === 'number' ? v.sigRegMethod : parseInt(v.sigRegMethod) || 1)
+        }
       } else {
-        this.signatureModal = { index: false, orgName: '', serialNo: '', signFromDate: null, signToDate: null, sigRegMethod: 1 }
+        this.signatureModal = {
+          index: false,
+          orgName: '',
+          serialNo: '',
+          signFromDate: null,
+          signToDate: null,
+          sigRegMethod: 1
+        }
       }
       this.signatureErrors = {}
       this.$refs.modalSignature.show()
@@ -1421,7 +1407,6 @@ export default {
   margin-bottom: 0.25rem;
 }
 .v-select { width: 100%; }
-.register-invoice-create .b-form-datepicker { width: 100%; }
 
 .signature-section-heading {
   align-items: center;

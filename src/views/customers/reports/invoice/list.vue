@@ -61,27 +61,23 @@
         </b-col>
         <b-col md="3" class="mb-2">
           <b-form-group label="Từ ngày" label-cols="4" label-size="sm" label-align="right">
-            <b-form-datepicker
+            <manual-date-picker
               v-model="filters.fromDate"
               :max="filters.toDate || undefined"
               size="sm"
-              locale="vi"
               :disabled="filters.periodType !== 'none'"
               placeholder="Từ ngày"
-              :date-format-options="{ day: '2-digit', month: '2-digit', year: 'numeric' }"
             />
           </b-form-group>
         </b-col>
         <b-col md="3" class="mb-2">
           <b-form-group label="Đến ngày" label-cols="4" label-size="sm" label-align="right">
-            <b-form-datepicker
+            <manual-date-picker
               v-model="filters.toDate"
               :min="filters.fromDate || undefined"
               size="sm"
-              locale="vi"
               :disabled="filters.periodType !== 'none'"
               placeholder="Đến ngày"
-              :date-format-options="{ day: '2-digit', month: '2-digit', year: 'numeric' }"
             />
           </b-form-group>
         </b-col>

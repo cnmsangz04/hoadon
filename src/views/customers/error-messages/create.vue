@@ -26,7 +26,7 @@
             </b-col>
             <b-col md="3">
               <b-form-group label="Ngày lập thông báo" label-class="font-weight-bold">
-                <b-form-datepicker v-model="frm.noticeDate" locale="vi" :date-format-options="dateFmt" :state="state('noticeDate')" />
+                <manual-date-picker v-model="frm.noticeDate" :state="state('noticeDate')" />
                 <b-form-invalid-feedback :state="state('noticeDate')">{{ errors.noticeDate }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
@@ -40,7 +40,7 @@
             </b-col>
             <b-col md="6">
               <b-form-group label="Ngày thông báo rà soát CQT" label-class="font-weight-bold">
-                <b-form-datepicker v-model="frm.taxNoticeDate" locale="vi" :date-format-options="dateFmt" :state="state('taxNoticeDate')" />
+                <manual-date-picker v-model="frm.taxNoticeDate" :state="state('taxNoticeDate')" />
                 <b-form-invalid-feedback :state="state('taxNoticeDate')">{{ errors.taxNoticeDate }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
@@ -105,7 +105,7 @@
                     <b-td><b-form-input size="sm" v-model.trim="item.formSymbol" /></b-td>
                     <b-td><b-form-input size="sm" v-model.trim="item.serial" /></b-td>
                     <b-td><b-form-input size="sm" v-model.trim="item.invoiceNo" /></b-td>
-                    <b-td><b-form-input size="sm" type="date" v-model="item.invoiceDate" /></b-td>
+                    <b-td><manual-date-picker v-model="item.invoiceDate" size="sm" placeholder="dd/mm/yyyy" /></b-td>
                     <b-td><b-form-select size="sm" v-model.number="item.invoiceType" :options="invoiceTypeOptions" /></b-td>
                     <b-td><b-form-select size="sm" v-model.number="item.errorType" :options="errorTypeOptions" /></b-td>
                     <b-td class="text-center">
@@ -186,8 +186,8 @@
 
     <b-modal ref="invoiceModal" size="xl" title="Chọn hóa đơn sai sót">
       <b-row class="mb-2">
-        <b-col md="3"><b-form-datepicker v-model="invoiceSearch.dateFrom" placeholder="Từ ngày" locale="vi" size="sm" :date-format-options="dateFmt" /></b-col>
-        <b-col md="3"><b-form-datepicker v-model="invoiceSearch.dateTo" placeholder="Đến ngày" locale="vi" size="sm" :date-format-options="dateFmt" /></b-col>
+        <b-col md="3"><manual-date-picker v-model="invoiceSearch.dateFrom" placeholder="Từ ngày" size="sm" /></b-col>
+        <b-col md="3"><manual-date-picker v-model="invoiceSearch.dateTo" placeholder="Đến ngày" size="sm" /></b-col>
         <b-col md="3"><b-form-input v-model.trim="invoiceSearch.keyword" size="sm" placeholder="Khách hàng / mã CQT" @keyup.enter="searchInvoices" /></b-col>
         <b-col md="2"><b-form-input v-model.number="invoiceSearch.no" size="sm" placeholder="Số HĐ" @keyup.enter="searchInvoices" /></b-col>
         <b-col md="1"><b-button size="sm" variant="primary" @click="searchInvoices">Tìm</b-button></b-col>

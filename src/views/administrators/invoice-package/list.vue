@@ -108,10 +108,10 @@
               <b-form-select v-model="purchaseFilter.paymentMethod" :options="paymentMethodOptions" />
             </b-col>
             <b-col md="2" class="mb-2">
-              <b-form-input v-model="purchaseFilter.fromDate" type="date" />
+              <manual-date-picker v-model="purchaseFilter.fromDate" placeholder="dd/mm/yyyy" size="sm" />
             </b-col>
             <b-col md="2" class="mb-2">
-              <b-form-input v-model="purchaseFilter.toDate" type="date" />
+              <manual-date-picker v-model="purchaseFilter.toDate" placeholder="dd/mm/yyyy" size="sm" />
             </b-col>
             <b-col md="3" class="mb-2 text-md-right">
               <b-button size="sm" variant="primary" class="mr-2" @click="applyPurchaseFilter">

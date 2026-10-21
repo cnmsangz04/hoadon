@@ -72,7 +72,7 @@
             </b-col>
             <b-col lg="4" md="6">
               <b-form-group label="Ngày lập" label-class="form-label" :state="state('date_export')">
-                <b-form-input type="date" v-model="frmData.date_export" :state="state('date_export')" />
+                <manual-date-picker v-model="frmData.date_export" placeholder="dd/mm/yyyy" :state="state('date_export')" />
                 <b-form-invalid-feedback :state="state('date_export')">{{ invalidFeedback('date_export') }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>

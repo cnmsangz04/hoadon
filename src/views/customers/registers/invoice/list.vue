@@ -48,23 +48,19 @@
       </b-row>
       <b-row class="mt-2">
         <b-col md="3" class="mb-2">
-          <b-form-datepicker
+          <manual-date-picker
             v-model="filters.dateFrom"
             :max="filters.dateTo || undefined"
             placeholder="Từ ngày"
             size="sm"
-            locale="vi"
-            :date-format-options="{ day: '2-digit', month: '2-digit', year: 'numeric' }"
           />
         </b-col>
         <b-col md="3" class="mb-2">
-          <b-form-datepicker
+          <manual-date-picker
             v-model="filters.dateTo"
             :min="filters.dateFrom || undefined"
             placeholder="Đến ngày"
             size="sm"
-            locale="vi"
-            :date-format-options="{ day: '2-digit', month: '2-digit', year: 'numeric' }"
           />
         </b-col>
         <b-col md="6" class="mb-2 d-flex align-items-center justify-content-end">

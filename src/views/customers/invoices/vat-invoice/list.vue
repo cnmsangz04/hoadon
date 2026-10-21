@@ -51,11 +51,9 @@
           </b-form-select>
         </b-col>
         <b-col md="3" class="mb-2">
-          <b-form-datepicker
+          <manual-date-picker
             v-model="filters.date"
             placeholder="Lọc theo ngày lập"
-            :date-format-options="dateFormatOptions"
-            locale="vi"
           />
         </b-col>
         <b-col md="2" class="mb-2 text-right">

@@ -84,11 +84,11 @@
           </b-col>
           <b-col lg="2" md="6" class="mb-2">
             <label class="filter-label">Từ ngày</label>
-            <b-form-input v-model="purchaseFilter.fromDate" type="date" :max="purchaseFilter.toDate || undefined" />
+            <manual-date-picker v-model="purchaseFilter.fromDate" placeholder="dd/mm/yyyy" size="sm" :max="purchaseFilter.toDate || undefined" />
           </b-col>
           <b-col lg="2" md="6" class="mb-2">
             <label class="filter-label">Đến ngày</label>
-            <b-form-input v-model="purchaseFilter.toDate" type="date" :min="purchaseFilter.fromDate || undefined" />
+            <manual-date-picker v-model="purchaseFilter.toDate" placeholder="dd/mm/yyyy" size="sm" :min="purchaseFilter.fromDate || undefined" />
           </b-col>
           <b-col lg="2" md="6" class="mb-2 filter-actions">
             <b-button size="sm" variant="primary" @click="applyPurchaseFilter">

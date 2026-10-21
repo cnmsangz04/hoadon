@@ -135,10 +135,10 @@
           <b-form-select v-model="historyFilter.changeType" :options="historyChangeTypeOptions" />
         </b-col>
         <b-col md="2" class="mb-2">
-          <b-form-input v-model="historyFilter.fromDate" type="date" />
+          <manual-date-picker v-model="historyFilter.fromDate" placeholder="dd/mm/yyyy" size="sm" />
         </b-col>
         <b-col md="2" class="mb-2">
-          <b-form-input v-model="historyFilter.toDate" type="date" />
+          <manual-date-picker v-model="historyFilter.toDate" placeholder="dd/mm/yyyy" size="sm" />
         </b-col>
         <b-col md="1" class="mb-2 text-md-right">
           <b-button size="sm" variant="primary" block @click="applyHistoryFilter">

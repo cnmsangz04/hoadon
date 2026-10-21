@@ -26,6 +26,8 @@ import 'jquery-confirm/dist/jquery-confirm.min.js'
 import 'vue-select/dist/vue-select.css'
 import VSelect from 'vue-select'
 Vue.component('v-select', VSelect)
+import ManualDatePicker from '@/views/components/manual_date_picker.vue'
+Vue.component('manual-date-picker', ManualDatePicker)
 
 window.$ = window.jQuery = $
 
