@@ -7,15 +7,25 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -24,9 +34,13 @@ public class PatvanTransmissionService {
     private static final Logger log = LoggerFactory.getLogger(PatvanTransmissionService.class);
     private static final ObjectMapper JSON = new ObjectMapper();
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(20))
-            .build();
+    private HttpClient httpClient;
+
+    @Value("${patvan.uat.ssl-verify:false}")
+    private boolean sslVerify;
+
+    @Value("${patvan.uat.server-cert-sha256:8C2EBE5EA8DBCC68510D9E9A92FD6AE699F33563149785E1B6BBB9CFE0E2E6DA}")
+    private String pinnedServerCertificateSha256;
 
     @Value("${patvan.uat.oauth-url:https://ote-tvan.hoadon30s.vn/token}")
     private String oauthUrl;
@@ -84,6 +98,21 @@ public class PatvanTransmissionService {
 
     @Value("${patvan.uat.bthhd-url:https://ote-tvan.hoadon30s.vn/bang-tong-hop}")
     private String bthhdUrl;
+
+    @PostConstruct
+    private void initializeHttpClient() {
+        HttpClient.Builder builder = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(20));
+        if (!sslVerify) {
+            try {
+                builder.sslContext(pinnedUatSslContext(pinnedServerCertificateSha256));
+                log.warn("PATVAN UAT CA-chain verification is disabled; the UAT leaf certificate remains pinned");
+            } catch (GeneralSecurityException e) {
+                throw new IllegalStateException("Không khởi tạo được SSL client cho PATVAN UAT", e);
+            }
+        }
+        httpClient = builder.build();
+    }
 
     public PatvanPostResult postXml(PatvanMessageType type, String xml, String mstNnt) {
         if (type == null) {
@@ -151,7 +180,7 @@ public class PatvanTransmissionService {
                     .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             String body = response.body() != null ? response.body() : "";
-            log.info("RESPONSE_GET_PATVAN_TOKEN_UAT group={} httpStatus={} body={}", credential.group(), response.statusCode(), body.replace("\n", ""));
+            log.info("RESPONSE_GET_PATVAN_TOKEN_UAT group={} httpStatus={}", credential.group(), response.statusCode());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 throw new PatvanException("Không lấy được token truyền nhận UAT, HTTP " + response.statusCode());
             }
@@ -217,6 +246,56 @@ public class PatvanTransmissionService {
 
     private String encode(String value) {
         return URLEncoder.encode(value != null ? value : "", StandardCharsets.UTF_8);
+    }
+
+    private SSLContext pinnedUatSslContext(String expectedFingerprint) throws GeneralSecurityException {
+        String expected = normalizeFingerprint(expectedFingerprint);
+        if (expected.isBlank()) {
+            throw new GeneralSecurityException("Thiếu fingerprint certificate PATVAN UAT");
+        }
+        TrustManager[] trustManagers = {
+                new X509TrustManager() {
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] chain, String authType) {
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] chain, String authType)
+                            throws CertificateException {
+                        if (chain == null || chain.length == 0) {
+                            throw new CertificateException("PATVAN UAT không gửi certificate");
+                        }
+                        try {
+                            String actual = hex(MessageDigest.getInstance("SHA-256")
+                                    .digest(chain[0].getEncoded()));
+                            if (!expected.equals(actual)) {
+                                throw new CertificateException("Certificate PATVAN UAT không khớp fingerprint đã cấu hình");
+                            }
+                        } catch (GeneralSecurityException e) {
+                            throw new CertificateException("Không kiểm tra được certificate PATVAN UAT", e);
+                        }
+                    }
+
+                    @Override
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return new X509Certificate[0];
+                    }
+                }
+        };
+        SSLContext context = SSLContext.getInstance("TLS");
+        context.init(null, trustManagers, new SecureRandom());
+        return context;
+    }
+
+    private static String normalizeFingerprint(String value) {
+        return value == null ? "" : value.replace(":", "").replaceAll("\\s+", "")
+                .toUpperCase(Locale.ROOT);
+    }
+
+    private static String hex(byte[] bytes) {
+        StringBuilder result = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) result.append(String.format(Locale.ROOT, "%02X", b));
+        return result.toString();
     }
 
     private record Token(String tokenType, String accessToken) {}
