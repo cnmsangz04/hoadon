@@ -32,7 +32,7 @@ public final class InvoiceXmlBuilder {
         String id = hasText(inv.getIdAttr())
                 ? inv.getIdAttr()
                 : java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
-        String pban = "2.1.0";
+        String pban = "2.1.1";
         String thdon = nullToEmpty(inv.getName());
         String khmshdon = form != null && form.getFormCode() != null ? form.getFormCode() : "";
         String khhdon = form != null && form.getSerial() != null ? form.getSerial() : "";

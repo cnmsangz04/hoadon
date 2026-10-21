@@ -102,8 +102,8 @@ public final class RegisterInvoiceXmlTaxValidator {
     private static void validateTtChung(List<String> errors, Element ttChung) {
         String path = "TKhai/DLTKhai/TTChung";
         String pban = requireText(errors, ttChung, path, "PBan", 6);
-        if (hasText(pban) && !"2.1.0".equals(pban)) {
-            errors.add(path + "/PBan: phải có giá trị 2.1.0");
+        if (hasText(pban) && !"2.1.1".equals(pban)) {
+            errors.add(path + "/PBan: phải có giá trị 2.1.1");
         }
         requireText(errors, ttChung, path, "MSo", 15);
         requireText(errors, ttChung, path, "Ten", 100);
