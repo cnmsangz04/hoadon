@@ -347,6 +347,8 @@ Table register_invoices {
   company_id bigint [not null]
   user_id bigint [not null]
   declaration_code varchar(100)
+  id_attr varchar(100) [note: 'Mã định danh XML DLTKhai@Id']
+  code varchar(100) [note: 'Mã thông điệp do truyền nhận trả về']
   declaration_type int [not null]
   form_pattern varchar(20) [not null]
   declaration_date date [not null]
