@@ -16,6 +16,16 @@ backup_jar="/opt/hoadon-prod/app.jar.bak-${timestamp}"
 
 cd "$source_dir"
 
+restore_frontend_build_output() {
+    git restore --source=HEAD --staged --worktree -- \
+        src/main/resources/static/index.html \
+        src/main/resources/static/js
+    git clean -fd -- src/main/resources/static/js
+}
+
+restore_frontend_build_output
+trap restore_frontend_build_output EXIT
+
 git fetch origin
 git pull --ff-only origin main
 
@@ -50,6 +60,18 @@ Sau đó cấp quyền chạy:
 
 ```bash
 sudo chmod +x /usr/local/sbin/hoadon-deploy
+```
+
+## Dọn trạng thái build cũ lần đầu trên VPS
+
+Nếu lần deploy trước đã tạo lỗi `index.html` hoặc các bundle untracked, chạy một lần:
+
+```bash
+cd /opt/apps/hoadon
+git restore --source=HEAD --staged --worktree -- \
+    src/main/resources/static/index.html \
+    src/main/resources/static/js
+git clean -fd -- src/main/resources/static/js
 ```
 
 Chạy deploy:
