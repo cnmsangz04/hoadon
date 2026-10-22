@@ -46,6 +46,9 @@ cp "$app_jar" "$backup_jar"
 cp "$built_jar" "$new_jar"
 chmod 644 "$new_jar"
 mv "$new_jar" "$app_jar"
+
+systemctl restart hoadon
+systemctl is-active --quiet hoadon
 ```
 
 ## Copy script lên VPS
