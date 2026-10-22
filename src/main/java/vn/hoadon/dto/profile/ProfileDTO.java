@@ -18,6 +18,8 @@ public class ProfileDTO {
     public LocalDate representDateBirth;
     public String representCitizenIdent;
     public String representPassPort;
+    public String representNationalityCode;
+    public String representNationalityName;
     public String representPhone;
     public String representMail;
 

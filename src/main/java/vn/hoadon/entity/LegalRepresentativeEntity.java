@@ -29,6 +29,12 @@ public class LegalRepresentativeEntity {
     @Column(name = "passport_no")
     private String passportNo;
 
+    @Column(name = "nationality_code", length = 2)
+    private String nationalityCode;
+
+    @Column(name = "nationality_name", columnDefinition = "NVARCHAR(50)")
+    private String nationalityName;
+
     @Column(name = "phone")
     private String phone;
 
@@ -74,6 +80,12 @@ public class LegalRepresentativeEntity {
 
     public String getPassportNo() { return passportNo; }
     public void setPassportNo(String passportNo) { this.passportNo = passportNo; }
+
+    public String getNationalityCode() { return nationalityCode; }
+    public void setNationalityCode(String nationalityCode) { this.nationalityCode = nationalityCode; }
+
+    public String getNationalityName() { return nationalityName; }
+    public void setNationalityName(String nationalityName) { this.nationalityName = nationalityName; }
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }

@@ -91,6 +91,21 @@ class InvoiceXmlBuilderTest {
     }
 
     @Test
+    void registerInvoiceXmlUsesLegalRepresentativeNationality() {
+        RegisterInvoiceEntity registerInvoice = new RegisterInvoiceEntity();
+
+        String xml = RegisterInvoiceXmlBuilder.buildUnsigned(
+                registerInvoice,
+                "Nguyen Van A", "0900000000", null, "Ha Noi", "012345678901", null,
+                "1980-01-01", "1", null, null, "Cong ty test", "0100000000", "Ha Noi",
+                null, "VN", "Việt Nam"
+        );
+
+        assertThat(xml).contains("<MQTNDDPLuat>VN</MQTNDDPLuat>");
+        assertThat(xml).contains("<QTDDPLuat>Việt Nam</QTDDPLuat>");
+    }
+
+    @Test
     void sampleInvoiceXmlDefaultsFinancialLeaseFlagToZero() {
         String xml = SampleInvoiceXmlBuilder.build();
 

@@ -20,6 +20,8 @@ public class RegisterInvoicePrefillDto {
     private String legalPhone;       // số điện thoại từ legal_representatives.phone
     private String legalCitizenId;   // CCCD/CMND từ legal_representatives.citizen_id
     private String legalPassportNo;  // số hộ chiếu từ legal_representatives.passport_no
+    private String legalNationalityCode;
+    private String legalNationalityName;
     private LocalDate legalDateOfBirth; // ngày sinh từ legal_representatives.date_of_birth
     private Integer legalGender;        // giới tính từ legal_representatives.gender
 
@@ -46,6 +48,10 @@ public class RegisterInvoicePrefillDto {
     public void setLegalCitizenId(String legalCitizenId) { this.legalCitizenId = legalCitizenId; }
     public String getLegalPassportNo() { return legalPassportNo; }
     public void setLegalPassportNo(String legalPassportNo) { this.legalPassportNo = legalPassportNo; }
+    public String getLegalNationalityCode() { return legalNationalityCode; }
+    public void setLegalNationalityCode(String legalNationalityCode) { this.legalNationalityCode = legalNationalityCode; }
+    public String getLegalNationalityName() { return legalNationalityName; }
+    public void setLegalNationalityName(String legalNationalityName) { this.legalNationalityName = legalNationalityName; }
     public LocalDate getLegalDateOfBirth() { return legalDateOfBirth; }
     public void setLegalDateOfBirth(LocalDate legalDateOfBirth) { this.legalDateOfBirth = legalDateOfBirth; }
     public Integer getLegalGender() { return legalGender; }

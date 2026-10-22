@@ -125,6 +125,8 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
             dto.setLegalPhone(legal.getPhone());
             dto.setLegalCitizenId(legal.getCitizenId());
             dto.setLegalPassportNo(legal.getPassportNo());
+            dto.setLegalNationalityCode(legal.getNationalityCode());
+            dto.setLegalNationalityName(legal.getNationalityName());
             dto.setLegalDateOfBirth(legal.getDateOfBirth());
             dto.setLegalGender(legal.getGender());
         });
@@ -159,6 +161,8 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
         String contactAddress = null;
         String citizenId = null;
         String passportNo = null;
+        String nationalityCode = null;
+        String nationalityName = null;
         String dateOfBirth = null;
         String gender = null;
         String taxAuthorityCode = null;
@@ -189,6 +193,8 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
             contactPhone = legal.getPhone();
             citizenId = legal.getCitizenId();
             passportNo = legal.getPassportNo();
+            nationalityCode = legal.getNationalityCode();
+            nationalityName = legal.getNationalityName();
             dateOfBirth = legal.getDateOfBirth() != null ? legal.getDateOfBirth().toString() : null;
             gender = legal.getGender() != null ? String.valueOf(legal.getGender()) : null;
         }
@@ -208,7 +214,9 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
                 companyName,
                 taxCode,
                 createPlaceName,
-                documentId
+                documentId,
+                nationalityCode,
+                nationalityName
         );
     }
 

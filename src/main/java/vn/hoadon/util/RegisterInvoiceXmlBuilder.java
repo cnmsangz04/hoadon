@@ -96,6 +96,28 @@ public final class RegisterInvoiceXmlBuilder {
                                        String taxCode,
                                        String createPlaceName,
                                        String documentId) {
+        return buildUnsigned(e, contactName, contactPhone, contactEmail, contactAddress, citizenId, passportNo,
+                dateOfBirth, gender, taxAuthorityCode, taxAuthorityName, companyName, taxCode, createPlaceName,
+                documentId, null, null);
+    }
+
+    public static String buildUnsigned(RegisterInvoiceEntity e,
+                                       String contactName,
+                                       String contactPhone,
+                                       String contactEmail,
+                                       String contactAddress,
+                                       String citizenId,
+                                       String passportNo,
+                                       String dateOfBirth,
+                                       String gender,
+                                       String taxAuthorityCode,
+                                       String taxAuthorityName,
+                                       String companyName,
+                                       String taxCode,
+                                       String createPlaceName,
+                                       String documentId,
+                                       String nationalityCode,
+                                       String nationalityName) {
         if (e == null) return "";
         String id = documentId != null && !documentId.isBlank()
                 ? documentId.trim()
@@ -112,6 +134,8 @@ public final class RegisterInvoiceXmlBuilder {
         String mcqtqly = nullToEmpty(taxAuthorityCode);
         String tnddpluat = nullToEmpty(contactName);
         String dtddpluat = nullToEmpty(contactPhone);
+        String mqtnddpluat = nullToEmpty(nationalityCode);
+        String qtddpluat = nullToEmpty(nationalityName);
         String cccdan = nullToEmpty(citizenId);
         String shchieu = nullToEmpty(passportNo);
         String nsddpluat = nullToEmpty(dateOfBirth);
@@ -144,6 +168,8 @@ public final class RegisterInvoiceXmlBuilder {
           .append(tag("MCQTQLy", mcqtqly))
           .append(tag("TNDDPLuat", tnddpluat))
           .append(tag("DTDDPLuat", dtddpluat))
+          .append(tag("MQTNDDPLuat", mqtnddpluat))
+          .append(tag("QTDDPLuat", qtddpluat))
           .append(tag("CCCDan", cccdan))
           .append(tag("SHChieu", shchieu))
           .append(tag("NSDDPLuat", nsddpluat))

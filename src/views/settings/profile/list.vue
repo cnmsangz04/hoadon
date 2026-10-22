@@ -257,6 +257,12 @@
               </b-col>
             </b-row>
             <b-row class="pt-2 pb-2">
+              <b-col cols="2" class="font-weight-bold">Quốc tịch:</b-col>
+              <b-col cols="4">{{ frmData.representNationalityName }}</b-col>
+              <b-col cols="2" class="font-weight-bold">Mã quốc tịch:</b-col>
+              <b-col cols="4">{{ frmData.representNationalityCode }}</b-col>
+            </b-row>
+            <b-row class="pt-2 pb-2">
               <b-col cols="2" class="font-weight-bold">Email:</b-col>
               <b-col cols="4">{{ frmData.representMail }}</b-col>
             </b-row>
@@ -303,6 +309,28 @@
                   <b-form-invalid-feedback :state="state('representPhone')">
                     {{ invalidFeedback('representPhone') }}
                   </b-form-invalid-feedback>
+                </b-form-group>
+              </b-col>
+            </b-row>
+
+            <b-row>
+              <b-col cols="12" md="6">
+                <b-form-group label="Quốc tịch" label-for="represent-nationality">
+                  <b-form-select
+                    id="represent-nationality"
+                    v-model="frmRepresent.representNationalityName"
+                    :options="options.nationality"
+                    @change="onNationalityNameChange"
+                  />
+                </b-form-group>
+              </b-col>
+              <b-col cols="12" md="6">
+                <b-form-group label="Mã quốc tịch" label-for="represent-nationality-code">
+                  <b-form-input
+                    id="represent-nationality-code"
+                    :value="nationalityCodeForName(frmRepresent.representNationalityName)"
+                    readonly
+                  />
                 </b-form-group>
               </b-col>
             </b-row>
@@ -1012,6 +1040,19 @@ import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 import moment from "moment";
 import { createPopper as Popperjs } from "@popperjs/core";
+import { NATIONALITY_OPTIONS } from "./nationalities";
+
+const createEmptyRepresentForm = () => ({
+  representName: "",
+  representPhone: "",
+  representCitizenIdent: "",
+  representPassPort: "",
+  representNationalityCode: "",
+  representNationalityName: "",
+  representDateBirth: null,
+  representGender: null,
+  representMail: ""
+});
 
 export default {
   name: "Profile",
@@ -1037,7 +1078,7 @@ export default {
       // Dữ liệu chính và model form
       frmData: {},
       frmInfo: {},
-      frmRepresent: {},
+      frmRepresent: createEmptyRepresentForm(),
       frmDataInvoice: {},
       frmDataContact: {},
       frmDataBank: {
@@ -1058,6 +1099,17 @@ export default {
         banks: [],
         taxAuthorities: [],
         taxAuthorityNames: [],
+        nationality: [
+          { text: "", value: "" },
+          ...NATIONALITY_OPTIONS.slice()
+            .sort((a, b) => a.label.localeCompare(b.label, "vi", { sensitivity: "base" }))
+            .map((item) => ({
+            text: item.label,
+            value: item.label,
+            code: item.code,
+            label: item.label
+            }))
+        ],
         gender: [
           { text: "Nam", value: 1 },
           { text: "Nữ", value: 0 }
@@ -1132,6 +1184,8 @@ export default {
         "representPassPort",
         "manualDate",
         "representGender",
+        "representNationalityCode",
+        "representNationalityName",
         "representMail"
       ]);
       this.frmRepresent.representName = this.frmData.representName || "";
@@ -1139,6 +1193,12 @@ export default {
       this.frmRepresent.representCitizenIdent =
         this.frmData.representCitizenIdent || "";
       this.frmRepresent.representPassPort = this.frmData.representPassPort || "";
+      this.frmRepresent.representNationalityCode = (
+        this.frmData.representNationalityCode || ""
+      ).toUpperCase();
+      this.frmRepresent.representNationalityName =
+        this.frmData.representNationalityName ||
+        this.nationalityNameForCode(this.frmRepresent.representNationalityCode);
       this.frmRepresent.representDateBirth =
         this.frmData.representDateBirth || null;
       this.frmRepresent.representGender = this.frmData.representGender;
@@ -1250,7 +1310,7 @@ export default {
           break;
         case "formRepresent":
           this.formRepresent = false;
-          this.frmRepresent = {};
+          this.frmRepresent = createEmptyRepresentForm();
           this.clearScopedErrors([
             "representName",
             "representPhone",
@@ -1258,6 +1318,8 @@ export default {
             "representPassPort",
             "manualDate",
             "representGender",
+            "representNationalityCode",
+            "representNationalityName",
             "representMail"
           ]);
           break;
@@ -1430,6 +1492,8 @@ export default {
         "representPassPort",
         "manualDate",
         "representGender",
+        "representNationalityCode",
+        "representNationalityName",
         "representMail"
       ];
       const errors = {};
@@ -1584,6 +1648,11 @@ export default {
         representPhone: this.trimValue(this.frmRepresent.representPhone),
         representCitizenIdent: this.trimValue(this.frmRepresent.representCitizenIdent),
         representPassPort: this.trimValue(this.frmRepresent.representPassPort),
+        representNationalityCode: this.trimValue(
+          this.nationalityCodeForName(this.frmRepresent.representNationalityName) ||
+            this.frmRepresent.representNationalityCode
+        ),
+        representNationalityName: this.trimValue(this.frmRepresent.representNationalityName),
         representMail: this.trimValue(this.frmRepresent.representMail),
         representDateBirth: moment(this.frmRepresent.representDateBirth).format("YYYY-MM-DD")
       };
@@ -1593,7 +1662,7 @@ export default {
         .then(() => {
           this.buttonRepresent = false;
           this.formRepresent = false;
-          this.frmRepresent = {};
+          this.frmRepresent = createEmptyRepresentForm();
           this.importData();
         })
         .catch((errors) => {
@@ -1712,6 +1781,33 @@ export default {
       }
       const value = errors[field] || [];
       return Array.isArray(value) ? value.join(" ") : String(value);
+    },
+
+    nationalityNameForCode(code) {
+      const option = (this.options.nationality || []).find(
+        (item) => item.code === String(code || "").toUpperCase()
+      );
+      return option ? option.label || option.text : "";
+    },
+
+    nationalityCodeForName(name) {
+      const option = (this.options.nationality || []).find(
+        (item) => item.value === name
+      );
+      return option ? String(option.code || "").toUpperCase() : "";
+    },
+
+    onNationalityNameChange(name) {
+      this.$set(
+        this.frmRepresent,
+        "representNationalityCode",
+        this.nationalityCodeForName(name)
+      );
+      this.$set(
+        this.frmRepresent,
+        "representNationalityName",
+        name || ""
+      );
     },
 
     // Định vị menu xổ xuống của v-select.

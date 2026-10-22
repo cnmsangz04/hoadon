@@ -115,6 +115,8 @@ public final class RegisterInvoiceXmlTaxValidator {
         requireText(errors, ttChung, path, "MCQTQLy", 5);
         requireText(errors, ttChung, path, "TNDDPLuat", 50);
         requireText(errors, ttChung, path, "DTDDPLuat", 20);
+        requireText(errors, ttChung, path, "MQTNDDPLuat", 2);
+        requireText(errors, ttChung, path, "QTDDPLuat", 50);
         requireText(errors, ttChung, path, "CCCDan", 12);
         optionalLength(errors, ttChung, path, "SHChieu", 20);
         requireDate(errors, ttChung, path, "NSDDPLuat");

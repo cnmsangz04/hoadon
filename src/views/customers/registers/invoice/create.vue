@@ -89,6 +89,15 @@
               <div class="mb-2"><span class="font-weight-bold">Giới tính:</span> <span>{{ genderText(legalRep.gender) }}</span></div>
             </b-col>
           </b-row>
+
+          <b-row>
+            <b-col cols="12" md="6">
+              <div class="mb-2"><span class="font-weight-bold">Quốc tịch:</span> <span>{{ legalRep.nationality_name }}</span></div>
+            </b-col>
+            <b-col cols="12" md="6">
+              <div class="mb-2"><span class="font-weight-bold">Mã quốc tịch:</span> <span>{{ legalRep.nationality_code }}</span></div>
+            </b-col>
+          </b-row>
         </b-card-body>
       </b-card>
 
@@ -549,7 +558,7 @@ export default {
       transmitProviderOptions: org_transmits,
       app: { provinces: [] },
       company: { address: '', email: '', name: '', tax_code: '' },
-      legalRep: { fullname: '', phone: '', citizen_id: '', passport_no: '', date_of_birth: null, gender: null },
+      legalRep: { fullname: '', phone: '', citizen_id: '', passport_no: '', nationality_code: '', nationality_name: '', date_of_birth: null, gender: null },
       errors: {},
       signatureErrors: {},
       options: {
@@ -797,6 +806,8 @@ export default {
         this.legalRep.phone = legal.phone || data.legalPhone || ''
         this.legalRep.citizen_id = legal.citizen_id || legal.citizenId || data.legalCitizenId || ''
         this.legalRep.passport_no = legal.passport_no || legal.passportNo || data.legalPassportNo || ''
+        this.legalRep.nationality_code = legal.nationality_code || legal.nationalityCode || data.legalNationalityCode || ''
+        this.legalRep.nationality_name = legal.nationality_name || legal.nationalityName || data.legalNationalityName || ''
         this.legalRep.date_of_birth = legal.date_of_birth || legal.dateOfBirth || data.legalDateOfBirth || null
         this.legalRep.gender = legal.gender != null ? legal.gender : (data.legalGender != null ? data.legalGender : null)
         // Prefill authority name if available

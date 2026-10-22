@@ -220,6 +220,8 @@ public class ProfileController extends BaseController {
             dto.representDateBirth = rep.getDateOfBirth();
             dto.representCitizenIdent = rep.getCitizenId();
             dto.representPassPort = rep.getPassportNo();
+            dto.representNationalityCode = rep.getNationalityCode();
+            dto.representNationalityName = rep.getNationalityName();
             dto.representPhone = rep.getPhone();
             dto.representMail = rep.getEmail();
         });
@@ -337,6 +339,8 @@ public class ProfileController extends BaseController {
         String representPhone = trim(body.get("representPhone"));
         String representCitizenIdent = trim(body.get("representCitizenIdent"));
         String representPassPort = trim(body.get("representPassPort"));
+        String representNationalityCode = trim(body.get("representNationalityCode"));
+        String representNationalityName = trim(body.get("representNationalityName"));
         String representMail = trim(body.get("representMail"));
         Integer representGender = parseInteger(body.get("representGender"));
         LocalDate representDateBirth = parseProfileDate(body.get("representDateBirth"));
@@ -352,6 +356,14 @@ public class ProfileController extends BaseController {
         }
         if (!isValidPassport(representPassPort)) {
             errors.put("representPassPort", Collections.singletonList("Số hộ chiếu chỉ gồm chữ và số, từ 6 đến 20 ký tự"));
+        }
+        if (!representNationalityCode.isBlank() && !representNationalityCode.matches("[A-Za-z]{2}")) {
+            errors.put("representNationalityCode", Collections.singletonList("Mã quốc tịch phải gồm 2 chữ cái"));
+        } else if (!representNationalityCode.isBlank()) {
+            representNationalityCode = representNationalityCode.toUpperCase(Locale.ROOT);
+        }
+        if (!representNationalityName.isBlank() && representNationalityName.length() > 50) {
+            errors.put("representNationalityName", Collections.singletonList("Quốc tịch không được vượt quá 50 ký tự"));
         }
         if (representDateBirth == null || representDateBirth.isBefore(LocalDate.of(1900, 1, 1)) || representDateBirth.isAfter(LocalDate.now())) {
             errors.put("manualDate", Collections.singletonList("Ngày sinh không hợp lệ"));
@@ -375,6 +387,8 @@ public class ProfileController extends BaseController {
         rep.setDateOfBirth(representDateBirth);
         rep.setCitizenId(representCitizenIdent.isBlank() ? null : representCitizenIdent);
         rep.setPassportNo(representPassPort.isBlank() ? null : representPassPort);
+        rep.setNationalityCode(representNationalityCode);
+        rep.setNationalityName(representNationalityName);
         rep.setPhone(representPhone);
         rep.setEmail(representMail);
         legalRepresentativeRepository.save(rep);

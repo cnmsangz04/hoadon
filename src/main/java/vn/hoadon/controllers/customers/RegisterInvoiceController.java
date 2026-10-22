@@ -123,6 +123,8 @@ public class RegisterInvoiceController extends BaseController {
         res.put("legalPhone", dto.getLegalPhone());
         res.put("legalCitizenId", dto.getLegalCitizenId());
         res.put("legalPassportNo", dto.getLegalPassportNo());
+        res.put("legalNationalityCode", dto.getLegalNationalityCode());
+        res.put("legalNationalityName", dto.getLegalNationalityName());
         res.put("legalDateOfBirth", dto.getLegalDateOfBirth());
         res.put("legalGender", dto.getLegalGender());
         // Nested company and legal representative info
@@ -137,6 +139,8 @@ public class RegisterInvoiceController extends BaseController {
         legal.put("phone", dto.getLegalPhone());
         legal.put("citizen_id", dto.getLegalCitizenId());
         legal.put("passport_no", dto.getLegalPassportNo());
+        legal.put("nationality_code", dto.getLegalNationalityCode());
+        legal.put("nationality_name", dto.getLegalNationalityName());
         legal.put("date_of_birth", dto.getLegalDateOfBirth());
         legal.put("gender", dto.getLegalGender());
         res.put("legalRepresentative", legal);
