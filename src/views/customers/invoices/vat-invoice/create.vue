@@ -20,6 +20,20 @@
         </div>
       </b-alert>
 
+      <b-row v-if="isProcessingInvoice" class="mb-3">
+        <b-col lg="8" md="12">
+          <b-form-group label="Lý do điều chỉnh/thay thế" label-class="form-label" :state="state('related_reason')">
+            <b-form-select
+              v-model="frmData.related_reason"
+              :options="relatedReasonOptions"
+              :disabled="!canEdit || isBusy"
+              :state="state('related_reason')"
+            />
+            <b-form-invalid-feedback :state="state('related_reason')">{{ invalidFeedback('related_reason') }}</b-form-invalid-feedback>
+          </b-form-group>
+        </b-col>
+      </b-row>
+
       <!-- Đã bỏ cảnh báo inline; dùng toastr để hiển thị lỗi -->
       
       <!-- Khung tải -->
@@ -451,6 +465,7 @@ export default {
         reference_id: null,
         invoice_type: 0,
         invoice_type_adjust: 0,
+        related_reason: null,
         order: { code: null },
         no: null,
         date_export: null,
@@ -494,6 +509,23 @@ export default {
         { value: 1, text: 'Tiền mặt' },
         { value: 2, text: 'Chuyển khoản' },
         { value: 3, text: 'Tiền mặt/Chuyển khoản' }
+      ],
+      relatedReasonOptions: [
+        { value: null, text: '-- Chọn lý do điều chỉnh/thay thế --' },
+        { value: '1', text: 'Điều chỉnh giá trị quyết toán dự án đầu tư hoặc điều chỉnh giá bán theo quy định chuyên ngành' },
+        { value: '2', text: 'Điều chỉnh giá trị, khối lượng theo kết luận của cơ quan nhà nước có thẩm quyền' },
+        { value: '3', text: 'Điều chỉnh giá bán buôn điện' },
+        { value: '4', text: 'Điều chỉnh do chiết khấu thương mại' },
+        { value: '5', text: 'Điều chỉnh do trả lại hàng hóa không phải tài sản phải đăng ký hoặc tài sản đã đăng ký tên người mua' },
+        { value: '6', text: 'Thay thế do trả lại hàng hóa là tài sản phải đăng ký và đã đăng ký tên người mua' },
+        { value: '7', text: 'Điều chỉnh do hoàn phí, giảm phí, giảm hoa hồng môi giới bảo hiểm hoặc khoản chi để giảm thu' },
+        { value: '8', text: 'Điều chỉnh do hủy/chấm dứt giao dịch hoặc hủy một phần dịch vụ thu tiền trước nhiều kỳ' },
+        { value: '9', text: 'Điều chỉnh do hoàn phí của tổ chức tín dụng hoặc tổ chức cung ứng dịch vụ thanh toán' },
+        { value: '10', text: 'Điều chỉnh đối với dịch vụ viễn thông sử dụng thẻ trả trước' },
+        { value: '11', text: 'Điều chỉnh do thay đổi giá trị bán khí thiên nhiên khi quy đổi sang Việt Nam đồng' },
+        { value: '12', text: 'Điều chỉnh đối với hóa đơn đổi, hoàn chứng từ vận chuyển hàng không' },
+        { value: '13', text: 'Điều chỉnh/thay thế hóa đơn đã lập sai' },
+        { value: '14', text: 'Thay thế hóa đơn điện tử đã lập sai là hóa đơn điện tử từ máy tính tiền' }
       ],
       editId: null,
       loadedInvoice: null,
@@ -559,10 +591,12 @@ export default {
       const referenceId = Number(q.referenceId || q.reference_id || 0)
       const invoiceType = Number(q.invoiceType || q.invoice_type || 0)
       const invoiceTypeAdjust = Number(q.invoiceTypeAdjust || q.invoice_type_adjust || 0)
+      const relatedReason = String(q.relatedReason || q.related_reason || '')
       if (referenceId > 0 && (invoiceType === 1 || invoiceType === 2)) {
         this.frmData.reference_id = referenceId
         this.frmData.invoice_type = invoiceType
         this.frmData.invoice_type_adjust = invoiceType === 2 && [1, 2, 3].includes(invoiceTypeAdjust) ? invoiceTypeAdjust : 0
+        this.frmData.related_reason = /^(?:[1-9]|1[0-4])$/.test(relatedReason) ? relatedReason : null
       }
     },
     // Unified error toast with deduplication by key
@@ -903,6 +937,7 @@ export default {
         this.frmData.reference_id = data?.referenceId ?? this.frmData.reference_id
         this.frmData.invoice_type = data?.invoiceType ?? this.frmData.invoice_type
         this.frmData.invoice_type_adjust = data?.invoiceTypeAdjust ?? this.frmData.invoice_type_adjust
+        this.frmData.related_reason = data?.relatedReason ?? this.frmData.related_reason
       }
       if (options.copyNo) this.frmData.no = data?.no ?? this.frmData.no
       if (options.copyDate) this.frmData.date_export = data?.dateExport ?? this.frmData.date_export
@@ -991,7 +1026,10 @@ export default {
           vatRateOther: this.resolveInvoiceVatRateOther(rows),
           referenceId: this.frmData.reference_id || null,
           invoiceType: Number(this.frmData.invoice_type || 0),
-          invoiceTypeAdjust: Number(this.frmData.invoice_type) === 2 ? Number(this.frmData.invoice_type_adjust || 0) : 0
+          invoiceTypeAdjust: Number(this.frmData.invoice_type) === 2 ? Number(this.frmData.invoice_type_adjust || 0) : 0,
+          relatedReason: Number(this.frmData.invoice_type || 0) > 0 && this.frmData.related_reason != null
+            ? String(this.frmData.related_reason)
+            : null
         }
         let res
         if (this.editId) {
@@ -1039,6 +1077,9 @@ export default {
       const sameVatRateError = !rowError ? this.sameVatRateError(rows) : null
       this.errors = {
         date_export: required(this.frmData.date_export, 'Vui lòng chọn ngày lập hóa đơn'),
+        related_reason: this.isProcessingInvoice
+          ? required(this.frmData.related_reason, 'Vui lòng chọn lý do điều chỉnh/thay thế')
+          : null,
         customerName: (!String(customer.name || '').trim() && !String(customer.buyer || '').trim())
           ? 'Vui lòng nhập đơn vị mua hoặc người mua'
           : null,

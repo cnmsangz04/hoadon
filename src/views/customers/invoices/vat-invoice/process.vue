@@ -32,6 +32,12 @@
             </b-form-group>
           </b-col>
 
+          <b-col lg="8" md="12" v-if="isProcessing">
+            <b-form-group label="Lý do điều chỉnh/thay thế" label-class="form-label">
+              <b-form-select v-model="relatedReason" :options="relatedReasonOptions" :disabled="isBusy" />
+            </b-form-group>
+          </b-col>
+
           <b-col lg="4" md="12" class="d-flex align-items-end mb-3">
             <b-button type="submit" variant="primary" :disabled="isBusy">
               <b-spinner v-if="isBusy" small class="mr-2" />
@@ -92,8 +98,26 @@ export default {
     return {
       invoiceNo: '',
       invoiceTypeAdjust: 1,
+      relatedReason: null,
       foundInvoice: null,
       isBusy: false,
+      relatedReasonOptions: [
+        { value: null, text: '-- Chọn lý do điều chỉnh/thay thế --' },
+        { value: '1', text: 'Điều chỉnh giá trị quyết toán dự án đầu tư hoặc điều chỉnh giá bán theo quy định chuyên ngành' },
+        { value: '2', text: 'Điều chỉnh giá trị, khối lượng theo kết luận của cơ quan nhà nước có thẩm quyền' },
+        { value: '3', text: 'Điều chỉnh giá bán buôn điện' },
+        { value: '4', text: 'Điều chỉnh do chiết khấu thương mại' },
+        { value: '5', text: 'Điều chỉnh do trả lại hàng hóa không phải tài sản phải đăng ký hoặc tài sản đã đăng ký tên người mua' },
+        { value: '6', text: 'Thay thế do trả lại hàng hóa là tài sản phải đăng ký và đã đăng ký tên người mua' },
+        { value: '7', text: 'Điều chỉnh do hoàn phí, giảm phí, giảm hoa hồng môi giới bảo hiểm hoặc khoản chi để giảm thu' },
+        { value: '8', text: 'Điều chỉnh do hủy/chấm dứt giao dịch hoặc hủy một phần dịch vụ thu tiền trước nhiều kỳ' },
+        { value: '9', text: 'Điều chỉnh do hoàn phí của tổ chức tín dụng hoặc tổ chức cung ứng dịch vụ thanh toán' },
+        { value: '10', text: 'Điều chỉnh đối với dịch vụ viễn thông sử dụng thẻ trả trước' },
+        { value: '11', text: 'Điều chỉnh do thay đổi giá trị bán khí thiên nhiên khi quy đổi sang Việt Nam đồng' },
+        { value: '12', text: 'Điều chỉnh đối với hóa đơn đổi, hoàn chứng từ vận chuyển hàng không' },
+        { value: '13', text: 'Điều chỉnh/thay thế hóa đơn đã lập sai' },
+        { value: '14', text: 'Thay thế hóa đơn điện tử đã lập sai là hóa đơn điện tử từ máy tính tiền' }
+      ],
       adjustTypeOptions: [
         { value: 1, text: 'Điều chỉnh tăng' },
         { value: 2, text: 'Điều chỉnh giảm' },
@@ -110,6 +134,9 @@ export default {
     },
     invoiceType () {
       return this.isAdjust ? 2 : 1
+    },
+    isProcessing () {
+      return this.invoiceType === 1 || this.invoiceType === 2
     },
     pageTitle () {
       return this.isAdjust ? 'Hóa đơn điều chỉnh' : 'Hóa đơn thay thế'
@@ -128,6 +155,10 @@ export default {
         this.notifyError('Vui lòng nhập số hóa đơn hợp lệ')
         return
       }
+      if (!this.relatedReason) {
+        this.notifyError('Vui lòng chọn lý do điều chỉnh/thay thế')
+        return
+      }
       this.isBusy = true
       try {
         const { data } = await axios.get('/invoices/processing/lookup', {
@@ -143,7 +174,8 @@ export default {
           query: {
             referenceId: data.id,
             invoiceType: this.invoiceType,
-            invoiceTypeAdjust: this.isAdjust ? this.invoiceTypeAdjust : 0
+            invoiceTypeAdjust: this.isAdjust ? this.invoiceTypeAdjust : 0,
+            relatedReason: this.relatedReason
           }
         })
       } catch (e) {

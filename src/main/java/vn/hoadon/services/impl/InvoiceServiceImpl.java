@@ -301,7 +301,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         // JSON blobs
         e.setBill(null);
         e.setOthers(null);
-        e.setRelated(null);
+        e.setRelated(normalizeRelatedReason(p.relatedReason));
         e.setCustomer(serializeSafely(p.customer));
         e.setDetail(serializeSafely(p.detail));
         applyInvoiceRelationFields(e, p, isCreate);
@@ -316,7 +316,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private void applyInvoiceRelationFields(InvoiceEntity e, InvoicePayload p, boolean isCreate) {
-        boolean hasRelation = p.referenceId != null || p.invoiceType != null || p.invoiceTypeAdjust != null;
+        boolean hasRelation = p.referenceId != null || p.invoiceType != null || p.invoiceTypeAdjust != null || p.relatedReason != null;
         if (!isCreate && !hasRelation) return;
 
         Short invoiceType = p.invoiceType != null ? p.invoiceType : (short)0;
@@ -324,6 +324,19 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setReferenceId(p.referenceId != null ? p.referenceId.intValue() : null);
         e.setInvoiceType(invoiceType);
         e.setInvoiceTypeAdjust(invoiceType == 2 ? invoiceTypeAdjust : (short)0);
+        e.setRelated(invoiceType == 1 || invoiceType == 2 ? normalizeRelatedReason(p.relatedReason) : null);
+    }
+
+    private String normalizeRelatedReason(String value) {
+        if (value == null || value.trim().isEmpty()) return null;
+        String normalized = value.trim();
+        try {
+            int code = Integer.parseInt(normalized);
+            if (code >= 1 && code <= 14) return String.valueOf(code);
+        } catch (NumberFormatException ignored) {
+            // Invalid values are rejected below when the invoice is a related invoice.
+        }
+        throw new IllegalArgumentException("Lý do điều chỉnh/thay thế không hợp lệ");
     }
 
     private InvoiceEntity validateRelatedInvoiceForCreate(InvoicePayload p, Long companyId) {
@@ -336,6 +349,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (p.referenceId == null) {
             throw new IllegalArgumentException("Thiếu hóa đơn gốc cần xử lý");
         }
+        if (p.relatedReason == null || p.relatedReason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng chọn lý do điều chỉnh/thay thế");
+        }
+        normalizeRelatedReason(p.relatedReason);
         InvoiceEntity original = invoiceRepository.findById(p.referenceId).orElse(null);
         if (original == null) {
             throw new IllegalArgumentException("Không tìm thấy hóa đơn gốc");

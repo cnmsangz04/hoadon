@@ -237,8 +237,18 @@ public final class InvoiceXmlBuilder {
         xml.nlhdcLQuan = relatedInvoice.getDateExport() != null
                 ? relatedInvoice.getDateExport().atStartOfDay().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                 : "";
+        // Lý do điều chỉnh/thay thế theo Phụ lục XVII.
+        xml.lddcTThe = relatedReason(inv.getRelated());
         xml.gChu = buildRelatedNote(invoiceType, inv.getInvoiceTypeAdjust(), relatedInvoice, relatedForm);
         return xml;
+    }
+
+    private static String relatedReason(String value) {
+        if (value != null && value.trim().matches("\\d{1,2}")) {
+            int code = Integer.parseInt(value.trim());
+            if (code >= 1 && code <= 14) return String.valueOf(code);
+        }
+        return "";
     }
 
     private static String buildRelatedNote(short invoiceType, Short adjustType, InvoiceEntity relatedInvoice, FormInvoiceEntity relatedForm) {
@@ -271,12 +281,14 @@ public final class InvoiceXmlBuilder {
         String khhdcLQuan = "";
         String shdcLQuan = "";
         String nlhdcLQuan = "";
+        String lddcTThe = "";
         String gChu = "";
 
         String toXml() {
             return new StringBuilder()
                     .append("<TTHDLQuan>")
                     .append(tag("TCHDon", tchDon))
+                    .append(tag("LDDCTThe", lddcTThe))
                     .append(tag("LHDCLQuan", lhdcLQuan))
                     .append(tag("KHMSHDCLQuan", khmsHdcLQuan))
                     .append(tag("KHHDCLQuan", khhdcLQuan))

@@ -38,5 +38,6 @@ public interface InvoiceService {
         public Long referenceId; // original invoice id for replacement/adjustment
         public Short invoiceType; // 0 normal, 1 replacement, 2 adjustment
         public Short invoiceTypeAdjust; // 1 increase, 2 decrease, 3 info
+        public String relatedReason; // LDDCTThe, reason code from Appendix XVII
     }
 }

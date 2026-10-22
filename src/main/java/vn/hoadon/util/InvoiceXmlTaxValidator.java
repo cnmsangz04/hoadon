@@ -183,6 +183,17 @@ public final class InvoiceXmlTaxValidator {
         if (hasText(tcdon) && !"1".equals(tcdon) && !"2".equals(tcdon)) {
             errors.add(path + "/TCHDon: chỉ nhận 1 hoặc 2");
         }
+        String reason = requireNumber(errors, related, path, "LDDCTThe", 2, 0);
+        if (hasText(reason)) {
+            try {
+                int code = Integer.parseInt(reason);
+                if (code < 1 || code > 14) {
+                    errors.add(path + "/LDDCTThe: chỉ nhận giá trị từ 1 đến 14");
+                }
+            } catch (NumberFormatException ignored) {
+                // requireNumber đã thêm lỗi định dạng số.
+            }
+        }
         requireNumber(errors, related, path, "LHDCLQuan", 1, 0);
         requireText(errors, related, path, "KHMSHDCLQuan", 11);
         requireText(errors, related, path, "KHHDCLQuan", 8);

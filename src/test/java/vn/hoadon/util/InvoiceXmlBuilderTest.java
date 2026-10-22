@@ -133,6 +133,43 @@ class InvoiceXmlBuilderTest {
     }
 
     @Test
+    void relatedInvoiceXmlContainsAdjustmentReplacementReason() {
+        InvoiceEntity invoice = new InvoiceEntity();
+        invoice.setName("Hoa don GTGT");
+        invoice.setNo(2);
+        invoice.setDateExport(LocalDate.of(2026, 10, 22));
+        invoice.setCurrency("VND");
+        invoice.setExchangeRate(1D);
+        invoice.setPaymentType((short) 1);
+        invoice.setCustomer("{}");
+        invoice.setDetail("[]");
+        invoice.setTotal(0D);
+        invoice.setVatAmount(0D);
+        invoice.setDiscountAmount(0D);
+        invoice.setAmount(0D);
+        invoice.setAmountInWords("Khong dong");
+        invoice.setInvoiceType((short) 2);
+        invoice.setRelated("4");
+
+        InvoiceEntity original = new InvoiceEntity();
+        original.setNo(1);
+        original.setDateExport(LocalDate.of(2026, 10, 20));
+
+        FormInvoiceEntity form = new FormInvoiceEntity();
+        form.setFormCode("1");
+        form.setSerial("C26TAA");
+
+        FormInvoiceEntity originalForm = new FormInvoiceEntity();
+        originalForm.setFormCode("1");
+        originalForm.setSerial("C26TAA");
+        originalForm.setCategory(1);
+
+        String xml = InvoiceXmlBuilder.build(invoice, form, null, null, original, originalForm);
+
+        assertThat(xml).contains("<TCHDon>2</TCHDon><LDDCTThe>4</LDDCTThe>");
+    }
+
+    @Test
     void oneVatRateFormUsesSingleVatRateSummaryWhenInvoiceVatRateIsMissing() {
         InvoiceEntity invoice = new InvoiceEntity();
         invoice.setName("Hoa don GTGT");

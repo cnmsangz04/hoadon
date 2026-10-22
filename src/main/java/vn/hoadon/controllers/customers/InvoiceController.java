@@ -359,6 +359,7 @@ public class InvoiceController extends BaseController {
         resp.put("referenceId", inv.getReferenceId());
         resp.put("invoiceType", inv.getInvoiceType());
         resp.put("invoiceTypeAdjust", inv.getInvoiceTypeAdjust());
+        resp.put("relatedReason", inv.getRelated());
         resp.put("no", inv.getNo());
         resp.put("dateExport", inv.getDateExport());
         resp.put("paymentType", inv.getPaymentType());
@@ -422,6 +423,7 @@ public class InvoiceController extends BaseController {
         p.referenceId = r.referenceId;
         p.invoiceType = r.invoiceType;
         p.invoiceTypeAdjust = r.invoiceTypeAdjust;
+        p.relatedReason = r.relatedReason;
         return p;
     }
 
@@ -602,6 +604,7 @@ public class InvoiceController extends BaseController {
         public Long referenceId;
         public Short invoiceType;
         public Short invoiceTypeAdjust;
+        public String relatedReason;
     }
 
     public static class CreateResponse { public Long id; public CreateResponse(Long id){ this.id = id; } }
