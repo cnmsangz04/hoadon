@@ -184,6 +184,8 @@ Table legal_representatives {
   date_of_birth date
   citizen_id varchar(255)
   passport_no varchar(255)
+  nationality_code varchar(2)
+  nationality_name nvarchar(50)
   phone varchar(255)
   email varchar(255)
   created_at datetime2
