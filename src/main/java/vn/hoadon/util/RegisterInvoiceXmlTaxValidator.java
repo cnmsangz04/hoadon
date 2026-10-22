@@ -132,12 +132,12 @@ public final class RegisterInvoiceXmlTaxValidator {
 
     private static void validateNdTkhai(List<String> errors, Element ndTkhai) {
         validateFlagGroup(errors, requireChild(errors, ndTkhai, "TKhai/DLTKhai/NDTKhai", "HTHDon"),
-                "TKhai/DLTKhai/NDTKhai/HTHDon", true, "CMa", "KCMa", "CMTMTTien");
+                "TKhai/DLTKhai/NDTKhai/HTHDon", true, "CMa", "CMTMTTien", "KCMTMTTien", "KCMa");
         validateFlagGroup(errors, requireChild(errors, ndTkhai, "TKhai/DLTKhai/NDTKhai", "HTGDLHDDT"),
                 "TKhai/DLTKhai/NDTKhai/HTGDLHDDT", false,
-                "NNTDBKKhan", "NNTKTDNUBND", "CQXLTSCong", "CDLTTDCQT", "CDLQTCTN");
+                "NNTDBKKhan", "NNTKTDNUBND", "CQXLTSCong", "CDLTTDCQT", "CDLQTCTN", "TCNNgoai");
         validateFlagGroup(errors, requireChild(errors, ndTkhai, "TKhai/DLTKhai/NDTKhai", "PThuc"),
-                "TKhai/DLTKhai/NDTKhai/PThuc", true, "CDDu", "CBTHop");
+                "TKhai/DLTKhai/NDTKhai/PThuc", true, "CDDu", "CDLTHDThu", "CBTHop", "CTTCTGDich");
         validateFlagGroup(errors, requireChild(errors, ndTkhai, "TKhai/DLTKhai/NDTKhai", "LHDSDung"),
                 "TKhai/DLTKhai/NDTKhai/LHDSDung", true,
                 "HDGTGT", "HDGTGTTHBLai", "HDBHang", "HDBHTHBLai", "HDTMai",

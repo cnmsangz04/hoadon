@@ -450,7 +450,11 @@ public class PatvanCallbackService {
         history.setShowNotify(1);
         history.setStatus(1);
         history.setXmlData(xml);
-        HistoryEntity saved = historyRepository.saveAndFlush(history);
+        HistoryEntity saved = historyRepository.save(history);
+        if (saved == null) {
+            saved = history;
+        }
+        historyRepository.flush();
         log.info("PATVAN_CALLBACK_HISTORY_SAVED type={} referenceTable={} companyId={} tableId={} historyId={}",
                 type, tableName, companyId, tableId, saved.getId());
     }

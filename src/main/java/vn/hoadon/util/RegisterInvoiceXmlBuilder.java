@@ -134,8 +134,8 @@ public final class RegisterInvoiceXmlBuilder {
         String mcqtqly = nullToEmpty(taxAuthorityCode);
         String tnddpluat = nullToEmpty(contactName);
         String dtddpluat = nullToEmpty(contactPhone);
-        String mqtnddpluat = nullToEmpty(nationalityCode);
-        String qtddpluat = nullToEmpty(nationalityName);
+        String mqtnddpluat = firstNonBlank(nationalityCode, "VN");
+        String qtddpluat = firstNonBlank(nationalityName, "Việt Nam");
         String cccdan = nullToEmpty(citizenId);
         String shchieu = nullToEmpty(passportNo);
         String nsddpluat = nullToEmpty(dateOfBirth);
@@ -184,8 +184,9 @@ public final class RegisterInvoiceXmlBuilder {
         sb.append("<NDTKhai>");
         sb.append("<HTHDon>")
           .append(tag("CMa", flag(invoiceForms, "CMa")))
-          .append(tag("KCMa", flag(invoiceForms, "KCMa")))
           .append(tag("CMTMTTien", flag(invoiceForms, "CMTMTTien")))
+          .append(tag("KCMTMTTien", flag(invoiceForms, "KCMTMTTien")))
+          .append(tag("KCMa", flag(invoiceForms, "KCMa")))
           .append("</HTHDon>");
         sb.append("<HTGDLHDDT>")
           .append(tag("NNTDBKKhan", flag(sendMethodCodes, "NNTDBKKhan")))
@@ -193,10 +194,13 @@ public final class RegisterInvoiceXmlBuilder {
           .append(tag("CQXLTSCong", flag(sendMethodCodes, "CQXLTSCong", "CQT")))
           .append(tag("CDLTTDCQT", flag(sendMethodCodes, "CDLTTDCQT")))
           .append(tag("CDLQTCTN", flag(sendMethodCodes, "CDLQTCTN")))
+          .append(tag("TCNNgoai", flag(sendMethodCodes, "TCNNgoai")))
           .append("</HTGDLHDDT>");
         sb.append("<PThuc>")
           .append(tag("CDDu", flag(transferMethods, "CDDu")))
+          .append(tag("CDLTHDThu", flag(transferMethods, "CDLTHDThu")))
           .append(tag("CBTHop", flag(transferMethods, "CBTHop")))
+          .append(tag("CTTCTGDich", flag(transferMethods, "CTTCTGDich")))
           .append("</PThuc>");
         sb.append("<LHDSDung>")
           .append(tag("HDGTGT", flag(invoiceTypes, "HDGTGT")))

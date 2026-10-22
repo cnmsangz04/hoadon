@@ -128,7 +128,8 @@
           <b-form-checkbox-group class="ml-3" stacked v-model="frmData.invoice_forms">
             <b-form-checkbox class="mb-2" value="CMa">Hóa đơn có mã</b-form-checkbox>
             <b-form-checkbox class="mb-2" value="KCMa">Hóa đơn không có mã</b-form-checkbox>
-            <b-form-checkbox value="CMTMTTien">Hóa đơn có mã từ máy tính tiền</b-form-checkbox>
+            <b-form-checkbox class="mb-2" value="CMTMTTien">Hóa đơn có mã từ máy tính tiền</b-form-checkbox>
+            <b-form-checkbox value="KCMTMTTien">Hóa đơn không có mã từ máy tính tiền</b-form-checkbox>
           </b-form-checkbox-group>
           <p v-if="!state('invoice_forms')" class="text-danger small mt-2">{{ invalidFeedback('invoice_forms') }}</p>
         </b-col>
@@ -177,7 +178,9 @@
           <label class="font-weight-bold">3. Phương thức chuyển dữ liệu hóa đơn điện tử</label>
           <b-form-checkbox-group class="ml-3" stacked v-model="frmData.transfer_methods">
             <b-form-checkbox class="mb-2" value="CDDu">Chuyển đầy đủ nội dung từng hóa đơn</b-form-checkbox>
-            <b-form-checkbox value="CBTHop">Chuyển theo bảng tổng hợp dữ liệu hóa đơn điện tử (điểm a1, khoản 3, Điều 22 của Nghị định)</b-form-checkbox>
+            <b-form-checkbox class="mb-2" value="CDLTHDThu">Chuyển dữ liệu tổng hợp doanh thu</b-form-checkbox>
+            <b-form-checkbox class="mb-2" value="CBTHop">Chuyển theo bảng tổng hợp dữ liệu hóa đơn điện tử (điểm a1, khoản 3, Điều 22 của Nghị định)</b-form-checkbox>
+            <b-form-checkbox value="CTTCTGDich">Chuyển thông tin chi tiết giao dịch</b-form-checkbox>
           </b-form-checkbox-group>
           <p v-if="!state('transfer_methods')" class="text-danger small mt-2">{{ invalidFeedback('transfer_methods') }}</p>
         </b-col>
@@ -859,7 +862,7 @@ export default {
     },
     normalizeInvoiceForms(raw) {
       // Phía backend có thể dùng các mã CMa, KCMa, CMTMTTien; đồng bộ về cùng kiểu
-      const dict = { CMa: 'CMa', KCMa: 'KCMa', CMTMTTien: 'CMTMTTien', 'CO_MA': 'CMa', 'KHONG_MA': 'KCMa', 'MA_MAY_TINH_TIEN': 'CMTMTTien' }
+      const dict = { CMa: 'CMa', KCMa: 'KCMa', CMTMTTien: 'CMTMTTien', KCMTMTTien: 'KCMTMTTien', 'CO_MA': 'CMa', 'KHONG_MA': 'KCMa', 'MA_MAY_TINH_TIEN': 'CMTMTTien', 'KHONG_MA_MAY_TINH_TIEN': 'KCMTMTTien' }
       return Array.from(new Set(this.normalizeArray(raw, dict)))
     },
     normalizeInvoiceTypes(raw) {
@@ -872,7 +875,7 @@ export default {
       return Array.from(new Set(this.normalizeArray(raw, dict)))
     },
     normalizeTransferMethods(raw) {
-      const dict = { CDDu: 'CDDu', CBTHop: 'CBTHop', 'CHUYEN_DAY_DU': 'CDDu', 'BANG_TONG_HOP': 'CBTHop' }
+      const dict = { CDDu: 'CDDu', CDLTHDThu: 'CDLTHDThu', CBTHop: 'CBTHop', CTTCTGDich: 'CTTCTGDich', 'CHUYEN_DAY_DU': 'CDDu', 'TONG_HOP_DOANH_THU': 'CDLTHDThu', 'BANG_TONG_HOP': 'CBTHop', 'CHI_TIET_GIAO_DICH': 'CTTCTGDich' }
       return Array.from(new Set(this.normalizeArray(raw, dict)))
     },
     normalizeDigitalCertificates(raw) {
