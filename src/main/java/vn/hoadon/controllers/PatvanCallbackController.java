@@ -12,6 +12,8 @@ import vn.hoadon.services.patvan.PatvanCallbackService;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/v1/api/patvan")
@@ -29,8 +31,18 @@ public class PatvanCallbackController {
     }
 
     @PostMapping("/callback")
-    public ResponseEntity<Map<String, Object>> callback(@RequestBody CallbackRequest request) {
+    public ResponseEntity<Map<String, Object>> callback(@RequestBody CallbackRequest request,
+                                                        HttpServletRequest httpRequest) {
         Map<String, Object> response = new LinkedHashMap<>();
+        String requestId = UUID.randomUUID().toString();
+        long startedAt = System.currentTimeMillis();
+        response.put("requestId", requestId);
+        log.info("PATVAN_CALLBACK_RECEIVED requestId={} remoteIp={} providerMst={} taxpayerMst={} xmlLength={}",
+                requestId,
+                remoteIp(httpRequest),
+                request != null ? trim(request.mst()) : "",
+                request != null ? trim(request.mstNnt()) : "",
+                request != null && request.xml() != null ? request.xml().length() : 0);
         try {
             if (request == null) throw new PatvanCallbackService.CallbackException("Dữ liệu callback rỗng");
             if (expectedProviderTaxCode != null && !expectedProviderTaxCode.isBlank()
@@ -43,12 +55,18 @@ public class PatvanCallbackController {
             response.put("message", result.message());
             response.put("messageType", result.messageType());
             response.put("messageReference", result.messageReference());
+            log.info("PATVAN_CALLBACK_PROCESSED requestId={} status={} messageType={} reference={} companyId={} durationMs={}",
+                    requestId, result.status(), result.messageType(), result.messageReference(),
+                    result.companyId(), System.currentTimeMillis() - startedAt);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.warn("PATVAN callback rejected: mstNnt={}, xmlLength={}, error={}",
+            log.error("PATVAN_CALLBACK_FAILED requestId={} providerMst={} taxpayerMst={} xmlLength={} durationMs={} error={}",
+                    requestId,
+                    request != null ? trim(request.mst()) : "",
                     request != null ? trim(request.mstNnt()) : "",
                     request != null && request.xml() != null ? request.xml().length() : 0,
-                    e.getMessage());
+                    System.currentTimeMillis() - startedAt,
+                    e.getMessage(), e);
             // CallbackPatvanController.php đọc trường status trong body để quyết định retry.
             response.put("status", 404);
             response.put("message", e.getMessage() == null ? "Xử lý callback thất bại" : e.getMessage());
@@ -58,6 +76,13 @@ public class PatvanCallbackController {
 
     private static String trim(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private static String remoteIp(HttpServletRequest request) {
+        if (request == null) return "";
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) return forwarded.split(",")[0].trim();
+        return request.getRemoteAddr();
     }
 
     public record CallbackRequest(String mst, String mstNnt, String xml) {}

@@ -177,6 +177,9 @@ public class PatvanCallbackService {
         CompanyEntity company = resolveCompany(reference, taxpayerTaxCode);
         long companyId = company.getId();
 
+        log.info("PATVAN_CALLBACK_MESSAGE_PARSED type={} reference={} companyId={}",
+                messageType, reference, companyId);
+
         switch (messageType) {
             case 102, 110 -> processRegisterReceive(document, xml, reference, companyId, messageType);
             case 103, 111 -> processRegisterAccept(document, xml, reference, companyId, messageType);
@@ -447,7 +450,9 @@ public class PatvanCallbackService {
         history.setShowNotify(1);
         history.setStatus(1);
         history.setXmlData(xml);
-        historyRepository.save(history);
+        HistoryEntity saved = historyRepository.saveAndFlush(history);
+        log.info("PATVAN_CALLBACK_HISTORY_SAVED type={} referenceTable={} companyId={} tableId={} historyId={}",
+                type, tableName, companyId, tableId, saved.getId());
     }
 
     private static String acceptedCallback(String reference, boolean haveCode, String invoiceXml) {

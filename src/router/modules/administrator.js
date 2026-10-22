@@ -76,6 +76,12 @@
       meta: { requiresAdmin: true, title: "Lịch sử gửi mail" },
     },
     {
+      path: "logs",
+      name: "admin-logs",
+      component: () => import("../../views/administrators/logs/list.vue"),
+      meta: { requiresAdmin: true, title: "Log hệ thống" },
+    },
+    {
       path: "telegram/config",
       name: "admin-telegram-config",
       component: () =>

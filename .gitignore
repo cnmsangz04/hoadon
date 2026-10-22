@@ -33,6 +33,8 @@ build/
 .vscode/
 node_modules/
 logs/
+!src/views/administrators/logs/
+!src/views/administrators/logs/list.vue
 *.log
 .env
 .local/

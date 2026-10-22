@@ -78,6 +78,7 @@ export default {
         { title: 'Thuế suất', icon: 'fas fa-percent', to: '/administrator/vat-rate/list' },
         { title: 'Email template', icon: 'fas fa-envelope', to: '/administrator/email-template/list' },
         { title: 'Lịch sử gửi mail', icon: 'fas fa-history', to: '/administrator/email/mail-history' },
+        { title: 'Log hệ thống', icon: 'fas fa-file-alt', to: '/administrator/logs' },
         { title: 'Telegram', icon: 'fas fa-paper-plane', to: '/administrator/telegram/config' },
         { title: 'Báo cáo hóa đơn ngày', icon: 'fas fa-calendar-check', to: '/administrator/daily-invoice-report/config' },
         { title: 'Phiên đăng nhập', icon: 'fas fa-desktop', to: '/administrator/sessions/list' },
