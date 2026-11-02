@@ -436,10 +436,10 @@ public class PatvanCallbackService {
 
     private void upsertHistory(long companyId, long userId, String tableName, long tableId,
                                int type, String title, String description, String xml) {
-        HistoryEntity history = historyRepository
-                .findFirstByCompanyIdAndTableNameAndTableIdAndTypeOrderByIdDesc(
-                        companyId, tableName, tableId, type)
-                .orElseGet(HistoryEntity::new);
+        // Callback là một lần truyền nhận mới, phải lưu thành một dòng lịch sử mới.
+        // Không cập nhật lại bản ghi theo type vì sẽ làm mất lịch sử khi tờ khai được
+        // gửi lại hoặc khi nhận lại cùng loại thông điệp 102/103.
+        HistoryEntity history = new HistoryEntity();
         history.setCompanyId(companyId);
         history.setUserId(userId);
         history.setTableName(tableName);

@@ -81,6 +81,22 @@
               </b-button>
             </b-col>
           </b-row>
+          <b-row class="mt-2">
+            <b-col cols="12">
+              <b-form-group class="mb-0" label="Lọc bằng SQL chỉ đọc" label-for="database-sql-filter">
+                <b-form-textarea
+                  id="database-sql-filter"
+                  v-model.trim="sqlFilter"
+                  rows="3"
+                  max-rows="8"
+                  placeholder="Ví dụ: SELECT * FROM dbo.history WHERE table_id = 16 ORDER BY created_at DESC"
+                  @keydown.ctrl.enter="applyFilter"></b-form-textarea>
+                <small class="form-text text-muted">
+                  Chỉ cho phép một câu SELECT/WITH. Kết quả giới hạn {{ sqlResultLimit }} dòng; nhấn Ctrl + Enter để lọc.
+                </small>
+              </b-form-group>
+            </b-col>
+          </b-row>
         </b-card>
 
         <b-card class="shadow-sm database-card">
@@ -96,7 +112,7 @@
                 {{ index + 1 + page * pageSize }}
               </template>
               <template #cell(option)="{ item }">
-                <b-dropdown v-if="!selectedTableReadOnly" size="sm" right variant="link" no-caret>
+                <b-dropdown v-if="!selectedTableReadOnly && !isSqlMode" size="sm" right variant="link" no-caret>
                   <template #button-content><i class="fas fa-ellipsis-h text-muted"></i></template>
                   <b-dropdown-item @click="openEdit(item)">
                     <i class="fas fa-edit mr-2"></i>Sửa
@@ -111,6 +127,7 @@
           </div>
 
           <pagination-bar
+            v-if="!isSqlMode"
             :current.sync="pageDisplay"
             :size.sync="pageSize"
             :total="total"
@@ -173,6 +190,8 @@ export default {
       rows: [],
       tableFields: [],
       keyword: '',
+      sqlFilter: '',
+      sqlResultLimit: 500,
       page: 0,
       pageSize: 20,
       pageSizes: [10, 20, 50, 100],
@@ -205,6 +224,9 @@ export default {
     },
     formColumns() {
       return this.schema.filter(column => column.writable && !column.identity && !column.primaryKey)
+    },
+    isSqlMode() {
+      return !!(this.sqlFilter && this.sqlFilter.trim())
     }
   },
   mounted() {
@@ -225,6 +247,7 @@ export default {
       this.selectedTable = table
       this.page = 0
       this.keyword = ''
+      this.sqlFilter = ''
       this.schema = []
       this.rows = []
       await this.loadSchema()
@@ -245,6 +268,21 @@ export default {
       if (!this.selectedTable) return
       this.isLoadingRows = true
       try {
+        if (this.isSqlMode) {
+          const response = await axios.post('/administrator/database/query', { sql: this.sqlFilter.trim() })
+          const data = response.data || {}
+          this.rows = Array.isArray(data.data) ? data.data : []
+          this.total = this.rows.length
+          const columns = Array.isArray(data.columns) && data.columns.length
+            ? data.columns
+            : Object.keys(this.rows[0] || {})
+          this.tableFields = [
+            { key: 'index', label: '#', thStyle: { width: '50px' }, class: 'text-center' },
+            ...columns.map(column => ({ key: column, label: column, sortable: false })),
+            { key: 'option', label: 'Thao tác', thStyle: { width: '90px' }, class: 'text-center' }
+          ]
+          return
+        }
         const response = await axios.get(`/administrator/database/${this.selectedTable}/rows`, {
           params: { page: this.page, size: this.pageSize, keyword: this.keyword || undefined }
         })
@@ -263,10 +301,12 @@ export default {
       this.loadRows()
     },
     changePage(page) {
+      if (this.isSqlMode) return
       this.page = page - 1
       this.loadRows()
     },
     changePageSize(size) {
+      if (this.isSqlMode) return
       this.pageSize = Number(size) || 20
       this.page = 0
       this.loadRows()

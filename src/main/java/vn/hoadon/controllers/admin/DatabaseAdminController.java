@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.Date;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -30,6 +31,8 @@ public class DatabaseAdminController extends BaseController {
     private static final String SCHEMA = "dbo";
     private static final int MAX_PAGE_SIZE = 100;
     private static final int MAX_DISPLAY_LENGTH = 5000;
+    private static final int MAX_SQL_ROWS = 500;
+    private static final int MAX_SQL_LENGTH = 12000;
 
     private static final Map<String, String> TABLE_LABELS = createTableLabels();
 
@@ -166,6 +169,58 @@ public class DatabaseAdminController extends BaseController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(displayRow(rows.get(0)));
+    }
+
+    /**
+     * Chạy truy vấn đọc do quản trị viên nhập để phục vụ tra cứu dữ liệu.
+     * Chỉ cho phép một câu SELECT/WITH, không cho phép thực thi lệnh thay đổi dữ liệu.
+     */
+    @PostMapping("/query")
+    public ResponseEntity<?> query(@RequestBody Map<String, Object> body) {
+        requireAdmin();
+        String sql;
+        try {
+            sql = validateReadOnlySql(body == null ? null : body.get("sql"));
+            QueryResult result = jdbcTemplate.query(sql, statement -> {
+                statement.setMaxRows(MAX_SQL_ROWS);
+                statement.setQueryTimeout(15);
+            }, resultSet -> {
+                ResultSetMetaData metadata = resultSet.getMetaData();
+                List<String> columns = new ArrayList<>();
+                for (int i = 1; i <= metadata.getColumnCount(); i++) {
+                    columns.add(metadata.getColumnLabel(i));
+                }
+
+                List<Map<String, Object>> rows = new ArrayList<>();
+                while (resultSet.next() && rows.size() < MAX_SQL_ROWS) {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    for (int i = 1; i <= metadata.getColumnCount(); i++) {
+                        row.put(metadata.getColumnLabel(i), resultSet.getObject(i));
+                    }
+                    rows.add(displayRow(row));
+                }
+                return new QueryResult(columns, rows);
+            });
+
+            List<String> visibleColumns = result.rows().isEmpty()
+                    ? result.columns().stream()
+                    .filter(column -> !HIDDEN_COLUMNS.contains(column.toLowerCase(Locale.ROOT)))
+                    .toList()
+                    : new ArrayList<>(result.rows().get(0).keySet());
+
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("data", result.rows());
+            response.put("columns", visibleColumns);
+            response.put("total", result.rows().size());
+            response.put("limit", MAX_SQL_ROWS);
+            response.put("truncated", result.rows().size() >= MAX_SQL_ROWS);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (DataAccessException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", "Câu SQL không thực thi được: " + rootMessage(e)));
+        }
     }
 
     @PostMapping("/{table}/rows")
@@ -441,6 +496,53 @@ public class DatabaseAdminController extends BaseController {
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
+    private String validateReadOnlySql(Object rawSql) {
+        if (rawSql == null || String.valueOf(rawSql).isBlank()) {
+            throw new IllegalArgumentException("Vui lòng nhập câu SQL");
+        }
+        String sql = String.valueOf(rawSql).trim();
+        if (sql.length() > MAX_SQL_LENGTH) {
+            throw new IllegalArgumentException("Câu SQL vượt quá " + MAX_SQL_LENGTH + " ký tự");
+        }
+
+        // Cho phép dấu chấm phẩy kết thúc câu, nhưng không cho phép ghép nhiều câu lệnh.
+        while (sql.endsWith(";")) sql = sql.substring(0, sql.length() - 1).trim();
+        if (sql.isBlank() || sql.contains(";") || sql.contains("--") || sql.contains("/*") || sql.contains("*/")) {
+            throw new IllegalArgumentException("Chỉ được nhập một câu SQL đọc dữ liệu, không chứa comment hoặc nhiều câu lệnh");
+        }
+        if (!sql.matches("(?is)^(select|with)\\b.*")) {
+            throw new IllegalArgumentException("Chỉ cho phép câu SELECT hoặc WITH");
+        }
+
+        String[] blocked = {
+                "insert", "update", "delete", "merge", "drop", "alter", "truncate", "create",
+                "exec", "execute", "grant", "revoke", "deny", "backup", "restore", "dbcc",
+                "shutdown", "waitfor", "reconfigure", "declare", "set", "use", "into",
+                "openrowset", "opendatasource", "openquery", "openxml"
+        };
+        for (String keyword : blocked) {
+            if (sql.matches("(?is).*\\b" + keyword + "\\b.*")) {
+                throw new IllegalArgumentException("Câu SQL chứa từ khóa không được phép: " + keyword.toUpperCase(Locale.ROOT));
+            }
+        }
+        if (sql.matches("(?is).*\\b(sys|information_schema)\\s*\\..*")) {
+            throw new IllegalArgumentException("Không cho phép truy vấn metadata hệ thống");
+        }
+        for (String hiddenColumn : HIDDEN_COLUMNS) {
+            if (sql.matches("(?is).*\\b" + hiddenColumn + "\\b.*")) {
+                throw new IllegalArgumentException("Không được truy vấn cột nhạy cảm: " + hiddenColumn);
+            }
+        }
+        return sql;
+    }
+
+    private String rootMessage(DataAccessException exception) {
+        Throwable cause = exception;
+        while (cause.getCause() != null) cause = cause.getCause();
+        String message = cause.getMessage() == null ? exception.getMessage() : cause.getMessage();
+        return message == null ? "Lỗi không xác định khi thực thi SQL" : message;
+    }
+
     private String qualified(String table) {
         return quote(SCHEMA) + "." + quote(table);
     }
@@ -515,5 +617,8 @@ public class DatabaseAdminController extends BaseController {
     }
 
     private record PrimaryKey(ColumnInfo column) {
+    }
+
+    private record QueryResult(List<String> columns, List<Map<String, Object>> rows) {
     }
 }
