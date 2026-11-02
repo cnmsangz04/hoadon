@@ -623,15 +623,15 @@ import { confirmUsbTokenSignature, startSignaturePolling } from '@/utils/pasigne
 import { org_solutions, org_transmits } from '@/utils/registerProviders'
 
 const INTEGRATED_DOCUMENT_FORM_NO_OPTIONS = [
-  { value: '1', text: '1 - Phản ánh loại Hóa đơn điện tử giá trị gia tăng' },
-  { value: '2', text: '2 - Phản ánh loại Hóa đơn điện tử bán hàng' },
-  { value: '3', text: '3 - Phản ánh loại Hóa đơn điện tử bán tài sản công' },
-  { value: '4', text: '4 - Phản ánh loại Hóa đơn điện tử bán hàng dự trữ quốc gia' },
-  { value: '5', text: '5 - Phản ánh các loại hóa đơn điện tử khác là tem điện tử, vé điện tử, thẻ điện tử, phiếu thu điện tử hoặc các chứng từ điện tử có tên gọi khác nhưng có nội dung của hóa đơn điện tử theo Điều 10 Nghị định 254/2026/NĐ-CP' },
-  { value: '6', text: '6 - Phản ánh các chứng từ điện tử được sử dụng và quản lý như hóa đơn gồm phiếu xuất kho kiêm vận chuyển nội bộ điện tử, phiếu xuất kho hàng gửi bán đại lý điện tử' },
-  { value: '7', text: '7 - Phản ánh loại Hóa đơn thương mại điện tử' },
-  { value: '8', text: '8 - Phản ánh loại Hóa đơn giá trị gia tăng tích hợp biên lai thu thuế, phí, lệ phí' },
-  { value: '9', text: '9 - Phản ánh loại Hóa đơn bán hàng tích hợp biên lai thu thuế, phí, lệ phí' }
+  { value: '1', text: 'Phản ánh loại Hóa đơn điện tử giá trị gia tăng' },
+  { value: '2', text: 'Phản ánh loại Hóa đơn điện tử bán hàng' },
+  { value: '3', text: 'Phản ánh loại Hóa đơn điện tử bán tài sản công' },
+  { value: '4', text: 'Phản ánh loại Hóa đơn điện tử bán hàng dự trữ quốc gia' },
+  { value: '5', text: 'Phản ánh các loại hóa đơn điện tử khác là tem điện tử, vé điện tử, thẻ điện tử, phiếu thu điện tử hoặc các chứng từ điện tử có tên gọi khác nhưng có nội dung của hóa đơn điện tử theo Điều 10 Nghị định 254/2026/NĐ-CP' },
+  { value: '6', text: 'Phản ánh các chứng từ điện tử được sử dụng và quản lý như hóa đơn gồm phiếu xuất kho kiêm vận chuyển nội bộ điện tử, phiếu xuất kho hàng gửi bán đại lý điện tử' },
+  { value: '7', text: 'Phản ánh loại Hóa đơn thương mại điện tử' },
+  { value: '8', text: 'Phản ánh loại Hóa đơn giá trị gia tăng tích hợp biên lai thu thuế, phí, lệ phí' },
+  { value: '9', text: 'Phản ánh loại Hóa đơn bán hàng tích hợp biên lai thu thuế, phí, lệ phí' }
 ]
 
 export default {
