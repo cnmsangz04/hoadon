@@ -190,7 +190,6 @@ public final class RegisterInvoiceXmlBuilder {
           .append("</HTHDon>");
         sb.append("<HTGDLHDDT>")
           .append(tag("NNTDBKKhan", flag(sendMethodCodes, "NNTDBKKhan")))
-          .append(tag("NNTKTDNUBND", flag(sendMethodCodes, "NNTKTDNUBND")))
           .append(tag("CQXLTSCong", flag(sendMethodCodes, "CQXLTSCong", "CQT")))
           .append(tag("CDLTTDCQT", flag(sendMethodCodes, "CDLTTDCQT")))
           .append(tag("CDLQTCTN", flag(sendMethodCodes, "CDLQTCTN")))
@@ -208,6 +207,7 @@ public final class RegisterInvoiceXmlBuilder {
           .append(tag("HDBHang", flag(invoiceTypes, "HDBHang")))
           .append(tag("HDBHTHBLai", flag(invoiceTypes, "HDBHTHBLai", "HDBHang_BienLai")))
           .append(tag("HDTMai", flag(invoiceTypes, "HDTMai", "HDThuongMai")))
+           .append(tag("HDNCCNNgoai", flag(invoiceTypes, "HDNCCNNgoai")))
           .append(tag("HDBTSCong", flag(invoiceTypes, "HDBTSCong")))
           .append(tag("HDBHDTQGia", flag(invoiceTypes, "HDBHDTQGia")))
           .append(tag("HDKhac", flag(invoiceTypes, "HDKhac")))
@@ -232,6 +232,7 @@ public final class RegisterInvoiceXmlBuilder {
         sb.append("</DSCTSSDung>");
 
         appendProviderGroups(sb, e);
+         appendOptionalDeclarationGroups(sb, e);
         sb.append("</NDTKhai>");
         sb.append("</DLTKhai>");
         sb.append("<DSCKS><NNT></NNT></DSCKS>");
@@ -266,6 +267,114 @@ public final class RegisterInvoiceXmlBuilder {
         if (!transmitProviders.isEmpty()) {
             appendProviderGroup(sb, "TTTCTN", "TCTN", transmitProviders, false);
         }
+    }
+
+    private static void appendOptionalDeclarationGroups(StringBuilder sb, RegisterInvoiceEntity e) {
+        appendInvoiceSuspend(sb, parseRows(e.getInvoiceSuspend()));
+        appendDependentUnits(sb, parseRows(e.getDependentUnits()));
+        appendAuthorizedLookupUnits(sb, parseRows(e.getAuthorizedLookupUnits()));
+        appendIntegratedDocuments(sb, parseRows(e.getIntegratedDocuments()));
+    }
+
+    private static void appendInvoiceSuspend(StringBuilder sb, List<JsonNode> rows) {
+        if (rows.isEmpty()) return;
+        sb.append("<TTTNSDung>");
+        int index = 1;
+        for (JsonNode row : rows) {
+            sb.append("<TNSDung>")
+              .append(tag("STT", String.valueOf(index++)))
+              .append(tag("TNgay", dateValue(row, "fromDate")))
+              .append(tag("DNgay", dateValue(row, "toDate")))
+              .append(tag("TTCGP", value(row, "organName")))
+              .append(tag("MSTTCGP", value(row, "organTaxCode")))
+              .append(tag("Seri", value(row, "serialNo")))
+              .append(tag("GChu", value(row, "note")))
+              .append("</TNSDung>");
+        }
+        sb.append("</TTTNSDung>");
+    }
+
+    private static void appendDependentUnits(StringBuilder sb, List<JsonNode> rows) {
+        if (rows.isEmpty()) return;
+        sb.append("<TTDVHTPT>");
+        int index = 1;
+        for (JsonNode row : rows) {
+            sb.append("<DVHTPT>")
+              .append(tag("STT", String.valueOf(index++)))
+              .append(tag("TDVHTPT", value(row, "name")))
+              .append(tag("MSTDVHTPT", value(row, "taxCode")))
+              .append(tag("TNgay", dateValue(row, "fromDate")))
+              .append(tag("DNgay", dateValue(row, "toDate")))
+              .append(tag("GChu", value(row, "note")))
+              .append("</DVHTPT>");
+        }
+        sb.append("</TTDVHTPT>");
+    }
+
+    private static void appendAuthorizedLookupUnits(StringBuilder sb, List<JsonNode> rows) {
+        if (rows.isEmpty()) return;
+        sb.append("<TTDVDUQTCuu>");
+        int index = 1;
+        for (JsonNode row : rows) {
+            sb.append("<DVDUQTCuu>")
+              .append(tag("STT", String.valueOf(index++)))
+              .append(tag("TDVi", value(row, "name")))
+              .append(tag("MST", value(row, "taxCode")))
+              .append(tag("HDBRMVao", value(row, "invoiceSalePurchase")))
+              .append(tag("TDLHDTNgay", dateValue(row, "dataFromDate")))
+              .append(tag("TDLHDDNgay", dateValue(row, "dataToDate")))
+              .append(tag("TGUQTNgay", dateValue(row, "authFromDate")))
+              .append(tag("TGUQDNgay", dateValue(row, "authToDate")))
+              .append(tag("GChu", value(row, "note")))
+              .append("</DVDUQTCuu>");
+        }
+        sb.append("</TTDVDUQTCuu>");
+    }
+
+    private static void appendIntegratedDocuments(StringBuilder sb, List<JsonNode> rows) {
+        if (rows.isEmpty()) return;
+        sb.append("<TTDKTH>");
+        int index = 1;
+        for (JsonNode row : rows) {
+            sb.append("<DKTH>")
+              .append(tag("STT", String.valueOf(index++)))
+              .append(tag("TLHDon", value(row, "invoiceType")))
+              .append(tag("KHMSHDon", value(row, "formNo")))
+              .append(tag("KHHDon", value(row, "serial")))
+              .append(tag("Ten", value(row, "name")))
+              .append(tag("MST", value(row, "taxCode")))
+              .append(tag("MDich", value(row, "purpose")))
+              .append(tag("TNgay", dateValue(row, "fromDate")))
+              .append(tag("DNgay", dateValue(row, "toDate")))
+              .append(tag("GChu", value(row, "note")))
+              .append("</DKTH>");
+        }
+        sb.append("</TTDKTH>");
+    }
+
+    private static List<JsonNode> parseRows(List<String> list) {
+        List<JsonNode> rows = new ArrayList<>();
+        if (list == null) return rows;
+        for (String item : list) {
+            if (item == null || item.isBlank()) continue;
+            try {
+                JsonNode node = MAPPER.readTree(item);
+                if (node != null && node.isObject()) rows.add(node);
+            } catch (JsonProcessingException ignored) {
+                // Ignore malformed optional rows; the form validation handles new input.
+            }
+        }
+        return rows;
+    }
+
+    private static String value(JsonNode row, String key) {
+        if (row == null || !row.has(key) || row.get(key).isNull()) return "";
+        return row.get(key).asText();
+    }
+
+    private static String dateValue(JsonNode row, String key) {
+        String value = value(row, key).trim();
+        return value.length() >= 10 ? value.substring(0, 10) : value;
     }
 
     private static void appendProviderGroup(StringBuilder sb, String groupTag, String rowTag,
@@ -312,6 +421,24 @@ public final class RegisterInvoiceXmlBuilder {
             if (s == null) continue;
             String v = s.trim();
             if (!v.isEmpty()) out.add(v);
+            if (v.startsWith("{") && v.endsWith("}")) {
+                try {
+                    JsonNode node = MAPPER.readTree(v);
+                    node.fields().forEachRemaining(entry -> {
+                        JsonNode value = entry.getValue();
+                        if (value == null || value.isNull()) return;
+                        if (value.isArray()) {
+                            value.forEach(item -> {
+                                if (item != null && !item.isNull() && !item.asText().isBlank()) out.add(item.asText());
+                            });
+                        } else if (!value.asText().isBlank()) {
+                            out.add(value.asText());
+                        }
+                    });
+                } catch (JsonProcessingException ignored) {
+                    // Keep the original value for backward compatibility.
+                }
+            }
         }
         return out;
     }

@@ -174,6 +174,10 @@ public class RegisterInvoiceController extends BaseController {
         entity.setDigitalCertificates(toStringList(req.getDigitalCertificates()));
         entity.setSolutionProviders(toStringList(req.getSolutionProviders()));
         entity.setTransmitProviders(toStringList(req.getTransmitProviders()));
+        entity.setInvoiceSuspend(toStringList(req.getInvoiceSuspend()));
+        entity.setDependentUnits(toStringList(req.getDependentUnits()));
+        entity.setAuthorizedLookupUnits(toStringList(req.getAuthorizedLookupUnits()));
+        entity.setIntegratedDocuments(toStringList(req.getIntegratedDocuments()));
         entity.setStatus(req.getStatus() != null ? req.getStatus() : 0);
         RegisterInvoiceEntity created = service.create(entity);
         return ResponseEntity.created(URI.create("/v1/register-invoices/" + created.getId())).body(created);
@@ -215,6 +219,10 @@ public class RegisterInvoiceController extends BaseController {
         patch.setDigitalCertificates(req.getDigitalCertificates() != null ? toStringList(req.getDigitalCertificates()) : existing.getDigitalCertificates());
         patch.setSolutionProviders(req.getSolutionProviders() != null ? toStringList(req.getSolutionProviders()) : existing.getSolutionProviders());
         patch.setTransmitProviders(req.getTransmitProviders() != null ? toStringList(req.getTransmitProviders()) : existing.getTransmitProviders());
+        patch.setInvoiceSuspend(req.getInvoiceSuspend() != null ? toStringList(req.getInvoiceSuspend()) : existing.getInvoiceSuspend());
+        patch.setDependentUnits(req.getDependentUnits() != null ? toStringList(req.getDependentUnits()) : existing.getDependentUnits());
+        patch.setAuthorizedLookupUnits(req.getAuthorizedLookupUnits() != null ? toStringList(req.getAuthorizedLookupUnits()) : existing.getAuthorizedLookupUnits());
+        patch.setIntegratedDocuments(req.getIntegratedDocuments() != null ? toStringList(req.getIntegratedDocuments()) : existing.getIntegratedDocuments());
         patch.setSignedXml(existing.getSignedXml());
         patch.setSignatureInfo(existing.getSignatureInfo());
         patch.setStatus(req.getStatus() != null ? req.getStatus() : existing.getStatus());
@@ -324,6 +332,10 @@ public class RegisterInvoiceController extends BaseController {
         e.setDigitalCertificates(src.getDigitalCertificates());
         e.setSolutionProviders(src.getSolutionProviders());
         e.setTransmitProviders(src.getTransmitProviders());
+        e.setInvoiceSuspend(src.getInvoiceSuspend());
+        e.setDependentUnits(src.getDependentUnits());
+        e.setAuthorizedLookupUnits(src.getAuthorizedLookupUnits());
+        e.setIntegratedDocuments(src.getIntegratedDocuments());
         // Signing and responses
         e.setSignedXml(src.getSignedXml());
         e.setSignatureInfo(src.getSignatureInfo());

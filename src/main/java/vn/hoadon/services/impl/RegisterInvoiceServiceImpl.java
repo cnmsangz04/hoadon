@@ -78,6 +78,10 @@ public class RegisterInvoiceServiceImpl implements RegisterInvoiceService {
             existing.setDigitalCertificates(patch.getDigitalCertificates());
             existing.setSolutionProviders(patch.getSolutionProviders());
             existing.setTransmitProviders(patch.getTransmitProviders());
+            existing.setInvoiceSuspend(patch.getInvoiceSuspend());
+            existing.setDependentUnits(patch.getDependentUnits());
+            existing.setAuthorizedLookupUnits(patch.getAuthorizedLookupUnits());
+            existing.setIntegratedDocuments(patch.getIntegratedDocuments());
             existing.setSignedXml(patch.getSignedXml());
             existing.setSignatureInfo(patch.getSignatureInfo());
             existing.setSignDate(patch.getSignDate());

@@ -148,7 +148,6 @@
             <b-form-checkbox-group class="pl-3" stacked v-model="frmData.send_methods_a">
               <div class="pl-2">
                 <b-form-checkbox class="mb-2" value="NNTDBKKhan">Doanh nghiệp nhỏ và vừa, hợp tác xã, hộ, cá nhân kinh doanh tại địa bàn có điều kiện kinh tế xã hội khó khăn, địa bàn có điều kiện kinh tế xã hội đặc biệt khó khăn</b-form-checkbox>
-                <b-form-checkbox class="mb-2" value="NNTKTDNUBND">Doanh nghiệp nhỏ và vừa khác theo đề nghị của Ủy ban nhân dân tỉnh, thành phố trực thuộc trung ương gửi Bộ Tài chính trừ doanh nghiệp hoạt động tại các khu kinh tế, khu công nghiệp, khu công nghệ cao</b-form-checkbox>
               </div>
             </b-form-checkbox-group>
             <div class="pb-2">
@@ -160,6 +159,7 @@
               <div class="pl-2">
                 <b-form-checkbox class="mb-2" value="CDLTTDCQT">Chuyển dữ liệu hóa đơn điện tử trực tiếp đến cơ quan thuế (điểm b1, khoản 3, Điều 22 của Nghị định)</b-form-checkbox>
                 <b-form-checkbox class="mb-2" value="CDLQTCTN">Thông qua tổ chức cung cấp dịch vụ hóa đơn điện tử (điểm b2, khoản 3, Điều 22 của Nghị định)</b-form-checkbox>
+                <b-form-checkbox class="mb-2" value="TCNNgoai">Tổ chức nước ngoài cung cấp dịch vụ thông qua nền tảng thương mại điện tử/nền tảng số khác</b-form-checkbox>
               </div>
             </b-form-checkbox-group>
             <div class="pb-2">
@@ -200,6 +200,7 @@
               </b-col>
               <b-col cols="12" md="6">
                 <b-form-checkbox class="mb-2" value="HDTMai">Hóa đơn thương mại</b-form-checkbox>
+                <b-form-checkbox class="mb-2" value="HDNCCNNgoai">Hóa đơn nhà cung cấp nước ngoài không có cơ sở thường trú tại Việt Nam</b-form-checkbox>
                 <b-form-checkbox class="mb-2" value="HDBTSCong">Hóa đơn bán tài sản công</b-form-checkbox>
                 <b-form-checkbox class="mb-2" value="HDBHDTQGia">Hóa đơn bán hàng dự trữ quốc gia</b-form-checkbox>
                 <b-form-checkbox class="mb-2" value="HDKhac">Hóa đơn khác</b-form-checkbox>
@@ -357,6 +358,44 @@
           </div>
         </b-col>
       </b-row>
+
+      <!-- 8-11. Các nhóm thông tin tùy chọn theo định dạng tờ khai -->
+      <template v-for="groupKey in declarationGroupKeys">
+        <b-row :key="`${groupKey}-heading`" class="pt-2 pb-2">
+          <b-col cols="12">
+            <div class="provider-section-heading">
+              <label class="font-weight-bold mb-0">{{ declarationGroupConfig(groupKey).title }}</label>
+              <b-button type="button" variant="link" class="provider-add-btn" @click="showDeclarationGroupModal(groupKey, false)">
+                <i class="fas fa-plus mr-1"></i> {{ declarationGroupConfig(groupKey).addLabel }}
+              </b-button>
+            </div>
+            <b-table-simple bordered small responsive show-empty empty-text="Không có dữ liệu">
+              <b-thead>
+                <b-tr>
+                  <b-th v-for="column in declarationGroupConfig(groupKey).columns" :key="`${groupKey}-${column.key}`" class="text-center align-middle">
+                    {{ column.label }}
+                  </b-th>
+                  <b-th class="text-center align-middle">Thao tác</b-th>
+                </b-tr>
+              </b-thead>
+              <b-tbody>
+                <b-tr v-for="(row, rowIndex) in frmData[groupKey]" :key="`${groupKey}-${rowIndex}`">
+                  <b-td v-for="column in declarationGroupConfig(groupKey).columns" :key="`${groupKey}-${rowIndex}-${column.key}`" :class="column.center ? 'text-center' : ''">
+                    {{ column.key === 'stt' ? rowIndex + 1 : (column.type === 'date' ? formatDate(row[column.key]) : row[column.key]) }}
+                  </b-td>
+                  <b-td class="text-center">
+                    <b-button type="button" variant="link" size="sm" title="Cập nhật" @click="showDeclarationGroupModal(groupKey, rowIndex)"><i class="far fa-edit"></i></b-button>
+                    <b-button type="button" variant="link" size="sm" title="Xóa" @click="deleteDeclarationGroupRow(groupKey, rowIndex)"><i class="far fa-trash-alt"></i></b-button>
+                  </b-td>
+                </b-tr>
+                <b-tr v-if="!frmData[groupKey] || !frmData[groupKey].length">
+                  <b-td :colspan="declarationGroupConfig(groupKey).columns.length + 1" class="text-center">Không có dữ liệu</b-td>
+                </b-tr>
+              </b-tbody>
+            </b-table-simple>
+          </b-col>
+        </b-row>
+      </template>
 
       <!-- Cam kết & nơi lập, ngày hiệu lực -->
       <b-row class="pt-2 pb-2">
@@ -531,6 +570,30 @@
         </div>
       </template>
     </b-modal>
+
+    <!-- Hộp thoại các nhóm dữ liệu tùy chọn của tờ khai -->
+    <b-modal ref="modalDeclarationGroup" size="lg" hide-header-close @hidden="onDeclarationGroupModalHidden">
+      <template #modal-title>
+        <div class="modal-title">{{ modalDeclarationGroup.title }}</div>
+      </template>
+      <b-form>
+        <b-row>
+          <b-col v-for="field in modalDeclarationGroup.fields" :key="`declaration-field-${field.key}`" cols="12" :md="field.md || 12">
+            <b-form-group :label="field.label" :label-for="`declaration-${field.key}`">
+              <b-form-textarea v-if="field.type === 'textarea'" :id="`declaration-${field.key}`" v-model="modalDeclarationGroup.row[field.key]" rows="2" max-rows="4" />
+              <manual-date-picker v-else-if="field.type === 'date'" :id="`declaration-${field.key}`" v-model="modalDeclarationGroup.row[field.key]" />
+              <b-form-input v-else :id="`declaration-${field.key}`" v-model.trim="modalDeclarationGroup.row[field.key]" />
+            </b-form-group>
+          </b-col>
+        </b-row>
+      </b-form>
+      <template #modal-footer>
+        <div class="modal-footer-actions">
+          <b-button size="sm" variant="light" @click="closeDeclarationGroupModal">Hủy</b-button>
+          <b-button type="button" size="sm" variant="primary" @click="saveDeclarationGroupRow">{{ modalDeclarationGroup.index !== false ? 'Cập nhật' : 'Thêm' }}</b-button>
+        </div>
+      </template>
+    </b-modal>
   </div>
 </template>
 
@@ -559,6 +622,107 @@ export default {
       dateFmt: { year: 'numeric', month: '2-digit', day: '2-digit' },
       solutionProviderOptions: org_solutions,
       transmitProviderOptions: org_transmits,
+      declarationGroupKeys: [
+        'invoice_suspend',
+        'dependent_units',
+        'authorized_lookup_units',
+        'integrated_documents'
+      ],
+      declarationGroups: {
+        invoice_suspend: {
+          title: '8. Thông tin tạm ngừng sử dụng hóa đơn điện tử',
+          addLabel: 'Thêm thông tin tạm ngừng',
+          fields: [
+            { key: 'organName', label: 'Tên tổ chức cung cấp giải pháp hóa đơn điện tử' },
+            { key: 'organTaxCode', label: 'Mã số thuế tổ chức cung cấp giải pháp', md: 6 },
+            { key: 'serialNo', label: 'Seri chứng thư số', md: 6 },
+            { key: 'fromDate', label: 'Từ ngày', type: 'date', md: 6 },
+            { key: 'toDate', label: 'Đến ngày', type: 'date', md: 6 },
+            { key: 'note', label: 'Ghi chú', type: 'textarea' }
+          ],
+          columns: [
+            { key: 'stt', label: 'STT', center: true },
+            { key: 'organName', label: 'Tổ chức cung cấp giải pháp' },
+            { key: 'organTaxCode', label: 'MST', center: true },
+            { key: 'serialNo', label: 'Seri', center: true },
+            { key: 'fromDate', label: 'Từ ngày', type: 'date', center: true },
+            { key: 'toDate', label: 'Đến ngày', type: 'date', center: true },
+            { key: 'note', label: 'Ghi chú' }
+          ],
+          required: ['fromDate', 'toDate', 'organName', 'organTaxCode']
+        },
+        dependent_units: {
+          title: '9. Đơn vị hạch toán phụ thuộc cần cấp quyền tra cứu hóa đơn',
+          addLabel: 'Thêm đơn vị hạch toán phụ thuộc',
+          fields: [
+            { key: 'name', label: 'Tên đơn vị hạch toán phụ thuộc cần cấp quyền tra cứu hóa đơn' },
+            { key: 'taxCode', label: 'Mã số thuế đơn vị', md: 6 },
+            { key: 'fromDate', label: 'Từ ngày cấp quyền tra cứu', type: 'date', md: 6 },
+            { key: 'toDate', label: 'Đến ngày cấp quyền tra cứu', type: 'date', md: 6 },
+            { key: 'note', label: 'Ghi chú', type: 'textarea', md: 6 }
+          ],
+          columns: [
+            { key: 'stt', label: 'STT', center: true },
+            { key: 'name', label: 'Tên đơn vị' },
+            { key: 'taxCode', label: 'MST', center: true },
+            { key: 'fromDate', label: 'Từ ngày', type: 'date', center: true },
+            { key: 'toDate', label: 'Đến ngày', type: 'date', center: true },
+            { key: 'note', label: 'Ghi chú' }
+          ],
+          required: ['name', 'taxCode', 'fromDate']
+        },
+        authorized_lookup_units: {
+          title: '10. Đơn vị được ủy quyền tra cứu hóa đơn',
+          addLabel: 'Thêm đơn vị được ủy quyền',
+          fields: [
+            { key: 'name', label: 'Tên đơn vị được ủy quyền' },
+            { key: 'taxCode', label: 'Mã số thuế đơn vị được ủy quyền', md: 6 },
+            { key: 'invoiceSalePurchase', label: 'Hóa đơn bán ra/mua vào', md: 6 },
+            { key: 'dataFromDate', label: 'Thời điểm lập hóa đơn - Từ ngày', type: 'date', md: 6 },
+            { key: 'dataToDate', label: 'Thời điểm lập hóa đơn - Đến ngày', type: 'date', md: 6 },
+            { key: 'authFromDate', label: 'Thời gian ủy quyền - Từ ngày', type: 'date', md: 6 },
+            { key: 'authToDate', label: 'Thời gian ủy quyền - Đến ngày', type: 'date', md: 6 },
+            { key: 'note', label: 'Ghi chú', type: 'textarea' }
+          ],
+          columns: [
+            { key: 'stt', label: 'STT', center: true },
+            { key: 'name', label: 'Tên đơn vị' },
+            { key: 'taxCode', label: 'MST', center: true },
+            { key: 'invoiceSalePurchase', label: 'Bán ra/Mua vào', center: true },
+            { key: 'dataFromDate', label: 'Lập HĐ từ', type: 'date', center: true },
+            { key: 'dataToDate', label: 'Lập HĐ đến', type: 'date', center: true },
+            { key: 'authFromDate', label: 'Ủy quyền từ', type: 'date', center: true },
+            { key: 'authToDate', label: 'Ủy quyền đến', type: 'date', center: true }
+          ],
+          required: ['name', 'taxCode', 'invoiceSalePurchase', 'dataFromDate', 'dataToDate', 'authFromDate', 'authToDate']
+        },
+        integrated_documents: {
+          title: '11. Đăng ký tích hợp hóa đơn điện tử với chứng từ điện tử',
+          addLabel: 'Thêm thông tin tích hợp',
+          fields: [
+            { key: 'invoiceType', label: 'Tên loại hóa đơn tích hợp', md: 6 },
+            { key: 'formNo', label: 'Ký hiệu mẫu hóa đơn tích hợp', md: 6 },
+            { key: 'serial', label: 'Ký hiệu hóa đơn tích hợp', md: 6 },
+            { key: 'name', label: 'Tên tổ chức được/nhận tích hợp', md: 6 },
+            { key: 'taxCode', label: 'Mã số thuế tổ chức', md: 6 },
+            { key: 'purpose', label: 'Mục đích', type: 'textarea', md: 6 },
+            { key: 'fromDate', label: 'Từ ngày', type: 'date', md: 6 },
+            { key: 'toDate', label: 'Đến ngày', type: 'date', md: 6 },
+            { key: 'note', label: 'Ghi chú', type: 'textarea', md: 6 }
+          ],
+          columns: [
+            { key: 'stt', label: 'STT', center: true },
+            { key: 'invoiceType', label: 'Loại hóa đơn' },
+            { key: 'formNo', label: 'Ký hiệu mẫu', center: true },
+            { key: 'serial', label: 'Ký hiệu', center: true },
+            { key: 'name', label: 'Tên tổ chức' },
+            { key: 'taxCode', label: 'MST', center: true },
+            { key: 'fromDate', label: 'Từ ngày', type: 'date', center: true },
+            { key: 'toDate', label: 'Đến ngày', type: 'date', center: true }
+          ],
+          required: ['invoiceType', 'formNo', 'serial', 'name', 'taxCode', 'purpose', 'fromDate', 'toDate']
+        }
+      },
       app: { provinces: [] },
       company: { address: '', email: '', name: '', tax_code: '' },
       legalRep: { fullname: '', phone: '', citizen_id: '', passport_no: '', nationality_code: '', nationality_name: '', date_of_birth: null, gender: null },
@@ -586,6 +750,10 @@ export default {
         digital_certificates: [],
         solution_providers: [],
         transmit_providers: [],
+        invoice_suspend: [],
+        dependent_units: [],
+        authorized_lookup_units: [],
+        integrated_documents: [],
         create_place: '',
         signature: null,
         signed_xml: null,
@@ -608,6 +776,13 @@ export default {
         taxCode: '',
         fromDate: null,
         toDate: null
+      },
+      modalDeclarationGroup: {
+        groupKey: null,
+        title: '',
+        index: false,
+        fields: [],
+        row: {}
       },
       providerErrors: {},
       declarationTypeOptions: [
@@ -656,8 +831,7 @@ export default {
     // Parent A toggled: apply to children
     sendToggleA(val) {
       const allA = [
-        'NNTDBKKhan',
-        'NNTKTDNUBND'
+        'NNTDBKKhan'
       ]
       if (val) {
         // check all children
@@ -676,7 +850,8 @@ export default {
     sendToggleB(val) {
       const allB = [
         'CDLTTDCQT',
-        'CDLQTCTN'
+        'CDLQTCTN',
+        'TCNNgoai'
       ]
       if (val) {
         this.frmData.send_methods_b = Array.from(new Set([...(this.frmData.send_methods_b||[]), ...allB]))
@@ -728,10 +903,46 @@ export default {
         invoice_types: (this.frmData.invoice_types || []).length ? null : 'Vui lòng chọn ít nhất một loại hóa đơn sử dụng',
         create_place: required(this.frmData.create_place, 'Vui lòng chọn nơi lập'),
       }
+      Object.assign(this.errors, this.validateDeclarationGroups())
       Object.keys(this.errors).forEach(key => {
         if (!this.errors[key]) delete this.errors[key]
       })
       return !hasErrors(this.errors)
+    },
+    validateDeclarationGroups() {
+      const errors = {}
+      const valueExists = value => value !== null && value !== undefined && String(value).trim() !== ''
+      const datePairs = [
+        ['fromDate', 'toDate'],
+        ['dataFromDate', 'dataToDate'],
+        ['authFromDate', 'authToDate']
+      ]
+      this.declarationGroupKeys.forEach(groupKey => {
+        const config = this.declarationGroupConfig(groupKey)
+        const rows = Array.isArray(this.frmData[groupKey]) ? this.frmData[groupKey] : []
+        rows.forEach((row, index) => {
+          if (!row || !Object.values(row).some(valueExists)) return
+          ;(config.required || []).forEach(fieldKey => {
+            if (!valueExists(row[fieldKey])) {
+              const field = (config.fields || []).find(item => item.key === fieldKey)
+              errors[`${groupKey}.${index}.${fieldKey}`] = `${config.title} - dòng ${index + 1}: ${field ? field.label : fieldKey} là bắt buộc`
+            }
+          })
+          datePairs.forEach(([fromKey, toKey]) => {
+            if (valueExists(row[fromKey]) && valueExists(row[toKey])) {
+              const from = new Date(row[fromKey])
+              const to = new Date(row[toKey])
+              if (!Number.isNaN(from.getTime()) && !Number.isNaN(to.getTime()) && from > to) {
+                errors[`${groupKey}.${index}.${toKey}`] = `${config.title} - dòng ${index + 1}: ngày kết thúc phải sau hoặc bằng ngày bắt đầu`
+              }
+            }
+          })
+        })
+      })
+      return errors
+    },
+    declarationGroupConfig(groupKey) {
+      return this.declarationGroups[groupKey] || { fields: [], columns: [], required: [] }
     },
     validateSignatureForm() {
       const from = this.signatureModal.signFromDate ? new Date(this.signatureModal.signFromDate) : null
@@ -900,7 +1111,7 @@ export default {
       const dict = {
         HDGTGT: 'HDGTGT', HDGTGTTHBLai: 'HDGTGTTHBLai', HDGTGT_BienLai: 'HDGTGTTHBLai',
         HDBHang: 'HDBHang', HDBHTHBLai: 'HDBHTHBLai', HDBHang_BienLai: 'HDBHTHBLai',
-        HDTMai: 'HDTMai', HDThuongMai: 'HDTMai', HDBTSCong: 'HDBTSCong',
+        HDTMai: 'HDTMai', HDThuongMai: 'HDTMai', HDNCCNNgoai: 'HDNCCNNgoai', HDBTSCong: 'HDBTSCong',
         HDBHDTQGia: 'HDBHDTQGia', HDKhac: 'HDKhac', CTu: 'CTu'
       }
       return Array.from(new Set(this.normalizeArray(raw, dict)))
@@ -908,6 +1119,43 @@ export default {
     normalizeTransferMethods(raw) {
       const dict = { CDDu: 'CDDu', CDLTHDThu: 'CDLTHDThu', CBTHop: 'CBTHop', CTTCTGDich: 'CTTCTGDich', 'CHUYEN_DAY_DU': 'CDDu', 'TONG_HOP_DOANH_THU': 'CDLTHDThu', 'BANG_TONG_HOP': 'CBTHop', 'CHI_TIET_GIAO_DICH': 'CTTCTGDich' }
       return Array.from(new Set(this.normalizeArray(raw, dict)))
+    },
+    normalizeDeclarationRows(raw) {
+      return this.normalizeArray(raw).map(item => {
+        if (typeof item !== 'string') return item
+        try {
+          const parsed = JSON.parse(item)
+          return typeof parsed === 'string' ? JSON.parse(parsed) : parsed
+        } catch {
+          return null
+        }
+      }).filter(item => item && typeof item === 'object' && !Array.isArray(item))
+    },
+    normalizeSendMethods(raw) {
+      const result = { a: [], b: [], c: [] }
+      let parsed = raw
+      if (typeof parsed === 'string' && parsed.trim()) {
+        try { parsed = JSON.parse(parsed) } catch { parsed = [] }
+      }
+      if (Array.isArray(parsed) && parsed.length === 1 && typeof parsed[0] === 'string') {
+        try { parsed = JSON.parse(parsed[0]) } catch {}
+      }
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        result.a = this.normalizeArray(parsed.a).filter(code => code !== 'NNTKTDNUBND')
+        result.b = this.normalizeArray(parsed.b).filter(code => code !== 'NNTKTDNUBND')
+        result.c = this.normalizeArray(parsed.c).filter(code => code !== 'NNTKTDNUBND')
+        return result
+      }
+      const codes = Array.isArray(parsed) ? parsed : []
+      codes.forEach(code => {
+        const value = typeof code === 'string' ? code : code && (code.code || code.value)
+        if (!value) return
+        if (value === 'NNTKTDNUBND') return
+        if (value === 'NNTDBKKhan') result.a.push(value)
+        else if (value === 'CQXLTSCong' || value === 'CQT') result.c.push(value)
+        else result.b.push(value)
+      })
+      return result
     },
     normalizeDigitalCertificates(raw) {
       console.log('normalizeDigitalCertificates input:', raw)
@@ -1057,15 +1305,7 @@ export default {
         }
         return def
       }
-      const sendMethodsRaw = val(data, ['send_methods', 'sendMethods'], null)
-      const sendParsed = (() => {
-        if (!sendMethodsRaw) return { a: [], b: [], c: [] }
-        if (typeof sendMethodsRaw === 'string') {
-          try { return JSON.parse(sendMethodsRaw) } catch { return { a: [], b: [], c: [] } }
-        }
-        if (typeof sendMethodsRaw === 'object') return sendMethodsRaw
-        return { a: [], b: [], c: [] }
-      })()
+      const sendParsed = this.normalizeSendMethods(val(data, ['send_methods', 'sendMethods'], null))
       const createPlaceRaw = val(data, ['create_place','createPlace'], '')
       const createPlaceNum = createPlaceRaw === '' || createPlaceRaw == null ? '' : Number(createPlaceRaw)
       const sigInfo = val(data, ['signature','signatureInfo','signature_info'], null)
@@ -1094,6 +1334,10 @@ export default {
         digital_certificates: this.normalizeDigitalCertificates(val(data, ['digital_certificates','digitalCertificates'], [])),
         solution_providers: this.normalizeProviders(val(data, ['solution_providers','solutionProviders'], [])),
         transmit_providers: this.normalizeProviders(val(data, ['transmit_providers','transmitProviders'], [])),
+        invoice_suspend: this.normalizeDeclarationRows(val(data, ['invoice_suspend', 'invoiceSuspend'], [])),
+        dependent_units: this.normalizeDeclarationRows(val(data, ['dependent_units', 'dependentUnits'], [])),
+        authorized_lookup_units: this.normalizeDeclarationRows(val(data, ['authorized_lookup_units', 'authorizedLookupUnits'], [])),
+        integrated_documents: this.normalizeDeclarationRows(val(data, ['integrated_documents', 'integratedDocuments'], [])),
         create_place: createPlaceNum,
         signature: signatureObj,
         signed_xml: val(data, ['signed_xml','signedXml'], null),
@@ -1147,7 +1391,11 @@ export default {
         transferMethods: this.frmData.transfer_methods,
         digitalCertificates,
         solutionProviders: (this.frmData.solution_providers || []).map(mapProvider),
-        transmitProviders: (this.frmData.transmit_providers || []).map(mapProvider)
+        transmitProviders: (this.frmData.transmit_providers || []).map(mapProvider),
+        invoiceSuspend: this.frmData.invoice_suspend || [],
+        dependentUnits: this.frmData.dependent_units || [],
+        authorizedLookupUnits: this.frmData.authorized_lookup_units || [],
+        integratedDocuments: this.frmData.integrated_documents || []
       }
     },
     async sendData() {
@@ -1433,6 +1681,57 @@ export default {
     onDeleteProvider(type, index) {
       const rows = type === 'solution' ? this.frmData.solution_providers : this.frmData.transmit_providers
       rows.splice(index, 1)
+    },
+    getEmptyDeclarationGroupRow(groupKey) {
+      const row = {}
+      this.declarationGroupConfig(groupKey).fields.forEach(field => {
+        row[field.key] = field.type === 'textarea' ? '' : null
+      })
+      return row
+    },
+    showDeclarationGroupModal(groupKey, index) {
+      const config = this.declarationGroupConfig(groupKey)
+      const rows = Array.isArray(this.frmData[groupKey]) ? this.frmData[groupKey] : []
+      const source = index !== false && index != null ? rows[index] : null
+      this.modalDeclarationGroup = {
+        groupKey,
+        title: `${index !== false && index != null ? 'Cập nhật' : 'Thêm'} ${config.title.toLowerCase()}`,
+        index: index !== false && index != null ? index : false,
+        fields: config.fields,
+        row: { ...this.getEmptyDeclarationGroupRow(groupKey), ...(source || {}) }
+      }
+      this.$refs.modalDeclarationGroup.show()
+    },
+    closeDeclarationGroupModal() {
+      this.$refs.modalDeclarationGroup.hide()
+    },
+    onDeclarationGroupModalHidden() {
+      this.modalDeclarationGroup = {
+        groupKey: null,
+        title: '',
+        index: false,
+        fields: [],
+        row: {}
+      }
+    },
+    saveDeclarationGroupRow() {
+      const groupKey = this.modalDeclarationGroup.groupKey
+      if (!groupKey) return
+      const row = { ...this.modalDeclarationGroup.row }
+      if (!Object.values(row).some(value => value !== null && value !== undefined && String(value).trim() !== '')) {
+        this.$bvToast && this.$bvToast.toast('Vui lòng nhập thông tin trước khi lưu', { title: 'Lỗi nhập liệu', variant: 'warning', solid: true })
+        return
+      }
+      if (!Array.isArray(this.frmData[groupKey])) this.$set(this.frmData, groupKey, [])
+      if (this.modalDeclarationGroup.index !== false) {
+        this.$set(this.frmData[groupKey], this.modalDeclarationGroup.index, row)
+      } else {
+        this.frmData[groupKey].push(row)
+      }
+      this.closeDeclarationGroupModal()
+    },
+    deleteDeclarationGroupRow(groupKey, index) {
+      if (Array.isArray(this.frmData[groupKey])) this.frmData[groupKey].splice(index, 1)
     },
     getNameRegMethod(code) {
       const n = (typeof code === 'number' || /^\d+$/.test(String(code))) ? Number(code) : null

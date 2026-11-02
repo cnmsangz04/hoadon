@@ -94,6 +94,22 @@ public class RegisterInvoiceUpsertRequest {
     @JsonAlias({"transmit_providers"})
     private Object transmitProviders;
 
+    @JsonProperty("invoiceSuspend")
+    @JsonAlias({"invoice_suspend"})
+    private Object invoiceSuspend;
+
+    @JsonProperty("dependentUnits")
+    @JsonAlias({"dependent_units"})
+    private Object dependentUnits;
+
+    @JsonProperty("authorizedLookupUnits")
+    @JsonAlias({"authorized_lookup_units"})
+    private Object authorizedLookupUnits;
+
+    @JsonProperty("integratedDocuments")
+    @JsonAlias({"integrated_documents"})
+    private Object integratedDocuments;
+
     @JsonProperty("status")
     private Integer status;
 
@@ -138,6 +154,14 @@ public class RegisterInvoiceUpsertRequest {
     public void setSolutionProviders(Object solutionProviders) { this.solutionProviders = solutionProviders; }
     public Object getTransmitProviders() { return transmitProviders; }
     public void setTransmitProviders(Object transmitProviders) { this.transmitProviders = transmitProviders; }
+    public Object getInvoiceSuspend() { return invoiceSuspend; }
+    public void setInvoiceSuspend(Object invoiceSuspend) { this.invoiceSuspend = invoiceSuspend; }
+    public Object getDependentUnits() { return dependentUnits; }
+    public void setDependentUnits(Object dependentUnits) { this.dependentUnits = dependentUnits; }
+    public Object getAuthorizedLookupUnits() { return authorizedLookupUnits; }
+    public void setAuthorizedLookupUnits(Object authorizedLookupUnits) { this.authorizedLookupUnits = authorizedLookupUnits; }
+    public Object getIntegratedDocuments() { return integratedDocuments; }
+    public void setIntegratedDocuments(Object integratedDocuments) { this.integratedDocuments = integratedDocuments; }
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
 

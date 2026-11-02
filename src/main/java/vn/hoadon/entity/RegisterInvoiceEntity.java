@@ -75,6 +75,22 @@ public class RegisterInvoiceEntity {
     @Column(name = "transmit_providers", columnDefinition = "NVARCHAR(MAX)")
     private List<String> transmitProviders;
 
+    @Convert(converter = JsonListConverter.class)
+    @Column(name = "invoice_suspend", columnDefinition = "NVARCHAR(MAX)")
+    private List<String> invoiceSuspend;
+
+    @Convert(converter = JsonListConverter.class)
+    @Column(name = "dependent_units", columnDefinition = "NVARCHAR(MAX)")
+    private List<String> dependentUnits;
+
+    @Convert(converter = JsonListConverter.class)
+    @Column(name = "authorized_lookup_units", columnDefinition = "NVARCHAR(MAX)")
+    private List<String> authorizedLookupUnits;
+
+    @Convert(converter = JsonListConverter.class)
+    @Column(name = "integrated_documents", columnDefinition = "NVARCHAR(MAX)")
+    private List<String> integratedDocuments;
+
     // XML & chữ ký
     @Column(name = "signed_xml", columnDefinition = "NVARCHAR(MAX)")
     private String signedXml;
@@ -139,6 +155,14 @@ public class RegisterInvoiceEntity {
     public void setSolutionProviders(List<String> solutionProviders) { this.solutionProviders = solutionProviders; }
     public List<String> getTransmitProviders() { return transmitProviders; }
     public void setTransmitProviders(List<String> transmitProviders) { this.transmitProviders = transmitProviders; }
+    public List<String> getInvoiceSuspend() { return invoiceSuspend; }
+    public void setInvoiceSuspend(List<String> invoiceSuspend) { this.invoiceSuspend = invoiceSuspend; }
+    public List<String> getDependentUnits() { return dependentUnits; }
+    public void setDependentUnits(List<String> dependentUnits) { this.dependentUnits = dependentUnits; }
+    public List<String> getAuthorizedLookupUnits() { return authorizedLookupUnits; }
+    public void setAuthorizedLookupUnits(List<String> authorizedLookupUnits) { this.authorizedLookupUnits = authorizedLookupUnits; }
+    public List<String> getIntegratedDocuments() { return integratedDocuments; }
+    public void setIntegratedDocuments(List<String> integratedDocuments) { this.integratedDocuments = integratedDocuments; }
     public String getSignedXml() { return signedXml; }
     public void setSignedXml(String signedXml) { this.signedXml = signedXml; }
     public String getSignatureInfo() { return signatureInfo; }

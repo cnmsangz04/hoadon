@@ -363,6 +363,10 @@ Table register_invoices {
   digital_certificates nvarchar(max) [not null, note: 'JSON array']
   solution_providers nvarchar(max) [note: 'JSON array']
   transmit_providers nvarchar(max) [note: 'JSON array']
+  invoice_suspend nvarchar(max) [note: 'JSON array các dòng tạm ngừng sử dụng']
+  dependent_units nvarchar(max) [note: 'JSON array đơn vị hạch toán phụ thuộc']
+  authorized_lookup_units nvarchar(max) [note: 'JSON array đơn vị được ủy quyền tra cứu']
+  integrated_documents nvarchar(max) [note: 'JSON array đăng ký tích hợp chứng từ']
   signed_xml nvarchar(max)
   signature_info nvarchar(max)
   sign_date datetime2
