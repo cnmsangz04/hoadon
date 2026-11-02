@@ -61,14 +61,11 @@ public class HistoryServiceImpl implements HistoryService {
     @Override
     public List<HistoryDto> listByRegisterInvoice(Long companyId, Long registerInvoiceId) {
         if (companyId == null || registerInvoiceId == null) return List.of();
-        List<HistoryEntity> all = historyRepository.findAll();
-        List<HistoryEntity> filtered = new ArrayList<>();
-        for (HistoryEntity h : all) {
-            if (h == null) continue;
-            if (companyId.equals(h.getCompanyId()) && "register_invoices".equals(h.getTableName()) && registerInvoiceId.equals(h.getTableId()) && h.getStatus() != null && h.getStatus() == 1 ) {
-                filtered.add(h);
-            }
-        }
+        // Lấy đúng lịch sử của tờ khai hiện tại và luôn hiển thị bản ghi mới nhất trước.
+        // Không dùng findAll() rồi lọc thủ công vì thứ tự trả về của DB không được đảm bảo.
+        List<HistoryEntity> filtered = historyRepository
+                .findByCompanyIdAndTableNameAndTableIdAndStatusOrderByCreatedAtDescIdDesc(
+                        companyId, "register_invoices", registerInvoiceId, 1);
         // Collect userIds and fetch usernames
         Map<Long, String> userMap = userRepository.findAllById(
                 filtered.stream().map(HistoryEntity::getUserId).filter(id -> id != null && id > 0).collect(Collectors.toSet())
