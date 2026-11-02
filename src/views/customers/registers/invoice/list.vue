@@ -124,6 +124,7 @@
               <i class="fas fa-ellipsis-h"></i>
             </template>
             <b-dropdown-item class="text-center" href="#" @click.prevent="openEdit(item)">Cập nhật</b-dropdown-item>
+            <b-dropdown-item class="text-center" href="#" @click.prevent="openCopy(item)">Sao chép</b-dropdown-item>
             <b-dropdown-item class="text-center" href="#" @click.prevent="downloadXml(item)">Tải XML</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) === 0" class="text-center" href="#" @click.prevent="onSignature(item, 'usb-token')">Ký USB token</b-dropdown-item>
             <b-dropdown-item v-if="canSendToTaxAuthority(item)" class="text-center" href="#" @click.prevent="sendToTaxAuthority(item)">Gửi CQT</b-dropdown-item>
@@ -459,6 +460,11 @@ export default {
     },
     openEdit(item) {
       this.$router.push({ name: 'CustomerRegisterInvoiceEdit', params: { id: item.id } })
+    },
+    openCopy(item) {
+      const id = item && (item.id || item.ID || item.Id)
+      if (!id) return
+      this.$router.push({ name: 'CustomerRegisterInvoiceCreate', query: { copyFrom: String(id) } })
     },
     openHistory(item) {
       this.$router.push({ name: 'register-invoice-history', params: { id: item.id } })

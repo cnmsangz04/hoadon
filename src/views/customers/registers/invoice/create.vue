@@ -4,7 +4,7 @@
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="d-flex align-items-center">
         <h4 class="mb-0 font-weight-bold">Tờ Khai Hóa Đơn Điện Tử</h4>
-        <b-badge class="ml-2" variant="light">{{ frmData.action === 'update' ? 'Cập nhật' : 'Tạo mới' }}</b-badge>
+        <b-badge class="ml-2" variant="light">{{ isCopyMode ? 'Sao chép' : (frmData.action === 'update' ? 'Cập nhật' : 'Tạo mới') }}</b-badge>
       </div>
     </div>
 
@@ -622,6 +622,9 @@ export default {
     }
   },
   computed: {
+    isCopyMode() {
+      return !this.$route?.params?.id && !!this.$route?.query?.copyFrom
+    },
     selectedPlaceName() {
       const p = this.app.provinces.find(x => x.id === this.frmData.create_place)
       return p ? p.name : ''
@@ -750,9 +753,13 @@ export default {
     bootstrap() {
       this.loadProvinces()
       const id = this.$route?.params?.id
+      const copyFrom = this.$route?.query?.copyFrom
       if (id) {
         this.frmData.action = 'update'
         this.loadDetail(id)
+      } else if (copyFrom) {
+        this.frmData.action = 'create'
+        this.loadCopy(copyFrom)
       } else {
         this.loadPrefill()
       }
@@ -824,6 +831,30 @@ export default {
         const { data } = await axios.get(`/register-invoices/${id}`)
         this.applyDetail(data)
         // Tải lại dữ liệu gợi ý để hiển thị thông tin pháp lý của công ty hiện tại
+        await this.loadPrefill()
+      } catch (e) {
+        // Lỗi đã được handler toàn cục xử lý
+      } finally {
+        this.btnLoading = false
+      }
+    },
+    async loadCopy(id) {
+      this.btnLoading = true
+      try {
+        const { data } = await axios.get(`/register-invoices/${id}`)
+        this.applyDetail(data)
+
+        // Bản sao phải là một tờ khai mới, không được dùng lại định danh,
+        // chữ ký hoặc trạng thái truyền nhận của tờ khai nguồn.
+        this.frmData = {
+          ...this.frmData,
+          action: 'create',
+          declaration_date: new Date().toISOString().substring(0, 10),
+          signature: null,
+          signed_xml: null,
+          date_sign: null,
+          status: 0
+        }
         await this.loadPrefill()
       } catch (e) {
         // Lỗi đã được handler toàn cục xử lý
