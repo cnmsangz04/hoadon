@@ -61,8 +61,6 @@ public class HistoryServiceImpl implements HistoryService {
     @Override
     public List<HistoryDto> listByRegisterInvoice(Long companyId, Long registerInvoiceId) {
         if (companyId == null || registerInvoiceId == null) return List.of();
-        // Lấy đúng lịch sử của tờ khai hiện tại và luôn hiển thị bản ghi mới nhất trước.
-        // Không dùng findAll() rồi lọc thủ công vì thứ tự trả về của DB không được đảm bảo.
         List<HistoryEntity> filtered = historyRepository
                 .findByCompanyIdAndTableNameAndTableIdAndStatusOrderByCreatedAtDescIdDesc(
                         companyId, "register_invoices", registerInvoiceId, 1);

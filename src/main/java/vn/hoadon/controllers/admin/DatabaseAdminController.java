@@ -23,6 +23,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/v1/administrator/database")
@@ -171,16 +173,15 @@ public class DatabaseAdminController extends BaseController {
         return ResponseEntity.ok(displayRow(rows.get(0)));
     }
 
-    /**
-     * Chạy truy vấn đọc do quản trị viên nhập để phục vụ tra cứu dữ liệu.
-     * Chỉ cho phép một câu SELECT/WITH, không cho phép thực thi lệnh thay đổi dữ liệu.
-     */
-    @PostMapping("/query")
-    public ResponseEntity<?> query(@RequestBody Map<String, Object> body) {
+    @PostMapping("/{table}/query")
+    public ResponseEntity<?> query(
+            @PathVariable String table,
+            @RequestBody Map<String, Object> body) {
         requireAdmin();
+        String tableName = validTable(table);
         String sql;
         try {
-            sql = validateReadOnlySql(body == null ? null : body.get("sql"));
+            sql = validateReadOnlySql(body == null ? null : body.get("sql"), tableName);
             QueryResult result = jdbcTemplate.query(sql, statement -> {
                 statement.setMaxRows(MAX_SQL_ROWS);
                 statement.setQueryTimeout(15);
@@ -496,7 +497,7 @@ public class DatabaseAdminController extends BaseController {
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
-    private String validateReadOnlySql(Object rawSql) {
+    private String validateReadOnlySql(Object rawSql, String tableName) {
         if (rawSql == null || String.valueOf(rawSql).isBlank()) {
             throw new IllegalArgumentException("Vui lòng nhập câu SQL");
         }
@@ -533,7 +534,24 @@ public class DatabaseAdminController extends BaseController {
                 throw new IllegalArgumentException("Không được truy vấn cột nhạy cảm: " + hiddenColumn);
             }
         }
+        validateTableScope(sql, tableName);
         return sql;
+    }
+
+    private void validateTableScope(String sql, String tableName) {
+        Pattern referencePattern = Pattern.compile(
+                "(?is)\\b(?:from|join)\\s+(?:(?:\\[dbo\\]|dbo)\\s*\\.\\s*)?\\[?([a-zA-Z_][\\w$]*)\\]?");
+        Matcher matcher = referencePattern.matcher(sql);
+        boolean found = false;
+        while (matcher.find()) {
+            found = true;
+            if (!tableName.equalsIgnoreCase(matcher.group(1))) {
+                throw new IllegalArgumentException("Câu SQL chỉ được truy vấn bảng " + tableName);
+            }
+        }
+        if (!found) {
+            throw new IllegalArgumentException("Câu SQL phải truy vấn bảng " + tableName);
+        }
     }
 
     private String rootMessage(DataAccessException exception) {

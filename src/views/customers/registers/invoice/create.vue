@@ -381,7 +381,7 @@
               <b-tbody>
                 <b-tr v-for="(row, rowIndex) in frmData[groupKey]" :key="`${groupKey}-${rowIndex}`">
                   <b-td v-for="column in declarationGroupConfig(groupKey).columns" :key="`${groupKey}-${rowIndex}-${column.key}`" :class="column.center ? 'text-center' : ''">
-                    {{ column.key === 'stt' ? rowIndex + 1 : (column.type === 'date' ? formatDate(row[column.key]) : row[column.key]) }}
+                    {{ column.key === 'stt' ? rowIndex + 1 : displayDeclarationValue(column, row) }}
                   </b-td>
                   <b-td class="text-center">
                     <b-button type="button" variant="link" size="sm" title="Cập nhật" @click="showDeclarationGroupModal(groupKey, rowIndex)"><i class="far fa-edit"></i></b-button>
@@ -582,7 +582,23 @@
             <b-form-group :label="field.label" :label-for="`declaration-${field.key}`">
               <b-form-textarea v-if="field.type === 'textarea'" :id="`declaration-${field.key}`" v-model="modalDeclarationGroup.row[field.key]" rows="2" max-rows="4" />
               <manual-date-picker v-else-if="field.type === 'date'" :id="`declaration-${field.key}`" v-model="modalDeclarationGroup.row[field.key]" />
-              <b-form-input v-else :id="`declaration-${field.key}`" v-model.trim="modalDeclarationGroup.row[field.key]" />
+              <v-select
+                v-else-if="field.type === 'select'"
+                :id="`declaration-${field.key}`"
+                v-model="modalDeclarationGroup.row[field.key]"
+                :options="field.options"
+                label="text"
+                :reduce="option => option.value"
+                :clearable="false"
+                :searchable="false"
+                placeholder="Chọn ký hiệu mẫu hóa đơn"
+                class="declaration-select" />
+              <b-form-input
+                v-else
+                :id="`declaration-${field.key}`"
+                v-model.trim="modalDeclarationGroup.row[field.key]"
+                :type="field.type || 'text'"
+                :maxlength="field.maxlength || null" />
             </b-form-group>
           </b-col>
         </b-row>
@@ -605,6 +621,18 @@ import { firstError, hasErrors, required } from '@/utils/validators'
 import { toastError, toastSuccess, toastWarning } from '@/utils/toast'
 import { confirmUsbTokenSignature, startSignaturePolling } from '@/utils/pasigner'
 import { org_solutions, org_transmits } from '@/utils/registerProviders'
+
+const INTEGRATED_DOCUMENT_FORM_NO_OPTIONS = [
+  { value: '1', text: '1 - Phản ánh loại Hóa đơn điện tử giá trị gia tăng' },
+  { value: '2', text: '2 - Phản ánh loại Hóa đơn điện tử bán hàng' },
+  { value: '3', text: '3 - Phản ánh loại Hóa đơn điện tử bán tài sản công' },
+  { value: '4', text: '4 - Phản ánh loại Hóa đơn điện tử bán hàng dự trữ quốc gia' },
+  { value: '5', text: '5 - Phản ánh các loại hóa đơn điện tử khác là tem điện tử, vé điện tử, thẻ điện tử, phiếu thu điện tử hoặc các chứng từ điện tử có tên gọi khác nhưng có nội dung của hóa đơn điện tử theo Điều 10 Nghị định 254/2026/NĐ-CP' },
+  { value: '6', text: '6 - Phản ánh các chứng từ điện tử được sử dụng và quản lý như hóa đơn gồm phiếu xuất kho kiêm vận chuyển nội bộ điện tử, phiếu xuất kho hàng gửi bán đại lý điện tử' },
+  { value: '7', text: '7 - Phản ánh loại Hóa đơn thương mại điện tử' },
+  { value: '8', text: '8 - Phản ánh loại Hóa đơn giá trị gia tăng tích hợp biên lai thu thuế, phí, lệ phí' },
+  { value: '9', text: '9 - Phản ánh loại Hóa đơn bán hàng tích hợp biên lai thu thuế, phí, lệ phí' }
+]
 
 export default {
   name: 'RegisterInvoiceCreate',
@@ -655,11 +683,11 @@ export default {
           title: '9. Đơn vị hạch toán phụ thuộc cần cấp quyền tra cứu hóa đơn',
           addLabel: 'Thêm đơn vị hạch toán phụ thuộc',
           fields: [
-            { key: 'name', label: 'Tên đơn vị hạch toán phụ thuộc cần cấp quyền tra cứu hóa đơn' },
-            { key: 'taxCode', label: 'Mã số thuế đơn vị', md: 6 },
-            { key: 'fromDate', label: 'Từ ngày cấp quyền tra cứu', type: 'date', md: 6 },
-            { key: 'toDate', label: 'Đến ngày cấp quyền tra cứu', type: 'date', md: 6 },
-            { key: 'note', label: 'Ghi chú', type: 'textarea', md: 6 }
+            { key: 'name', label: 'Tên đơn vị', md: 12 },
+            { key: 'taxCode', label: 'MST', md: 6, maxlength: 14 },
+            { key: 'fromDate', label: 'Từ ngày', type: 'date', md: 3 },
+            { key: 'toDate', label: 'Đến ngày', type: 'date', md: 3 },
+            { key: 'note', label: 'Ghi chú', type: 'textarea', md: 12 }
           ],
           columns: [
             { key: 'stt', label: 'STT', center: true },
@@ -675,14 +703,25 @@ export default {
           title: '10. Đơn vị được ủy quyền tra cứu hóa đơn',
           addLabel: 'Thêm đơn vị được ủy quyền',
           fields: [
-            { key: 'name', label: 'Tên đơn vị được ủy quyền' },
-            { key: 'taxCode', label: 'Mã số thuế đơn vị được ủy quyền', md: 6 },
-            { key: 'invoiceSalePurchase', label: 'Hóa đơn bán ra/mua vào', md: 6 },
-            { key: 'dataFromDate', label: 'Thời điểm lập hóa đơn - Từ ngày', type: 'date', md: 6 },
-            { key: 'dataToDate', label: 'Thời điểm lập hóa đơn - Đến ngày', type: 'date', md: 6 },
-            { key: 'authFromDate', label: 'Thời gian ủy quyền - Từ ngày', type: 'date', md: 6 },
-            { key: 'authToDate', label: 'Thời gian ủy quyền - Đến ngày', type: 'date', md: 6 },
-            { key: 'note', label: 'Ghi chú', type: 'textarea' }
+            { key: 'name', label: 'Tên đơn vị', md: 12 },
+            { key: 'taxCode', label: 'MST', md: 6, maxlength: 14 },
+            {
+              key: 'invoiceSalePurchase',
+              label: 'Bán ra/Mua vào',
+              type: 'select',
+              md: 6,
+              options: [
+                { value: null, text: 'Chọn loại hóa đơn' },
+                { value: '1', text: '1 - Hóa đơn bán ra' },
+                { value: '2', text: '2 - Hóa đơn mua vào' },
+                { value: '3', text: '3 - Cả bán ra và mua vào' }
+              ]
+            },
+            { key: 'dataFromDate', label: 'Lập HĐ từ', type: 'date', md: 6 },
+            { key: 'dataToDate', label: 'Lập HĐ đến', type: 'date', md: 6 },
+            { key: 'authFromDate', label: 'Ủy quyền từ', type: 'date', md: 6 },
+            { key: 'authToDate', label: 'Ủy quyền đến', type: 'date', md: 6 },
+            { key: 'note', label: 'Ghi chú', type: 'textarea', md: 12 }
           ],
           columns: [
             { key: 'stt', label: 'STT', center: true },
@@ -700,15 +739,21 @@ export default {
           title: '11. Đăng ký tích hợp hóa đơn điện tử với chứng từ điện tử',
           addLabel: 'Thêm thông tin tích hợp',
           fields: [
-            { key: 'invoiceType', label: 'Tên loại hóa đơn tích hợp', md: 6 },
-            { key: 'formNo', label: 'Ký hiệu mẫu hóa đơn tích hợp', md: 6 },
-            { key: 'serial', label: 'Ký hiệu hóa đơn tích hợp', md: 6 },
-            { key: 'name', label: 'Tên tổ chức được/nhận tích hợp', md: 6 },
-            { key: 'taxCode', label: 'Mã số thuế tổ chức', md: 6 },
-            { key: 'purpose', label: 'Mục đích', type: 'textarea', md: 6 },
+            { key: 'invoiceType', label: 'Loại hóa đơn', md: 6 },
+            {
+              key: 'formNo',
+              label: 'Ký hiệu mẫu hóa đơn',
+              type: 'select',
+              options: INTEGRATED_DOCUMENT_FORM_NO_OPTIONS,
+              md: 6
+            },
+            { key: 'serial', label: 'Ký hiệu', md: 6, maxlength: 6 },
+            { key: 'name', label: 'Tên tổ chức', md: 6 },
+            { key: 'taxCode', label: 'MST', md: 6, maxlength: 14 },
+            { key: 'purpose', label: 'Mục đích', md: 6, maxlength: 255 },
             { key: 'fromDate', label: 'Từ ngày', type: 'date', md: 6 },
             { key: 'toDate', label: 'Đến ngày', type: 'date', md: 6 },
-            { key: 'note', label: 'Ghi chú', type: 'textarea', md: 6 }
+            { key: 'note', label: 'Ghi chú', type: 'textarea', md: 12 }
           ],
           columns: [
             { key: 'stt', label: 'STT', center: true },
@@ -1693,12 +1738,16 @@ export default {
       const config = this.declarationGroupConfig(groupKey)
       const rows = Array.isArray(this.frmData[groupKey]) ? this.frmData[groupKey] : []
       const source = index !== false && index != null ? rows[index] : null
+      const row = { ...this.getEmptyDeclarationGroupRow(groupKey), ...(source || {}) }
+      if (groupKey === 'integrated_documents' && row.formNo !== null && row.formNo !== undefined && row.formNo !== '') {
+        row.formNo = String(row.formNo)
+      }
       this.modalDeclarationGroup = {
         groupKey,
         title: `${index !== false && index != null ? 'Cập nhật' : 'Thêm'} ${config.title.toLowerCase()}`,
         index: index !== false && index != null ? index : false,
         fields: config.fields,
-        row: { ...this.getEmptyDeclarationGroupRow(groupKey), ...(source || {}) }
+        row
       }
       this.$refs.modalDeclarationGroup.show()
     },
@@ -1733,6 +1782,17 @@ export default {
     deleteDeclarationGroupRow(groupKey, index) {
       if (Array.isArray(this.frmData[groupKey])) this.frmData[groupKey].splice(index, 1)
     },
+    displayDeclarationValue(column, row) {
+      const value = row && row[column.key]
+      if (column.type === 'date') return this.formatDate(value)
+      if (column.key === 'invoiceSalePurchase') {
+        const options = this.declarationGroups.authorized_lookup_units.fields
+          .find(field => field.key === 'invoiceSalePurchase')?.options || []
+        const option = options.find(item => String(item.value) === String(value))
+        return option && option.value !== null ? option.text : (value || '—')
+      }
+      return value || '—'
+    },
     getNameRegMethod(code) {
       const n = (typeof code === 'number' || /^\d+$/.test(String(code))) ? Number(code) : null
       if (n === 1) return 'Thêm mới'
@@ -1751,6 +1811,25 @@ export default {
   margin-bottom: 0.25rem;
 }
 .v-select { width: 100%; }
+
+.declaration-select ::v-deep .vs__dropdown-menu {
+  max-width: 100%;
+  min-width: 100%;
+  overflow-x: hidden;
+}
+
+.declaration-select ::v-deep .vs__dropdown-option {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.declaration-select ::v-deep .vs__selected {
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .signature-section-heading {
   align-items: center;

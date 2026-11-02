@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import vn.hoadon.config.AppEnvironment;
 import vn.hoadon.entity.CompanyEntity;
@@ -234,12 +235,12 @@ public class PatvanCallbackService {
         boolean accepted = "2".equals(noticeType);
         boolean hasCode = formInvoiceRepository.findById(invoice.getFormId().longValue())
                 .map(FormInvoiceEntity::getHaveCode).orElse(0) == 1;
-        String rejection = firstText(document,
-                "string((" + NOTICE_PATH + "/*[local-name()='LCMa']/*[local-name()='DSLDo'])[1])",
+        String rejection = firstNonBlank(invoiceRejectionDescription(document), firstText(document,
                 "string((" + NOTICE_PATH + "/*[local-name()='LHDKMa'])[1])",
                 "string((" + NOTICE_PATH + "/*[local-name()='LHDMTTien']/*[local-name()='DSLDo'])[1])",
                 "string((" + NOTICE_PATH + "/*[local-name()='LCTu']/*[local-name()='DSCTu']/*[local-name()='CTu'])[1])",
-                "string((" + NOTICE_PATH + "/*[local-name()='KHLKhac'])[1])");
+                "string((" + NOTICE_PATH + "/*[local-name()='KHLKhac'])[1])"),
+                "Cơ quan thuế từ chối hóa đơn");
         String description = accepted
                 ? text(document, "string((" + NOTICE_PATH + "/*[local-name()='CCu'])[1])")
                 : rejection;
@@ -289,9 +290,16 @@ public class PatvanCallbackService {
         registerInvoiceRepository.save(register);
 
         String title = text(document, "string((//*[local-name()='DLTBao']/*[local-name()='Ten'])[1])");
+        String description = accepted
+                ? "Cơ quan thuế đã tiếp nhận tờ khai"
+                : firstNonBlank(registerErrorDescription(document), firstText(document,
+                    "string((//*[local-name()='DLTBao']/*[local-name()='KHLKhac'])[1])",
+                    "string((//*[local-name()='DLTBao']/*[local-name()='LCTu']//*[local-name()='CTu'])[1])",
+                    "string((//*[local-name()='DLTBao']/*[local-name()='MTLoi'])[1])"),
+                    "Cơ quan thuế chưa tiếp nhận tờ khai");
         upsertHistory(companyId, register.getUserId(), "register_invoices", register.getId(), messageType,
                 title.isBlank() ? "Thông báo tiếp nhận tờ khai" : title,
-                accepted ? "Cơ quan thuế đã tiếp nhận tờ khai" : "Cơ quan thuế chưa tiếp nhận tờ khai", xml);
+                description, xml);
     }
 
     private void processRegisterAccept(Document document, String xml, String reference,
@@ -308,11 +316,73 @@ public class PatvanCallbackService {
         registerInvoiceRepository.save(register);
 
         String title = text(document, "string((//*[local-name()='DLTBao']/*[local-name()='Ten'])[1])");
-        String description = accepted ? "Cơ quan thuế đã chấp nhận tờ khai" : firstText(document,
-                "string((//*[local-name()='DLTBao']/*[local-name()='DSLDKCNhan'])[1])",
-                "string((//*[local-name()='DLTBao']/*[local-name()='KHLKhac'])[1])");
+        String description = accepted
+                ? "Cơ quan thuế đã chấp nhận tờ khai"
+                : firstNonBlank(registerErrorDescription(document), firstText(document,
+                    "string((//*[local-name()='DLTBao']/*[local-name()='KHLKhac'])[1])",
+                    "string((//*[local-name()='DLTBao']/*[local-name()='LCTu']//*[local-name()='CTu'])[1])",
+                    "string((//*[local-name()='DLTBao']/*[local-name()='MTLoi'])[1])"),
+                    "Cơ quan thuế không chấp nhận tờ khai");
         upsertHistory(companyId, register.getUserId(), "register_invoices", register.getId(), messageType,
                 title.isBlank() ? "Thông báo kết quả tờ khai" : title, description, xml);
+    }
+
+    private static String registerErrorDescription(Document document) {
+        try {
+            NodeList errors = (NodeList) XPathFactory.newInstance().newXPath().evaluate(
+                    "//*[local-name()='DLTBao']/*[local-name()='DSLDKCNhan']/*[local-name()='LDo']",
+                    document, XPathConstants.NODESET);
+            StringBuilder result = new StringBuilder();
+            for (int i = 0; i < errors.getLength(); i++) {
+                Node error = errors.item(i);
+                String code = text(error, "string(./*[local-name()='MLoi'][1])");
+                String message = text(error, "string(./*[local-name()='MTa'][1])");
+                if (message.isBlank()) message = error.getTextContent().trim();
+                if (message.isBlank()) continue;
+                if (result.length() > 0) result.append("; ");
+                if (!code.isBlank()) result.append("Mã lỗi ").append(code).append(": ");
+                result.append(message);
+            }
+            return result.toString();
+        } catch (Exception e) {
+            throw new CallbackException("Không đọc được lỗi tờ khai từ XML callback: " + e.getMessage());
+        }
+    }
+
+    private static String invoiceRejectionDescription(Document document) {
+        try {
+            NodeList errors = (NodeList) XPathFactory.newInstance().newXPath().evaluate(
+                    "(" + NOTICE_PATH + "/*[local-name()='LCMa']/*[local-name()='DSLDo']/*[local-name()='LDo'])",
+                    document, XPathConstants.NODESET);
+            StringBuilder result = new StringBuilder();
+            for (int i = 0; i < errors.getLength(); i++) {
+                Node error = errors.item(i);
+                String code = text(error, "string(./*[local-name()='MLoi'][1])");
+                String message = firstNonBlank(
+                        text(error, "string(./*[local-name()='MTLoi'][1])"),
+                        text(error, "string(./*[local-name()='MTa'][1])"),
+                        error.getTextContent().trim());
+                String handling = text(error, "string(./*[local-name()='HDXLy'][1])");
+                if (message.isBlank()) continue;
+                if (result.length() > 0) result.append("; ");
+                if (!code.isBlank()) result.append("Mã lỗi ").append(code).append(": ");
+                result.append(message);
+                if (!handling.isBlank()) result.append(". Hướng xử lý: ").append(handling);
+            }
+            return result.toString();
+        } catch (Exception e) {
+            throw new CallbackException("Không đọc được lỗi hóa đơn từ XML callback: " + e.getMessage());
+        }
+    }
+
+    private static String text(Node node, String expression) {
+        try {
+            String value = (String) XPathFactory.newInstance().newXPath()
+                    .evaluate(expression, node, XPathConstants.STRING);
+            return value == null ? "" : value.trim();
+        } catch (Exception e) {
+            throw new CallbackException("Không đọc được XML callback: " + e.getMessage());
+        }
     }
 
     private void processErrorMessage301(Document document, String xml, String reference,
@@ -436,9 +506,6 @@ public class PatvanCallbackService {
 
     private void upsertHistory(long companyId, long userId, String tableName, long tableId,
                                int type, String title, String description, String xml) {
-        // Callback là một lần truyền nhận mới, phải lưu thành một dòng lịch sử mới.
-        // Không cập nhật lại bản ghi theo type vì sẽ làm mất lịch sử khi tờ khai được
-        // gửi lại hoặc khi nhận lại cùng loại thông điệp 102/103.
         HistoryEntity history = new HistoryEntity();
         history.setCompanyId(companyId);
         history.setUserId(userId);
@@ -555,6 +622,12 @@ public class PatvanCallbackService {
             if (!value.isBlank()) return value;
         }
         return "";
+    }
+
+    private static String firstNonBlank(String first, String second, String fallback) {
+        if (first != null && !first.isBlank()) return first;
+        if (second != null && !second.isBlank()) return second;
+        return fallback;
     }
 
     private static String serialize(Node node) {

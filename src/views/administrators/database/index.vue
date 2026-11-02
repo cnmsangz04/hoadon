@@ -83,17 +83,13 @@
           </b-row>
           <b-row class="mt-2">
             <b-col cols="12">
-              <b-form-group class="mb-0" label="Lọc bằng SQL chỉ đọc" label-for="database-sql-filter">
+              <b-form-group class="mb-0" label="SQL" label-for="database-sql-filter">
                 <b-form-textarea
                   id="database-sql-filter"
                   v-model.trim="sqlFilter"
                   rows="3"
                   max-rows="8"
-                  placeholder="Ví dụ: SELECT * FROM dbo.history WHERE table_id = 16 ORDER BY created_at DESC"
                   @keydown.ctrl.enter="applyFilter"></b-form-textarea>
-                <small class="form-text text-muted">
-                  Chỉ cho phép một câu SELECT/WITH. Kết quả giới hạn {{ sqlResultLimit }} dòng; nhấn Ctrl + Enter để lọc.
-                </small>
               </b-form-group>
             </b-col>
           </b-row>
@@ -191,7 +187,6 @@ export default {
       tableFields: [],
       keyword: '',
       sqlFilter: '',
-      sqlResultLimit: 500,
       page: 0,
       pageSize: 20,
       pageSizes: [10, 20, 50, 100],
@@ -269,7 +264,7 @@ export default {
       this.isLoadingRows = true
       try {
         if (this.isSqlMode) {
-          const response = await axios.post('/administrator/database/query', { sql: this.sqlFilter.trim() })
+          const response = await axios.post(`/administrator/database/${this.selectedTable}/query`, { sql: this.sqlFilter.trim() })
           const data = response.data || {}
           this.rows = Array.isArray(data.data) ? data.data : []
           this.total = this.rows.length
