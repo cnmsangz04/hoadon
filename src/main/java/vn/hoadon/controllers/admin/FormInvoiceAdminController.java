@@ -1,9 +1,7 @@
 package vn.hoadon.controllers.admin;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
@@ -11,15 +9,15 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.entity.FormInvoiceEntity;
+import vn.hoadon.invoice.template.service.InvoiceDocumentBridge;
+import vn.hoadon.invoice.template.service.TemplateAccess;
 import vn.hoadon.services.FormInvoiceService;
 import vn.hoadon.util.UploadPath;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,6 +27,7 @@ import java.util.UUID;
 public class FormInvoiceAdminController extends BaseController {
 
     private final FormInvoiceService service;
+    @Autowired private InvoiceDocumentBridge documents;
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FormInvoiceAdminController.class);
 
     @Autowired
@@ -42,60 +41,8 @@ public ResponseEntity<?> list(@RequestBody Map<String, Object> body,
                               @RequestParam(defaultValue = "10") int size) {
     permission("form-invoice-manage");
 
-    // CHỈ HIỂN THỊ system = 0 (mẫu hệ thống)
-    Pageable limit1000 = PageRequest.of(0, 1000, Sort.by(Sort.Direction.DESC, "updatedAt"));
-    java.util.List<FormInvoiceEntity> combined = new java.util.ArrayList<>(
-        service.pageBySystem(0, limit1000).getContent()
-    );
-
-    // Deduplicate
-    java.util.Map<Long, FormInvoiceEntity> map = new java.util.LinkedHashMap<>();
-    for (FormInvoiceEntity it : combined) {
-        if (it != null && it.getId() != null) map.put(it.getId(), it);
-    }
-    
-    java.util.List<FormInvoiceEntity> filtered = new java.util.ArrayList<>(map.values());
-
-    // Lọc dữ liệu theo các tham số
-    String q = body.getOrDefault("q", "").toString().toLowerCase();
-    Integer category = getInt(body, "category");
-    Integer type = getInt(body, "type");
-    Integer status = getInt(body, "status");
-
-    filtered = filtered.stream().filter(it -> {
-        // Luôn lọc chỉ system = 0
-        if (!java.util.Objects.equals(it.getSystem(), 0)) return false;
-        if (StringUtils.hasText(q) && (it.getName() == null || !it.getName().toLowerCase().contains(q))) return false;
-        if (category != null && !java.util.Objects.equals(it.getCategory(), category)) return false;
-        if (type != null && !java.util.Objects.equals(it.getType(), type)) return false;
-        if (status != null && !java.util.Objects.equals(it.getStatus(), status)) return false;
-        return true;
-    }).collect(java.util.stream.Collectors.toList());
-
-    // Sắp xếp
-    filtered.sort((a, b) -> {
-        java.time.LocalDateTime aa = a.getUpdatedAt();
-        java.time.LocalDateTime bb = b.getUpdatedAt();
-        if (aa == null && bb == null) return 0;
-        if (aa == null) return 1;
-        if (bb == null) return -1;
-        return bb.compareTo(aa);
-    });
-
-    // Phân trang in-memory
-    int total = filtered.size();
-    int from = Math.max(0, Math.min(total, page * size));
-    int to = Math.min(total, from + size);
-    java.util.List<FormInvoiceEntity> pageItems = filtered.subList(from, to);
-
-    Map<String, Object> res = new HashMap<>();
-    res.put("items", pageItems);
-    res.put("total", total);
-    res.put("per_page", size);
-    res.put("current_page", page + 1);
-    res.put("last_page", Math.max(1, (total + size - 1) / size));
-    
-    return ResponseEntity.ok(res);
+    var result = service.pageByCompanySystemWithFilters(null, 0, java.util.Objects.toString(body.get("q"), ""), getInt(body, "category"), getInt(body, "type"), getInt(body, "status"), PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100), Sort.by(Sort.Direction.DESC, "updatedAt")));
+    return ResponseEntity.ok(Map.of("items", result.getContent(), "total", result.getTotalElements(), "per_page", result.getSize(), "current_page", result.getNumber() + 1, "last_page", Math.max(1, result.getTotalPages())));
 }
 
 // Hàm hỗ trợ lấy số an toàn từ dữ liệu ánh xạ
@@ -106,19 +53,22 @@ private Integer getInt(Map<String, Object> body, String key) {
     try { return Integer.valueOf(val.toString()); } catch (Exception e) { return null; }
 }
 
-private Long getLong(Map<String, Object> body, String key) {
-    Object val = body.get(key);
-    if (val == null) return null;
-    if (val instanceof Number) return ((Number) val).longValue();
-    try { return Long.valueOf(val.toString()); } catch (Exception e) { return null; }
-}
     @GetMapping("/{id}")
     public ResponseEntity<?> get(@PathVariable Long id) {
         permission("form-invoice-manage");
         Optional<FormInvoiceEntity> opt = service.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         FormInvoiceEntity e = opt.get();
+        if (!Integer.valueOf(0).equals(e.getSystem())) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(e);
+    }
+
+    @GetMapping(value = "/{id}/preview", produces = org.springframework.http.MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<?> preview(@PathVariable Long id) {
+        permission("form-invoice-manage");
+        var user = currentUser();
+        var access = new TemplateAccess(user.getCompanyId(), user.getId(), true);
+        return documents.pdf(documents.sample(id, true, access), false, "invoice-" + id + ".pdf");
     }
 
     @PostMapping(value = "/saveOrUpdate")
@@ -129,7 +79,6 @@ private Long getLong(Map<String, Object> body, String key) {
             @RequestParam(value = "type", required = false) Integer type,
             @RequestParam(value = "status", required = false) Integer status,
             @RequestParam(value = "have_code", required = false) Integer haveCode,
-            @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "photo", required = false) MultipartFile photo
     ) {
         permission("form-invoice-manage");
@@ -146,7 +95,10 @@ private Long getLong(Map<String, Object> body, String key) {
             } else {
                 Optional<FormInvoiceEntity> opt = service.findById(id);
                 if (opt.isEmpty()) return ResponseEntity.notFound().build();
-                e = opt.get();
+                if (!Integer.valueOf(0).equals(opt.get().getSystem())) return ResponseEntity.notFound().build();
+                e = new FormInvoiceEntity();
+                e.setId(id);
+                e.setCompanyId(opt.get().getCompanyId());
             }
 
             if (!StringUtils.hasText(name)) return ResponseEntity.badRequest().body(Map.of("message", "Name required"));
@@ -175,6 +127,7 @@ private Long getLong(Map<String, Object> body, String key) {
                 // keep default 1L
             }
             
+            if (!creating && e.getCompanyId() != null) detectedCompanyId = e.getCompanyId();
             e.setCompanyId(detectedCompanyId);
             e.setSystem(0); // luôn là mẫu hệ thống
             
@@ -184,21 +137,6 @@ private Long getLong(Map<String, Object> body, String key) {
 
             // Resolve upload company id theo company_id đã detect
             Long uploadCompanyId = detectedCompanyId;
-
-            // Xử lý file tải lên: lưu dưới uploads/<companyId>/template và uploads/<companyId>/photo
-            if (file != null && !file.isEmpty()) {
-                try {
-                    Path dir = UploadPath.resolveCompanyTypeDir(uploadCompanyId, "template");
-                    String orig = file.getOriginalFilename();
-                    String ext = (orig != null && orig.contains(".")) ? orig.substring(orig.lastIndexOf('.')) : "";
-                    String fname = UUID.randomUUID().toString() + ext;
-                    Path target = dir.resolve(fname);
-                    Files.write(target, file.getBytes());
-                    e.setFile(UploadPath.publicUrl(uploadCompanyId, "template", fname));
-                } catch (IOException ex) {
-                    return ResponseEntity.status(500).body(Map.of("message", "Failed saving file: " + ex.getMessage()));
-                }
-            }
 
             if (photo != null && !photo.isEmpty()) {
                 try {
@@ -236,6 +174,8 @@ private Long getLong(Map<String, Object> body, String key) {
     @PostMapping("/{id}/status")
     public ResponseEntity<?> setStatus(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         permission("form-invoice-manage");
+        var current = service.findById(id).orElse(null);
+        if (current == null || !Integer.valueOf(0).equals(current.getSystem())) return ResponseEntity.notFound().build();
         Integer status = body.get("status") != null ? Integer.valueOf(body.get("status").toString()) : null;
         if (status == null) return ResponseEntity.badRequest().body(Map.of("message", "status required"));
         try {
@@ -258,25 +198,11 @@ private Long getLong(Map<String, Object> body, String key) {
         Optional<FormInvoiceEntity> opt = service.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         FormInvoiceEntity e = opt.get();
+        if (!Integer.valueOf(0).equals(e.getSystem())) return ResponseEntity.notFound().build();
 
 
-        // Remove files
-        try {
-            if (StringUtils.hasText(e.getPhoto())) {
-                String rel = e.getPhoto().replaceFirst("^/", "");
-                Path p = Paths.get(System.getProperty("user.dir")).resolve(rel);
-                Files.deleteIfExists(p);
-            }
-        } catch (Exception ignore) {}
-        try {
-            if (StringUtils.hasText(e.getFile())) {
-                String rel = e.getFile().replaceFirst("^/", "");
-                Path p = Paths.get(System.getProperty("user.dir")).resolve(rel);
-                Files.deleteIfExists(p);
-            }
-        } catch (Exception ignore) {}
-
-        service.delete(id);
+        try { service.delete(id); }
+        catch (IllegalArgumentException ex) { return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage())); }
         return ResponseEntity.noContent().build();
     }
 }

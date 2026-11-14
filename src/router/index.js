@@ -61,6 +61,12 @@ const router = new VueRouter({
 					}
 				},
 				{
+					path: '/form-invoice/designer',
+					name: 'CustomerInvoiceTemplateDesigner',
+					component: () => import('@/views/customers/form-invoice/designer.vue'),
+					meta: { requiresUser: true, title: 'Thiết kế mẫu hóa đơn' }
+				},
+				{
 					path: '/form-invoice/list',
 					name: 'CustomerFormInvoiceList',
 					component: () => import('@/views/customers/form-invoice/list.vue'),

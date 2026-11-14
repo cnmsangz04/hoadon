@@ -110,6 +110,19 @@
       meta: { requiresAdmin: true, title: "Dữ liệu database" },
     },
     {
+      path: "form-invoice/designer",
+      name: "admin-invoice-template-designer",
+      component: () => import("../../views/customers/form-invoice/designer.vue"),
+      meta: { title: "Thiết kế mẫu hóa đơn" }
+    },
+    {
+      path: "form-invoice/fields",
+      name: "admin-invoice-template-fields",
+      component: () =>
+        import("../../views/administrators/form-invoice/fields.vue"),
+      meta: { requiresAdmin: true, title: "Phần tử mẫu hóa đơn" },
+    },
+    {
       path: "form-invoice/list",
       name: "admin-form-invoice-list",
       component: () =>

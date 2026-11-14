@@ -10,6 +10,7 @@
           <i class="fas fa-sync-alt"></i>
           Làm mới
         </b-button>
+        <b-button size="sm" variant="outline-primary" class="mr-2" :to="{ name: 'CustomerInvoiceTemplateDesigner' }">Thiết kế mẫu</b-button>
         <b-button size="sm" variant="success" @click="goCreate">
           <i class="fas fa-file-alt"></i>
           Thêm mẫu
@@ -47,7 +48,12 @@
         </b-col>
       </b-row>
       <b-row class="mt-2">
-        <b-col md="12" class="mb-2 d-flex align-items-center justify-content-end">
+        <b-col md="3" class="mb-2">
+          <b-form-select v-model="filters.status" :options="statusOptions">
+            <template #first><b-form-select-option :value="null">Tất cả trạng thái</b-form-select-option></template>
+          </b-form-select>
+        </b-col>
+        <b-col md="9" class="mb-2 d-flex align-items-center justify-content-end">
           <b-button size="sm" variant="outline-secondary" class="mr-2" @click="resetFilters">Xóa lọc</b-button>
           <b-button size="sm" variant="outline-primary" @click="applyFilters">
             <i class="fas fa-filter"></i>
@@ -104,6 +110,7 @@
             <template #button-content>
               <i class="fas fa-ellipsis-h"></i>
             </template>
+            <b-dropdown-item class="text-center" :to="{name:'CustomerInvoiceTemplateDesigner',query:{formId:item.id}}">Thiết kế</b-dropdown-item>
             <b-dropdown-item class="text-center" href="#" @click.prevent="goEdit(item)">Cập nhật</b-dropdown-item>
             <b-dropdown-item class="text-center" href="#" @click.prevent="btnView(item)">Xem</b-dropdown-item>
             <b-dropdown-item v-if="Number(item.status) === 0" class="text-center text-danger" href="#" @click.prevent="onDelete(item)">Xóa</b-dropdown-item>
@@ -244,10 +251,11 @@ export default {
       const formId = item.form_id != null ? item.form_id : (item.id != null ? item.id : null)
       if (!formId) return false
       try {
-        const { data } = await axios.get(`/form-invoices/${formId}/view`, {
+        const { data, headers } = await axios.get(`/form-invoices/${formId}/view`, {
           responseType: 'text',
           headers: { Accept: 'text/html' }
         })
+        this.$set(this.iframe, 'artifactId', headers['x-artifact-id'] || null)
         this.iframe.form_id = formId
         this.iframe.src = 'about:blank'
         this.iframe.srcdoc = data || ''
@@ -271,6 +279,7 @@ export default {
       try {
         const { data } = await axios.get(`/form-invoices/${id}/download-${ext}`, {
           responseType: 'blob',
+          params: ext === 'pdf' && this.iframe.artifactId ? { artifactId: this.iframe.artifactId } : {},
           headers: { Accept: mime }
         })
         const blob = data instanceof Blob ? data : new Blob([data], { type: mime })
@@ -296,7 +305,7 @@ export default {
           q: this.filters.keyword || undefined,
           category: this.filters.category || undefined,
           type: this.filters.type || undefined,
-          status: this.filters.status || undefined,
+          status: this.filters.status == null ? undefined : this.filters.status,
         }
         const { data } = await axios.get('/form-invoices', { params })
         const items = (data.items || data.data || []).map(it => ({
@@ -309,7 +318,6 @@ export default {
           userId: it.userId || it.user_id,
           username: it.username,
           updatedAt: it.updatedAt || it.updated_at,
-          file: it.file,
           photo: it.photo,
         }))
         this.list.data = items

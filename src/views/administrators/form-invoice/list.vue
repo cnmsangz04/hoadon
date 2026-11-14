@@ -8,6 +8,7 @@
                     <i class="fas fa-sync-alt"></i>
                     Làm mới
                 </b-button>
+                <b-button size="sm" variant="outline-primary" class="mr-2" :to="{ name: 'admin-invoice-template-designer' }">Thiết kế mẫu</b-button>
                 <b-button size="sm" variant="success" @click="goCreate">
                     <i class="fas fa-plus"></i>
                     Tạo mẫu
@@ -116,6 +117,7 @@
                         <template #button-content>
                             <i class="fas fa-ellipsis-h"></i>
                         </template>
+                        <b-dropdown-item :to="{name:'admin-invoice-template-designer',query:{formId:item.id}}">Thiết kế</b-dropdown-item>
                         <b-dropdown-item class="text-center" href="#" @click.prevent="edit(item)">
                             Cập nhật
                         </b-dropdown-item>
@@ -204,7 +206,6 @@ export default {
                     type: it.type,
                     status: it.status,
                     photo: it.photo,
-                    file: it.file,
                     system: it.system
                 }))
                 this.total = data.total || 0
@@ -225,9 +226,23 @@ export default {
         onPageSizeChange(size) { this.size = Number(size) || this.size; this.page = 1; this.fetch() },
         goCreate() { this.$router.push({ name: 'admin-form-invoice-create' }) },
         edit(item) { this.$router.push({ name: 'admin-form-invoice-edit', params: { id: item.id } }) },
-        preview(item) {
+        async preview(item) {
             if (!item.id) return
-            window.open(`/v1/file/${item.id}/view`, '_blank')
+            const viewer = window.open('', '_blank')
+            if (!viewer) {
+                this.$bvToast && this.$bvToast.toast('Cho phép mở cửa sổ mới để xem mẫu', { title: 'Xem mẫu', variant: 'warning', solid: true })
+                return
+            }
+            try {
+                const { data } = await axios.get(`/administrator/form-invoices/${item.id}/preview`, { responseType: 'blob' })
+                if (!data.type.includes('application/pdf')) throw new Error('Phản hồi không phải PDF')
+                const url = URL.createObjectURL(data)
+                viewer.location.replace(url)
+                setTimeout(() => URL.revokeObjectURL(url), 300000)
+            } catch (e) {
+                viewer.close()
+                this.$bvToast && this.$bvToast.toast('Không thể tạo bản xem mẫu', { title: 'Lỗi', variant: 'danger', solid: true })
+            }
         },
         async setStatus(id, status) {
             if (!confirm(status === 1 ? 'Kích hoạt mẫu này?' : 'Tạm ngưng mẫu này?')) return

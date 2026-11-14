@@ -1,5 +1,7 @@
 package vn.hoadon.services.impl;
 
+import vn.hoadon.invoice.template.service.InvoiceTemplateBindingService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +36,9 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Autowired
     private InvoiceNumberRepository invoiceNumberRepository;
+
+    @Autowired
+    private InvoiceTemplateBindingService templateBindings;
 
     private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
 
@@ -71,6 +76,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             if (formId != null) {
                 FormInvoiceEntity form = formCache.computeIfAbsent(formId, id -> formInvoiceRepository.findById(id).orElse(null));
                 if (form != null && Objects.equals(form.getCompanyId(), inv.getCompanyId() != null ? inv.getCompanyId().longValue() : null)) {
+                    form = InvoiceTemplateBindingService.frozenForm(inv, form);
                     dto.formCode = form.getFormCode();
                     dto.serial = form.getSerial();
                 }
@@ -92,6 +98,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                     if (refFormId != null) {
                         FormInvoiceEntity refForm = formCache.computeIfAbsent(refFormId, id -> formInvoiceRepository.findById(id).orElse(null));
                         if (refForm != null && Objects.equals(refForm.getCompanyId(), inv.getCompanyId() != null ? inv.getCompanyId().longValue() : null)) {
+                            refForm = InvoiceTemplateBindingService.frozenForm(ref, refForm);
                             dto.referenceFormCode = refForm.getFormCode();
                             dto.referenceSerial = refForm.getSerial();
                         }
@@ -134,21 +141,30 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setLookupCode(generateUniqueLookupCode());
         e.setCreatedAt(java.time.LocalDateTime.now());
         e.setUpdatedAt(java.time.LocalDateTime.now());
+        templateBindings.pin(e);
         InvoiceEntity saved = invoiceRepository.save(e);
         updateOriginalInvoiceStatus(original, saved.getInvoiceType());
         return saved;
     }
 
     @Override
+    @Transactional
     public InvoiceEntity update(Long id, InvoicePayload payload, Long companyId, Long userId) {
         InvoiceEntity e = invoiceRepository.findById(id).orElse(null);
         if (e == null) return null;
         if (!sameCompany(e.getCompanyId(), companyId)) {
             throw new IllegalArgumentException("Hóa đơn không thuộc công ty hiện tại");
         }
+        if (e.getStatus() != null && e.getStatus() != 0) throw new IllegalArgumentException("Chỉ được chỉnh sửa hóa đơn nháp");
+        Integer previousFormId = e.getFormId();
         validateFormForCompany(payload != null ? payload.formId : null, companyId);
         validateRelatedInvoiceForCreate(payload, companyId);
         applyPayload(e, payload, companyId, userId, false);
+        if (!Objects.equals(previousFormId, e.getFormId())) {
+            e.setTemplateVersionId(null);
+            e.setIssueProfileSnapshotJson(null);
+        }
+        templateBindings.pin(e);
         // Re-assign invoice_number_id if formId changed or missing
         assignInvoiceNumberId(e, companyId, payload);
         // Keep existing id_attr/lookup_code; generate if missing
@@ -163,6 +179,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     @Override
+    @Transactional
     public InvoiceEntity clone(Long sourceId, Long companyId, Long userId) {
         InvoiceEntity src = invoiceRepository.findById(sourceId).orElse(null);
         if (src == null) return null;
@@ -208,6 +225,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         assignInvoiceNumberId(e, companyId != null ? companyId : (src.getCompanyId() != null ? src.getCompanyId().longValue() : null), new InvoicePayload(){ { this.formId = src.getFormId() != null ? src.getFormId().longValue() : null; } });
         e.setCreatedAt(LocalDateTime.now());
         e.setUpdatedAt(LocalDateTime.now());
+        templateBindings.pin(e);
         return invoiceRepository.save(e);
     }
 
@@ -231,7 +249,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (form == null) {
             throw new IllegalArgumentException("Không tìm thấy mẫu hóa đơn");
         }
-        if (companyId != null && form.getCompanyId() != null && !companyId.equals(form.getCompanyId())) {
+        if (!Integer.valueOf(1).equals(form.getSystem()) || companyId == null || !companyId.equals(form.getCompanyId())) {
             throw new IllegalArgumentException("Mẫu hóa đơn không thuộc công ty hiện tại");
         }
     }

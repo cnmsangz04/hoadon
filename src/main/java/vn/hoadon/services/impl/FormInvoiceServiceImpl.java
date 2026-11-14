@@ -1,5 +1,11 @@
 package vn.hoadon.services.impl;
 
+import vn.hoadon.invoice.template.persistence.CompanyInvoiceDefaultEntity;
+import vn.hoadon.invoice.template.persistence.CompanyInvoiceDefaultRepository;
+import vn.hoadon.repositories.CompanyRepository;
+import vn.hoadon.repositories.InvoiceRepository;
+import vn.hoadon.repositories.RegisterInvoiceRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,23 +19,21 @@ import vn.hoadon.repositories.InvoiceNumberRepository;
 import vn.hoadon.services.FormInvoiceService;
 
 import jakarta.persistence.criteria.Predicate;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Service
 public class FormInvoiceServiceImpl implements FormInvoiceService {
-    private static final Logger log = LoggerFactory.getLogger(FormInvoiceServiceImpl.class);
-
     private final FormInvoiceRepository repo;
     private final InvoiceNumberRepository invoiceNumberRepository;
+    @Autowired private CompanyRepository companies;
+    @Autowired private InvoiceRepository invoices;
+    @Autowired private RegisterInvoiceRepository declarations;
+    @Autowired private CompanyInvoiceDefaultRepository defaults;
+    @Autowired private vn.hoadon.invoice.template.service.InvoiceFormTemplateService formTemplates;
+    @jakarta.persistence.PersistenceContext private jakarta.persistence.EntityManager entityManager;
 
     @Autowired
     public FormInvoiceServiceImpl(FormInvoiceRepository repo, InvoiceNumberRepository invoiceNumberRepository) {
@@ -70,7 +74,7 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
             if (q != null && !q.isBlank()) {
                 String kw = "%" + q.toLowerCase() + "%";
                 Predicate namePred = cb.like(cb.lower(root.get("name")), kw);
-                Predicate serialPred = cb.like(cb.lower(root.get("serial")), kw);
+                Predicate serialPred = cb.like(cb.lower(cb.concat(cb.coalesce(root.get("formCode"), ""), cb.coalesce(root.get("serial"), ""))), kw);
                 Predicate formCodePred = cb.like(cb.lower(root.get("formCode")), kw);
                 predicates.add(cb.or(namePred, serialPred, formCodePred));
             }
@@ -100,174 +104,112 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
     public Optional<FormInvoiceEntity> findById(Long id) { return repo.findById(id); }
 
     @Override
-    public FormInvoiceEntity create(FormInvoiceEntity e) {
-        // Duplicate file and photo to new UUID filenames, update entity paths
-        e.setCreatedAt(e.getCreatedAt() != null ? e.getCreatedAt() : LocalDateTime.now());
-        e.setUpdatedAt(e.getUpdatedAt() != null ? e.getUpdatedAt() : LocalDateTime.now());
-
-        // Ensure default status is inactive (0) when not provided
-        if (e.getStatus() == null) {
-            e.setStatus(0);
-        }
-        log.debug("FormInvoice create request: companyId={}, category={}, status={}, serial={}", e.getCompanyId(), e.getCategory(), e.getStatus(), e.getSerial());
-
-        // Validate duplicate serial for system=1 within same company & category ONLY when active (status==1)
-        if (e.getCompanyId() != null && e.getSystem() != null && e.getSystem() == 1 && e.getCategory() != null && e.getSerial() != null && !e.getSerial().isBlank() && e.getStatus() != null && e.getStatus() == 1) {
-            boolean exists = repo.existsByCompanyIdAndSystemAndCategoryAndSerial(e.getCompanyId(), 1, e.getCategory(), e.getSerial());
-            if (exists) {
-                throw new IllegalArgumentException("Ký hiệu đã tồn tại");
-            }
-        }
-
-        // Hàm hỗ trợ sao chép một đường dẫn
-        java.util.function.Function<String, String> copyPath = (String original) -> {
-            if (original == null || original.isBlank()) return original;
-            try {
-                Path src = Paths.get(original);
-                if (!src.isAbsolute()) {
-                    // Try relative to project root
-                    src = Paths.get("").toAbsolutePath().resolve(original).normalize();
-                }
-                if (!Files.exists(src) || !Files.isRegularFile(src)) {
-                    return original; // Leave as-is if source not found
-                }
-                String filename = src.getFileName().toString();
-                String ext = "";
-                int dot = filename.lastIndexOf('.');
-                if (dot >= 0) ext = filename.substring(dot);
-                String newName = UUID.randomUUID().toString() + ext;
-                Path targetDir = src.getParent();
-                if (targetDir == null) targetDir = src.toAbsolutePath().getParent();
-                if (targetDir == null) targetDir = Paths.get("").toAbsolutePath();
-                Path dst = targetDir.resolve(newName);
-                Files.copy(src, dst);
-                // Trả về đường dẫn cùng kiểu với bản gốc (tương đối nếu bản gốc là tương đối)
-                if (Paths.get(original).isAbsolute()) {
-                    return dst.toString();
-                } else {
-                    Path projectRoot = Paths.get("").toAbsolutePath();
-                    Path rel = projectRoot.relativize(dst);
-                    return rel.toString().replace('\\','/');
-                }
-            } catch (Exception ex) {
-                // Nếu sao chép lỗi thì giữ tham chiếu gốc
-                return original;
-            }
-        };
-
-        if (e.getFile() != null) {
-            e.setFile(copyPath.apply(e.getFile()));
-        }
-        if (e.getPhoto() != null) {
-            e.setPhoto(copyPath.apply(e.getPhoto()));
-        }
-
-        FormInvoiceEntity saved = repo.save(e);
-        log.debug("FormInvoice saved: id={}, companyId={}, category={}, status={}", saved.getId(), saved.getCompanyId(), saved.getCategory(), saved.getStatus());
-
-        // Nếu không kích hoạt thì không đụng tới invoice_numbers
-        if (saved.getStatus() == null || saved.getStatus() != 1) {
-            log.debug("Form not active (status={}), returning without touching invoice_numbers", saved.getStatus());
-            return saved;
-        }
-
-        // Activation logic: enforce single active invoice_numbers per company+category
-        if (saved.getCompanyId() != null && saved.getCategory() != null) {
-            log.info("Activating form: id={}, companyId={}, category={}", saved.getId(), saved.getCompanyId(), saved.getCategory());
-            List<InvoiceNumberEntity> activesByCat = invoiceNumberRepository.findByCompanyIdAndCategoryAndStatus(saved.getCompanyId(), saved.getCategory(), 1);
-            log.debug("Found {} active invoice_numbers for companyId={}, category={}", activesByCat.size(), saved.getCompanyId(), saved.getCategory());
-            if (!activesByCat.isEmpty()) {
-                InvoiceNumberEntity inv = activesByCat.get(0);
-                inv.setFormId(saved.getId());
-                inv.setCategory(saved.getCategory());
-                inv.setUpdatedAt(LocalDateTime.now());
-                invoiceNumberRepository.save(inv);
-                log.info("Updated active invoice_numbers id={} to form_id={}", inv.getId(), saved.getId());
-            } else {
-                InvoiceNumberEntity newInv = new InvoiceNumberEntity();
-                newInv.setCompanyId(saved.getCompanyId());
-                newInv.setFormId(saved.getId());
-                newInv.setCategory(saved.getCategory());
-                newInv.setStatus(1);
-                newInv.setTotal(0);
-                newInv.setCreatedAt(LocalDateTime.now());
-                newInv.setUpdatedAt(LocalDateTime.now());
-                invoiceNumberRepository.save(newInv);
-                log.info("Created new active invoice_numbers for companyId={}, category={} pointing to form_id={}", saved.getCompanyId(), saved.getCategory(), saved.getId());
-            }
-        }
-
+    @Transactional
+    public FormInvoiceEntity create(FormInvoiceEntity form) {
+        if (form.getStatus() == null) form.setStatus(0);
+        lockCompany(form);
+        validate(form);
+        form.setCreatedAt(LocalDateTime.now());
+        form.setUpdatedAt(form.getCreatedAt());
+        FormInvoiceEntity saved = repo.saveAndFlush(form);
+        var access = new vn.hoadon.invoice.template.service.TemplateAccess(saved.getCompanyId(), saved.getUserId(), Integer.valueOf(0).equals(saved.getSystem()));
+        formTemplates.editable(saved.getId(), "form-" + saved.getId(), access);
+        synchronizeActivation(saved, false);
         return saved;
     }
 
     @Override
     @Transactional
     public Optional<FormInvoiceEntity> update(Long id, FormInvoiceEntity patch) {
-        return repo.findById(id).map(ex -> {
-            Integer previousStatus = ex.getStatus();
-
-            // Compute effective values to validate duplicate serials (respect patch values)
-            Long companyId = patch.getCompanyId() != null ? patch.getCompanyId() : ex.getCompanyId();
-            Integer system = patch.getSystem() != null ? patch.getSystem() : ex.getSystem();
-            Integer category = patch.getCategory() != null ? patch.getCategory() : ex.getCategory();
-            String serial = patch.getSerial() != null ? patch.getSerial() : ex.getSerial();
-            Integer status = patch.getStatus() != null ? patch.getStatus() : ex.getStatus();
-            // Enforce uniqueness only for active company templates
-            if (companyId != null && system != null && system == 1 && category != null && serial != null && !serial.isBlank() && status != null && status == 1) {
-                boolean exists = repo.existsByCompanyIdAndSystemAndCategoryAndSerialAndIdNot(companyId, 1, category, serial, ex.getId());
-                if (exists) {
-                    throw new IllegalArgumentException("Ký hiệu đã tồn tại");
-                }
-            }
-
-            ex.setName(patch.getName() != null ? patch.getName() : ex.getName());
-            ex.setFormCode(patch.getFormCode() != null ? patch.getFormCode() : ex.getFormCode());
-            ex.setSerial(patch.getSerial() != null ? patch.getSerial() : ex.getSerial());
-            ex.setFile(patch.getFile() != null ? patch.getFile() : ex.getFile());
-            ex.setPhoto(patch.getPhoto() != null ? patch.getPhoto() : ex.getPhoto());
-            ex.setSystem(patch.getSystem() != null ? patch.getSystem() : ex.getSystem());
-            ex.setType(patch.getType() != null ? patch.getType() : ex.getType());
-            ex.setCategory(patch.getCategory() != null ? patch.getCategory() : ex.getCategory());
-            ex.setStatus(patch.getStatus() != null ? patch.getStatus() : ex.getStatus());
-            ex.setUpdatedAt(LocalDateTime.now());
-
-            log.debug("FormInvoice update: id={}, prevStatus={}, newStatus={}, companyId={}, category={}", ex.getId(), previousStatus, ex.getStatus(), ex.getCompanyId(), ex.getCategory());
-
-            // Activation logic on status transition to 1
-            if ((previousStatus == null || previousStatus != 1) && ex.getStatus() != null && ex.getStatus() == 1) {
-                if (ex.getCompanyId() != null && ex.getCategory() != null) {
-                    List<InvoiceNumberEntity> activesByCat = invoiceNumberRepository.findByCompanyIdAndCategoryAndStatus(ex.getCompanyId(), ex.getCategory(), 1);
-                    log.debug("Update activation: found {} active invoice_numbers for companyId={}, category={}", activesByCat.size(), ex.getCompanyId(), ex.getCategory());
-                    if (!activesByCat.isEmpty()) {
-                        InvoiceNumberEntity inv = activesByCat.get(0);
-                        inv.setFormId(ex.getId());
-                        inv.setCategory(ex.getCategory());
-                        inv.setUpdatedAt(LocalDateTime.now());
-                        invoiceNumberRepository.save(inv);
-                        log.info("Updated active invoice_numbers id={} to form_id={} on activation", inv.getId(), ex.getId());
-                    } else {
-                        InvoiceNumberEntity newInv = new InvoiceNumberEntity();
-                        newInv.setCompanyId(ex.getCompanyId());
-                        newInv.setFormId(ex.getId());
-                        newInv.setCategory(ex.getCategory());
-                        newInv.setStatus(1);
-                        newInv.setTotal(0);
-                        newInv.setCreatedAt(LocalDateTime.now());
-                        newInv.setUpdatedAt(LocalDateTime.now());
-                        invoiceNumberRepository.save(newInv);
-                        log.info("Created new active invoice_numbers on activation for companyId={}, category={}, form_id={}", ex.getCompanyId(), ex.getCategory(), ex.getId());
-                    }
-                }
-            } else {
-                log.debug("No activation change (prevStatus={}, newStatus={}), skipping invoice_numbers changes", previousStatus, ex.getStatus());
-            }
-
-            return repo.save(ex);
-        });
+        FormInvoiceEntity current = repo.findById(id).orElse(null);
+        if (current == null) return Optional.empty();
+        lockCompany(current);
+        entityManager.refresh(current);
+        boolean wasActive = Integer.valueOf(1).equals(current.getStatus());
+        if (patch.getSystem() != null && !patch.getSystem().equals(current.getSystem())) throw new IllegalArgumentException("Không được thay đổi phạm vi mẫu");
+        if (patch.getCompanyId() != null && !patch.getCompanyId().equals(current.getCompanyId())) throw new IllegalArgumentException("Không được chuyển mẫu sang công ty khác");
+        boolean fiscalChanged = changed(patch.getFormCode(), current.getFormCode()) || changed(patch.getSerial(), current.getSerial())
+                || changed(patch.getCategory(), current.getCategory()) || changed(patch.getType(), current.getType()) || changed(patch.getHaveCode(), current.getHaveCode());
+        if (fiscalChanged && invoices.existsByFormId(Math.toIntExact(id))) throw new IllegalArgumentException("Mẫu đã được sử dụng; không được sửa ký hiệu hoặc cấu hình phát hành");
+        if (patch.getName() != null) current.setName(patch.getName());
+        if (patch.getFormCode() != null) current.setFormCode(patch.getFormCode());
+        if (patch.getSerial() != null) current.setSerial(patch.getSerial());
+        if (patch.getPhoto() != null) current.setPhoto(patch.getPhoto());
+        if (patch.getType() != null) current.setType(patch.getType());
+        if (patch.getCategory() != null) current.setCategory(patch.getCategory());
+        if (patch.getStatus() != null) current.setStatus(patch.getStatus());
+        if (patch.getHaveCode() != null) current.setHaveCode(patch.getHaveCode());
+        current.setUpdatedAt(LocalDateTime.now());
+        boolean deactivating = !fiscalChanged && Integer.valueOf(0).equals(patch.getStatus());
+        if (!deactivating) validate(current);
+        synchronizeActivation(current, wasActive);
+        return Optional.of(repo.save(current));
     }
 
+    private void lockCompany(FormInvoiceEntity form) {
+        if (Integer.valueOf(1).equals(form.getSystem())) companies.lockById(form.getCompanyId()).orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty"));
+    }
+
+    private void validate(FormInvoiceEntity form) {
+        if (form.getName() == null || form.getName().isBlank() || form.getName().length() > 255) throw new IllegalArgumentException("Tên mẫu không hợp lệ");
+        if (!java.util.Set.of(0, 1).contains(form.getStatus())) throw new IllegalArgumentException("Trạng thái mẫu không hợp lệ");
+        if (form.getCategory() == null || !java.util.Set.of(1, 2).contains(form.getCategory()) || form.getType() == null || !java.util.Set.of(1, 2).contains(form.getType())) throw new IllegalArgumentException("Loại hóa đơn hoặc loại thuế suất không hợp lệ");
+        if (form.getHaveCode() == null || !java.util.Set.of(0, 1).contains(form.getHaveCode())) throw new IllegalArgumentException("Hình thức có mã/không mã không hợp lệ");
+        if (Integer.valueOf(1).equals(form.getStatus()) && form.getTemplateVersionId() == null) throw new IllegalArgumentException("Cần công bố và chọn phiên bản thiết kế trước khi kích hoạt mẫu hóa đơn");
+        if (!Integer.valueOf(1).equals(form.getSystem())) return;
+        if (!String.valueOf(form.getCategory()).equals(form.getFormCode()) || form.getSerial() == null || !form.getSerial().matches("[CK][0-9]{2}T[A-Z]{2}")) throw new IllegalArgumentException("Ký hiệu hóa đơn không hợp lệ");
+        if ((form.getSerial().startsWith("C") ? 1 : 0) != form.getHaveCode()) throw new IllegalArgumentException("Ký hiệu C/K không khớp hình thức hóa đơn");
+        if (Integer.valueOf(1).equals(form.getStatus())) {
+            var accepted = declarations.findLatestAccepted(form.getCompanyId(), org.springframework.data.domain.PageRequest.of(0, 1));
+            if (accepted.isEmpty()) throw new IllegalArgumentException("Chưa có tờ khai hóa đơn được chấp nhận");
+            var declaration = accepted.getFirst();
+            String kind = form.getCategory() == 1 ? "HDGTGT" : "HDBHang";
+            if (!contains(declaration.getInvoiceTypes(), kind) || !contains(declaration.getInvoiceForms(), form.getHaveCode() == 1 ? "CMa" : "KCMa")) throw new IllegalArgumentException("Tờ khai không phù hợp loại hoặc hình thức hóa đơn");
+        }
+    }
+
+    private static boolean contains(List<String> values, String value) { return values != null && values.contains(value); }
+
+    private void synchronizeActivation(FormInvoiceEntity form, boolean wasActive) {
+        if (!Integer.valueOf(1).equals(form.getSystem())) return;
+        boolean active = Integer.valueOf(1).equals(form.getStatus());
+        if (active) repo.deactivateOthers(form.getCompanyId(), form.getCategory(), form.getId());
+        var selection = defaults.findByCompanyIdAndCategory(form.getCompanyId(), form.getCategory()).orElse(null);
+        if (selection == null) {
+            if (!active) return;
+            selection = new CompanyInvoiceDefaultEntity();
+            selection.setCompanyId(form.getCompanyId());
+            selection.setCategory(form.getCategory());
+            selection.setActivationPolicy("COMPAT_SINGLE_ACTIVE_PER_CATEGORY");
+        }
+        if (active) selection.setFormInvoiceId(form.getId());
+        else if (java.util.Objects.equals(selection.getFormInvoiceId(), form.getId())) selection.setFormInvoiceId(null);
+        selection.setUpdatedAt(LocalDateTime.now(java.time.ZoneOffset.UTC));
+        defaults.save(selection);
+        if (!active || wasActive) return;
+        // Giữ bộ đếm hiện hành đến khi dữ liệu dãy số được đối chiếu và chuyển đổi.
+        List<InvoiceNumberEntity> counters = invoiceNumberRepository.findByCompanyIdAndCategoryAndStatus(form.getCompanyId(), form.getCategory(), 1);
+        InvoiceNumberEntity counter = counters.isEmpty() ? new InvoiceNumberEntity() : counters.getFirst();
+        if (counter.getId() == null) {
+            counter.setCompanyId(form.getCompanyId());
+            counter.setCategory(form.getCategory());
+            counter.setTotal(0);
+            counter.setStatus(1);
+            counter.setCreatedAt(LocalDateTime.now());
+        }
+        counter.setFormId(form.getId());
+        counter.setUpdatedAt(LocalDateTime.now());
+        invoiceNumberRepository.save(counter);
+    }
+
+    private static boolean changed(Object patch, Object current) { return patch != null && !patch.equals(current); }
+
     @Override
+    @Transactional
     public void delete(Long id) {
-        repo.deleteById(id);
+        var form = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Không tìm thấy mẫu"));
+        lockCompany(form);
+        if (!Integer.valueOf(0).equals(form.getStatus()) || invoices.existsByFormId(Math.toIntExact(id)) || !invoiceNumberRepository.findByCompanyIdAndFormId(form.getCompanyId(), id).isEmpty()) throw new IllegalArgumentException("Mẫu đang được sử dụng; hãy ngừng kích hoạt thay vì xóa");
+        repo.delete(form);
     }
 }

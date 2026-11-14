@@ -6,6 +6,15 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "form_invoices")
 public class FormInvoiceEntity {
+    @Column(name = "template_id")
+    private Long templateId;
+
+    @Column(name = "template_version_id")
+    private Long templateVersionId;
+
+    @Column(name = "number_series_id")
+    private Long numberSeriesId;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -24,9 +33,6 @@ public class FormInvoiceEntity {
 
     @Column(name = "form_code", columnDefinition = "NVARCHAR(50)")
     private String formCode;
-
-    @Column(name = "`file`")
-    private String file;
 
     @Column(name = "photo")
     private String photo;
@@ -65,8 +71,8 @@ public class FormInvoiceEntity {
     public void setSerial(String serial) { this.serial = serial; }
     public String getFormCode() { return formCode; }
     public void setFormCode(String formCode) { this.formCode = formCode; }
-    public String getFile() { return file; }
-    public void setFile(String file) { this.file = file; }
+    public Long getTemplateId() { return templateId; }
+    public void setTemplateId(Long templateId) { this.templateId = templateId; }
     public String getPhoto() { return photo; }
     public void setPhoto(String photo) { this.photo = photo; }
     public Integer getSystem() { return system; }
@@ -83,4 +89,8 @@ public class FormInvoiceEntity {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public Long getTemplateVersionId() { return templateVersionId; }
+    public void setTemplateVersionId(Long templateVersionId) { this.templateVersionId = templateVersionId; }
+    public Long getNumberSeriesId() { return numberSeriesId; }
+    public void setNumberSeriesId(Long numberSeriesId) { this.numberSeriesId = numberSeriesId; }
 }

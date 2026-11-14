@@ -1,5 +1,7 @@
 package vn.hoadon.services.impl;
 
+import vn.hoadon.invoice.template.service.InvoiceTemplateBindingService;
+
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
@@ -49,6 +51,8 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
     private static final String IMPORT_TYPE = "importhoadon";
     private static final DataFormatter FORMATTER = new DataFormatter(Locale.forLanguageTag("vi-VN"));
     private static final DateTimeFormatter FILE_TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+
+    @Autowired private InvoiceTemplateBindingService templateBindings;
 
     @Autowired
     private InvoiceImportRepository repository;
@@ -496,7 +500,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
     }
 
     private FormInvoiceEntity resolveActiveVatForm(Long companyId) throws Exception {
-        FormInvoiceEntity activeVatForm = formInvoiceRepository.findTopByCompanyIdAndStatusAndCategoryOrderByUpdatedAtDesc(companyId, 1, 1);
+        FormInvoiceEntity activeVatForm = templateBindings.activeForm(companyId, 1);
         if (activeVatForm == null) {
             throw new IllegalArgumentException("Chưa có mẫu hóa đơn GTGT được kích hoạt");
         }

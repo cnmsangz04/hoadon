@@ -7,6 +7,12 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "invoices")
 public class InvoiceEntity {
+    @Column(name = "template_version_id")
+    private Long templateVersionId;
+
+    @Column(name = "issue_profile_snapshot_json", columnDefinition = "NVARCHAR(MAX)")
+    private String issueProfileSnapshotJson;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -284,4 +290,8 @@ public class InvoiceEntity {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public Long getTemplateVersionId() { return templateVersionId; }
+    public void setTemplateVersionId(Long templateVersionId) { this.templateVersionId = templateVersionId; }
+    public String getIssueProfileSnapshotJson() { return issueProfileSnapshotJson; }
+    public void setIssueProfileSnapshotJson(String issueProfileSnapshotJson) { this.issueProfileSnapshotJson = issueProfileSnapshotJson; }
 }

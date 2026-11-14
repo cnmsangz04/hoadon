@@ -1,7 +1,8 @@
 package vn.hoadon.util;
 
+import vn.hoadon.invoice.template.service.InvoiceTemplateBindingService;
+
 import vn.hoadon.entity.FormInvoiceEntity;
-import vn.hoadon.entity.UserEntity;
 import vn.hoadon.entity.InvoiceEntity;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.CompanyBankEntity;
@@ -29,6 +30,8 @@ public final class InvoiceXmlBuilder {
     public static String build(InvoiceEntity inv, FormInvoiceEntity form, CompanyEntity company, CompanyBankEntity bank,
                                InvoiceEntity relatedInvoice, FormInvoiceEntity relatedForm) {
         if (inv == null) return "";
+        form = InvoiceTemplateBindingService.frozenForm(inv, form);
+        relatedForm = InvoiceTemplateBindingService.frozenForm(relatedInvoice, relatedForm);
         String id = hasText(inv.getIdAttr())
                 ? inv.getIdAttr()
                 : java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();

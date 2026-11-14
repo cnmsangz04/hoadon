@@ -9,7 +9,7 @@ import vn.hoadon.entity.UserEntity;
 import java.time.LocalDate;
 
 /**
- * Tạo XML hóa đơn mẫu để xem trước mẫu XSLT.
+ * Tạo XML hóa đơn mẫu để xem trước bố cục hóa đơn.
  * Dữ liệu này cố định, không phụ thuộc DB và chỉ dùng cho chức năng xem trước.
  */
 public final class SampleInvoiceXmlBuilder {

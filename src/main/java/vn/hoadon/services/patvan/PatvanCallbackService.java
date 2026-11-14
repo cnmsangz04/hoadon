@@ -1,5 +1,7 @@
 package vn.hoadon.services.patvan;
 
+import vn.hoadon.invoice.template.service.InvoiceTemplateBindingService;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,7 +15,6 @@ import org.xml.sax.InputSource;
 import vn.hoadon.config.AppEnvironment;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.ErrorMessageEntity;
-import vn.hoadon.entity.FormInvoiceEntity;
 import vn.hoadon.entity.HistoryEntity;
 import vn.hoadon.entity.InvoiceEntity;
 import vn.hoadon.entity.RegisterInvoiceEntity;
@@ -42,7 +43,6 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -234,7 +234,7 @@ public class PatvanCallbackService {
         InvoiceEntity invoice = findInvoice(reference, companyId);
         boolean accepted = "2".equals(noticeType);
         boolean hasCode = formInvoiceRepository.findById(invoice.getFormId().longValue())
-                .map(FormInvoiceEntity::getHaveCode).orElse(0) == 1;
+                .map(form -> InvoiceTemplateBindingService.frozenForm(invoice, form).getHaveCode()).orElse(0) == 1;
         String rejection = firstNonBlank(invoiceRejectionDescription(document), firstText(document,
                 "string((" + NOTICE_PATH + "/*[local-name()='LHDKMa'])[1])",
                 "string((" + NOTICE_PATH + "/*[local-name()='LHDMTTien']/*[local-name()='DSLDo'])[1])",
@@ -369,7 +369,8 @@ public class PatvanCallbackService {
                 result.append(message);
                 if (!handling.isBlank()) result.append(". Hướng xử lý: ").append(handling);
             }
-            return result.toString();
+            return result.length() > 0 ? result.toString()
+                    : text(document, "string((" + NOTICE_PATH + "/*[local-name()='LCMa']/*[local-name()='DSLDo'])[1])");
         } catch (Exception e) {
             throw new CallbackException("Không đọc được lỗi hóa đơn từ XML callback: " + e.getMessage());
         }

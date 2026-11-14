@@ -1,5 +1,8 @@
 package vn.hoadon.repositories;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,6 +14,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
+    boolean existsByFormIdAndTemplateVersionIdIsNull(Integer formId);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select i from InvoiceEntity i where i.id = :id")
+    Optional<InvoiceEntity> lockDocumentById(@Param("id") Long id);
 
     @Query("SELECT i FROM InvoiceEntity i WHERE (:companyId IS NULL OR i.companyId = :companyId) AND (:q IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.code) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.lookupCode) LIKE LOWER(CONCAT('%', :q, '%'))) AND (:status IS NULL OR i.status = :status)")
     Page<InvoiceEntity> search(@Param("companyId") Long companyId, @Param("q") String q, @Param("status") Short status, Pageable pageable);

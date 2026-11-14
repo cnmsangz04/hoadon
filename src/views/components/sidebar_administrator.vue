@@ -72,7 +72,14 @@ export default {
         { title: 'Duyệt đăng ký', icon: 'fas fa-user-check', to: '/administrator/company-registration/list' },
         { title: 'Quản lý gói hóa đơn', icon: 'fas fa-box-open', to: '/administrator/invoice-package/list' },
         { title: 'Hạn mức hóa đơn', icon: 'fas fa-file-invoice-dollar', to: '/administrator/buy-invoice/list' },
-        { title: 'Mẫu hóa đơn', icon: 'fas fa-file-contract', to: '/administrator/form-invoice/list' },
+        {
+          title: 'Mẫu hóa đơn',
+          icon: 'fas fa-file-contract',
+          children: [
+            { title: 'Mẫu phát hành', icon: 'fas fa-list', to: '/administrator/form-invoice/list' },
+            { title: 'Phần tử mẫu hóa đơn', icon: 'fas fa-code', to: '/administrator/form-invoice/fields' },
+          ],
+        },
         { title: 'Ngân hàng', icon: 'fas fa-piggy-bank', to: '/administrator/bank/list' },
         { title: 'Cơ quan thuế', icon: 'fas fa-landmark', to: '/administrator/tax-authority/list' },
         { title: 'Thuế suất', icon: 'fas fa-percent', to: '/administrator/vat-rate/list' },

@@ -343,6 +343,7 @@ export default {
       sellerTaxcode: '',
       // iframe state for viewing invoice
       iframe: {
+        artifactId: null,
         src: null,
         lookup_code: null,
         status: null,
@@ -409,10 +410,12 @@ export default {
     }
   },
   created () {
+    window.addEventListener('message', this.onArtifactMessage)
     this.ensureSellerTaxcode()
     this.fetchList()
   },
   beforeDestroy () {
+    window.removeEventListener('message', this.onArtifactMessage)
     // Clear all pending poll timers
     try {
       Object.values(this.pollTimers || {}).forEach(t => clearTimeout(t))
@@ -455,11 +458,20 @@ export default {
       return this.sellerTaxcode
     },
 
+    onArtifactMessage(event) {
+      const frame = document.getElementById('viewVatInv')
+      if (!frame || event.source !== frame.contentWindow || event.data?.type !== 'invoice-artifact') return
+      const expectedOrigin = new URL(this.iframe.src, window.location.href).origin
+      if (event.origin !== expectedOrigin || event.data.documentKey !== `/v1/invoices/${this.iframe.lookup_code}/download-pdf`) return
+      this.iframe.artifactId = Number(event.data.artifactId) || null
+    },
+
     invoicePublicPath (lookupCode, action) {
       const code = encodeURIComponent(lookupCode || '')
       const taxcode = (this.sellerTaxcode || this.appSellerTaxcode() || '').toString().trim()
       const query = taxcode ? `?taxcode=${encodeURIComponent(taxcode)}` : ''
-      return `/invoices/${code}${action}${query}`
+      const artifact = action === '/download-pdf' && lookupCode === this.iframe.lookup_code && this.iframe.artifactId ? `${query ? '&' : '?'}artifactId=${this.iframe.artifactId}` : ''
+      return `/invoices/${code}${action}${query}${artifact}`
     },
 
     invoicePublicUrl (lookupCode, action) {
@@ -697,7 +709,9 @@ export default {
         return false
       }
       this.iframe.lookup_code = lookupCode
-      this.iframe.src = this.invoicePublicUrl(lookupCode, '/view')
+      this.iframe.artifactId = null
+      const viewUrl = this.invoicePublicUrl(lookupCode, '/view')
+      this.iframe.src = `${viewUrl}${viewUrl.includes('?') ? '&' : '?'}viewRevision=${Date.now()}`
       this.$root.$emit('bv::show::modal', 'modalVatInvoice')
       return false
     },
@@ -728,7 +742,8 @@ export default {
       try {
         const iframe = document.getElementById('viewVatInv')
         if (iframe && iframe.contentWindow) {
-          iframe.contentWindow.print()
+          if (iframe.contentWindow.printInvoice) iframe.contentWindow.printInvoice()
+          else iframe.contentWindow.print()
         } else {
           // Dự phòng: open print dialog for current window
           window.print()

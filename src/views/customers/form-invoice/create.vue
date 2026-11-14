@@ -29,6 +29,7 @@
         <b-card class="shadow-sm card-soft">
           <b-card-body>
             <b-form @submit.prevent="onSubmit">
+              <fieldset :disabled="isView">
               <div class="section-header">Thông tin mẫu</div>
 
               <!-- Tên mẫu (row) -->
@@ -122,13 +123,14 @@
                 </b-form-group>
               </div>
 
+              </fieldset>
               <!-- Hành động -->
               <div class="form-actions sticky-actions d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center mt-3 gap-2">
                 <b-button class="btn-back" variant="secondary" @click="$router.back()">
                   <i class="fas fa-arrow-left"></i>
                   <span>Trở lại</span>
                 </b-button>
-                <b-button class="btn-save" :disabled="submitting" variant="primary" type="submit">
+                <b-button v-if="!isView" class="btn-save" :disabled="submitting" variant="primary" type="submit">
                   <span v-if="submitting"><i class="fas fa-spinner fa-spin"></i> Đang lưu...</span>
                   <span v-else><i class="fas fa-save"></i> Lưu mẫu</span>
                 </b-button>
@@ -154,11 +156,10 @@ export default {
       form: {
         name: '',
         serial: '',
-        file: '',
         photo: '',
         type: null,
         category: null,
-        status: 1,
+        status: 0,
         system: 1,
         form_code: '', // ký tự đầu được lưu riêng ở backend
         have_code: 0, // C -> 1, K -> 0
@@ -182,6 +183,7 @@ export default {
     }
   },
   computed: {
+    isView() { return this.$route.name === 'CustomerFormInvoiceView' },
     pageTitle() {
       const id = this.$route.params.id
       if (id) return 'Cập nhật/Xem mẫu hóa đơn'
@@ -245,13 +247,10 @@ export default {
     },
     async prefillFromTemplate(id) {
       try {
-        const { data } = await axios.get(`/form-invoices/templates/${id}`).catch(async () => {
-          return await axios.get(`/form-invoices/${id}`)
-        })
+        const { data } = await axios.get(`/form-invoices/templates/${id}`)
         const it = data && (data.item || data)
         if (it) {
           this.form.name = it.name || this.form.name
-          this.form.file = it.file || it.path || this.form.file
           this.form.photo = it.photo || this.form.photo
           this.form.type = it.type != null ? Number(it.type) : this.form.type
           this.form.category = it.category != null ? Number(it.category) : this.form.category
@@ -265,7 +264,7 @@ export default {
             this.serialSuffix = s.substring(5,7).toUpperCase()
           }
           // Ánh xạ have_code từ item nếu có; nếu không thì suy ra từ CK
-          this.form.have_code = it.have_code != null ? Number(it.have_code) : (this.serialCK === 'C' ? 1 : 0)
+          this.form.have_code = (it.haveCode != null || it.have_code != null) ? Number(it.haveCode != null ? it.haveCode : it.have_code) : (this.serialCK === 'C' ? 1 : 0)
           this.composeSerial()
           // Đảm bảo đang tạo mới, không phải mẫu hệ thống
           this.form.system = 1
@@ -280,7 +279,6 @@ export default {
         const it = data && (data.item || data)
         if (it) {
           this.form.name = it.name
-          this.form.file = it.file || it.path || ''
           this.form.photo = it.photo || ''
           this.form.type = it.type != null ? Number(it.type) : null
           this.form.category = it.category != null ? Number(it.category) : null
@@ -299,13 +297,14 @@ export default {
           this.form.status = it.status != null ? Number(it.status) : 1
           this.form.system = it.system != null ? Number(it.system) : 1
           this.form.form_code = (it.formCode || it.form_code || '')
-          this.form.have_code = it.have_code != null ? Number(it.have_code) : (this.serialCK === 'C' ? 1 : 0)
+          this.form.have_code = (it.haveCode != null || it.have_code != null) ? Number(it.haveCode != null ? it.haveCode : it.have_code) : (this.serialCK === 'C' ? 1 : 0)
         }
       } catch (e) {
         // Đã bỏ gán notify
       }
     },
     async onSubmit() {
+      if (this.isView) return
       this.suffixError = ''
       this.suffixValidated = true
       this.nameError = ''
@@ -355,7 +354,9 @@ export default {
         } else {
           const templateId = this.$route.query.templateId
           if (templateId) payload.templateId = templateId
-          await axios.post('/form-invoices', payload, { successMessage: 'Đã tạo mẫu' })
+          const { data } = await axios.post('/form-invoices', payload, { successMessage: 'Đã tạo mẫu' })
+          this.$router.push({ name: 'CustomerInvoiceTemplateDesigner', query: { formId: data.id } })
+          return
         }
         this.$router.push({ name: 'CustomerFormInvoiceList' })
       } catch (e) {

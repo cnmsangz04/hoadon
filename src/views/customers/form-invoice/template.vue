@@ -71,7 +71,7 @@
       >
         <b-card class="template-card h-100 text-center">
           <div class="template-thumb mb-2">
-            <img :src="item.photo" alt="template" class="template-img" />
+            <img v-if="item.photo" :src="item.photo" alt="Ảnh đại diện mẫu" class="template-img" /><div v-else class="py-5 text-muted">Chưa có ảnh đại diện</div>
           </div>
           <div class="text-secondary">
             <p class="template-name">{{ item.name }}</p>
@@ -86,6 +86,7 @@
         </b-card>
       </b-col>
     </b-row>
+    <b-pagination v-if="total > 12" v-model="page" :total-rows="total" :per-page="12" @change="loadPage" />
   </div>
 </template>
 
@@ -97,6 +98,8 @@ export default {
   data() {
     return {
       notify: '',
+      page: 1,
+      total: 0,
       keyword: '',
       category: null,
       type: null,
@@ -117,17 +120,19 @@ export default {
     this.importData()
   },
   methods: {
-    async importData() {
+    importData() { this.page = 1; return this.loadPage(1) },
+    async loadPage(page = 1) {
       // Tải mẫu đã lọc theo tên, danh mục và loại
       // Endpoint backend /form-invoices/templates chỉ trả mẫu system=0
       this.notify = ''
       try {
-        const params = {}
+        const params = { page, size: 12 }
         if (this.keyword) params.q = this.keyword
         if (this.category != null) params.category = this.category
         if (this.type != null) params.type = this.type
         const { data } = await axios.get('/form-invoices/templates', { params })
         const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : []
+        this.total = Number(data.total || 0)
         this.templates = items.map(it => ({
           id: it.id,
           name: it.name,
