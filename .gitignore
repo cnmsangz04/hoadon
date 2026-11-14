@@ -36,6 +36,7 @@ logs/
 !src/views/administrators/logs/
 !src/views/administrators/logs/list.vue
 *.log
+*.md
 .env
 .local/
 **/node_modules/
@@ -43,4 +44,4 @@ logs/
 /cpanel/
 /docs/
 /logs/
-prod.md
+/invoice-documents/

@@ -7,7 +7,8 @@
     "watch": "vue-cli-service serve --host 0.0.0.0 --port 80",
     "build": "node --max-old-space-size=1536 ./node_modules/@vue/cli-service/bin/vue-cli-service.js build --dest src/main/resources/static",
     "prod": "npm run build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "test:invoice-designer:build": "vue-cli-service build src/test/frontend/invoice_designer.js --dest target/invoice-designer-test"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.1.0",
