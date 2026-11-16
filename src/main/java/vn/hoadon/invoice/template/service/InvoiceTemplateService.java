@@ -2,20 +2,22 @@ package vn.hoadon.invoice.template.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.criteria.Root;
 import vn.hoadon.invoice.template.catalog.*;
 import vn.hoadon.invoice.template.compiler.JsonLayoutCompiler;
 import vn.hoadon.invoice.template.config.InvoiceTemplateProperties;
 import vn.hoadon.invoice.template.persistence.*;
 import vn.hoadon.invoice.template.render.TemplateRenderService;
 import vn.hoadon.invoice.template.storage.*;
+import vn.hoadon.entity.FormInvoiceEntity;
+import vn.hoadon.repositories.FormInvoiceRepository;
 
 import java.time.*;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Service
@@ -34,13 +36,18 @@ public class InvoiceTemplateService {
     private final InvoiceFieldCatalog catalog;
     private final InvoiceTemplateProperties properties;
     private final ObjectMapper mapper;
+    private final ObjectProvider<InvoiceTemplateThumbnailService> thumbnails;
+    private final FormInvoiceRepository forms;
+    private final InvoiceTemplateHistoryService history;
 
     public InvoiceTemplateService(InvoiceTemplateRepository templates, InvoiceTemplateDraftRepository drafts,
                                    InvoiceTemplateVersionRepository versions, InvoiceTemplateVersionAssetRepository versionAssets,
                                    InvoiceTemplateValidationRunRepository validations, InvoiceTemplateAuditRepository audit,
                                    InvoiceAssetService assets, TemplateRenderService renders, InvoiceFixtureFactory fixtures,
                                    JsonLayoutCompiler compiler, InvoiceFieldCatalog catalog,
-                                   InvoiceTemplateProperties properties, ObjectMapper mapper) {
+                                   InvoiceTemplateProperties properties, ObjectMapper mapper,
+                                   ObjectProvider<InvoiceTemplateThumbnailService> thumbnails,
+                                   FormInvoiceRepository forms, InvoiceTemplateHistoryService history) {
         this.templates = templates;
         this.drafts = drafts;
         this.versions = versions;
@@ -54,12 +61,32 @@ public class InvoiceTemplateService {
         this.catalog = catalog;
         this.properties = properties;
         this.mapper = mapper;
+        this.thumbnails = thumbnails;
+        this.forms = forms;
+        this.history = history;
     }
 
     public Page<InvoiceTemplateEntity> list(TemplateAccess access, String scope, String q, Integer category, int page, int size) {
         Specification<InvoiceTemplateEntity> filter = (root, query, cb) -> {
-            var owner = "SYSTEM".equals(scope) ? cb.equal(root.get("scope"), "SYSTEM") : cb.and(cb.equal(root.get("scope"), "COMPANY"), cb.equal(root.get("companyId"), access.companyId()));
-            var predicate = cb.and(owner, cb.equal(root.get("state"), "ACTIVE"));
+            jakarta.persistence.criteria.Predicate owner;
+            if ("SYSTEM".equals(scope)) {
+                owner = cb.equal(root.get("scope"), "SYSTEM");
+            } else if ("COMPANY_AND_SYSTEM".equals(scope)) {
+                owner = cb.or(
+                        cb.equal(root.get("scope"), "SYSTEM"),
+                        cb.and(cb.equal(root.get("scope"), "COMPANY"), cb.equal(root.get("companyId"), access.companyId()))
+                );
+            } else {
+                owner = cb.and(cb.equal(root.get("scope"), "COMPANY"), cb.equal(root.get("companyId"), access.companyId()));
+            }
+            // The selector is for templates that can be assigned directly to a form.
+            // A template created from another version is a working copy and must not
+            // appear as another primary template in the selector.
+            var predicate = cb.and(
+                    owner,
+                    cb.isNull(root.get("sourceVersionId")),
+                    activeFormLink(root, query, cb, access, "SYSTEM".equals(scope))
+            );
             if (category != null) predicate = cb.and(predicate, cb.equal(root.get("category"), category));
             if (q != null && !q.isBlank()) predicate = cb.and(predicate, cb.like(cb.lower(root.get("name")), "%" + q.trim().toLowerCase(Locale.ROOT).replace("%", "\\%").replace("_", "\\_") + "%", '\\'));
             return predicate;
@@ -67,10 +94,71 @@ public class InvoiceTemplateService {
         return templates.findAll(filter, PageRequest.of(Math.max(0, page - 1), Math.clamp(size, 1, 100), Sort.by(Sort.Direction.DESC, "updatedAt", "id")));
     }
 
+    /** Chỉ trả mẫu đang được liên kết từ form_invoice trong phạm vi người dùng được phép. */
+    private jakarta.persistence.criteria.Predicate activeFormLink(
+            Root<InvoiceTemplateEntity> template,
+            jakarta.persistence.criteria.CriteriaQuery<?> query,
+            jakarta.persistence.criteria.CriteriaBuilder cb,
+            TemplateAccess access,
+            boolean systemOnly) {
+        var formsQuery = query.subquery(Long.class);
+        var form = formsQuery.from(FormInvoiceEntity.class);
+        jakarta.persistence.criteria.Predicate owner;
+        if (systemOnly) {
+            owner = cb.and(cb.equal(form.get("system"), 0), cb.equal(form.get("status"), 1));
+        } else {
+            var companyForm = cb.and(
+                    cb.equal(form.get("system"), 1),
+                    cb.equal(form.get("companyId"), access.companyId()),
+                    form.get("status").in(0, 1)
+            );
+            var systemForm = cb.and(
+                    cb.equal(form.get("system"), 0),
+                    cb.equal(form.get("status"), 1)
+            );
+            owner = cb.or(companyForm, systemForm);
+        }
+
+        var versionIds = query.subquery(Long.class);
+        var version = versionIds.from(InvoiceTemplateVersionEntity.class);
+        versionIds.select(version.get("id"));
+        versionIds.where(cb.equal(version.get("templateId"), template.get("id")));
+
+        var linked = cb.or(
+                cb.equal(form.get("templateId"), template.get("id")),
+                form.get("templateVersionId").in(versionIds)
+        );
+        formsQuery.select(form.get("id"));
+        formsQuery.where(cb.and(owner, linked));
+        return cb.exists(formsQuery);
+    }
+
     public Details details(Long id, TemplateAccess access) {
         var template = require(id, access, false);
         var draft = "SYSTEM".equals(template.getScope()) && !access.systemManager() ? null : drafts.findByTemplateId(id).orElse(null);
-        return new Details(template, draft, versions.findByTemplateIdOrderByVersionNoDesc(id));
+        return new Details(template, draft, versions.findTop3ByTemplateIdOrderByVersionNoDesc(id));
+    }
+
+    @Transactional
+    public void trimHistory(Long id, TemplateAccess access) {
+        lock(id, access);
+        history.trim(id);
+    }
+
+    @Transactional
+    public Details deleteVersion(Long id, Long versionId, TemplateAccess access) {
+        var template = lock(id, access);
+        history.delete(id, versionId);
+        template.setUpdatedAt(now());
+        event(template, access, "DELETE_VERSION", null, null, versionId, "{}");
+        return details(id, access);
+    }
+
+    private void ensureEditableState(InvoiceTemplateEntity template) {
+        if ("ACTIVE".equals(template.getState())) return;
+        boolean linkedToForm = forms.findByTemplateId(template.getId()).stream()
+                .anyMatch(form -> Objects.equals(form.getStatus(), 0) || Objects.equals(form.getStatus(), 1));
+        if (!linkedToForm) throw TemplateException.conflict("Mẫu đã ngừng sử dụng");
     }
 
     @Transactional
@@ -102,7 +190,7 @@ public class InvoiceTemplateService {
         template.setCreatedAt(now());
         template.setUpdatedAt(now());
         template = templates.saveAndFlush(template);
-        String sourceContent = source == null ? defaultLayout() : source.getSourceContent();
+        String sourceContent = source == null ? defaultLayout(category) : source.getSourceContent();
         String manifestJson = source == null ? "{}" : source.getManifestJson();
         var draft = new InvoiceTemplateDraftEntity();
         draft.setTemplateId(template.getId());
@@ -124,10 +212,10 @@ public class InvoiceTemplateService {
     @Transactional
     public InvoiceTemplateDraftEntity save(Long id, long expectedVersion, JsonNode layout, TemplateAccess access) {
         var template = lock(id, access);
-        if (!"ACTIVE".equals(template.getState())) throw TemplateException.conflict("Mẫu đã ngừng sử dụng");
+        ensureEditableState(template);
         var draft = draft(id);
         checkRevision(draft, expectedVersion);
-        if (!draft.getFieldCatalogVersion().equals(layout.path("fieldCatalogVersion").asText())) throw TemplateException.conflict("Cần cập nhật danh mục bằng thao tác Cập nhật danh mục");
+        if (!draft.getFieldCatalogVersion().equals(layout.path("fieldCatalogVersion").asText())) throw TemplateException.conflict("Danh mục phần tử đã thay đổi; vui lòng mở lại mẫu để cập nhật");
         return saveDraft(template, draft, layout, access);
     }
 
@@ -146,14 +234,20 @@ public class InvoiceTemplateService {
         draft = drafts.saveAndFlush(draft);
 
         assets.pin(draft.getManifestJson(), "DRAFT", draft.getId());
+        var savedDraft = draft;
+        thumbnails.ifAvailable(service -> service.refresh(template, savedDraft));
         event(template, access, "SAVE_DRAFT", null, null, draft.getId(), "{}");
         return draft;
+    }
+
+    public void refreshThumbnail(Details details) {
+        thumbnails.ifAvailable(service -> service.refresh(details.template(), details.draft()));
     }
 
     @Transactional
     public InvoiceTemplateDraftEntity upgradeCatalog(Long id, long expectedVersion, TemplateAccess access) {
         var template = lock(id, access);
-        if (!"ACTIVE".equals(template.getState())) throw TemplateException.conflict("Mẫu đã ngừng sử dụng");
+        ensureEditableState(template);
         var draft = draft(id);
         checkRevision(draft, expectedVersion);
         var layout = (com.fasterxml.jackson.databind.node.ObjectNode) tree(draft.getSourceContent());
@@ -168,7 +262,7 @@ public class InvoiceTemplateService {
     @Transactional(readOnly = true)
     public String designerPreview(Long id, JsonNode layout, int rows, TemplateAccess access) {
         var template = require(id, access, true);
-        if (!"ACTIVE".equals(template.getState())) throw TemplateException.conflict("Mẫu đã ngừng sử dụng");
+        ensureEditableState(template);
         if (rows < 0 || rows > 60) throw TemplateException.invalid("INVALID_ROWS", "Số dòng minh họa phải từ 0 đến 60");
         if (assets.json(layout).getBytes(java.nio.charset.StandardCharsets.UTF_8).length > properties.getMaxInputBytes())
             throw TemplateException.invalid("RENDER_INPUT_LIMIT", "Nội dung bố cục vượt giới hạn");
@@ -243,7 +337,7 @@ public class InvoiceTemplateService {
             verifyRequest(previous.get(), requestHash);
             return versions.findById(previous.get().getResultId()).orElseThrow(TemplateException::missing);
         }
-        if (!"ACTIVE".equals(template.getState())) throw TemplateException.conflict("Mẫu đã ngừng sử dụng");
+        ensureEditableState(template);
         var draft = draft(id);
         checkRevision(draft, expectedVersion);
         var run = validation(reportId, access);
@@ -255,18 +349,21 @@ public class InvoiceTemplateService {
         draft.setUpdatedAt(now());
         template.setUpdatedAt(now());
         event(template, access, "PUBLISH", requestKey, requestHash, version.getId(), run.getReportJson());
+        history.trim(id);
         return version;
     }
 
     @Transactional
     public InvoiceTemplateDraftEntity restore(Long id, Long versionId, long expectedVersion, TemplateAccess access) {
         var template = lock(id, access);
+        ensureEditableState(template);
         var source = requireVersion(versionId, access);
         if (!source.getTemplateId().equals(id)) throw TemplateException.missing();
         var draft = draft(id);
         checkRevision(draft, expectedVersion);
         draft.setBaseVersionId(versionId);
         draft.setSourceContent(source.getSourceContent());
+        draft.setSchemaVersion(source.getSchemaVersion());
         draft.setFieldCatalogVersion(source.getFieldCatalogVersion());
         draft.setManifestJson(source.getManifestJson());
         draft.setContentHash(source.getContentHash());
@@ -274,7 +371,7 @@ public class InvoiceTemplateService {
         draft.setUpdatedAt(now());
         event(template, access, "RESTORE_DRAFT", null, null, draft.getId(), assets.json(Map.of("versionId", versionId)));
         draft = drafts.saveAndFlush(draft);
-
+        assets.pin(draft.getManifestJson(), "DRAFT", draft.getId());
         return draft;
     }
 
@@ -351,14 +448,19 @@ public class InvoiceTemplateService {
         return version;
     }
 
-    public String defaultLayout() {
-        try (var stream = new ClassPathResource("invoice-template/default-layout.json").getInputStream()) {
-            var layout = (com.fasterxml.jackson.databind.node.ObjectNode) tree(new String(stream.readAllBytes(), StandardCharsets.UTF_8));
-            layout.put("fieldCatalogVersion", catalog.version());
-            return assets.json(layout);
-        } catch (Exception ex) {
-            throw new IllegalStateException("Không đọc được bố cục mẫu mặc định", ex);
-        }
+    public String defaultLayout(Integer category) {
+        int normalizedCategory = category == null ? 1 : category;
+        var template = templates.findTopByScopeAndCategoryAndStateOrderByIdAsc("SYSTEM", normalizedCategory, "ACTIVE")
+                .orElseThrow(() -> TemplateException.invalid(
+                        "DEFAULT_TEMPLATE_MISSING",
+                        "Chưa có mẫu hệ thống mặc định cho loại hóa đơn " + normalizedCategory));
+        var version = versions.findTopByTemplateIdOrderByVersionNoDesc(template.getId())
+                .orElseThrow(() -> TemplateException.invalid(
+                        "DEFAULT_TEMPLATE_MISSING",
+                        "Mẫu hệ thống mặc định chưa có phiên bản được công bố"));
+        var layout = (com.fasterxml.jackson.databind.node.ObjectNode) tree(version.getSourceContent());
+        layout.put("fieldCatalogVersion", catalog.version());
+        return assets.json(layout);
     }
     public JsonNode tree(String value) { try { return mapper.readTree(value); } catch (Exception ex) { throw TemplateException.invalid("INVALID_JSON", "JSON không hợp lệ"); } }
     public static String hash(String source, String manifest) { return DocumentStorage.sha256(source + "\n" + manifest); }

@@ -13,6 +13,16 @@ module.exports = {
     host: '0.0.0.0',   // lắng nghe trên mọi interface để chấp nhận domain ảo (map về 127.0.0.1)
     port: 80,              // frontend local: http://hoadon2er.local.vn
     hot: true,           // bật hot reload
+    client: {
+      overlay: {
+        errors: true,
+        warnings: false,
+        runtimeErrors: error => {
+          const message = error?.message || String(error || '')
+          return !/ResizeObserver loop (completed with undelivered notifications|limit exceeded)/i.test(message)
+        }
+      }
+    },
     headers: {
       'Access-Control-Allow-Origin': '*',
     },

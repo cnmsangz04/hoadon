@@ -8,7 +8,6 @@
                     <i class="fas fa-sync-alt"></i>
                     Làm mới
                 </b-button>
-                <b-button size="sm" variant="outline-primary" class="mr-2" :to="{ name: 'admin-invoice-template-designer' }">Thiết kế mẫu</b-button>
                 <b-button size="sm" variant="success" @click="goCreate">
                     <i class="fas fa-plus"></i>
                     Tạo mẫu
@@ -107,6 +106,7 @@
 
                 <template #cell(option)="{ item }">
                     <b-dropdown
+                        class="table-action-dropdown"
                         size="sm"
                         right
                         variant="link"
@@ -117,7 +117,7 @@
                         <template #button-content>
                             <i class="fas fa-ellipsis-h"></i>
                         </template>
-                        <b-dropdown-item :to="{name:'admin-invoice-template-designer',query:{formId:item.id}}">Thiết kế</b-dropdown-item>
+                        <b-dropdown-item class="text-center" :to="{name:'admin-invoice-template-designer',query:{formId:item.id}}">Thiết kế</b-dropdown-item>
                         <b-dropdown-item class="text-center" href="#" @click.prevent="edit(item)">
                             Cập nhật
                         </b-dropdown-item>
@@ -369,6 +369,10 @@ export default {
 
 .dropdown-item i {
     width: 20px;
+    text-align: center;
+}
+
+.form-invoices-admin ::v-deep .table-action-dropdown .dropdown-item {
     text-align: center;
 }
 

@@ -6,5 +6,6 @@ import java.util.Optional;
 
 public interface InvoiceTemplateVersionRepository extends JpaRepository<InvoiceTemplateVersionEntity, Long> {
     List<InvoiceTemplateVersionEntity> findByTemplateIdOrderByVersionNoDesc(Long templateId);
+    List<InvoiceTemplateVersionEntity> findTop3ByTemplateIdOrderByVersionNoDesc(Long templateId);
     Optional<InvoiceTemplateVersionEntity> findTopByTemplateIdOrderByVersionNoDesc(Long templateId);
 }

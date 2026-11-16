@@ -13,6 +13,8 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import vn.hoadon.entity.FormInvoiceEntity;
 
 public interface FormInvoiceRepository extends JpaRepository<FormInvoiceEntity, Long>, JpaSpecificationExecutor<FormInvoiceEntity> {
+    java.util.List<FormInvoiceEntity> findByTemplateId(Long templateId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select f from FormInvoiceEntity f where f.id = :id")
     java.util.Optional<FormInvoiceEntity> lockById(@Param("id") Long id);

@@ -23,7 +23,6 @@ public class InvoiceDocumentService {
     private final SignatureVatRepository signatures;
     private final SignatureAuthoritiesTaxService authoritySignatures;
     private final InvoiceTemplateRepository templates;
-    private final InvoiceTemplateVersionRepository versions;
     private final InvoiceDocumentSnapshotRepository snapshots;
     private final InvoiceFormTemplateService formTemplates;
     private final TemplateRenderService renders;
@@ -34,7 +33,7 @@ public class InvoiceDocumentService {
 
     public InvoiceDocumentService(InvoiceRepository invoices, FormInvoiceRepository forms, CompanyRepository companies, CompanyBankRepository banks,
                                    SignatureVatRepository signatures, SignatureAuthoritiesTaxService authoritySignatures, InvoiceTemplateRepository templates,
-                                   InvoiceTemplateVersionRepository versions, InvoiceDocumentSnapshotRepository snapshots, InvoiceFormTemplateService formTemplates,
+                                   InvoiceDocumentSnapshotRepository snapshots, InvoiceFormTemplateService formTemplates,
                                    TemplateRenderService renders, InvoiceAssetService assets, InvoiceFixtureFactory fixtures,
                                    InvoiceFieldCatalog fieldCatalog, InvoiceExternalFieldRegistry externalFields) {
         this.invoices = invoices;
@@ -44,7 +43,6 @@ public class InvoiceDocumentService {
         this.signatures = signatures;
         this.authoritySignatures = authoritySignatures;
         this.templates = templates;
-        this.versions = versions;
         this.snapshots = snapshots;
         this.formTemplates = formTemplates;
         this.renders = renders;
@@ -57,7 +55,7 @@ public class InvoiceDocumentService {
     @Transactional
     public InvoiceRenderJobEntity sample(Long formId, boolean publicSample, TemplateAccess access) {
         var form = requireSampleForm(formId, publicSample, access);
-        var version = formTemplates.published(formId);
+        var version = formTemplates.latestPublished(formId);
         String xml = sampleXml(form, publicSample, access);
         String scope = publicSample ? "SYSTEM" : "COMPANY";
         return renders.enqueue(scope, publicSample ? null : access.companyId(), "TEMPLATE_SAMPLE", version.getId(), null, null, null, version.getSourceContent(), version.getManifestJson(), xml,
@@ -90,8 +88,7 @@ public class InvoiceDocumentService {
         Long companyId = invoice.getCompanyId().longValue();
         var form = forms.findById(invoice.getFormId().longValue()).orElseThrow(TemplateException::missing);
         if (!Objects.equals(form.getSystem(), 0) && !Objects.equals(form.getCompanyId(), companyId)) throw TemplateException.missing();
-        if (invoice.getTemplateVersionId() == null) throw TemplateException.invalid("INVOICE_TEMPLATE_NOT_PINNED", "Hóa đơn chưa có phiên bản mẫu. Cần hoàn tất chuyển dữ liệu trước khi xem bản in.");
-        var version = versions.findById(invoice.getTemplateVersionId()).orElseThrow(TemplateException::missing);
+        var version = formTemplates.latestPublished(form.getId());
         var template = templates.findById(version.getTemplateId()).orElseThrow(TemplateException::missing);
         new TemplateAccess(companyId, null, false).requireRead(template);
         var source = xml(invoice, form);
@@ -120,8 +117,7 @@ public class InvoiceDocumentService {
             snapshot.setSourceXml(source.content());
             snapshot.setSourceHash(snapshotHash);
             snapshot.setContextJson(assets.json(context));
-            snapshot.setFidelity(snapshots.findTopByInvoiceIdOrderByIdAsc(invoiceId).map(InvoiceDocumentSnapshotEntity::getFidelity)
-                    .orElse("PINNED_VERSION"));
+            snapshot.setFidelity("CURRENT_TEMPLATE");
             snapshot.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
             snapshot = snapshots.saveAndFlush(snapshot);
             assets.pin(version.getManifestJson(), "SNAPSHOT", snapshot.getId());

@@ -12,9 +12,6 @@ public class FormInvoiceEntity {
     @Column(name = "template_version_id")
     private Long templateVersionId;
 
-    @Column(name = "number_series_id")
-    private Long numberSeriesId;
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -91,6 +88,4 @@ public class FormInvoiceEntity {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public Long getTemplateVersionId() { return templateVersionId; }
     public void setTemplateVersionId(Long templateVersionId) { this.templateVersionId = templateVersionId; }
-    public Long getNumberSeriesId() { return numberSeriesId; }
-    public void setNumberSeriesId(Long numberSeriesId) { this.numberSeriesId = numberSeriesId; }
 }

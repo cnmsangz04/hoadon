@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
-    boolean existsByFormIdAndTemplateVersionIdIsNull(Integer formId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from InvoiceEntity i where i.id = :id")
     Optional<InvoiceEntity> lockDocumentById(@Param("id") Long id);

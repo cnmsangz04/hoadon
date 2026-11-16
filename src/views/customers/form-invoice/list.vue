@@ -10,7 +10,6 @@
           <i class="fas fa-sync-alt"></i>
           Làm mới
         </b-button>
-        <b-button size="sm" variant="outline-primary" class="mr-2" :to="{ name: 'CustomerInvoiceTemplateDesigner' }">Thiết kế mẫu</b-button>
         <b-button size="sm" variant="success" @click="goCreate">
           <i class="fas fa-file-alt"></i>
           Thêm mẫu

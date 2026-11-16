@@ -161,7 +161,6 @@ public class InvoiceServiceImpl implements InvoiceService {
         validateRelatedInvoiceForCreate(payload, companyId);
         applyPayload(e, payload, companyId, userId, false);
         if (!Objects.equals(previousFormId, e.getFormId())) {
-            e.setTemplateVersionId(null);
             e.setIssueProfileSnapshotJson(null);
         }
         templateBindings.pin(e);

@@ -28,12 +28,14 @@ public class TemplateRenderService {
     private final InvoiceTemplateRepository templates;
     private final InvoiceTemplateDraftRepository drafts;
     private final InvoiceTemplateVersionRepository versions;
+    private final InvoicePdfRenderer pdfRenderer;
     private final String designerFontCss;
 
     public TemplateRenderService(InvoiceRenderJobRepository jobs, InvoiceRenderArtifactRepository artifacts, InvoiceAssetService assets,
                                  DocumentStorage storage, JsonLayoutCompiler compiler,
                                  InvoiceViewModelMapper viewModels, InvoiceTemplateProperties properties, ObjectMapper mapper,
-                                 InvoiceTemplateRepository templates, InvoiceTemplateDraftRepository drafts, InvoiceTemplateVersionRepository versions) {
+                                 InvoiceTemplateRepository templates, InvoiceTemplateDraftRepository drafts, InvoiceTemplateVersionRepository versions,
+                                 InvoicePdfRenderer pdfRenderer) {
         this.jobs = jobs;
         this.artifacts = artifacts;
         this.assets = assets;
@@ -45,6 +47,7 @@ public class TemplateRenderService {
         this.templates = templates;
         this.drafts = drafts;
         this.versions = versions;
+        this.pdfRenderer = pdfRenderer;
         var fonts = ChromiumInvoicePdfRenderer.bundledFonts();
         StringBuilder inlineFonts = new StringBuilder();
         for (String rule : fonts.css().split("}")) {
@@ -131,6 +134,12 @@ public class TemplateRenderService {
     public byte[] bytes(InvoiceRenderArtifactEntity artifact) { return storage.read(artifact.getStorageKey(), artifact.getSha256()); }
 
     public String designerFontCss() { return designerFontCss; }
+
+    public byte[] renderPdf(com.fasterxml.jackson.databind.JsonNode layout, String xml, String manifest, String scope, Long companyId) {
+        String html = compileLayout(layout, xml, Map.of("sampleMarker", "SAMPLE", "lookupCode", "SAMPLE0001",
+                "lookup_code", "SAMPLE0001", "code_cqt", "MCCQT-MINH-HOA"));
+        return pdfRenderer.render(html, assets.resources(manifest, scope, companyId)).bytes();
+    }
 
     public String designerPreview(com.fasterxml.jackson.databind.JsonNode layout, String xml, String manifest, String scope, Long companyId) {
         String html = compileLayout(layout, xml, Map.of("sampleMarker", "SAMPLE", "lookupCode", "SAMPLE0001",

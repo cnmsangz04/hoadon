@@ -22,7 +22,7 @@ public class InvoiceTemplateController extends BaseController {
     public record SaveRequest(@NotNull Long expectedLockVersion, @NotNull JsonNode layout) { }
     public record RevisionRequest(@NotNull Long expectedLockVersion) { }
     public record DesignerPreviewRequest(@NotNull JsonNode layout, @Min(0) @Max(60) int rows) { }
-    public record PublishRequest(@NotNull Long expectedLockVersion, @NotNull Long validationReportId) { }
+    public record PublishRequest(@NotNull Long expectedLockVersion, @NotNull Long validationReportId, @Positive Long formId) { }
     public record RestoreRequest(@NotNull Long expectedLockVersion, @NotNull Long versionId) { }
 
     private final InvoiceTemplateService service;
@@ -52,7 +52,7 @@ public class InvoiceTemplateController extends BaseController {
                        @RequestParam(required = false) String q, @RequestParam(required = false) Integer category,
                        @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
         var access = access(request, false);
-        return service.list(access, request.getRequestURI().contains("/administrator/") ? "SYSTEM" : scope, q, category, page, size);
+        return service.list(access, request.getRequestURI().contains("/administrator/") ? "SYSTEM" : "COMPANY_AND_SYSTEM", q, category, page, size);
     }
 
     @GetMapping("/catalog")
@@ -71,9 +71,9 @@ public class InvoiceTemplateController extends BaseController {
     }
 
     @GetMapping("/default-layout")
-    public Object defaultLayout(HttpServletRequest request) {
+    public Object defaultLayout(HttpServletRequest request, @RequestParam(defaultValue = "1") Integer category) {
         access(request, false);
-        return service.tree(service.defaultLayout());
+        return service.tree(service.defaultLayout(category));
     }
 
     @GetMapping("/designer-fonts")
@@ -129,12 +129,21 @@ public class InvoiceTemplateController extends BaseController {
 
     @PostMapping("/{id}/publish")
     public Object publish(@PathVariable Long id, @Valid @RequestBody PublishRequest body, @RequestHeader("Idempotency-Key") String key, HttpServletRequest request) {
-        return service.publish(id, body.expectedLockVersion(), body.validationReportId(), key, access(request, true));
+        var access = access(request, true);
+        if (body.formId() != null) {
+            return bindings.publishForForm(body.formId(), id, body.expectedLockVersion(), body.validationReportId(), key, access);
+        }
+        return service.publish(id, body.expectedLockVersion(), body.validationReportId(), key, access);
     }
 
     @PostMapping("/{id}/draft-from-version")
     public Object restore(@PathVariable Long id, @Valid @RequestBody RestoreRequest body, HttpServletRequest request) {
         return service.restore(id, body.versionId(), body.expectedLockVersion(), access(request, true));
+    }
+
+    @DeleteMapping("/{id}/versions/{versionId}")
+    public Object deleteVersion(@PathVariable Long id, @PathVariable Long versionId, HttpServletRequest request) {
+        return service.deleteVersion(id, versionId, access(request, true));
     }
 
     @PostMapping("/{id}/upgrade-catalog")

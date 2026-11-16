@@ -134,7 +134,6 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         if (patch.getName() != null) current.setName(patch.getName());
         if (patch.getFormCode() != null) current.setFormCode(patch.getFormCode());
         if (patch.getSerial() != null) current.setSerial(patch.getSerial());
-        if (patch.getPhoto() != null) current.setPhoto(patch.getPhoto());
         if (patch.getType() != null) current.setType(patch.getType());
         if (patch.getCategory() != null) current.setCategory(patch.getCategory());
         if (patch.getStatus() != null) current.setStatus(patch.getStatus());

@@ -21,12 +21,12 @@ public class InvoiceTemplateBindingService {
     private final InvoiceAssetService assets;
     private final CompanyInvoiceDefaultRepository defaults;
     private final CompanyRepository companies;
-    private final vn.hoadon.repositories.InvoiceRepository invoices;
+    private final InvoiceTemplateService templateService;
 
     public InvoiceTemplateBindingService(FormInvoiceRepository forms, InvoiceTemplateVersionRepository versions, InvoiceTemplateRepository templates,
                                           InvoiceFormTemplateService formTemplates, InvoiceAssetService assets,
                                           CompanyInvoiceDefaultRepository defaults, CompanyRepository companies,
-                                          vn.hoadon.repositories.InvoiceRepository invoices) {
+                                          InvoiceTemplateService templateService) {
         this.forms = forms;
         this.versions = versions;
         this.templates = templates;
@@ -34,7 +34,20 @@ public class InvoiceTemplateBindingService {
         this.assets = assets;
         this.defaults = defaults;
         this.companies = companies;
-        this.invoices = invoices;
+        this.templateService = templateService;
+    }
+
+    @Transactional
+    public InvoiceTemplateVersionEntity publishForForm(Long formId, Long templateId, long expectedVersion,
+                                                       Long reportId, String key, TemplateAccess access) {
+        var form = forms.lockById(formId).orElseThrow(TemplateException::missing);
+        if (access.systemManager() ? !Objects.equals(form.getSystem(), 0)
+                : !Objects.equals(form.getSystem(), 1) || !Objects.equals(form.getCompanyId(), access.companyId())) {
+            throw TemplateException.missing();
+        }
+        var version = templateService.publish(templateId, expectedVersion, reportId, key, access);
+        bindForm(formId, version.getId(), access);
+        return version;
     }
 
     @Transactional
@@ -63,7 +76,6 @@ public class InvoiceTemplateBindingService {
         var existing = forms.findById(formId).orElseThrow(TemplateException::missing);
         if (access.systemManager() ? !Objects.equals(existing.getSystem(), 0)
                 : !Objects.equals(existing.getSystem(), 1) || !Objects.equals(existing.getCompanyId(), access.companyId())) throw TemplateException.missing();
-        if (invoices.existsByFormIdAndTemplateVersionIdIsNull(Math.toIntExact(formId))) throw TemplateException.invalid("INVOICE_TEMPLATE_NOT_PINNED", "Còn hóa đơn chưa có phiên bản mẫu. Cần hoàn tất chuyển dữ liệu trước khi đổi thiết kế.");
         var form = forms.lockById(formId).orElseThrow(TemplateException::missing);
         if (access.systemManager()) {
             if (!Objects.equals(form.getSystem(), 0)) throw TemplateException.missing();
@@ -72,7 +84,20 @@ public class InvoiceTemplateBindingService {
         var template = templates.findById(version.getTemplateId()).orElseThrow(TemplateException::missing);
         access.requireRead(template);
         if (access.systemManager() && !"SYSTEM".equals(template.getScope())) throw TemplateException.missing();
-        if (!Objects.equals(template.getCategory(), form.getCategory()) || !"ACTIVE".equals(template.getState())) throw TemplateException.invalid("TEMPLATE_INCOMPATIBLE", "Mẫu không phù hợp loại hóa đơn hoặc đã ngừng sử dụng");
+        if (!Objects.equals(template.getCategory(), form.getCategory())) {
+            throw TemplateException.invalid("TEMPLATE_INCOMPATIBLE", "Mẫu không phù hợp loại hóa đơn");
+        }
+        // Older records may still carry the removed ARCHIVED state. A template
+        // that is already assigned to this active form remains the same design
+        // and can be saved again; publishing brings it back to the normal state.
+        boolean currentTemplate = Objects.equals(form.getTemplateId(), template.getId());
+        if (!currentTemplate && !"ACTIVE".equals(template.getState())) {
+            throw TemplateException.invalid("TEMPLATE_INCOMPATIBLE", "Mẫu đã ngừng sử dụng");
+        }
+        if (currentTemplate && !"ACTIVE".equals(template.getState())) {
+            template.setState("ACTIVE");
+            template.setUpdatedAt(java.time.LocalDateTime.now());
+        }
         requireTaxMode(version, form);
         form.setTemplateVersionId(versionId);
         form.setTemplateId("SYSTEM".equals(template.getScope()) && !access.systemManager() ? null : template.getId());
@@ -83,13 +108,7 @@ public class InvoiceTemplateBindingService {
         var form = forms.findById(invoice.getFormId().longValue()).orElseThrow(TemplateException::missing);
         Long companyId = invoice.getCompanyId().longValue();
         if (!Objects.equals(form.getSystem(), 1) || !Objects.equals(form.getCompanyId(), companyId)) throw TemplateException.missing();
-        if (invoice.getTemplateVersionId() == null) {
-            var version = formTemplates.published(form.getId());
-            var template = templates.findById(version.getTemplateId()).orElseThrow(TemplateException::missing);
-            new TemplateAccess(companyId, null, false).requireRead(template);
-            requireTaxMode(version, form);
-            invoice.setTemplateVersionId(version.getId());
-        }
+        requireTaxMode(formTemplates.latestPublished(form.getId()), form);
         if (invoice.getIssueProfileSnapshotJson() == null) {
             Map<String, Object> profile = new LinkedHashMap<>();
             profile.put("formCode", form.getFormCode());

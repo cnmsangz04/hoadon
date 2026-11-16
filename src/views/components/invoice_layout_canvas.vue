@@ -3,8 +3,17 @@
     <div class="canvas-status" role="status" aria-live="polite">
       <span v-if="loading">Đang cập nhật trang…</span>
       <span v-else-if="error" class="text-danger">{{ error }}</span>
-      <span v-else>Chọn để định dạng · Nhấp đúp để sửa văn bản · Kéo để đổi vị trí</span>
-      <button v-if="error" type="button" class="btn btn-sm btn-link" @click="schedule">
+      <span v-else>Trang thiết kế</span>
+      <span class="canvas-page-size"
+        >{{ layout.page.format }} ·
+        {{ layout.page.orientation === "landscape" ? "Ngang" : "Dọc" }}</span
+      >
+      <button
+        v-if="error"
+        type="button"
+        class="btn btn-sm btn-link"
+        @click="schedule"
+      >
         Thử lại
       </button>
     </div>
@@ -53,33 +62,30 @@
         </div>
       </div>
     </div>
-    <div class="canvas-footnote">
-      Trang soạn thảo dùng dữ liệu minh họa. Xem Bản in PDF để kiểm tra ngắt trang.
-    </div>
   </div>
 </template>
 
 <script>
-import axios from '@/plugins/axios'
-import { findBlock } from '@/utils/invoice_layout'
+import axios from "@/plugins/axios";
+import { findBlock } from "@/utils/invoice_layout";
 
 export default {
-  name: 'InvoiceLayoutCanvas',
+  name: "InvoiceLayoutCanvas",
   props: {
     layout: { type: Object, required: true },
     templateId: { type: Number, required: true },
     base: { type: String, required: true },
-    selectedId: { type: String, default: '' },
+    selectedId: { type: String, default: "" },
     zoom: { type: Number, default: 80 },
     rows: { type: Number, default: 3 },
-    disabled: { type: Boolean, default: false }
+    disabled: { type: Boolean, default: false },
   },
   data: () => ({
-    documentHtml: '',
-    fontCss: '',
+    documentHtml: "",
+    fontCss: "",
     documentHeight: 1123,
     loading: false,
-    error: '',
+    error: "",
     timer: null,
     generation: 0,
     editingId: null,
@@ -88,96 +94,111 @@ export default {
     suppressClick: false,
     selectionBox: null,
     observer: null,
-    destroyed: false
+    measureFrame: null,
+    destroyed: false,
   }),
   computed: {
     pageWidth() {
-      const short = this.layout.page.format === 'A5' ? 148 : 210
-      const long = this.layout.page.format === 'A5' ? 210 : 297
-      return ((this.layout.page.orientation === 'landscape' ? long : short) * 96) / 25.4
+      const short = this.layout.page.format === "A5" ? 148 : 210;
+      const long = this.layout.page.format === "A5" ? 210 : 297;
+      return (
+        ((this.layout.page.orientation === "landscape" ? long : short) * 96) /
+        25.4
+      );
     },
     pageHeight() {
-      const short = this.layout.page.format === 'A5' ? 148 : 210
-      const long = this.layout.page.format === 'A5' ? 210 : 297
-      return ((this.layout.page.orientation === 'landscape' ? short : long) * 96) / 25.4
+      const short = this.layout.page.format === "A5" ? 148 : 210;
+      const long = this.layout.page.format === "A5" ? 210 : 297;
+      return (
+        ((this.layout.page.orientation === "landscape" ? short : long) * 96) /
+        25.4
+      );
     },
     spaceStyle() {
       return {
-        width: (this.pageWidth * this.zoom) / 100 + 'px',
-        height: ((this.documentHeight + 22) * this.zoom) / 100 + 'px'
-      }
+        width: (this.pageWidth * this.zoom) / 100 + "px",
+        height: ((this.documentHeight + 22) * this.zoom) / 100 + "px",
+      };
     },
     sheetStyle() {
-      return { transform: `scale(${this.zoom / 100})`, width: this.pageWidth + 'px' }
-    }
+      return {
+        transform: `scale(${this.zoom / 100})`,
+        width: this.pageWidth + "px",
+      };
+    },
   },
   watch: {
     layout: {
       deep: true,
       handler() {
-        this.schedule()
-      }
+        this.schedule();
+      },
     },
     templateId() {
-      this.editingId = null
-      this.schedule()
+      this.editingId = null;
+      this.schedule();
     },
     rows() {
-      this.schedule()
+      this.schedule();
     },
     selectedId() {
-      this.markSelection()
+      this.markSelection();
     },
     disabled() {
-      this.markSelection()
-    }
+      this.markSelection();
+    },
   },
   created() {
-    this.schedule()
+    this.schedule();
   },
   beforeDestroy() {
-    this.destroyed = true
-    this.generation++
-    clearTimeout(this.timer)
-    this.observer?.disconnect()
+    this.destroyed = true;
+    this.generation++;
+    clearTimeout(this.timer);
+    if (this.measureFrame !== null) cancelAnimationFrame(this.measureFrame);
+    this.observer?.disconnect();
   },
   methods: {
     schedule() {
-      clearTimeout(this.timer)
-      const generation = ++this.generation
-      if (this.editingId) return
-      this.timer = setTimeout(() => this.refresh(generation), 250)
+      clearTimeout(this.timer);
+      const generation = ++this.generation;
+      if (this.editingId) return;
+      this.timer = setTimeout(() => this.refresh(generation), 250);
     },
     async refresh(generation) {
-      this.loading = true
-      this.error = ''
+      this.loading = true;
+      this.error = "";
       try {
         if (!this.fontCss) {
           const { data } = await axios.get(`${this.base}/designer-fonts`, {
-            meta: { suppressGlobalErrorToast: true }
-          })
-          if (generation !== this.generation || this.destroyed) return
-          this.fontCss = data.css
+            meta: { suppressGlobalErrorToast: true },
+          });
+          if (generation !== this.generation || this.destroyed) return;
+          this.fontCss = data.css;
         }
         const { data } = await axios.post(
           `${this.base}/${this.templateId}/designer-preview`,
           {
             layout: this.layout,
-            rows: this.rows
+            rows: this.rows,
           },
           { meta: { suppressGlobalErrorToast: true } }
-        )
-        if (generation !== this.generation || this.destroyed) return
-        this.documentHtml = this.decorate(data.html)
+        );
+        if (generation !== this.generation || this.destroyed) return;
+        this.documentHtml = this.decorate(data.html);
       } catch (e) {
-        if (generation !== this.generation || this.destroyed) return
-        this.error = e.response?.data?.message || e.message || 'Không cập nhật được trang thiết kế'
+        if (generation !== this.generation || this.destroyed) return;
+        this.error =
+          e.response?.data?.message ||
+          e.message ||
+          "Không cập nhật được trang thiết kế";
       } finally {
-        if (generation === this.generation && !this.destroyed) this.loading = false
+        if (generation === this.generation && !this.destroyed)
+          this.loading = false;
       }
     },
     decorate(html) {
-      const margins = this.layout.page.marginMm
+      const margins = this.layout.page.marginMm;
       const css = `
         ${this.fontCss}
         html{background:#fff}body{width:${this.pageWidth}px;min-height:${this.pageHeight}px;padding:${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm!important}
@@ -193,246 +214,321 @@ export default {
         [data-block-id][contenteditable=true]{cursor:text;min-height:1.3em;user-select:text}
         .stack:empty,.columns:empty,.totals:empty,.relatedInvoice:empty{min-height:12mm;border:1px dashed #cbd5e1}
         .stack:empty:after,.columns:empty:after,.totals:empty:after,.relatedInvoice:empty:after{content:'Thả phần tử vào đây';color:#94a3b8;font:10pt sans-serif}
+        .field:empty,.signatureSummary>.signature:empty{min-height:7mm;border:1px dashed #cbd5e1}
+        .field:empty:after{content:'Trường dữ liệu';color:#94a3b8;font:10pt sans-serif}
+        .signatureSummary>.signature:empty:after{content:'Thông tin chữ ký';color:#94a3b8;font:10pt sans-serif}
         .pageBreak{outline:1px dashed #94a3b8}.pageBreak:after{content:'Ngắt trang';position:absolute;top:0;left:0;font:8pt sans-serif;color:#64748b;pointer-events:none}
-      `
-      const policy = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline';">`
+      `;
+      const policy = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline';">`;
       return html
-        .replace('<head>', '<head>' + policy)
-        .replace('</head>', `<style>${css}</style></head>`)
+        .replace("<head>", "<head>" + policy)
+        .replace("</head>", `<style>${css}</style></head>`);
     },
     attachDocument() {
-      const doc = this.$refs.frame?.contentDocument
-      if (!doc?.body || !this.documentHtml) return
-      this.observer?.disconnect()
-      doc.querySelectorAll('[data-block-id]').forEach((element) => {
-        element.draggable = false
-      })
-      doc.addEventListener('click', (event) => {
+      const doc = this.$refs.frame?.contentDocument;
+      if (!doc?.body || !this.documentHtml) return;
+      this.observer?.disconnect();
+      doc.querySelectorAll("[data-block-id]").forEach((element) => {
+        element.draggable = false;
+      });
+      doc.addEventListener("click", (event) => {
         if (!this.disabled)
-          this.$emit('select', event.target.closest('[data-block-id]')?.dataset.blockId || null)
-      })
-      doc.addEventListener('keydown', (event) => {
-        if (this.disabled) return
+          this.$emit(
+            "select",
+            event.target.closest("[data-block-id]")?.dataset.blockId || null
+          );
+      });
+      doc.addEventListener("keydown", (event) => {
+        if (this.disabled) return;
         if (event.target.isContentEditable) {
-          if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return
-          event.target.blur()
+          if (
+            !(event.ctrlKey || event.metaKey) ||
+            event.key.toLowerCase() !== "s"
+          )
+            return;
+          event.target.blur();
         }
-        this.$emit('shortcut', event)
-      })
+        this.$emit("shortcut", event);
+      });
       const measure = () => {
-        if (!this.destroyed && this.$refs.frame?.contentDocument === doc)
-          this.documentHeight = Math.max(
+        if (this.destroyed || this.$refs.frame?.contentDocument !== doc) return;
+        if (this.measureFrame !== null) return;
+        this.measureFrame = requestAnimationFrame(() => {
+          this.measureFrame = null;
+          if (this.destroyed || this.$refs.frame?.contentDocument !== doc)
+            return;
+          const height = Math.max(
             this.pageHeight,
             Math.ceil(doc.body.getBoundingClientRect().height)
-          )
-      }
-      this.observer = new ResizeObserver(measure)
-      this.observer.observe(doc.body)
-      doc.fonts.ready.then(measure)
-      measure()
-      this.markSelection()
+          );
+          if (height !== this.documentHeight) this.documentHeight = height;
+        });
+      };
+      this.observer = new MutationObserver(measure);
+      this.observer.observe(doc.body, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+        attributes: true,
+      });
+      doc.fonts.ready.then(measure);
+      doc.addEventListener("load", measure, true);
+      measure();
+      this.markSelection();
     },
     point(event) {
-      const frame = this.$refs.frame
-      const doc = frame?.contentDocument
-      if (!doc) return null
-      const rect = frame.getBoundingClientRect()
-      const scale = this.zoom / 100
-      const clientX = (event.clientX - rect.left) / scale
-      const clientY = (event.clientY - rect.top) / scale
-      return { target: doc.elementFromPoint(clientX, clientY), clientX, clientY }
+      const frame = this.$refs.frame;
+      const doc = frame?.contentDocument;
+      if (!doc) return null;
+      const rect = frame.getBoundingClientRect();
+      const scale = this.zoom / 100;
+      const clientX = (event.clientX - rect.left) / scale;
+      const clientY = (event.clientY - rect.top) / scale;
+      return {
+        target: doc.elementFromPoint(clientX, clientY),
+        clientX,
+        clientY,
+      };
     },
     selectAt(event) {
-      if (this.disabled || this.suppressClick) return
-      const point = this.point(event)
-      const element = point?.target?.closest('[data-block-id]')
-      this.$emit('select', element?.dataset.blockId || null)
-      this.$refs.interactionLayer.focus({ preventScroll: true })
+      if (this.disabled || this.suppressClick) return;
+      const point = this.point(event);
+      const element = point?.target?.closest("[data-block-id]");
+      this.$emit("select", element?.dataset.blockId || null);
+      this.$refs.interactionLayer.focus({ preventScroll: true });
     },
     editAt(event) {
-      const point = this.point(event)
-      if (point?.target) this.beginEditing(point)
+      const point = this.point(event);
+      if (point?.target) this.beginEditing(point);
     },
     startPointer(event) {
-      if (this.disabled || event.button !== 0) return
-      const element = this.point(event)?.target?.closest('[data-block-id]')
-      this.beginPointer(event, element)
+      if (this.disabled || event.button !== 0) return;
+      const element = this.point(event)?.target?.closest("[data-block-id]");
+      this.beginPointer(event, element);
     },
     startSelectedPointer(event) {
-      if (this.disabled || event.button !== 0) return
+      if (this.disabled || event.button !== 0) return;
       const element = this.$refs.frame?.contentDocument?.querySelector(
         `[data-block-id="${this.selectedId}"]`
-      )
-      this.beginPointer(event, element)
+      );
+      this.beginPointer(event, element);
     },
     beginPointer(event, element) {
-      if (!element || element.dataset.blockId === this.layout.body.id) return
+      if (!element || element.dataset.blockId === this.layout.body.id) return;
       this.pointerDrag = {
         id: element.dataset.blockId,
         element,
         pointerId: event.pointerId,
         x: event.clientX,
-        y: event.clientY
-      }
+        y: event.clientY,
+      };
     },
     movePointer(event) {
-      const drag = this.pointerDrag
-      if (!drag || drag.pointerId !== event.pointerId || this.disabled) return
-      if (!this.draggingId && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 5) return
+      const drag = this.pointerDrag;
+      if (!drag || drag.pointerId !== event.pointerId || this.disabled) return;
+      if (
+        !this.draggingId &&
+        Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 5
+      )
+        return;
       if (!this.draggingId) {
-        this.draggingId = drag.id
-        clearTimeout(this.timer)
-        this.generation++
-        this.loading = false
-        this.$refs.interactionLayer.setPointerCapture(event.pointerId)
-        drag.element.setAttribute('data-editor-dragging', '')
+        this.draggingId = drag.id;
+        clearTimeout(this.timer);
+        this.generation++;
+        this.loading = false;
+        this.$refs.interactionLayer.setPointerCapture(event.pointerId);
+        drag.element.setAttribute("data-editor-dragging", "");
       }
-      event.preventDefault()
-      this.clearMarkers()
-      const point = this.point(event)
-      const target = point && this.dropTarget(point)
-      if (target) target.element.dataset.editorDrop = target.placement
+      event.preventDefault();
+      this.clearMarkers();
+      const point = this.point(event);
+      const target = point && this.dropTarget(point);
+      if (target) target.element.dataset.editorDrop = target.placement;
     },
     finishPointer(event) {
-      const drag = this.pointerDrag
-      if (!drag || drag.pointerId !== event.pointerId) return
-      const id = this.draggingId
-      const point = this.point(event)
+      const drag = this.pointerDrag;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      const id = this.draggingId;
+      const point = this.point(event);
       const target =
-        id && point && !this.disabled && event.type !== 'pointercancel'
+        id && point && !this.disabled && event.type !== "pointercancel"
           ? this.dropTarget(point)
-          : null
-      this.cancelPointer(event)
+          : null;
+      this.cancelPointer(event);
       if (id) {
-        this.suppressClick = true
+        this.suppressClick = true;
         setTimeout(() => {
-          this.suppressClick = false
-        }, 0)
-        if (target) this.$emit('move', { id, targetId: target.id, placement: target.placement })
-        this.schedule()
+          this.suppressClick = false;
+        }, 0);
+        if (target)
+          this.$emit("move", {
+            id,
+            targetId: target.id,
+            placement: target.placement,
+          });
+        this.schedule();
       }
     },
     cancelPointer(event) {
-      this.pointerDrag?.element.removeAttribute('data-editor-dragging')
+      this.pointerDrag?.element.removeAttribute("data-editor-dragging");
       if (this.$refs.interactionLayer.hasPointerCapture(event.pointerId))
-        this.$refs.interactionLayer.releasePointerCapture(event.pointerId)
-      this.pointerDrag = null
-      this.draggingId = null
-      this.clearMarkers()
+        this.$refs.interactionLayer.releasePointerCapture(event.pointerId);
+      this.pointerDrag = null;
+      this.draggingId = null;
+      this.clearMarkers();
     },
     clearMarkers() {
-      const doc = this.$refs.frame?.contentDocument
-      if (doc) this.clearDrop(doc)
+      const doc = this.$refs.frame?.contentDocument;
+      if (doc) this.clearDrop(doc);
     },
     paletteOver(event) {
-      if (this.disabled || !this.acceptsDrop(event)) return
-      this.clearMarkers()
-      const point = this.point(event)
-      const target = point && this.dropTarget(point)
-      if (target) target.element.dataset.editorDrop = target.placement
-      event.dataTransfer.dropEffect = 'copy'
+      if (this.disabled || !this.acceptsDrop(event)) return;
+      this.clearMarkers();
+      const point = this.point(event);
+      const target = point && this.dropTarget(point);
+      if (target) target.element.dataset.editorDrop = target.placement;
+      event.dataTransfer.dropEffect = "copy";
     },
     paletteDrop(event) {
-      this.clearMarkers()
-      if (this.disabled || !this.acceptsDrop(event)) return
-      const point = this.point(event)
-      const target = point && this.dropTarget(point)
-      const type = event.dataTransfer.getData('application/x-invoice-block-type')
+      this.clearMarkers();
+      if (this.disabled || !this.acceptsDrop(event)) return;
+      const point = this.point(event);
+      const target = point && this.dropTarget(point);
+      const type = event.dataTransfer.getData(
+        "application/x-invoice-block-type"
+      );
+      const fieldKey = event.dataTransfer.getData(
+        "application/x-invoice-field-key"
+      );
       if (target && type)
-        this.$emit('insert', { type, targetId: target.id, placement: target.placement })
+        this.$emit("insert", {
+          type,
+          fieldKey,
+          targetId: target.id,
+          placement: target.placement,
+        });
     },
     markSelection() {
-      const doc = this.$refs.frame?.contentDocument
-      if (!doc) return
-      doc.querySelectorAll('[data-block-id]').forEach((element) => {
-        element.toggleAttribute('data-editor-selected', element.dataset.blockId === this.selectedId)
-        element.draggable = false
-      })
-      const element = doc.querySelector(`[data-block-id="${this.selectedId}"]`)
-      const rect = element?.getBoundingClientRect()
+      const doc = this.$refs.frame?.contentDocument;
+      if (!doc) return;
+      doc.querySelectorAll("[data-block-id]").forEach((element) => {
+        element.toggleAttribute(
+          "data-editor-selected",
+          element.dataset.blockId === this.selectedId
+        );
+        element.draggable = false;
+      });
+      const element = doc.querySelector(`[data-block-id="${this.selectedId}"]`);
+      const rect = element?.getBoundingClientRect();
       this.selectionBox = rect
-        ? { left: Math.max(0, rect.left - 19) + 'px', top: Math.max(22, rect.top + 22) + 'px' }
-        : null
+        ? {
+            left: Math.max(0, rect.left - 19) + "px",
+            top: Math.max(22, rect.top + 22) + "px",
+          }
+        : null;
     },
     beginEditing(event) {
-      if (this.disabled) return
-      const element = event.target.closest('[data-block-id]')
-      const found = findBlock(this.layout.body, element?.dataset.blockId)
-      if (!found || found.block.type !== 'text') return
-      this.editingId = found.block.id
-      element.draggable = false
-      element.contentEditable = 'true'
-      element.textContent = found.block.text
-      element.focus()
-      const onInput = () => this.$emit('text', { id: found.block.id, text: element.innerText })
-      element.addEventListener('input', onInput)
-      element.addEventListener('paste', (paste) => {
-        paste.preventDefault()
+      if (this.disabled) return;
+      const element = event.target.closest("[data-block-id]");
+      const found = findBlock(this.layout.body, element?.dataset.blockId);
+      if (!found || found.block.type !== "text") return;
+      this.editingId = found.block.id;
+      element.draggable = false;
+      element.contentEditable = "true";
+      element.textContent = found.block.text;
+      element.focus();
+      const onInput = () =>
+        this.$emit("text", { id: found.block.id, text: element.innerText });
+      element.addEventListener("input", onInput);
+      element.addEventListener("paste", (paste) => {
+        paste.preventDefault();
         element.ownerDocument.execCommand(
-          'insertText',
+          "insertText",
           false,
-          paste.clipboardData.getData('text/plain')
-        )
-      })
+          paste.clipboardData.getData("text/plain")
+        );
+      });
       element.addEventListener(
-        'blur',
+        "blur",
         () => {
-          onInput()
-          element.removeEventListener('input', onInput)
-          element.contentEditable = 'false'
-          this.editingId = null
-          this.schedule()
+          onInput();
+          element.removeEventListener("input", onInput);
+          element.contentEditable = "false";
+          this.editingId = null;
+          this.schedule();
         },
         { once: true }
-      )
+      );
     },
     acceptsDrop(event) {
       return Array.from(event.dataTransfer?.types || []).some(
-        (type) => type === 'application/x-invoice-block-type'
-      )
+        (type) => type === "application/x-invoice-block-type"
+      );
     },
     dropTarget(event) {
-      const element = event.target?.closest('[data-block-id]')
-      const found = findBlock(this.layout.body, element?.dataset.blockId)
-      if (!found) return null
-      const id = found.block.id
-      if (this.draggingId && findBlock(findBlock(this.layout.body, this.draggingId)?.block, id))
-        return null
-      const rect = element.getBoundingClientRect()
-      const x = (event.clientX - rect.left) / Math.max(1, rect.width)
-      const y = (event.clientY - rect.top) / Math.max(1, rect.height)
-      let placement
-      if (!found.parent || (found.block.children && y > 0.25 && y < 0.75 && x > 0.2 && x < 0.8))
-        placement = 'inside'
-      else if (found.parent.type === 'columns') placement = x < 0.5 ? 'before' : 'after'
-      else if (x < 0.12 || x > 0.88) placement = x < 0.5 ? 'left' : 'right'
-      else placement = y < 0.5 ? 'before' : 'after'
-      return { element, id, placement }
+      const element = event.target?.closest("[data-block-id]");
+      const found = findBlock(this.layout.body, element?.dataset.blockId);
+      if (!found) return null;
+      const id = found.block.id;
+      if (
+        this.draggingId &&
+        findBlock(findBlock(this.layout.body, this.draggingId)?.block, id)
+      )
+        return null;
+      const rect = element.getBoundingClientRect();
+      const x = (event.clientX - rect.left) / Math.max(1, rect.width);
+      const y = (event.clientY - rect.top) / Math.max(1, rect.height);
+      let placement;
+      if (
+        !found.parent ||
+        (found.block.children && y > 0.25 && y < 0.75 && x > 0.2 && x < 0.8)
+      )
+        placement = "inside";
+      else if (found.parent.type === "columns")
+        placement = x < 0.5 ? "before" : "after";
+      else if (x < 0.12 || x > 0.88) placement = x < 0.5 ? "left" : "right";
+      else placement = y < 0.5 ? "before" : "after";
+      return { element, id, placement };
     },
     clearDrop(doc) {
       doc
-        .querySelectorAll('[data-editor-drop]')
-        .forEach((element) => element.removeAttribute('data-editor-drop'))
-    }
-  }
-}
+        .querySelectorAll("[data-editor-drop]")
+        .forEach((element) => element.removeAttribute("data-editor-drop"));
+    },
+  },
+};
 </script>
 
 <style scoped>
+.invoice-layout-canvas {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
 .canvas-status {
-  min-height: 37px;
-  padding: 9px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 7px 16px;
   color: #64748b;
   font-size: 12px;
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
 }
+.canvas-page-size {
+  margin-left: auto;
+  font-size: 11px;
+}
 .canvas-viewport {
   overflow: auto;
-  height: calc(100vh - 350px);
-  min-height: 480px;
-  background: #e9edf2;
+  flex: 1;
+  min-height: 0;
+  background: #e8ecf2;
   padding: 24px;
+  scrollbar-width: thin;
 }
 .canvas-sheet-space {
   margin: 0 auto;
@@ -482,12 +578,5 @@ export default {
       transparent 37.795px
     )
     bottom / 100% 8px no-repeat #fafafa;
-}
-.canvas-footnote {
-  padding: 8px 16px;
-  font-size: 12px;
-  color: #64748b;
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
 }
 </style>

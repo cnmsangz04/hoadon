@@ -11,25 +11,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.dto.forminvoice.FormInvoiceListItemDto;
 import vn.hoadon.entity.FormInvoiceEntity;
 import vn.hoadon.entity.UserEntity;
 import vn.hoadon.repositories.UserRepository;
-import vn.hoadon.repositories.InvoiceRepository;
 import vn.hoadon.repositories.RegisterInvoiceRepository;
 import vn.hoadon.services.FormInvoiceService;
-import vn.hoadon.services.InvoiceNumberService;
-import vn.hoadon.util.UploadPath;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ContentDisposition;
@@ -39,16 +30,13 @@ import org.springframework.http.ContentDisposition;
 public class FormInvoiceController extends BaseController {
 
     private final FormInvoiceService service;
-    private final InvoiceNumberService invoiceNumberService;
 
     @Autowired private UserRepository userRepository;
-    @Autowired private InvoiceRepository invoiceRepository;
     @Autowired private RegisterInvoiceRepository registerInvoiceRepository;
 
     @Autowired
-    public FormInvoiceController(FormInvoiceService service, InvoiceNumberService invoiceNumberService) {
+    public FormInvoiceController(FormInvoiceService service) {
         this.service = service;
-        this.invoiceNumberService = invoiceNumberService;
     }
 
     @Autowired private InvoiceDocumentBridge documentBridge;
@@ -209,7 +197,6 @@ public class FormInvoiceController extends BaseController {
         Integer status = Optional.ofNullable(body.get("status")).map(v -> Integer.valueOf(v.toString())).orElse(1);
         // Always set system=1 for customer-created samples
         Integer system = 1;
-        String photo = Optional.ofNullable(body.get("photo")).map(Object::toString).orElse(null);
         Long templateId = Optional.ofNullable(body.get("templateId")).map(v -> Long.valueOf(v.toString())).orElse(null);
         Integer haveCode = Optional.ofNullable(body.get("have_code")).map(v -> Integer.valueOf(v.toString())).orElse(0);
 
@@ -229,7 +216,6 @@ public class FormInvoiceController extends BaseController {
         String formCode = serialFull.substring(0, 1);
         String serialRemainder = serialFull.substring(1);
 
-        // Giữ ảnh đại diện của mẫu hệ thống khi tạo cấu hình công ty.
         if (templateId != null) {
             Optional<FormInvoiceEntity> optTpl = service.findById(templateId);
             if (optTpl.isEmpty()) {
@@ -243,18 +229,11 @@ public class FormInvoiceController extends BaseController {
             if (!Objects.equals(tpl.getCategory(), category) || !Objects.equals(tpl.getType(), type) || !Objects.equals(tpl.getStatus(), 1)) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Mẫu nguồn không phù hợp cấu hình hoặc đã ngừng sử dụng"));
             }
-            // Copy photo
-            if (StringUtils.hasText(tpl.getPhoto())) {
-                String copiedPhoto = copyTemplatePhoto(tpl.getPhoto(), companyId);
-                if (copiedPhoto != null) {
-                    photo = copiedPhoto;
-                }
-            }
         }
 
         FormInvoiceEntity e = new FormInvoiceEntity();
         if (templateId != null) {
-            e.setTemplateVersionId(formTemplates.published(templateId).getId());
+            e.setTemplateVersionId(formTemplates.latestPublished(templateId).getId());
         }
         e.setCompanyId(companyId);
         e.setUserId(user.getId());
@@ -265,7 +244,6 @@ public class FormInvoiceController extends BaseController {
         e.setType(type);
         e.setStatus(status);
         e.setSystem(system);
-        e.setPhoto(photo);
         e.setHaveCode(haveCode);
         e.setCreatedAt(LocalDateTime.now());
         e.setUpdatedAt(LocalDateTime.now());
@@ -281,57 +259,6 @@ public class FormInvoiceController extends BaseController {
         resp.put("id", saved.getId());
         resp.put("message", "Đã tạo mẫu hóa đơn");
         return ResponseEntity.ok(resp);
-    }
-
-    private String copyTemplatePhoto(String sourcePublicPath, Long companyId) {
-        try {
-            Path srcFs = toFilesystemPath(sourcePublicPath);
-            if (srcFs == null || !Files.exists(srcFs)) return null;
-
-            String ext = getExtension(srcFs.getFileName().toString());
-            String baseName = "photo_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 6);
-            String targetFileName = ext != null && !ext.isBlank() ? baseName + "." + ext : baseName;
-
-            Path companyDir = UploadPath.basePath().resolve(String.valueOf(companyId)).resolve("photo").normalize();
-            if (!Files.exists(companyDir)) Files.createDirectories(companyDir);
-            Path targetFs = companyDir.resolve(targetFileName);
-            Files.copy(srcFs, targetFs);
-            return toPublicPath(targetFs);
-        } catch (IOException ex) {
-            return null;
-        }
-    }
-
-    /** Resolve a public uploads path like "/uploads/{companyId}/..." to a filesystem path. */
-    private Path toFilesystemPath(String publicPath) {
-        if (!StringUtils.hasText(publicPath)) return null;
-        String p = publicPath.trim().replace('\\', '/');
-        if (p.startsWith("/")) p = p.substring(1);
-        if (!p.startsWith("uploads/")) return null;
-
-        Path base = UploadPath.basePath();
-        Path resolved = base.resolve(p.substring("uploads/".length())).normalize();
-        return resolved.startsWith(base) ? resolved : null;
-    }
-
-    /** Convert a filesystem path under the configured uploads dir to a public path starting with "/uploads/". */
-    private String toPublicPath(Path fsPath) {
-        Path base = UploadPath.basePath();
-        Path normalized = fsPath.toAbsolutePath().normalize();
-        if (!normalized.startsWith(base)) {
-            throw new IllegalArgumentException("File is outside the uploads directory");
-        }
-        Path rel = base.relativize(normalized);
-        String s = rel.toString().replace('\\', '/');
-        return "/uploads/" + s;
-    }
-
-    /** Extract file extension without dot. */
-    private String getExtension(String filename) {
-        if (filename == null) return null;
-        int idx = filename.lastIndexOf('.');
-        if (idx < 0 || idx == filename.length() - 1) return null;
-        return filename.substring(idx + 1);
     }
 
     @PutMapping("/{id}")

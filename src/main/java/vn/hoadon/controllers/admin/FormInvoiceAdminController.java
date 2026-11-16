@@ -1,5 +1,7 @@
 package vn.hoadon.controllers.admin;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -10,13 +12,13 @@ import org.springframework.web.multipart.MultipartFile;
 import vn.hoadon.controllers.base.BaseController;
 import vn.hoadon.entity.FormInvoiceEntity;
 import vn.hoadon.invoice.template.service.InvoiceDocumentBridge;
+import vn.hoadon.invoice.template.service.InvoiceFormTemplateService;
+import vn.hoadon.invoice.template.service.InvoiceTemplateService;
 import vn.hoadon.invoice.template.service.TemplateAccess;
+import vn.hoadon.invoice.template.service.TemplateException;
 import vn.hoadon.services.FormInvoiceService;
-import vn.hoadon.util.UploadPath;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
@@ -28,6 +30,9 @@ public class FormInvoiceAdminController extends BaseController {
 
     private final FormInvoiceService service;
     @Autowired private InvoiceDocumentBridge documents;
+    @Autowired private InvoiceFormTemplateService formTemplates;
+    @Autowired private InvoiceTemplateService templates;
+    @Autowired private ObjectMapper mapper;
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FormInvoiceAdminController.class);
 
     @Autowired
@@ -79,7 +84,7 @@ private Integer getInt(Map<String, Object> body, String key) {
             @RequestParam(value = "type", required = false) Integer type,
             @RequestParam(value = "status", required = false) Integer status,
             @RequestParam(value = "have_code", required = false) Integer haveCode,
-            @RequestParam(value = "photo", required = false) MultipartFile photo
+            @RequestParam(value = "layoutJson", required = false) MultipartFile layoutJson
     ) {
         permission("form-invoice-manage");
         log.debug("saveOrUpdate called: id={}, name={}, category={}, type={}, status={}, haveCode={}", id, name, category, type, status, haveCode);
@@ -135,23 +140,6 @@ private Integer getInt(Map<String, Object> body, String key) {
             e.setFormCode("X");
             e.setSerial("XXXXXX");
 
-            // Resolve upload company id theo company_id đã detect
-            Long uploadCompanyId = detectedCompanyId;
-
-            if (photo != null && !photo.isEmpty()) {
-                try {
-                    Path dir = UploadPath.resolveCompanyTypeDir(uploadCompanyId, "photo");
-                    String orig = photo.getOriginalFilename();
-                    String ext = (orig != null && orig.contains(".")) ? orig.substring(orig.lastIndexOf('.')) : "";
-                    String fname = UUID.randomUUID().toString() + ext;
-                    Path target = dir.resolve(fname);
-                    Files.write(target, photo.getBytes());
-                    e.setPhoto(UploadPath.publicUrl(uploadCompanyId, "photo", fname));
-                } catch (IOException ex) {
-                    return ResponseEntity.status(500).body(Map.of("message", "Failed saving photo: " + ex.getMessage()));
-                }
-            }
-
             e.setUpdatedAt(LocalDateTime.now());
 
             FormInvoiceEntity saved;
@@ -161,7 +149,13 @@ private Integer getInt(Map<String, Object> body, String key) {
                 // Dùng update để tránh kiểm tra trùng với chính bản ghi hiện tại
                 saved = service.update(id, e).orElseThrow(() -> new RuntimeException("Unable to update template"));
             }
+            if (layoutJson != null && !layoutJson.isEmpty()) {
+                applyLayoutJson(saved, layoutJson);
+            }
             return ResponseEntity.ok(saved);
+        } catch (TemplateException ex) {
+            log.warn("Invalid invoice template JSON: {}", ex.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage(), "code", ex.getCode()));
         } catch (IllegalArgumentException iae) {
             log.warn("Validation error: {}", iae.getMessage());
             return ResponseEntity.badRequest().body(Map.of("message", iae.getMessage()));
@@ -169,6 +163,29 @@ private Integer getInt(Map<String, Object> body, String key) {
             log.error("Error saving form invoice", ex);
             return ResponseEntity.status(500).body(Map.of("message", ex.getClass().getSimpleName() + ": " + (ex.getMessage() != null ? ex.getMessage() : "Unexpected error")));
         }
+    }
+
+    private void applyLayoutJson(FormInvoiceEntity form, MultipartFile layoutJson) throws IOException {
+        String originalName = layoutJson.getOriginalFilename();
+        if (originalName != null && !originalName.toLowerCase(java.util.Locale.ROOT).endsWith(".json")) {
+            throw TemplateException.invalid("INVALID_LAYOUT_FILE", "Chỉ hỗ trợ file bố cục có đuôi .json");
+        }
+        if (layoutJson.getSize() == 0 || layoutJson.getSize() > 10 * 1024 * 1024) {
+            throw TemplateException.invalid("LAYOUT_SIZE_LIMIT", "File JSON bố cục phải lớn hơn 0 và không quá 10 MB");
+        }
+        JsonNode layout;
+        try (var input = layoutJson.getInputStream()) {
+            layout = mapper.readTree(input);
+        } catch (Exception ex) {
+            throw TemplateException.invalid("INVALID_LAYOUT_JSON", "File bố cục không phải JSON hợp lệ");
+        }
+        if (layout == null || !layout.isObject()) {
+            throw TemplateException.invalid("INVALID_LAYOUT_JSON", "Bố cục phải là một JSON object");
+        }
+        var user = currentUser();
+        var access = new TemplateAccess(user.getCompanyId(), user.getId(), true);
+        var details = formTemplates.editable(form.getId(), "admin-layout-upload-" + UUID.randomUUID(), access);
+        templates.save(details.template().getId(), details.draft().getLockVersion(), layout, access);
     }
 
     @PostMapping("/{id}/status")
