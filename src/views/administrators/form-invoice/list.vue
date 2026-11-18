@@ -1,6 +1,5 @@
-﻿<template>
+<template>
     <div class="container-fluid py-3 form-invoices-admin">
-        <!-- Tiêu đề và thao tác -->
         <div class="d-flex align-items-center justify-content-between mb-3">
             <h4 class="mb-0 font-weight-bold">Mẫu hóa đơn</h4>
             <div>
@@ -14,8 +13,6 @@
                 </b-button>
             </div>
         </div>
-
-        <!-- Hàng bộ lọc -->
         <b-card class="mb-3 shadow-sm">
             <b-row>
                 <b-col md="4" class="mb-2">
@@ -58,8 +55,6 @@
                 </b-col>
             </b-row>
         </b-card>
-
-        <!-- Bảng -->
         <b-card class="shadow-sm">
             <b-table
                 bordered
@@ -73,7 +68,6 @@
                 empty-text="Không có dữ liệu"
                 class="mb-0 table-modern table-compact"
             >
-                <!-- STT -->
                 <template #cell(id)="{ index }">
                     {{ (page - 1) * size + index + 1 }}
                 </template>
@@ -199,18 +193,15 @@ export default {
                 this.items = (data.items || []).map(it => ({
                     id: it.id,
                     name: it.name,
-                    companyId: it.companyId || it.company_id || null,
-                    companyName: it.companyName || '',
                     serial: (it.formCode || '') + (it.serial || ''),
                     category: it.category,
                     type: it.type,
                     status: it.status,
                     photo: it.photo,
-                    system: it.system
                 }))
                 this.total = data.total || 0
             } catch (e) {
-                // Bỏ qua lỗi tải danh sách, trạng thái tải sẽ được tắt ở finally
+                this.$bvToast && this.$bvToast.toast('Không thể tải danh sách mẫu hóa đơn', { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 3000 })
             } finally { this.isBusy = false }
         },
         getCategoryText(val) {
@@ -251,7 +242,10 @@ export default {
                 this.$bvToast && this.$bvToast.toast(status === 1 ? 'Đã kích hoạt' : 'Đã tạm ngưng', { title: 'Thành công', variant: 'success', solid: true })
                 this.fetch()
             } catch (e) {
-                this.$bvToast && this.$bvToast.toast('Cập nhật trạng thái thất bại', { title: 'Lỗi', variant: 'danger', solid: true })
+                const message = e && e.response && e.response.data && e.response.data.message
+                    ? e.response.data.message
+                    : 'Cập nhật trạng thái thất bại'
+                this.$bvToast && this.$bvToast.toast(message, { title: 'Lỗi', variant: 'danger', solid: true })
             }
         },
         async onDelete(item) {
@@ -269,7 +263,6 @@ export default {
 </script>
 
 <style scoped>
-/* Kiểu thẻ */
 .form-invoices-admin .card.shadow-sm {
     border-radius: 10px;
 }
@@ -278,12 +271,10 @@ export default {
     border: 1px solid #e9ecef;
 }
 
-/* Hover của bảng */
 .form-invoices-admin .table-hover tbody tr:hover {
     background-color: #fafbfd;
 }
 
-/* Nút */
 .form-invoices-admin .btn-outline-primary {
     border-color: #dfe7ff;
 }
@@ -292,7 +283,6 @@ export default {
     background: #eef3ff;
 }
 
-/* Tiêu đề bảng */
 .form-invoices-admin .table thead th {
     background: #f7f9fc;
     border-bottom: 1px solid #ecf0f6;
@@ -300,7 +290,6 @@ export default {
     font-weight: 700;
 }
 
-/* Kiểu bảng hiện đại */
 .table-modern thead th {
     background-color: #f9fafb;
     border-bottom: 2px solid #e5e7eb;
@@ -330,23 +319,19 @@ export default {
     border-color: #e9ecef;
 }
 
-/* Kiểu nhãn trạng thái */
 .badge {
     font-size: 13px;
     padding: 0.35em 0.65em;
 }
 
-/* Tiện ích text */
 .text-mono {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-/* Nội dung thẻ */
 .card-body {
     padding: 0.75rem 1rem;
 }
 
-/* Nhóm input */
 .input-group-text {
     background-color: #f8f9fa;
     border-right: none;
@@ -361,7 +346,6 @@ export default {
     border-left: none;
 }
 
-/* Item dropdown */
 .dropdown-item {
     font-size: 0.9rem;
     padding: 0.5rem 1rem;

@@ -887,7 +887,8 @@ public class InvoiceController extends BaseController {
             throw new IllegalArgumentException("Thiếu mẫu hóa đơn (form_id)");
         }
         FormInvoiceEntity form = formInvoiceRepository.findById(formId).orElse(null);
-        if (form == null || form.getCompanyId() == null || !companyId.equals(form.getCompanyId())) {
+        if (form == null || !Integer.valueOf(0).equals(form.getSystem())
+                || form.getCompanyId() == null || !companyId.equals(form.getCompanyId())) {
             throw new IllegalArgumentException("Mẫu hóa đơn không thuộc công ty hiện tại");
         }
         return form;

@@ -40,12 +40,15 @@
             </b-col>
             <b-col cols="12" md="6">
               <b-form-group label="Trạng thái" label-class="font-weight-bold">
-                <b-form-select v-model.number="form.status" :options="statusOptions" />
+                <b-form-select
+                  v-model.number="form.status"
+                  :options="statusOptions"
+                />
               </b-form-group>
             </b-col>
           </b-row>
 
-          <b-form-group label="Bố cục mẫu JSON" label-class="font-weight-bold" class="mb-0">
+          <b-form-group label="Bố cục mẫu JSON" label-class="font-weight-bold" class="mb-0" :required="!id">
             <b-form-file
               v-model="layoutJsonFile"
               accept=".json,application/json"
@@ -61,7 +64,7 @@
             </b-button>
             <b-button type="submit" variant="primary" class="ml-2" :disabled="isSaving">
               <b-spinner v-if="isSaving" small class="mr-1" />
-              {{ isSaving ? 'Đang lưu…' : 'Lưu và thiết kế mẫu' }}
+              {{ isSaving ? 'Đang lưu…' : 'Lưu mẫu' }}
             </b-button>
           </div>
         </b-form>
@@ -119,6 +122,31 @@ export default {
     },
     async onSubmit() {
       if (this.isSaving || !this.form.name) return
+      if (!this.id && !this.layoutJsonFile) {
+        this.error = 'Phải tải file JSON bố cục'
+        return
+      }
+      if (this.layoutJsonFile) {
+        const fileName = this.layoutJsonFile.name || ''
+        if (!/\.json$/i.test(fileName)) {
+          this.error = 'Chỉ được tải lên file có đuôi .json'
+          return
+        }
+        if (this.layoutJsonFile.size === 0 || this.layoutJsonFile.size > 10 * 1024 * 1024) {
+          this.error = 'File JSON bố cục phải lớn hơn 0 và không quá 10 MB'
+          return
+        }
+        try {
+          const layout = JSON.parse(await this.layoutJsonFile.text())
+          if (!layout || Array.isArray(layout) || typeof layout !== 'object') {
+            this.error = 'Bố cục phải là một JSON object'
+            return
+          }
+        } catch (e) {
+          this.error = 'File bố cục không phải JSON hợp lệ'
+          return
+        }
+      }
       this.isSaving = true
       this.error = ''
       const body = new FormData()
@@ -127,7 +155,7 @@ export default {
       if (this.layoutJsonFile) body.append('layoutJson', this.layoutJsonFile)
       try {
         const { data } = await axios.post('/administrator/form-invoices/saveOrUpdate', body)
-        this.$router.push({ name: 'admin-invoice-template-designer', query: { formId: data.id } })
+        this.$router.push({ name: 'admin-form-invoice-list' })
       } catch (e) {
         this.error = e.response?.data?.message || 'Không lưu được mẫu hóa đơn'
       } finally {

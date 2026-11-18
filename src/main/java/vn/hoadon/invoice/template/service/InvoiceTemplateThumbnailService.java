@@ -14,6 +14,7 @@ import vn.hoadon.invoice.template.persistence.InvoiceTemplateDraftEntity;
 import vn.hoadon.invoice.template.persistence.InvoiceTemplateEntity;
 import vn.hoadon.invoice.template.render.TemplateRenderService;
 import vn.hoadon.repositories.FormInvoiceRepository;
+import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.util.UploadPath;
 
 import javax.imageio.ImageIO;
@@ -31,14 +32,16 @@ import java.util.List;
 public class InvoiceTemplateThumbnailService {
     private static final Logger log = LoggerFactory.getLogger(InvoiceTemplateThumbnailService.class);
     private final FormInvoiceRepository forms;
+    private final CompanyRepository companies;
     private final InvoiceFixtureFactory fixtures;
     private final ObjectMapper mapper;
     private final TemplateRenderService renders;
 
-    public InvoiceTemplateThumbnailService(FormInvoiceRepository forms,
+    public InvoiceTemplateThumbnailService(FormInvoiceRepository forms, CompanyRepository companies,
                                            InvoiceFixtureFactory fixtures, ObjectMapper mapper,
                                            TemplateRenderService renders) {
         this.forms = forms;
+        this.companies = companies;
         this.fixtures = fixtures;
         this.mapper = mapper;
         this.renders = renders;
@@ -61,7 +64,10 @@ public class InvoiceTemplateThumbnailService {
     }
 
     private void update(FormInvoiceEntity form, byte[] png) throws Exception {
-        Long ownerId = form.getCompanyId() == null ? 0L : form.getCompanyId();
+        Long ownerId = form.getCompanyId() != null
+                ? form.getCompanyId()
+                : companies.findAll().stream().findFirst().map(vn.hoadon.entity.CompanyEntity::getId)
+                .orElseThrow(() -> new IllegalStateException("Không có công ty để lưu ảnh mẫu"));
         var directory = UploadPath.resolveCompanyTypeDir(ownerId, "photo");
         var target = directory.resolve("template-" + form.getId() + ".png");
         Files.write(target, png, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);

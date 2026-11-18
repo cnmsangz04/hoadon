@@ -1,5 +1,6 @@
 package vn.hoadon.services.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import vn.hoadon.invoice.template.persistence.CompanyInvoiceDefaultEntity;
 import vn.hoadon.invoice.template.persistence.CompanyInvoiceDefaultRepository;
 import vn.hoadon.repositories.CompanyRepository;
@@ -33,6 +34,7 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
     @Autowired private RegisterInvoiceRepository declarations;
     @Autowired private CompanyInvoiceDefaultRepository defaults;
     @Autowired private vn.hoadon.invoice.template.service.InvoiceFormTemplateService formTemplates;
+    @Autowired private vn.hoadon.invoice.template.service.InvoiceTemplateStorageCleanupService templateStorageCleanup;
     @jakarta.persistence.PersistenceContext private jakarta.persistence.EntityManager entityManager;
 
     @Autowired
@@ -105,15 +107,17 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
 
     @Override
     @Transactional
-    public FormInvoiceEntity create(FormInvoiceEntity form) {
+    public FormInvoiceEntity create(FormInvoiceEntity form, JsonNode initialLayout) {
+        validateSystemScope(form);
+        if (Integer.valueOf(1).equals(form.getSystem())) form.setCompanyId(null);
         if (form.getStatus() == null) form.setStatus(0);
         lockCompany(form);
         validate(form);
         form.setCreatedAt(LocalDateTime.now());
         form.setUpdatedAt(form.getCreatedAt());
         FormInvoiceEntity saved = repo.saveAndFlush(form);
-        var access = new vn.hoadon.invoice.template.service.TemplateAccess(saved.getCompanyId(), saved.getUserId(), Integer.valueOf(0).equals(saved.getSystem()));
-        formTemplates.editable(saved.getId(), "form-" + saved.getId(), access);
+        var access = new vn.hoadon.invoice.template.service.TemplateAccess(saved.getCompanyId(), saved.getUserId(), Integer.valueOf(1).equals(saved.getSystem()));
+        formTemplates.editable(saved.getId(), "form-" + saved.getId(), access, initialLayout);
         synchronizeActivation(saved, false);
         return saved;
     }
@@ -128,6 +132,8 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         boolean wasActive = Integer.valueOf(1).equals(current.getStatus());
         if (patch.getSystem() != null && !patch.getSystem().equals(current.getSystem())) throw new IllegalArgumentException("Không được thay đổi phạm vi mẫu");
         if (patch.getCompanyId() != null && !patch.getCompanyId().equals(current.getCompanyId())) throw new IllegalArgumentException("Không được chuyển mẫu sang công ty khác");
+        validateSystemScope(current);
+        if (Integer.valueOf(1).equals(current.getSystem())) current.setCompanyId(null);
         boolean fiscalChanged = changed(patch.getFormCode(), current.getFormCode()) || changed(patch.getSerial(), current.getSerial())
                 || changed(patch.getCategory(), current.getCategory()) || changed(patch.getType(), current.getType()) || changed(patch.getHaveCode(), current.getHaveCode());
         if (fiscalChanged && invoices.existsByFormId(Math.toIntExact(id))) throw new IllegalArgumentException("Mẫu đã được sử dụng; không được sửa ký hiệu hoặc cấu hình phát hành");
@@ -141,12 +147,20 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         current.setUpdatedAt(LocalDateTime.now());
         boolean deactivating = !fiscalChanged && Integer.valueOf(0).equals(patch.getStatus());
         if (!deactivating) validate(current);
+        var access = new vn.hoadon.invoice.template.service.TemplateAccess(current.getCompanyId(), current.getUserId(), Integer.valueOf(1).equals(current.getSystem()));
+        if (!deactivating) formTemplates.validateBinding(current, access);
         synchronizeActivation(current, wasActive);
         return Optional.of(repo.save(current));
     }
 
     private void lockCompany(FormInvoiceEntity form) {
-        if (Integer.valueOf(1).equals(form.getSystem())) companies.lockById(form.getCompanyId()).orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty"));
+        if (Integer.valueOf(0).equals(form.getSystem())) companies.lockById(form.getCompanyId()).orElseThrow(() -> new IllegalArgumentException("Không tìm thấy công ty"));
+    }
+
+    private void validateSystemScope(FormInvoiceEntity form) {
+        if (form.getSystem() == null || !java.util.Set.of(0, 1).contains(form.getSystem())) {
+            throw new IllegalArgumentException("Phạm vi mẫu hóa đơn không hợp lệ");
+        }
     }
 
     private void validate(FormInvoiceEntity form) {
@@ -154,8 +168,8 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         if (!java.util.Set.of(0, 1).contains(form.getStatus())) throw new IllegalArgumentException("Trạng thái mẫu không hợp lệ");
         if (form.getCategory() == null || !java.util.Set.of(1, 2).contains(form.getCategory()) || form.getType() == null || !java.util.Set.of(1, 2).contains(form.getType())) throw new IllegalArgumentException("Loại hóa đơn hoặc loại thuế suất không hợp lệ");
         if (form.getHaveCode() == null || !java.util.Set.of(0, 1).contains(form.getHaveCode())) throw new IllegalArgumentException("Hình thức có mã/không mã không hợp lệ");
-        if (Integer.valueOf(1).equals(form.getStatus()) && form.getTemplateVersionId() == null) throw new IllegalArgumentException("Cần công bố và chọn phiên bản thiết kế trước khi kích hoạt mẫu hóa đơn");
-        if (!Integer.valueOf(1).equals(form.getSystem())) return;
+        if (Integer.valueOf(1).equals(form.getStatus()) && form.getTemplateVersionId() == null) throw new IllegalArgumentException("Mẫu chưa có phiên bản thiết kế hợp lệ");
+        if (!Integer.valueOf(0).equals(form.getSystem())) return;
         if (!String.valueOf(form.getCategory()).equals(form.getFormCode()) || form.getSerial() == null || !form.getSerial().matches("[CK][0-9]{2}T[A-Z]{2}")) throw new IllegalArgumentException("Ký hiệu hóa đơn không hợp lệ");
         if ((form.getSerial().startsWith("C") ? 1 : 0) != form.getHaveCode()) throw new IllegalArgumentException("Ký hiệu C/K không khớp hình thức hóa đơn");
         if (Integer.valueOf(1).equals(form.getStatus())) {
@@ -170,7 +184,7 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
     private static boolean contains(List<String> values, String value) { return values != null && values.contains(value); }
 
     private void synchronizeActivation(FormInvoiceEntity form, boolean wasActive) {
-        if (!Integer.valueOf(1).equals(form.getSystem())) return;
+        if (!Integer.valueOf(0).equals(form.getSystem())) return;
         boolean active = Integer.valueOf(1).equals(form.getStatus());
         if (active) repo.deactivateOthers(form.getCompanyId(), form.getCategory(), form.getId());
         var selection = defaults.findByCompanyIdAndCategory(form.getCompanyId(), form.getCategory()).orElse(null);
@@ -186,7 +200,6 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         selection.setUpdatedAt(LocalDateTime.now(java.time.ZoneOffset.UTC));
         defaults.save(selection);
         if (!active || wasActive) return;
-        // Giữ bộ đếm hiện hành đến khi dữ liệu dãy số được đối chiếu và chuyển đổi.
         List<InvoiceNumberEntity> counters = invoiceNumberRepository.findByCompanyIdAndCategoryAndStatus(form.getCompanyId(), form.getCategory(), 1);
         InvoiceNumberEntity counter = counters.isEmpty() ? new InvoiceNumberEntity() : counters.getFirst();
         if (counter.getId() == null) {
@@ -209,6 +222,12 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         var form = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Không tìm thấy mẫu"));
         lockCompany(form);
         if (!Integer.valueOf(0).equals(form.getStatus()) || invoices.existsByFormId(Math.toIntExact(id)) || !invoiceNumberRepository.findByCompanyIdAndFormId(form.getCompanyId(), id).isEmpty()) throw new IllegalArgumentException("Mẫu đang được sử dụng; hãy ngừng kích hoạt thay vì xóa");
+        var access = new vn.hoadon.invoice.template.service.TemplateAccess(
+                form.getCompanyId(), form.getUserId() == null ? 0L : form.getUserId(), Integer.valueOf(1).equals(form.getSystem()));
+        String photo = form.getPhoto();
+        formTemplates.deleteForForm(id, access);
         repo.delete(form);
+        repo.flush();
+        if (photo != null && !repo.existsByPhoto(photo)) templateStorageCleanup.deletePhoto(photo);
     }
 }

@@ -9,8 +9,6 @@ import jakarta.persistence.LockModeType;
 import java.util.Optional;
 
 public interface InvoiceTemplateRepository extends JpaRepository<InvoiceTemplateEntity, Long>, JpaSpecificationExecutor<InvoiceTemplateEntity> {
-    Optional<InvoiceTemplateEntity> findTopByScopeAndCategoryAndStateOrderByIdAsc(String scope, Integer category, String state);
-
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select t from InvoiceTemplateEntity t where t.id = :id")
     Optional<InvoiceTemplateEntity> lockById(@Param("id") Long id);

@@ -58,7 +58,7 @@ public class InvoiceDocumentService {
         var version = formTemplates.latestPublished(formId);
         String xml = sampleXml(form, publicSample, access);
         String scope = publicSample ? "SYSTEM" : "COMPANY";
-        return renders.enqueue(scope, publicSample ? null : access.companyId(), "TEMPLATE_SAMPLE", version.getId(), null, null, null, version.getSourceContent(), version.getManifestJson(), xml,
+        return renders.enqueue(scope, access.companyId(), "TEMPLATE_SAMPLE", version.getId(), null, null, null, version.getSourceContent(), version.getManifestJson(), xml,
                 Map.of("sampleMarker", "SAMPLE", "status", "Dữ liệu minh họa", "lookup_code", "SAMPLE0001",
                         "code_cqt", "MCCQT-MINH-HOA", "formId", formId.toString(), "invoiceCategory", String.valueOf(form.getCategory()), "taxMode", Objects.equals(form.getType(), 2) ? "MULTI_RATE" : "SINGLE_RATE", "sourceStage", "DRAFT"));
     }
@@ -71,8 +71,8 @@ public class InvoiceDocumentService {
     private FormInvoiceEntity requireSampleForm(Long formId, boolean publicSample, TemplateAccess access) {
         var form = forms.findById(formId).orElseThrow(TemplateException::missing);
         if (publicSample) {
-            if (!Objects.equals(form.getSystem(), 0) || !Objects.equals(form.getStatus(), 1) && !access.systemManager()) throw TemplateException.missing();
-        } else if (!Objects.equals(form.getCompanyId(), access.companyId()) || !Objects.equals(form.getSystem(), 1)) throw TemplateException.missing();
+            if (!Objects.equals(form.getSystem(), 1) || !Objects.equals(form.getStatus(), 1) && !access.systemManager()) throw TemplateException.missing();
+        } else if (!Objects.equals(form.getCompanyId(), access.companyId()) || !Objects.equals(form.getSystem(), 0)) throw TemplateException.missing();
         return form;
     }
 
@@ -87,7 +87,7 @@ public class InvoiceDocumentService {
         var invoice = invoices.lockDocumentById(invoiceId).orElseThrow(TemplateException::missing);
         Long companyId = invoice.getCompanyId().longValue();
         var form = forms.findById(invoice.getFormId().longValue()).orElseThrow(TemplateException::missing);
-        if (!Objects.equals(form.getSystem(), 0) && !Objects.equals(form.getCompanyId(), companyId)) throw TemplateException.missing();
+        if (!Objects.equals(form.getSystem(), 1) && !Objects.equals(form.getCompanyId(), companyId)) throw TemplateException.missing();
         var version = formTemplates.latestPublished(form.getId());
         var template = templates.findById(version.getTemplateId()).orElseThrow(TemplateException::missing);
         new TemplateAccess(companyId, null, false).requireRead(template);

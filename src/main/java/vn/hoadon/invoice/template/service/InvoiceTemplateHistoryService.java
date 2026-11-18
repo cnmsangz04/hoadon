@@ -37,6 +37,11 @@ public class InvoiceTemplateHistoryService {
         remove(List.of(target), history.getFirst().getId());
     }
 
+    public void deleteAll(Long templateId) {
+        var history = versions.findByTemplateIdOrderByVersionNoDesc(templateId);
+        if (!history.isEmpty()) remove(history, null);
+    }
+
     private void remove(List<InvoiceTemplateVersionEntity> removed, Long latestId) {
         var ids = removed.stream().map(InvoiceTemplateVersionEntity::getId).toList();
         entityManager.flush();
@@ -51,8 +56,6 @@ public class InvoiceTemplateHistoryService {
                 .setParameter("ids", ids).getResultList();
         drafts.forEach(draft -> draft.setBaseVersionId(null));
 
-        // Render jobs contain their own HTML and resources, so existing PDF jobs
-        // remain readable after the corresponding layout history is removed.
         entityManager.createQuery("update InvoiceRenderJobEntity j set j.templateVersionId = null where j.templateVersionId in :ids")
                 .setParameter("ids", ids).executeUpdate();
         entityManager.createNativeQuery("update invoice_render_artifacts set template_version_id = null where template_version_id in (:ids)")

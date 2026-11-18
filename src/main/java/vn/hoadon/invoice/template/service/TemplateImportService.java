@@ -77,9 +77,12 @@ public class TemplateImportService {
         if (!"REVIEW_REQUIRED".equals(job.getState())) throw TemplateException.conflict("Chưa có đề xuất được xử lý để áp dụng");
         JsonNode proposal = templates.tree(job.getProposalJson());
         if (job.getTargetTemplateId() == null) {
-            var created = templates.create(name, category, null, false, "pdf-import-" + id, access);
+            var created = templates.create(name, category, null, false, "pdf-import-" + id, access, proposal.path("layout"));
             job.setTargetTemplateId(created.template().getId());
             job.setExpectedDraftLockVersion(created.draft().getLockVersion());
+            job.setState("APPLIED");
+            job.setAppliedDraftId(created.draft().getId());
+            return created.draft();
         }
         var draft = templates.save(job.getTargetTemplateId(), job.getExpectedDraftLockVersion(), proposal.path("layout"), access);
         job.setState("APPLIED");

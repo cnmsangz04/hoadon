@@ -549,13 +549,11 @@ public class CatalogImportServiceImpl implements CatalogImportService {
     }
 
     private Path resolveImportDir(Long companyId, CatalogType type) throws java.io.IOException {
-        Path dir = UploadPath.basePath().resolve(Path.of(String.valueOf(companyId), type.uploadDir)).normalize();
-        Files.createDirectories(dir);
-        return dir;
+        return UploadPath.resolveCompanyTypeDir(companyId, type.uploadDir);
     }
 
     private String publicImportUrl(Long companyId, CatalogType type, String fileName) {
-        return "/uploads/" + companyId + "/" + type.uploadDir + "/" + fileName;
+        return UploadPath.publicUrl(companyId, type.uploadDir, fileName);
     }
 
     private String buildStoredFileName(String originalName) {

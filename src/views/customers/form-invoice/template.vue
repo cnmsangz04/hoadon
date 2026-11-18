@@ -122,8 +122,6 @@ export default {
   methods: {
     importData() { this.page = 1; return this.loadPage(1) },
     async loadPage(page = 1) {
-      // Tải mẫu đã lọc theo tên, danh mục và loại
-      // Endpoint backend /form-invoices/templates chỉ trả mẫu system=0
       this.notify = ''
       try {
         const params = { page, size: 12 }
@@ -153,7 +151,6 @@ export default {
     typeLabel(v) { return Number(v) === 1 ? 'Một thuế suất' : Number(v) === 2 ? 'Nhiều thuế suất' : '—' },
     typeVariant(v) { return Number(v) === 1 ? 'success' : Number(v) === 2 ? 'warning' : 'light' },
     copyTemplate(templateId) {
-      // Chuyển đến trang tạo với templateId đã chọn để sao chép/tạo mới
       this.$router.push({
         name: 'CustomerFormInvoiceCreate',
         query: { templateId }
@@ -167,13 +164,11 @@ export default {
 .style-chooser { width: 100%; }
 .text-secondary p { margin-bottom: 0.5rem; }
 
-/* Kiểu thẻ bộ lọc */
 .filter-card { border: 1px solid #e9eef5; }
 .filter-header { font-size: 14px; }
 .font-weight-600 { font-weight: 600; }
 .filter-label { display: inline-block; margin-bottom: var(--ui-label-gap); color: #6b7280; font-size: 12px; }
 
-/* Kiểu thông báo */
 .notify-alert { border-color: #e9eef5; color: #4b5563; }
 .notify-text { font-size: 13px; }
 

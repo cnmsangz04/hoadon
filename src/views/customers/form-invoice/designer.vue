@@ -38,9 +38,7 @@
       <div class="document-header">
         <div class="d-flex align-items-center action-bar">
           <strong>{{ details.template.name }}</strong>
-          <b-badge :variant="hasPendingChanges ? 'warning' : 'success'">{{
-            hasPendingChanges ? "Chưa lưu" : "Đã lưu"
-          }}</b-badge>
+          <b-badge :variant="saveStateVariant">{{ saveStateLabel }}</b-badge>
           <span v-if="draft.baseVersionId" class="text-muted small">
             {{ draftSourceLabel }}
           </span>
@@ -55,11 +53,19 @@
           >
           <b-button
             size="sm"
+            variant="primary"
+            :disabled="busy"
+            @click="saveDraftOnly"
+          >
+            Lưu nháp
+          </b-button>
+          <b-button
+            size="sm"
             variant="success"
             :disabled="busy"
-            @click="save"
+            @click="saveVersion"
           >
-            {{ busy ? "Đang xử lý…" : "Lưu mẫu" }}
+            {{ busy ? "Đang xử lý…" : "Lưu phiên bản" }}
           </b-button>
         </div>
       </div>
@@ -1104,13 +1110,22 @@ export default {
     formId() {
       return this.$route.query.formId ? Number(this.$route.query.formId) : null;
     },
-    hasPendingChanges() {
-      const latest = this.details?.versions[0];
-      if (this.dirty || !latest) return true;
+    saveStateLabel() {
+      if (this.dirty) return "Chưa lưu";
+      const latest = this.details?.versions?.[0];
+      if (!latest) return "Đã lưu nháp";
       if (latest.contentHash && this.draft?.contentHash) {
-        return latest.contentHash !== this.draft.contentHash;
+        return latest.contentHash === this.draft.contentHash
+          ? "Đã lưu"
+          : "Đã lưu nháp";
       }
-      return latest.sourceContent !== this.draft?.sourceContent;
+      return latest.sourceContent === this.draft?.sourceContent
+        ? "Đã lưu"
+        : "Đã lưu nháp";
+    },
+    saveStateVariant() {
+      if (this.dirty) return "warning";
+      return this.saveStateLabel === "Đã lưu" ? "success" : "info";
     },
     draftSourceLabel() {
       const source = this.details?.versions.find(
@@ -1299,7 +1314,7 @@ export default {
       );
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
-        this.save();
+        this.saveDraftOnly();
       } else if (!input && (event.ctrlKey || event.metaKey)) {
         const key = event.key.toLowerCase();
         if (key === "z" || key === "y") {
@@ -1507,7 +1522,14 @@ export default {
         const { data } = await axios.get(
           `${this.base}/${this.selectedTemplateId}`
         );
-        await this.install(data);
+        if (!data.draft) {
+          const { data: editable } = await axios.post(
+            `${this.base}/${this.selectedTemplateId}/ensure-draft`
+          );
+          await this.install(editable);
+        } else {
+          await this.install(data);
+        }
       } catch (e) {
         this.fail(e);
       } finally {
@@ -1527,6 +1549,21 @@ export default {
       this.draft = data;
       this.savedLayout = JSON.stringify(JSON.parse(data.sourceContent));
       this.dirty = JSON.stringify(this.layout) !== this.savedLayout;
+    },
+    async saveDraftOnly() {
+      if (this.busy || !this.layout) return;
+      this.busy = true;
+      this.error = "";
+      this.notice = "";
+      try {
+        if (this.dirty) await this.saveDraft();
+        await this.syncCatalog();
+        this.notice = "Đã lưu nháp";
+      } catch (e) {
+        this.fail(e);
+      } finally {
+        this.busy = false;
+      }
     },
     async preview() {
       this.busy = true;
@@ -1548,7 +1585,7 @@ export default {
         this.busy = false;
       }
     },
-    async save() {
+    async saveVersion() {
       if (this.busy) return;
       this.busy = true;
       this.error = "";
@@ -1594,10 +1631,14 @@ export default {
           { headers: { "Idempotency-Key": requestKey() } }
         );
         this.dirty = false;
-        await this.load();
         this.notice = this.formId
           ? "Đã lưu và áp dụng mẫu hóa đơn"
           : "Đã lưu mẫu";
+        await this.$router.push({
+          name: this.isAdmin
+            ? "admin-form-invoice-list"
+            : "CustomerFormInvoiceList",
+        });
       } catch (e) {
         this.fail(e);
         this.notice = "";
@@ -1737,32 +1778,22 @@ export default {
         }[block.type];
         block.repeatHeader = true;
         block.rowSplitPolicy = "splitIfOversized";
-        if (block.type === "feesTable") {
-          const fields = this.fieldsFor("fees");
-          block.columns = fields.map((f, i) => ({
-            id: `fee${i}`,
-            fieldKey: f.value,
-            label: f.text,
-            widthPercent:
-              i === fields.length - 1
-                ? 100 - Math.floor(100 / fields.length) * i
-                : Math.floor(100 / fields.length),
-            formatter: "decimal",
-          }));
-        } else {
-          try {
-            const { data } = await axios.get(`${this.base}/default-layout`, {
-              params: { category: this.details?.template?.category || 1 },
-            });
-            const table = data.body.children.find((b) => b.type === block.type);
-            block.columns = table.columns;
-            block.headerStyle = table.headerStyle || {};
-            block.cellStyle = table.cellStyle || {};
-          } catch (e) {
-            this.fail(e);
-            return;
-          }
-        }
+        const available = new Map(this.fields.map((field) => [field.key, field]));
+        const limit = block.type === "taxSummaryTable" ? 3 : block.type === "itemsTable" ? 7 : 6;
+        const fields = this.fieldsFor(block.dataSource).slice(0, limit).map((field) => ({
+          field: available.get(field.value),
+          label: field.text,
+          formatter: block.type === "feesTable" ? "decimal" : "plainText",
+        })).filter((item) => item.field);
+        const width = fields.length ? Math.floor(100 / fields.length) : 100;
+        block.columns = fields.map((item, index) => ({
+          id: blockId(),
+          fieldKey: item.field.key,
+          label: item.label,
+          widthPercent: index === fields.length - 1 ? 100 - width * index : width,
+          formatter: item.formatter,
+          style: {},
+        }));
       }
       if (block.columns) {
         block.headerStyle = block.headerStyle || {};

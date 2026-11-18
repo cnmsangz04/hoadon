@@ -595,13 +595,11 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
     }
 
     private Path resolveImportDir(Long companyId) throws java.io.IOException {
-        Path dir = UploadPath.basePath().resolve(Path.of(String.valueOf(companyId), IMPORT_TYPE)).normalize();
-        Files.createDirectories(dir);
-        return dir;
+        return UploadPath.resolveCompanyTypeDir(companyId, IMPORT_TYPE);
     }
 
     private String publicImportUrl(Long companyId, String fileName) {
-        return "/uploads/" + companyId + "/" + IMPORT_TYPE + "/" + fileName;
+        return UploadPath.publicUrl(companyId, IMPORT_TYPE, fileName);
     }
 
     private String sanitizeFileName(String value) {

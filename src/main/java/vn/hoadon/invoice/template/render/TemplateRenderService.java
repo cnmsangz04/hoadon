@@ -29,13 +29,14 @@ public class TemplateRenderService {
     private final InvoiceTemplateDraftRepository drafts;
     private final InvoiceTemplateVersionRepository versions;
     private final InvoicePdfRenderer pdfRenderer;
+    private final InvoiceTemplateStorageCleanupService storageCleanup;
     private final String designerFontCss;
 
     public TemplateRenderService(InvoiceRenderJobRepository jobs, InvoiceRenderArtifactRepository artifacts, InvoiceAssetService assets,
                                  DocumentStorage storage, JsonLayoutCompiler compiler,
                                  InvoiceViewModelMapper viewModels, InvoiceTemplateProperties properties, ObjectMapper mapper,
                                  InvoiceTemplateRepository templates, InvoiceTemplateDraftRepository drafts, InvoiceTemplateVersionRepository versions,
-                                 InvoicePdfRenderer pdfRenderer) {
+                                 InvoicePdfRenderer pdfRenderer, InvoiceTemplateStorageCleanupService storageCleanup) {
         this.jobs = jobs;
         this.artifacts = artifacts;
         this.assets = assets;
@@ -48,6 +49,7 @@ public class TemplateRenderService {
         this.drafts = drafts;
         this.versions = versions;
         this.pdfRenderer = pdfRenderer;
+        this.storageCleanup = storageCleanup;
         var fonts = ChromiumInvoicePdfRenderer.bundledFonts();
         StringBuilder inlineFonts = new StringBuilder();
         for (String rule : fonts.css().split("}")) {
@@ -89,6 +91,7 @@ public class TemplateRenderService {
         String requestKey = DocumentStorage.sha256(assets.json(Arrays.asList(scope, companyId, purpose, versionId, draftId, draftLockVersion, snapshotId, inputHash)));
         var existing = jobs.findByRequestKey(requestKey);
         if (existing.isPresent()) return existing.get();
+        if ("DRAFT_PREVIEW".equals(purpose) && draftId != null) storageCleanup.deleteDraftPreviewJobs(draftId);
         InvoiceRenderJobEntity job = new InvoiceRenderJobEntity();
         job.setScope(scope);
         job.setCompanyId(companyId);

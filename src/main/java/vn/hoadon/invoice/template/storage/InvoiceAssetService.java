@@ -78,17 +78,23 @@ public class InvoiceAssetService {
             }
         } catch (TemplateException ex) { throw ex; }
         catch (Exception ex) { throw TemplateException.invalid("INVALID_ASSET", "Không đọc được nội dung tài nguyên"); }
-        return store(bytes, kind, mime, json(metadata), system ? "SYSTEM" : "COMPANY", system ? null : access.companyId(), access.actorId());
+        return store(bytes, kind, mime, json(metadata), system ? "SYSTEM" : "COMPANY",
+                system ? null : access.companyId(), access.actorId(), access.companyId());
     }
 
     public InvoiceAssetEntity store(byte[] bytes, String kind, String mime, String metadata, String scope, Long companyId, Long actorId) {
+        return store(bytes, kind, mime, metadata, scope, companyId, actorId, companyId);
+    }
+
+    private InvoiceAssetEntity store(byte[] bytes, String kind, String mime, String metadata, String scope,
+                                     Long companyId, Long actorId, Long storageCompanyId) {
         if (!Set.of("IMAGE", "FONT", "PDF_REFERENCE").contains(kind)) throw TemplateException.invalid("INVALID_ASSET_KIND", "Loại tài nguyên không được hỗ trợ");
         if (bytes.length > properties.getMaxInputBytes()) throw TemplateException.invalid("ASSET_SIZE_LIMIT", "Tài nguyên vượt giới hạn");
         InvoiceAssetEntity asset = new InvoiceAssetEntity();
         asset.setScope(scope);
         asset.setCompanyId(companyId);
         asset.setKind(kind);
-        asset.setStorageKey(storage.write(bytes));
+        asset.setStorageKey(storage.write(bytes, storageCompanyId, "invoice-assets", extension(kind, mime)));
         asset.setMimeType(mime);
         asset.setSha256(DocumentStorage.sha256(bytes));
         asset.setByteSize((long) bytes.length);
@@ -96,6 +102,12 @@ public class InvoiceAssetService {
         asset.setCreatedBy(actorId);
         asset.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
         return repository.save(asset);
+    }
+
+    private static String extension(String kind, String mime) {
+        if ("FONT".equals(kind)) return ".ttf";
+        if ("PDF_REFERENCE".equals(kind)) return ".pdf";
+        return "image/png".equalsIgnoreCase(mime) ? ".png" : ".jpg";
     }
 
     public InvoiceAssetEntity require(Long id, String targetScope, Long companyId) {
@@ -118,7 +130,7 @@ public class InvoiceAssetService {
             var asset = require(ref.assetId(), scope, companyId);
             totalBytes += asset.getByteSize();
             if (totalBytes > properties.getMaxInputBytes() * 4L) throw TemplateException.invalid("ASSET_SIZE_LIMIT", "Tổng tài nguyên mẫu vượt giới hạn");
-            if (!asset.getSha256().equals(ref.sha256()) || !asset.getMimeType().equals(ref.mimeType())) throw TemplateException.invalid("ASSET_HASH_MISMATCH", "Tài nguyên khác bản đã công bố");
+            if (!asset.getSha256().equals(ref.sha256()) || !asset.getMimeType().equals(ref.mimeType())) throw TemplateException.invalid("ASSET_HASH_MISMATCH", "Tài nguyên khác phiên bản đã lưu");
             result.put(asset.getId(), new InvoicePdfRenderer.Resource(read(asset), asset.getMimeType()));
         }
         return result;

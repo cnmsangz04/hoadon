@@ -5,4 +5,5 @@ import java.util.Optional;
 
 public interface InvoiceTemplateAuditRepository extends JpaRepository<InvoiceTemplateAuditEntity, Long> {
     Optional<InvoiceTemplateAuditEntity> findByRequestKey(String requestKey);
+    void deleteByTemplateId(Long templateId);
 }

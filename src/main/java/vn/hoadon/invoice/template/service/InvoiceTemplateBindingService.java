@@ -41,8 +41,8 @@ public class InvoiceTemplateBindingService {
     public InvoiceTemplateVersionEntity publishForForm(Long formId, Long templateId, long expectedVersion,
                                                        Long reportId, String key, TemplateAccess access) {
         var form = forms.lockById(formId).orElseThrow(TemplateException::missing);
-        if (access.systemManager() ? !Objects.equals(form.getSystem(), 0)
-                : !Objects.equals(form.getSystem(), 1) || !Objects.equals(form.getCompanyId(), access.companyId())) {
+        if (access.systemManager() ? !Objects.equals(form.getSystem(), 1)
+                : !Objects.equals(form.getSystem(), 0) || !Objects.equals(form.getCompanyId(), access.companyId())) {
             throw TemplateException.missing();
         }
         var version = templateService.publish(templateId, expectedVersion, reportId, key, access);
@@ -55,7 +55,7 @@ public class InvoiceTemplateBindingService {
         companies.lockById(companyId).orElseThrow(TemplateException::missing);
         var selection = defaults.findByCompanyIdAndCategory(companyId, category).orElse(null);
         if (selection == null) {
-            var candidates = forms.findByCompanyIdAndSystemAndCategoryAndStatus(companyId, 1, category, 1);
+            var candidates = forms.findByCompanyIdAndSystemAndCategoryAndStatus(companyId, 0, category, 1);
             if (candidates.size() > 1) throw TemplateException.invalid("DEFAULT_FORM_CONFLICT", "Có nhiều mẫu cùng kích hoạt; cần đối chiếu trước khi chọn mặc định");
             selection = new CompanyInvoiceDefaultEntity();
             selection.setCompanyId(companyId);
@@ -67,29 +67,31 @@ public class InvoiceTemplateBindingService {
         }
         if (selection.getFormInvoiceId() == null) return null;
         var form = forms.findById(selection.getFormInvoiceId()).orElseThrow(TemplateException::missing);
-        if (!Objects.equals(form.getCompanyId(), companyId) || !Objects.equals(form.getCategory(), category) || !Objects.equals(form.getSystem(), 1) || !Objects.equals(form.getStatus(), 1)) throw TemplateException.invalid("DEFAULT_FORM_INVALID", "Mẫu mặc định không còn phù hợp; vui lòng chọn lại");
+        if (!Objects.equals(form.getCompanyId(), companyId) || !Objects.equals(form.getCategory(), category) || !Objects.equals(form.getSystem(), 0) || !Objects.equals(form.getStatus(), 1)) throw TemplateException.invalid("DEFAULT_FORM_INVALID", "Mẫu mặc định không còn phù hợp; vui lòng chọn lại");
         return form;
     }
 
     @Transactional
     public void bindForm(Long formId, Long versionId, TemplateAccess access) {
-        var existing = forms.findById(formId).orElseThrow(TemplateException::missing);
-        if (access.systemManager() ? !Objects.equals(existing.getSystem(), 0)
-                : !Objects.equals(existing.getSystem(), 1) || !Objects.equals(existing.getCompanyId(), access.companyId())) throw TemplateException.missing();
         var form = forms.lockById(formId).orElseThrow(TemplateException::missing);
         if (access.systemManager()) {
-            if (!Objects.equals(form.getSystem(), 0)) throw TemplateException.missing();
-        } else if (!Objects.equals(form.getCompanyId(), access.companyId()) || !Objects.equals(form.getSystem(), 1)) throw TemplateException.missing();
+            if (!Objects.equals(form.getSystem(), 1)) throw TemplateException.missing();
+        } else if (!Objects.equals(form.getCompanyId(), access.companyId()) || !Objects.equals(form.getSystem(), 0)) throw TemplateException.missing();
         var version = versions.findById(versionId).orElseThrow(TemplateException::missing);
         var template = templates.findById(version.getTemplateId()).orElseThrow(TemplateException::missing);
         access.requireRead(template);
-        if (access.systemManager() && !"SYSTEM".equals(template.getScope())) throw TemplateException.missing();
+        if (access.systemManager() && (!Objects.equals(form.getSystem(), 1) || !"SYSTEM".equals(template.getScope()))) throw TemplateException.missing();
+        if (!access.systemManager() && (!Objects.equals(form.getSystem(), 0)
+                || !"COMPANY".equals(template.getScope())
+                || !Objects.equals(template.getCompanyId(), access.companyId()))) {
+            throw TemplateException.invalid("TEMPLATE_COPY_REQUIRED", "Mẫu hệ thống phải được sao chép thành mẫu riêng của công ty trước khi sử dụng");
+        }
         if (!Objects.equals(template.getCategory(), form.getCategory())) {
             throw TemplateException.invalid("TEMPLATE_INCOMPATIBLE", "Mẫu không phù hợp loại hóa đơn");
         }
-        // Older records may still carry the removed ARCHIVED state. A template
-        // that is already assigned to this active form remains the same design
-        // and can be saved again; publishing brings it back to the normal state.
+        if (form.getTemplateId() != null && !Objects.equals(form.getTemplateId(), template.getId())) {
+            throw TemplateException.invalid("TEMPLATE_BINDING_INVALID", "Mỗi mẫu hóa đơn chỉ được liên kết với template riêng của mẫu đó");
+        }
         boolean currentTemplate = Objects.equals(form.getTemplateId(), template.getId());
         if (!currentTemplate && !"ACTIVE".equals(template.getState())) {
             throw TemplateException.invalid("TEMPLATE_INCOMPATIBLE", "Mẫu đã ngừng sử dụng");
@@ -100,14 +102,14 @@ public class InvoiceTemplateBindingService {
         }
         requireTaxMode(version, form);
         form.setTemplateVersionId(versionId);
-        form.setTemplateId("SYSTEM".equals(template.getScope()) && !access.systemManager() ? null : template.getId());
+        form.setTemplateId(template.getId());
     }
 
     @Transactional
     public void pin(InvoiceEntity invoice) {
         var form = forms.findById(invoice.getFormId().longValue()).orElseThrow(TemplateException::missing);
         Long companyId = invoice.getCompanyId().longValue();
-        if (!Objects.equals(form.getSystem(), 1) || !Objects.equals(form.getCompanyId(), companyId)) throw TemplateException.missing();
+        if (!Objects.equals(form.getSystem(), 0) || !Objects.equals(form.getCompanyId(), companyId)) throw TemplateException.missing();
         requireTaxMode(formTemplates.latestPublished(form.getId()), form);
         if (invoice.getIssueProfileSnapshotJson() == null) {
             Map<String, Object> profile = new LinkedHashMap<>();
@@ -127,7 +129,7 @@ public class InvoiceTemplateBindingService {
             var result = new FormInvoiceEntity();
             result.setId(current == null ? null : current.getId());
             result.setCompanyId(invoice.getCompanyId().longValue());
-            result.setSystem(1);
+            result.setSystem(0);
             if (current != null) {
                 result.setPhoto(current.getPhoto());
                 result.setName(current.getName());

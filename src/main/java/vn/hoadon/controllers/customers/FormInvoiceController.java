@@ -3,6 +3,7 @@ package vn.hoadon.controllers.customers;
 import vn.hoadon.invoice.template.service.InvoiceDocumentBridge;
 import vn.hoadon.invoice.template.service.InvoiceTemplateBindingService;
 import vn.hoadon.invoice.template.service.TemplateAccess;
+import vn.hoadon.invoice.template.service.TemplateException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -24,6 +25,8 @@ import java.util.*;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ContentDisposition;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 @RestController
 @RequestMapping("/v1/form-invoices")
@@ -74,12 +77,10 @@ public class FormInvoiceController extends BaseController {
         }
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "updatedAt"));
 
-        // Dùng method service mới để lọc ở tầng database
-        Page<FormInvoiceEntity> p = service.pageByCompanySystemWithFilters(companyId, 1, q, category, type, status, pageable);
+        Page<FormInvoiceEntity> p = service.pageByCompanySystemWithFilters(companyId, 0, q, category, type, status, pageable);
 
         List<FormInvoiceEntity> items = p.getContent();
 
-        // Lấy username cho các item hiển thị
         Set<Long> uidSet = new HashSet<>();
         for (FormInvoiceEntity it : items) {
             if (it.getUserId() != null) uidSet.add(it.getUserId());
@@ -114,7 +115,7 @@ public class FormInvoiceController extends BaseController {
     ) {
         permission("form-invoice-list|form-invoice-save");
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.clamp(size, 1, 100), Sort.by(Sort.Direction.DESC, "updatedAt", "id"));
-        Page<FormInvoiceEntity> result = service.pageByCompanySystemWithFilters(null, 0, q, category, type, 1, pageable);
+        Page<FormInvoiceEntity> result = service.pageByCompanySystemWithFilters(null, 1, q, category, type, 1, pageable);
         List<Map<String, Object>> items = result.getContent().stream().map(form -> {
             Map<String, Object> item = new HashMap<>();
             item.put("id", form.getId());
@@ -136,12 +137,13 @@ public class FormInvoiceController extends BaseController {
         Optional<FormInvoiceEntity> opt = service.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         FormInvoiceEntity e = opt.get();
-        // System templates (system=0) are shared across all companies - no company check needed
-        // For company-specific forms (system=1), check company ownership
-        if (Objects.equals(e.getSystem(), 1) && !Objects.equals(e.getCompanyId(), user.getCompanyId())) {
+        if (Objects.equals(e.getSystem(), 0)
+                && (!Objects.equals(e.getCompanyId(), user.getCompanyId()) || !Set.of(0, 1).contains(e.getStatus()))) {
             return ResponseEntity.status(403).build();
         }
-        // Chỉ cho phép truy cập template hệ thống (system = 0), từ chối giá trị system khác
+        if (Objects.equals(e.getSystem(), 1) && !Objects.equals(e.getStatus(), 1)) {
+            return ResponseEntity.status(403).build();
+        }
         if (!Objects.equals(e.getSystem(), 0) && !Objects.equals(e.getSystem(), 1)) {
             return ResponseEntity.status(403).build();
         }
@@ -164,7 +166,7 @@ public class FormInvoiceController extends BaseController {
         Optional<FormInvoiceEntity> opt = service.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         FormInvoiceEntity e = opt.get();
-        if (!Objects.equals(e.getCompanyId(), user.getCompanyId()) || !Objects.equals(e.getSystem(), 1)) return ResponseEntity.status(403).build();
+        if (!Objects.equals(e.getCompanyId(), user.getCompanyId()) || !Objects.equals(e.getSystem(), 0)) return ResponseEntity.status(403).build();
         return ResponseEntity.ok(e);
     }
 
@@ -176,12 +178,13 @@ public class FormInvoiceController extends BaseController {
         Optional<FormInvoiceEntity> opt = service.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         FormInvoiceEntity form = opt.get();
-        if (!Objects.equals(form.getCompanyId(), user.getCompanyId()) || !Objects.equals(form.getSystem(), 1)) return ResponseEntity.status(403).build();
+        if (!Objects.equals(form.getCompanyId(), user.getCompanyId()) || !Objects.equals(form.getSystem(), 0)) return ResponseEntity.status(403).build();
         var access = new TemplateAccess(user.getCompanyId(), user.getId(), false);
         return documentBridge.viewer(documentBridge.sample(id, false, access), "/v1/form-invoices/" + id + "/download-pdf");
     }
 
     @PostMapping
+    @Transactional
     public ResponseEntity<?> create(@RequestBody Map<String, Object> body) {
         permission("form-invoice-save");
         UserEntity user = currentUser();
@@ -194,21 +197,13 @@ public class FormInvoiceController extends BaseController {
         String serialFull = Optional.ofNullable(body.get("serial")).map(Object::toString).orElse(null);
         Integer category = Optional.ofNullable(body.get("category")).map(v -> Integer.valueOf(v.toString())).orElse(null);
         Integer type = Optional.ofNullable(body.get("type")).map(v -> Integer.valueOf(v.toString())).orElse(null);
-        Integer status = Optional.ofNullable(body.get("status")).map(v -> Integer.valueOf(v.toString())).orElse(1);
-        // Always set system=1 for customer-created samples
-        Integer system = 1;
+        Integer status = Optional.ofNullable(body.get("status")).map(v -> Integer.valueOf(v.toString())).orElse(0);
         Long templateId = Optional.ofNullable(body.get("templateId")).map(v -> Long.valueOf(v.toString())).orElse(null);
         Integer haveCode = Optional.ofNullable(body.get("have_code")).map(v -> Integer.valueOf(v.toString())).orElse(0);
 
-        if (Objects.equals(status, 1) && !hasAcceptedRegisterInvoice(companyId)) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Chưa có tờ khai hóa đơn được chấp nhận nên không thể thêm/kích hoạt mẫu hóa đơn"));
-        }
-
-        // Validate name
         if (name == null || name.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Tên mẫu không được để trống"));
         }
-        // Validate serial (full): must have at least 2 chars to split
         if (serialFull == null || serialFull.trim().length() < 2) {
             return ResponseEntity.badRequest().body(Map.of("message", "Ký hiệu không hợp lệ"));
         }
@@ -222,8 +217,7 @@ public class FormInvoiceController extends BaseController {
                 return ResponseEntity.badRequest().body(Map.of("message", "Không tìm thấy mẫu template"));
             }
             FormInvoiceEntity tpl = optTpl.get();
-            // Chỉ cho phép sao chép từ template hệ thống (system = 0), dùng chung cho mọi công ty
-            if (!Objects.equals(tpl.getSystem(), 0)) {
+            if (!Objects.equals(tpl.getSystem(), 1)) {
                 return ResponseEntity.status(403).body(Map.of("message", "Chỉ được sao chép từ mẫu hệ thống"));
             }
             if (!Objects.equals(tpl.getCategory(), category) || !Objects.equals(tpl.getType(), type) || !Objects.equals(tpl.getStatus(), 1)) {
@@ -242,17 +236,30 @@ public class FormInvoiceController extends BaseController {
         e.setSerial(serialRemainder);
         e.setCategory(category);
         e.setType(type);
-        e.setStatus(status);
-        e.setSystem(system);
+        boolean activateAfterCreate = Integer.valueOf(1).equals(status);
+        e.setStatus(0);
+        e.setSystem(0);
         e.setHaveCode(haveCode);
         e.setCreatedAt(LocalDateTime.now());
         e.setUpdatedAt(LocalDateTime.now());
 
         FormInvoiceEntity saved;
         try {
-            saved = service.create(e);
+            saved = service.create(e, null);
+            if (activateAfterCreate) {
+                var access = new TemplateAccess(companyId, user.getId(), false);
+                formTemplates.saveInitialVersion(saved.getId(), access);
+                FormInvoiceEntity activation = new FormInvoiceEntity();
+                activation.setStatus(1);
+                saved = service.update(saved.getId(), activation)
+                        .orElseThrow(() -> new IllegalArgumentException("Không thể kích hoạt mẫu hóa đơn"));
+            }
         } catch (IllegalArgumentException iae) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return ResponseEntity.badRequest().body(Map.of("message", iae.getMessage()));
+        } catch (TemplateException te) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return ResponseEntity.badRequest().body(Map.of("message", te.getMessage(), "code", te.getCode()));
         }
 
         Map<String, Object> resp = new HashMap<>();
@@ -269,7 +276,7 @@ public class FormInvoiceController extends BaseController {
         Optional<FormInvoiceEntity> opt = service.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         FormInvoiceEntity ex = opt.get();
-        if (!Objects.equals(ex.getCompanyId(), user.getCompanyId()) || !Objects.equals(ex.getSystem(), 1)) return ResponseEntity.status(403).build();
+        if (!Objects.equals(ex.getCompanyId(), user.getCompanyId()) || !Objects.equals(ex.getSystem(), 0)) return ResponseEntity.status(403).build();
 
         FormInvoiceEntity patch = new FormInvoiceEntity();
         patch.setName(Optional.ofNullable(body.get("name")).map(Object::toString).orElse(null));
@@ -286,7 +293,7 @@ public class FormInvoiceController extends BaseController {
         patch.setCategory(Optional.ofNullable(body.get("category")).map(v -> Integer.valueOf(v.toString())).orElse(null));
         patch.setType(Optional.ofNullable(body.get("type")).map(v -> Integer.valueOf(v.toString())).orElse(null));
         patch.setStatus(Optional.ofNullable(body.get("status")).map(v -> Integer.valueOf(v.toString())).orElse(null));
-        patch.setSystem(1);
+        patch.setSystem(0);
 
         patch.setHaveCode(Optional.ofNullable(body.get("have_code")).map(v -> Integer.valueOf(v.toString())).orElse(null));
 
@@ -319,7 +326,7 @@ public class FormInvoiceController extends BaseController {
         Optional<FormInvoiceEntity> opt = service.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         FormInvoiceEntity e = opt.get();
-        if (!Objects.equals(e.getCompanyId(), user.getCompanyId()) || !Objects.equals(e.getSystem(), 1)) {
+        if (!Objects.equals(e.getCompanyId(), user.getCompanyId()) || !Objects.equals(e.getSystem(), 0)) {
             return ResponseEntity.status(403).build();
         }
         try { service.delete(id); }
@@ -354,14 +361,13 @@ public class FormInvoiceController extends BaseController {
             FormInvoiceListItemDto d = new FormInvoiceListItemDto();
             d.setId(it.getId());
             d.setName(it.getName());
-            // Dùng serial ghép: formCode + serial
             String combinedSerial = (it.getFormCode() != null ? it.getFormCode() : "") + (it.getSerial() != null ? it.getSerial() : "");
             d.setSerial(combinedSerial);
             d.setCategory(it.getCategory());
             d.setCategoryLabel(categoryLabel(it.getCategory()));
             d.setType(it.getType());
             d.setTypeLabel(typeLabel(it.getType()));
-            d.setStatus(it.getStatus()); // add status to dto
+            d.setStatus(it.getStatus());
             d.setUserId(it.getUserId());
             d.setUsername(it.getUserId() != null ? usernameMap.get(it.getUserId()) : null);
             d.setUpdatedAt(it.getUpdatedAt());
@@ -404,7 +410,7 @@ public class FormInvoiceController extends BaseController {
         Optional<FormInvoiceEntity> opt = service.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         FormInvoiceEntity e = opt.get();
-        if (!Objects.equals(e.getCompanyId(), user.getCompanyId()) || !Objects.equals(e.getSystem(), 1)) return ResponseEntity.status(403).build();
+        if (!Objects.equals(e.getCompanyId(), user.getCompanyId()) || !Objects.equals(e.getSystem(), 0)) return ResponseEntity.status(403).build();
 
         var access = new TemplateAccess(user.getCompanyId(), user.getId(), false);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML)
@@ -420,7 +426,7 @@ public class FormInvoiceController extends BaseController {
         Optional<FormInvoiceEntity> opt = service.findById(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
         FormInvoiceEntity e = opt.get();
-        if (!Objects.equals(e.getCompanyId(), user.getCompanyId()) || !Objects.equals(e.getSystem(), 1)) return ResponseEntity.status(403).build();
+        if (!Objects.equals(e.getCompanyId(), user.getCompanyId()) || !Objects.equals(e.getSystem(), 0)) return ResponseEntity.status(403).build();
 
         var access = new TemplateAccess(user.getCompanyId(), user.getId(), false);
         return documentBridge.pdf(documentBridge.sampleArtifact(id, false, access, artifactId), true, "invoice-" + id + ".pdf");

@@ -35,7 +35,7 @@ public class FormInvoiceEntity {
     private String photo;
 
     @Column(name = "system", columnDefinition = "tinyint")
-    private Integer system; // 0/1
+    private Integer system; // 0: company/customer, 1: system
 
     @Column(name = "type", columnDefinition = "tinyint")
     private Integer type; // 1: one rate, 2: multi rate

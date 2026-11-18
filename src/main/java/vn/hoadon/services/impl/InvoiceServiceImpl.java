@@ -248,7 +248,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (form == null) {
             throw new IllegalArgumentException("Không tìm thấy mẫu hóa đơn");
         }
-        if (!Integer.valueOf(1).equals(form.getSystem()) || companyId == null || !companyId.equals(form.getCompanyId())) {
+        if (!Integer.valueOf(0).equals(form.getSystem()) || companyId == null || !companyId.equals(form.getCompanyId())) {
             throw new IllegalArgumentException("Mẫu hóa đơn không thuộc công ty hiện tại");
         }
     }

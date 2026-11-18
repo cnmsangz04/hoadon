@@ -79,7 +79,8 @@ public class InvoiceRenderWorker {
             if (job.getAttemptCount() > 3) throw TemplateException.invalid("RENDER_RETRY_LIMIT", "Đã vượt giới hạn thử tạo PDF");
             if (!properties.getProfileVersion().equals(job.getProfileVersion())) throw TemplateException.invalid("RENDER_PROFILE_UNAVAILABLE", "Worker không có render profile của tài liệu");
             var result = renderer.render(job.getSourceContent(), assets.resources(job.getManifestJson(), job.getScope(), job.getCompanyId()));
-            String key = storage.write(result.bytes());
+            Long storageOwner = "SYSTEM".equals(job.getScope()) && job.getCompanyId() == null ? 0L : job.getCompanyId();
+            String key = storage.write(result.bytes(), storageOwner, "invoice-pdfs", ".pdf");
             transactions.executeWithoutResult(status -> {
                 var current = jobs.lockById(id).orElseThrow();
                 if (!"RUNNING".equals(current.getState()) || !token.equals(current.getClaimToken())) return;

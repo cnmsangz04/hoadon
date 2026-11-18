@@ -18,7 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping({"/v1/invoice-templates", "/v1/administrator/invoice-templates"})
 public class InvoiceTemplateController extends BaseController {
-    public record CreateRequest(@NotBlank @Size(max = 255) String name, @Min(1) @Max(2) int category, Long sourceVersionId) { }
+    public record CreateRequest(@NotBlank @Size(max = 255) String name, @Min(1) @Max(2) int category, Long sourceVersionId, JsonNode layout) { }
     public record SaveRequest(@NotNull Long expectedLockVersion, @NotNull JsonNode layout) { }
     public record RevisionRequest(@NotNull Long expectedLockVersion) { }
     public record DesignerPreviewRequest(@NotNull JsonNode layout, @Min(0) @Max(60) int rows) { }
@@ -70,12 +70,6 @@ public class InvoiceTemplateController extends BaseController {
         return Map.of("version", source.code(), "fields", fields, "groups", source.groups(), "datasets", source.datasets());
     }
 
-    @GetMapping("/default-layout")
-    public Object defaultLayout(HttpServletRequest request, @RequestParam(defaultValue = "1") Integer category) {
-        access(request, false);
-        return service.tree(service.defaultLayout(category));
-    }
-
     @GetMapping("/designer-fonts")
     public Object designerFonts(HttpServletRequest request) {
         access(request, true);
@@ -91,15 +85,22 @@ public class InvoiceTemplateController extends BaseController {
     @PostMapping
     public Object create(HttpServletRequest request, @Valid @RequestBody CreateRequest body, @RequestHeader("Idempotency-Key") String key) {
         var access = access(request, true);
-        return service.create(body.name(), body.category(), body.sourceVersionId(), access.systemManager(), key, access);
+        return body.sourceVersionId() == null
+                ? service.create(body.name(), body.category(), null, access.systemManager(), key, access, body.layout())
+                : service.clonePublished(body.name(), body.category(), body.sourceVersionId(), access.systemManager(), key, access);
     }
 
     @GetMapping("/{id}")
     public Object details(@PathVariable Long id, HttpServletRequest request) { return service.details(id, access(request, false)); }
 
+    @PostMapping("/{id}/ensure-draft")
+    public Object ensureDraft(@PathVariable Long id, HttpServletRequest request) {
+        return service.ensureDraft(id, access(request, true));
+    }
+
     @PostMapping("/from-form/{id}")
     public Object fromForm(@PathVariable Long id, @RequestHeader("Idempotency-Key") String key, HttpServletRequest request) {
-        return formTemplates.editable(id, key, access(request, true));
+        return formTemplates.editable(id, key, access(request, true), null);
     }
 
     @PostMapping("/versions/{versionId}/bind/{formId}")

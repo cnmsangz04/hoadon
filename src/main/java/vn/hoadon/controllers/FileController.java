@@ -50,7 +50,7 @@ public class FileController {
 
     private void requirePublicTemplate(Long id) {
         FormInvoiceEntity form = formInvoiceService.findById(id).orElseThrow(TemplateException::missing);
-        if (!Integer.valueOf(0).equals(form.getSystem()) || !Integer.valueOf(1).equals(form.getStatus())) {
+        if (!Integer.valueOf(1).equals(form.getSystem()) || !Integer.valueOf(1).equals(form.getStatus())) {
             throw TemplateException.missing();
         }
     }

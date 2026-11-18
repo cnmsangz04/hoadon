@@ -84,7 +84,6 @@ public class ChromiumInvoicePdfRenderer implements InvoicePdfRenderer {
                 page.setContent(document.outerHtml(), new Page.SetContentOptions().setWaitUntil(com.microsoft.playwright.options.WaitUntilState.DOMCONTENTLOADED));
                 if (!resourceErrors.isEmpty()) throw TemplateException.invalid("ASSET_LOAD_FAILED", "Không tải đủ ảnh hoặc font của mẫu");
                 long resourceDeadline = System.nanoTime() + properties.getTimeoutSeconds() * 1_000_000_000L;
-                // Trang không chạy script; thăm dò từ worker để không phụ thuộc requestAnimationFrame.
                 while (!Boolean.TRUE.equals(page.evaluate("() => document.fonts.status === 'loaded' && Array.from(document.images).every(i => i.complete)"))) {
                     if (!resourceErrors.isEmpty()) throw TemplateException.invalid("ASSET_LOAD_FAILED", "Không tải đủ ảnh hoặc font của mẫu");
                     if (System.nanoTime() > resourceDeadline) throw TemplateException.invalid("RENDER_TIMEOUT", "Quá thời gian chờ tài nguyên của mẫu");

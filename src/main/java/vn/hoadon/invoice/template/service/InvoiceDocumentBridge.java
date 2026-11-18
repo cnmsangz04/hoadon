@@ -60,8 +60,8 @@ public class InvoiceDocumentBridge {
         var job = jobs.findById(artifact.getJobId()).orElseThrow(TemplateException::missing);
         if (!"TEMPLATE_SAMPLE".equals(job.getPurpose()) || !Objects.equals(publicSample ? "SYSTEM" : "COMPANY", artifact.getScope())) throw TemplateException.missing();
         var form = forms.findById(formId).orElseThrow(TemplateException::missing);
-        if (publicSample ? !Objects.equals(form.getSystem(), 0) || !Objects.equals(form.getStatus(), 1)
-                : !Objects.equals(form.getSystem(), 1) || !Objects.equals(form.getCompanyId(), access.companyId())) throw TemplateException.missing();
+        if (publicSample ? !Objects.equals(form.getSystem(), 1) || !Objects.equals(form.getStatus(), 1)
+                : !Objects.equals(form.getSystem(), 0) || !Objects.equals(form.getCompanyId(), access.companyId())) throw TemplateException.missing();
         try {
             if (!formId.toString().equals(mapper.readTree(job.getParametersJson()).path("formId").asText())) throw TemplateException.missing();
         } catch (com.fasterxml.jackson.core.JsonProcessingException ex) { throw new IllegalStateException(ex); }

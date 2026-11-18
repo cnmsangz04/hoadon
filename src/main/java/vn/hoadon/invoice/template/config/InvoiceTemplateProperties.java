@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "invoice.template")
 public class InvoiceTemplateProperties {
-    private String storageRoot = "invoice-documents";
+    private String storageRoot = "uploads";
     private String profileVersion = "chromium-1.64.0-fonts-1";
     private int workerCount = 2;
     private int timeoutSeconds = 45;
