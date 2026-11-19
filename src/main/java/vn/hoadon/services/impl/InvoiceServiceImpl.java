@@ -188,7 +188,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setCompanyId(companyId != null ? companyId.intValue() : src.getCompanyId());
         e.setUserId(userId != null ? userId.intValue() : src.getUserId());
         e.setFormId(src.getFormId());
-        e.setName(src.getName());
+        FormInvoiceEntity sourceForm = src.getFormId() == null
+                ? null
+                : formInvoiceRepository.findById(src.getFormId().longValue()).orElse(null);
+        e.setName(invoiceTitle(sourceForm, src.getName()));
         e.setNo(null); // new invoice should not reuse number
         e.setDateExport(src.getDateExport());
         e.setPaymentType(src.getPaymentType());
@@ -299,7 +302,11 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (userId != null) e.setUserId(userId.intValue());
         if (p.formId != null) e.setFormId(p.formId.intValue());
         // Basic info
-        e.setName("Hóa đơn GTGT");
+        Long selectedFormId = p.formId != null ? p.formId : (e.getFormId() == null ? null : e.getFormId().longValue());
+        FormInvoiceEntity selectedForm = selectedFormId == null
+                ? null
+                : formInvoiceRepository.findById(selectedFormId).orElse(null);
+        e.setName(invoiceTitle(selectedForm, e.getName()));
         e.setNo(p.no);
         e.setDateExport(p.dateExport);
         e.setPaymentType(p.paymentType != null ? p.paymentType : 1);
@@ -330,6 +337,11 @@ public class InvoiceServiceImpl implements InvoiceService {
             e.setTypeApi((short)0);
             e.setStatusConvert((short)0);
         }
+    }
+
+    private String invoiceTitle(FormInvoiceEntity form, String currentName) {
+        if (form != null && form.getName() != null && !form.getName().isBlank()) return form.getName().trim();
+        return currentName == null || currentName.isBlank() ? "Hóa đơn giá trị gia tăng" : currentName;
     }
 
     private void applyInvoiceRelationFields(InvoiceEntity e, InvoicePayload p, boolean isCreate) {

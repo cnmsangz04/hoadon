@@ -170,7 +170,7 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         if (form.getHaveCode() == null || !java.util.Set.of(0, 1).contains(form.getHaveCode())) throw new IllegalArgumentException("Hình thức có mã/không mã không hợp lệ");
         if (Integer.valueOf(1).equals(form.getStatus()) && form.getTemplateVersionId() == null) throw new IllegalArgumentException("Mẫu chưa có phiên bản thiết kế hợp lệ");
         if (!Integer.valueOf(0).equals(form.getSystem())) return;
-        if (!String.valueOf(form.getCategory()).equals(form.getFormCode()) || form.getSerial() == null || !form.getSerial().matches("[CK][0-9]{2}T[A-Z]{2}")) throw new IllegalArgumentException("Ký hiệu hóa đơn không hợp lệ");
+        if (!String.valueOf(form.getCategory()).equals(form.getFormCode()) || form.getSerial() == null || !form.getSerial().matches("[CK][0-9]{2}T[\\p{IsLatin}&&\\p{Lu}]{2}")) throw new IllegalArgumentException("Ký hiệu hóa đơn không hợp lệ");
         if ((form.getSerial().startsWith("C") ? 1 : 0) != form.getHaveCode()) throw new IllegalArgumentException("Ký hiệu C/K không khớp hình thức hóa đơn");
         if (Integer.valueOf(1).equals(form.getStatus())) {
             var accepted = declarations.findLatestAccepted(form.getCompanyId(), org.springframework.data.domain.PageRequest.of(0, 1));

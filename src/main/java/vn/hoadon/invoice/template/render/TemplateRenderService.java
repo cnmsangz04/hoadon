@@ -92,6 +92,9 @@ public class TemplateRenderService {
         var existing = jobs.findByRequestKey(requestKey);
         if (existing.isPresent()) return existing.get();
         if ("DRAFT_PREVIEW".equals(purpose) && draftId != null) storageCleanup.deleteDraftPreviewJobs(draftId);
+        if ("TEMPLATE_SAMPLE".equals(purpose) && versionId != null) {
+            storageCleanup.deleteCompletedTemplateSamples(scope, companyId, versionId);
+        }
         InvoiceRenderJobEntity job = new InvoiceRenderJobEntity();
         job.setScope(scope);
         job.setCompanyId(companyId);
@@ -197,7 +200,21 @@ public class TemplateRenderService {
     }
 
     private String compileLayout(com.fasterxml.jackson.databind.JsonNode layout, String xml, Map<String, String> parameters) {
-        String html = compiler.compile(layout, viewModels.map(xml, parameters, compiler.catalogSnapshot(layout)));
+        Map<String, Object> data = new LinkedHashMap<>(viewModels.map(xml, parameters, compiler.catalogSnapshot(layout)));
+        if ("SAMPLE".equals(parameters.get("sampleMarker"))) {
+            String signer = Objects.toString(data.get("seller.Ten"), "").trim();
+            if (signer.isBlank()) signer = "CÔNG TY MINH HỌA";
+            String signedAt = Objects.toString(data.get("common.NLap"), "20-01-2026");
+            if (signedAt.isBlank()) signedAt = "20-01-2026";
+            try {
+                signedAt = java.time.LocalDate.parse(signedAt).format(java.time.format.DateTimeFormatter.ofPattern("dd / MM / yyyy"));
+            } catch (RuntimeException ignored) { }
+            data.put("presentation.signatureValid", "true");
+            data.put("presentation.signatureSigner", signer);
+            data.put("presentation.signatureSignedAt", signedAt);
+            data.put("invoice.DSCKS.NBan.Signature.SignedAt", signedAt);
+        }
+        String html = compiler.compile(layout, data);
         return html.replace("</head>", "<style>" + customFontCss(layout) + "</style></head>");
     }
 

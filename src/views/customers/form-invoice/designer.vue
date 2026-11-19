@@ -152,6 +152,14 @@
               >
                 <em>I</em>
               </button>
+              <button
+                type="button"
+                title="In hoa"
+                :class="{ active: selectedStyle('textTransform', 'none') === 'uppercase' }"
+                @click="setStyle('textTransform', selectedStyle('textTransform', 'none') === 'uppercase' ? 'none' : 'uppercase')"
+              >
+                <span class="text-transform-icon">Aa</span>
+              </button>
               <label class="color-tool" title="Màu chữ">
                 <span
                   class="color-tool-symbol"
@@ -221,6 +229,22 @@
                 @click="deleteSelected"
               >
                 Xóa
+              </button>
+              <button
+                type="button"
+                :disabled="!selectedParent"
+                title="Chọn khung chứa phần tử để di chuyển cả khung"
+                @click="selectParent"
+              >
+                Chọn khung cha
+              </button>
+              <button
+                type="button"
+                :disabled="!canArrangeSelection"
+                title="Sắp các phần tử đã chọn theo chiều dọc, giữ khoảng cách đều"
+                @click="arrangeSelection"
+              >
+                Xếp gọn
               </button>
             </div>
           </div>
@@ -371,6 +395,10 @@
             :options="[0, 1, 3, 10, 60]"
           />
         </label>
+        <span class="selection-help" aria-live="polite">
+          {{ selectedIds.length ? `Đã chọn ${selectedIds.length} phần tử` : "Chọn phần tử để chỉnh sửa" }}
+          <span>Phím mũi tên để di chuyển · Shift + mũi tên để đi nhanh · Shift + nhấp để chọn nhiều</span>
+        </span>
         <div class="zoom-control">
           <button type="button" @click="fitPage">Vừa chiều ngang</button>
           <button
@@ -545,7 +573,7 @@
                 :blocks="layout.body.children"
                 :resolve-label="blockLabel"
                 :selected-id="selected ? selected.id : ''"
-                @select="selected = $event"
+                @select="selectBlock($event ? $event.id : null)"
                 @move="moveBlock"
               />
             </fieldset>
@@ -559,11 +587,19 @@
             :template-id="selectedTemplateId"
             :base="base"
             :selected-id="selected ? selected.id : ''"
+            :selected-ids="selectedIds"
+            :palette-item="paletteDragInfo"
             :zoom="zoom"
             :rows="sampleRows"
             :disabled="busy"
             @select="selectBlock"
-            @move="moveBlock"
+            @selection="selectBlocks"
+            @resize-start="startResizeBlock"
+            @resize="resizeBlock"
+            @resize-end="finishResizeBlock"
+            @position-start="startPositionBlocks"
+            @position="positionBlocks"
+            @position-end="finishPositionBlocks"
             @insert="insertBlock"
             @text="changeText"
             @shortcut="handleShortcut"
@@ -577,8 +613,9 @@
           <div class="inspector-heading">
             <span>Đang chọn</span
             ><strong>{{
-              selected ? blockLabel(selected) : "Chưa chọn phần tử"
+              selectedIds.length > 1 ? `${selectedIds.length} phần tử` : selected ? blockLabel(selected) : "Chưa chọn phần tử"
             }}</strong>
+            <small v-if="selectedIds.length > 1" class="text-muted">Kéo để di chuyển cùng nhau. Dùng thanh công cụ để định dạng toàn bộ phần đã chọn.</small>
           </div>
           <div
             v-if="selected"
@@ -598,7 +635,8 @@
               {{ tab.text }}
             </button>
           </div>
-          <fieldset :disabled="busy" class="inspector-content">
+          <p v-if="selectedIds.length > 1" class="multi-selection-note">Chọn một phần tử để sửa nội dung và kích thước riêng.</p>
+          <fieldset :disabled="busy || selectedIds.length > 1" class="inspector-content">
             <b-card
               title-tag="div"
               v-if="selected"
@@ -729,6 +767,13 @@
                       ]"
                   /></b-form-group>
                 </div>
+                <div class="col-12">
+                  <b-form-group label="Kiểu chữ"
+                    ><b-form-select
+                      v-model="selected.style.textTransform"
+                      :options="textTransforms"
+                  /></b-form-group>
+                </div>
               </div>
             </b-card>
             <div v-if="!selected" class="inspector-empty">
@@ -776,6 +821,24 @@
                     min="1"
                     max="150"
                 /></b-form-group>
+              </template>
+              <template v-if="selected.type === 'signatureSummary'">
+                <b-form-group label="Rộng khung (mm)">
+                  <b-form-input
+                    v-model.number="selected.widthMm"
+                    type="number"
+                    min="20"
+                    max="270"
+                  />
+                </b-form-group>
+                <b-form-group label="Cao khung (mm)">
+                  <b-form-input
+                    v-model.number="selected.heightMm"
+                    type="number"
+                    min="10"
+                    max="150"
+                  />
+                </b-form-group>
               </template>
               <b-form-group
                 v-if="selected.type === 'spacer'"
@@ -883,6 +946,7 @@ import {
   blockId,
   copyBlock,
   placeBlock,
+  selectedBlockRoots,
 } from "@/utils/invoice_layout";
 
 const requestKey = () =>
@@ -899,6 +963,9 @@ export default {
     draft: null,
     layout: null,
     selected: null,
+    selectedIds: [],
+    positionGestureActive: false,
+    resizeGestureActive: false,
     fields: [],
     fieldGroups: [],
     busy: false,
@@ -945,6 +1012,7 @@ export default {
     historyTimer: null,
     historyApplying: false,
     paletteDragActive: false,
+    paletteDragInfo: null,
     xmlGroupOpen: {},
     editorTabs: [
       { value: "home", text: "Trang đầu" },
@@ -957,6 +1025,12 @@ export default {
       { value: "center", text: "Căn giữa" },
       { value: "right", text: "Căn phải" },
     ],
+    textTransforms: [
+      { value: "none", text: "Giữ nguyên" },
+      { value: "uppercase", text: "IN HOA" },
+      { value: "lowercase", text: "in thường" },
+      { value: "capitalize", text: "Viết hoa đầu từ" },
+    ],
     marginLabels: { top: "Trên", right: "Phải", bottom: "Dưới", left: "Trái" },
     formatters: [
       { value: "plainText", text: "Văn bản" },
@@ -967,9 +1041,25 @@ export default {
     ],
   }),
   computed: {
+    selectedBlocks() {
+      return this.layout ? selectedBlockRoots(this.layout.body, this.selectedIds) : [];
+    },
+    selectedParent() {
+      if (!this.selected || !this.layout) return null;
+      const parent = findBlock(this.layout.body, this.selected.id)?.parent;
+      return parent && parent.id !== this.layout.body.id ? parent : null;
+    },
+    canArrangeSelection() {
+      return this.selectedIds.length > 1 || this.selected?.children?.length > 1;
+    },
     insertionTools() {
       return [
         { value: "text", text: "Văn bản", section: "Nội dung" },
+        {
+          value: "signatureSummary",
+          text: "Thông tin chữ ký",
+          section: "Nội dung",
+        },
         ...this.tableGroups
           .map((group) => ({
             value: "table",
@@ -1114,7 +1204,7 @@ export default {
       handler() {
         if (this.layout && this.draft) {
           this.dirty = JSON.stringify(this.layout) !== this.savedLayout;
-          if (!this.historyApplying) {
+          if (!this.historyApplying && !this.positionGestureActive && !this.resizeGestureActive) {
             clearTimeout(this.historyTimer);
             this.historyTimer = setTimeout(this.recordHistory, 350);
           }
@@ -1123,6 +1213,8 @@ export default {
     },
     selected(value) {
       if (value && !value.style) this.$set(value, "style", {});
+      if (!value) this.selectedIds = [];
+      else if (!this.selectedIds.includes(value.id)) this.selectedIds = [value.id];
     },
   },
   async created() {
@@ -1212,19 +1304,38 @@ export default {
       );
     },
     selectBlock(id) {
-      this.selected = id
-        ? findBlock(this.layout.body, id)?.block || null
-        : null;
+      this.selectBlocks({ ids: id ? [id] : [], primaryId: id });
+    },
+    selectBlocks({ ids = [], primaryId = null } = {}) {
+      if (!this.layout) {
+        this.selected = null;
+        this.selectedIds = [];
+        return;
+      }
+      const roots = selectedBlockRoots(this.layout.body, ids);
+      this.selectedIds = roots.map(({ block }) => block.id);
+      const primary = roots.find(({ block }) => block.id === primaryId) || roots[0];
+      this.selected = primary?.block || null;
+    },
+    selectParent() {
+      if (this.selectedParent) this.selectBlock(this.selectedParent.id);
+    },
+    arrangeSelection() {
+      if (!this.busy && this.canArrangeSelection) this.$refs.canvas?.arrangeSelection();
     },
     selectedStyle(key, fallback) {
       return this.selected?.style?.[key] ?? fallback;
     },
     setStyle(key, value) {
       if (!this.layout || this.busy) return;
-      const block = this.selected || this.layout.body;
-      this.selected = block;
-      if (!block.style) this.$set(block, "style", {});
-      this.$set(block.style, key, value);
+      const blocks = this.selectedBlocks.length
+        ? this.selectedBlocks.map(({ block }) => block)
+        : [this.layout.body];
+      if (!this.selected) this.selectBlock(this.layout.body.id);
+      blocks.forEach((block) => {
+        if (!block.style) this.$set(block, "style", {});
+        this.$set(block.style, key, value);
+      });
     },
     resetHistory() {
       clearTimeout(this.historyTimer);
@@ -1242,11 +1353,12 @@ export default {
     },
     applyHistory(index) {
       clearTimeout(this.historyTimer);
-      const selectedId = this.selected?.id;
+      const selectedIds = this.selectedIds.slice();
+      const primaryId = this.selected?.id;
       this.historyApplying = true;
       this.historyIndex = index;
       this.layout = JSON.parse(this.history[index]);
-      this.selectBlock(selectedId);
+      this.selectBlocks({ ids: selectedIds, primaryId });
       this.$nextTick(() => {
         this.historyApplying = false;
       });
@@ -1276,6 +1388,9 @@ export default {
         } else if (key === "d") {
           event.preventDefault();
           this.duplicateSelected();
+        } else if (key === "a") {
+          event.preventDefault();
+          this.selectBlocks({ ids: this.layout.body.children.map((block) => block.id) });
         }
       } else if (
         !input &&
@@ -1283,6 +1398,24 @@ export default {
       ) {
         event.preventDefault();
         this.deleteSelected();
+      } else if (!input && event.key === "Escape") {
+        event.preventDefault();
+        this.selectBlock(null);
+      } else if (!input && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key) && this.selectedIds.length) {
+        event.preventDefault();
+        const step = event.shiftKey ? 1 : 0.25;
+        const dx = event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0;
+        const dy = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
+        if (this.$refs.canvas?.nudgeSelection?.(dx, dy)) return;
+        this.startPositionBlocks();
+        this.positionBlocks({ changes: this.selectedBlocks
+          .filter(({ parent }) => parent)
+          .map(({ block }) => ({
+            id: block.id,
+            offsetXMm: Number(block.position?.xMm ?? block.style?.marginLeftMm ?? 0) + dx,
+            offsetYMm: Number(block.position?.yMm ?? block.style?.offsetTopMm ?? 0) + dy,
+          })) });
+        this.finishPositionBlocks();
       }
     },
     changeText({ id, text }) {
@@ -1298,11 +1431,73 @@ export default {
       if (
         placeBlock(this.layout.body, found.block, targetId, placement, true)
       ) {
-        this.selected = found.block;
+        this.selectBlock(found.block.id);
         this.recordHistory();
       } else
         this.error =
           "Không thể đặt phần tử ở vị trí này. Một nhóm cột chứa tối đa 6 phần tử.";
+    },
+    startResizeBlock() {
+      clearTimeout(this.historyTimer);
+      this.recordHistory();
+      this.resizeGestureActive = true;
+    },
+    resizeBlock({ id, widthMm, heightMm, axis, columnWidths, linkedHeights, position }) {
+      if (this.busy) return;
+      const block = findBlock(this.layout.body, id)?.block;
+      if (!block || block.id === this.layout.body.id || block.type === "pageBreak") return;
+      if (axis !== "height")
+        this.$set(block, "widthMm", Math.round(widthMm * 10) / 10);
+      if (axis !== "width")
+        this.$set(block, "heightMm", Math.round(heightMm * 10) / 10);
+      for (const column of columnWidths || []) {
+        const sibling = findBlock(this.layout.body, column.id)?.block;
+        if (sibling) this.$set(sibling, "widthMm", column.widthMm);
+      }
+      for (const linked of linkedHeights || []) {
+        const child = findBlock(this.layout.body, linked.id)?.block;
+        if (child) this.$set(child, "heightMm", Math.round(linked.heightMm * 10) / 10);
+      }
+      if (position) {
+        this.positionBlocks({ changes: [{ id, offsetXMm: position.xMm, offsetYMm: position.yMm }] });
+      }
+    },
+    finishResizeBlock() {
+      this.resizeGestureActive = false;
+      this.recordHistory();
+    },
+    startPositionBlocks() {
+      if (this.busy || this.positionGestureActive) return;
+      clearTimeout(this.historyTimer);
+      this.recordHistory();
+      this.positionGestureActive = true;
+    },
+    positionBlocks({ changes = [], coalesce = false } = {}) {
+      if (this.busy || !this.layout) return;
+      const roots = new Set(selectedBlockRoots(this.layout.body, changes.map((change) => change.id))
+        .filter(({ parent }) => parent).map(({ block }) => block.id));
+      changes.forEach(({ id, offsetXMm, offsetYMm }) => {
+        if (!roots.has(id)) return;
+        const block = findBlock(this.layout.body, id)?.block;
+        if (!block || !Number.isFinite(offsetXMm) || !Number.isFinite(offsetYMm)) return;
+        this.$set(block, "position", {
+          xMm: Math.round(Math.max(-1000, Math.min(1000, offsetXMm)) * 100) / 100,
+          yMm: Math.round(Math.max(-1000, Math.min(1000, offsetYMm)) * 100) / 100,
+        });
+        if (block.style) {
+          this.$delete(block.style, "marginLeftMm");
+          this.$delete(block.style, "offsetTopMm");
+        }
+      });
+      if (coalesce && this.historyIndex >= 0) {
+        clearTimeout(this.historyTimer);
+        this.history.splice(this.historyIndex, 1, JSON.stringify(this.layout));
+      }
+    },
+    finishPositionBlocks() {
+      if (!this.positionGestureActive) return;
+      this.positionGestureActive = false;
+      this.recordHistory();
     },
     dragPalette(event, type, dataSource = null) {
       if (this.busy) {
@@ -1310,6 +1505,7 @@ export default {
         return;
       }
       this.paletteDragActive = true;
+      this.paletteDragInfo = { type, repeated: false };
       event.dataTransfer.setData("application/x-invoice-block-type", type);
       if (dataSource)
         event.dataTransfer.setData("application/x-invoice-data-source", dataSource);
@@ -1321,6 +1517,10 @@ export default {
         return;
       }
       this.paletteDragActive = true;
+      this.paletteDragInfo = {
+        type: "field",
+        repeated: field.repeated,
+      };
       event.dataTransfer.setData("application/x-invoice-block-type", "field");
       event.dataTransfer.setData("application/x-invoice-field-key", field.key);
       event.dataTransfer.effectAllowed = "copy";
@@ -1328,6 +1528,7 @@ export default {
     finishPaletteDrag() {
       window.setTimeout(() => {
         this.paletteDragActive = false;
+        this.paletteDragInfo = null;
       }, 0);
     },
     insertBlock({ type, fieldKey, dataSource, targetId, placement }) {
@@ -1362,13 +1563,13 @@ export default {
         ? findBlock(this.layout.body, position.targetId)?.block
         : this.selected;
       const source = this.tableSource(target);
-      if (source && target.columns) {
+      if (source && target.columns && (!position || position.placement === "inside")) {
         if (this.tableFieldGroup(field) !== source) {
           const tableGroup = this.tableFieldGroup(field);
           this.error = `“${this.xmlFieldLabel(field)}” thuộc ${this.groupLabel(tableGroup)}. Hãy thả vào bảng ${this.groupLabel(tableGroup)} hoặc vùng trống để tạo bảng mới.`;
           return;
         }
-        this.selected = target;
+        this.selectBlock(target.id);
         this.inspectorTab = "content";
         if (target.columns.some((column) => column.fieldKey === field.key)) {
           this.showNotice(`Bảng đã có cột “${this.xmlFieldLabel(field)}”.`, 4000);
@@ -1399,36 +1600,37 @@ export default {
       };
     },
     duplicateSelected() {
-      if (!this.selected || this.busy) return;
-      const found = findBlock(this.layout.body, this.selected.id);
-      if (!found?.parent) return;
-      if (
-        found.parent.type === "columns" &&
-        found.parent.children.length >= 6
-      ) {
+      if (this.busy || !this.layout) return;
+      const sources = this.selectedBlocks.filter(({ parent }) => parent);
+      if (!sources.length) return;
+      const additions = new Map();
+      sources.forEach(({ parent }) => additions.set(parent, (additions.get(parent) || 0) + 1));
+      if (Array.from(additions).some(([parent, count]) => parent.type === "columns" && parent.children.length + count > 6)) {
         this.error = "Một nhóm cột chứa tối đa 6 phần tử";
         return;
       }
       this.recordHistory();
-      const copy = copyBlock(found.block);
-      found.parent.children.splice(
-        found.parent.children.indexOf(found.block) + 1,
-        0,
-        copy
-      );
-      this.selected = copy;
+      const copies = sources.map(({ block, parent }) => {
+        const copy = copyBlock(block);
+        if (copy.position) {
+          copy.position.xMm = Number(copy.position.xMm || 0) + 2;
+          copy.position.yMm = Number(copy.position.yMm || 0) + 2;
+        }
+        parent.children.splice(parent.children.indexOf(block) + 1, 0, copy);
+        return copy;
+      });
+      this.selectBlocks({ ids: copies.map((block) => block.id), primaryId: copies[0].id });
       this.recordHistory();
     },
     deleteSelected() {
-      if (!this.selected || this.busy) return;
-      const found = findBlock(this.layout.body, this.selected.id);
-      if (!found?.parent) return;
+      if (this.busy || !this.layout) return;
+      const sources = this.selectedBlocks.filter(({ parent }) => parent);
+      if (!sources.length) return;
       this.recordHistory();
-      found.parent.children.splice(
-        found.parent.children.indexOf(found.block),
-        1
-      );
-      this.selected = null;
+      sources.forEach(({ block, parent }) => {
+        parent.children.splice(parent.children.indexOf(block), 1);
+      });
+      this.selectBlock(null);
       this.recordHistory();
     },
     fail(e) {
@@ -1519,7 +1721,9 @@ export default {
         normalize(this.layout.body);
       }
       this.savedLayout = this.layout ? JSON.stringify(this.layout) : "";
-      this.selected = null;
+      this.selectBlock(null);
+      this.positionGestureActive = false;
+      this.resizeGestureActive = false;
       this.dirty = false;
       this.jobId = null;
       this.resetHistory();
@@ -1757,6 +1961,43 @@ export default {
           formatter: "plainText",
         });
       if (block.type === "text") block.text = "Nội dung";
+      if (block.type === "signatureSummary") {
+        block.style.borderWidthMm = 0.25;
+        block.style.borderColor = "#174a8b";
+        block.style.paddingMm = 2;
+        block.widthMm = 62;
+        block.heightMm = 24;
+        block.children = [
+          {
+            id: blockId(),
+            type: "text",
+            text: "Signature",
+            style: { color: "#ff0000", fontWeight: 700 },
+          },
+          {
+            id: blockId(),
+            type: "text",
+            text: "Ký bởi:",
+            style: { color: "#ff0000" },
+          },
+          {
+            id: blockId(),
+            type: "field",
+            fieldKey: "seller.Ten",
+            formatter: "plainText",
+            label: "",
+            style: { color: "#ff0000" },
+          },
+          {
+            id: blockId(),
+            type: "field",
+            fieldKey: "invoice.DSCKS.NBan.Signature.SignedAt",
+            formatter: "plainText",
+            label: "Ký ngày",
+            style: { color: "#ff0000" },
+          },
+        ];
+      }
       if (["stack", "columns"].includes(block.type)) {
         block.children = [];
         block.gapMm = 2;
@@ -1793,6 +2034,29 @@ export default {
       }
       if (templateId !== this.selectedTemplateId || this.busy || !this.layout)
         return;
+      if (type === "signatureSummary" && !position) {
+        const findBy = (node, predicate) => {
+          if (!node) return null;
+          if (predicate(node)) return node;
+          for (const child of node.children || []) {
+            const found = findBy(child, predicate);
+            if (found) return found;
+          }
+          return null;
+        };
+        const seller = findBy(
+          this.layout.body,
+          (node) => node.id === "sellerSignature" && Array.isArray(node.children)
+        );
+        if (seller) {
+          this.recordHistory();
+          const spacerIndex = seller.children.findIndex((child) => child.type === "spacer");
+          seller.children.splice(spacerIndex < 0 ? seller.children.length : spacerIndex, 0, block);
+          this.selectBlock(block.id);
+          this.recordHistory();
+          return;
+        }
+      }
       this.recordHistory();
       let placed;
       if (position)
@@ -1823,7 +2087,7 @@ export default {
           "Không thể chèn vào vị trí này. Kiểm tra số phần tử trong nhóm.";
         return;
       }
-      this.selected = block;
+      this.selectBlock(block.id);
       this.recordHistory();
     },
     async addField(field) {
@@ -1880,7 +2144,7 @@ export default {
           widthMm: 35,
           heightMm: 20,
         });
-        this.selected = this.layout.body.children[0];
+        this.selectBlock(this.layout.body.children[0].id);
       } catch (e) {
         this.fail(e);
       } finally {
@@ -2243,6 +2507,26 @@ export default {
 .workspace-panels {
   display: flex;
   gap: 5px;
+}
+.selection-help {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #334155;
+  font-size: 12px;
+}
+.selection-help > span {
+  color: #64748b;
+  font-size: 11px;
+}
+.multi-selection-note {
+  margin: 12px;
+  padding: 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 5px;
+  color: #1e40af;
+  background: #eff6ff;
+  font-size: 12px;
 }
 .workspace-panels button.active {
   color: #1d4ed8;

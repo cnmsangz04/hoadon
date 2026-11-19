@@ -15,6 +15,10 @@ import vn.hoadon.invoice.template.persistence.*;
 import vn.hoadon.invoice.template.render.TemplateRenderService;
 import vn.hoadon.invoice.template.storage.*;
 import vn.hoadon.entity.FormInvoiceEntity;
+import vn.hoadon.entity.CompanyBankEntity;
+import vn.hoadon.entity.CompanyEntity;
+import vn.hoadon.repositories.CompanyBankRepository;
+import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.FormInvoiceRepository;
 
 import java.time.*;
@@ -38,6 +42,8 @@ public class InvoiceTemplateService {
     private final ObjectMapper mapper;
     private final ObjectProvider<InvoiceTemplateThumbnailService> thumbnails;
     private final FormInvoiceRepository forms;
+    private final CompanyRepository companies;
+    private final CompanyBankRepository banks;
     private final InvoiceTemplateHistoryService history;
     private final InvoiceAssetPinRepository pins;
     private final InvoiceTemplateStorageCleanupService storageCleanup;
@@ -49,7 +55,8 @@ public class InvoiceTemplateService {
                                    JsonLayoutCompiler compiler, InvoiceFieldCatalog catalog,
                                    InvoiceTemplateProperties properties, ObjectMapper mapper,
                                    ObjectProvider<InvoiceTemplateThumbnailService> thumbnails,
-                                   FormInvoiceRepository forms, InvoiceTemplateHistoryService history,
+                                   FormInvoiceRepository forms, CompanyRepository companies, CompanyBankRepository banks,
+                                   InvoiceTemplateHistoryService history,
                                    InvoiceAssetPinRepository pins,
                                    InvoiceTemplateStorageCleanupService storageCleanup) {
         this.templates = templates;
@@ -67,6 +74,8 @@ public class InvoiceTemplateService {
         this.mapper = mapper;
         this.thumbnails = thumbnails;
         this.forms = forms;
+        this.companies = companies;
+        this.banks = banks;
         this.history = history;
         this.pins = pins;
         this.storageCleanup = storageCleanup;
@@ -360,6 +369,24 @@ public class InvoiceTemplateService {
 
     public String designerFontCss() { return renders.designerFontCss(); }
 
+    private String sampleXml(InvoiceTemplateEntity template, int rows) {
+        FormInvoiceEntity form = forms.findByTemplateId(template.getId()).stream().findFirst().orElseGet(() -> {
+            FormInvoiceEntity fallback = new FormInvoiceEntity();
+            fallback.setCategory(template.getCategory());
+            fallback.setType(1);
+            fallback.setFormCode(String.valueOf(template.getCategory()));
+            fallback.setSerial("C26TAA");
+            return fallback;
+        });
+        CompanyEntity company = null;
+        CompanyBankEntity bank = null;
+        if ("COMPANY".equals(template.getScope()) && template.getCompanyId() != null) {
+            company = companies.findById(template.getCompanyId()).orElse(null);
+            if (company != null) bank = banks.findByCompany(company).stream().findFirst().orElse(null);
+        }
+        return fixtures.sample(form, company, bank, rows);
+    }
+
     @Transactional(readOnly = true)
     public String designerPreview(Long id, JsonNode layout, int rows, TemplateAccess access) {
         var template = require(id, access, true);
@@ -369,11 +396,7 @@ public class InvoiceTemplateService {
             throw TemplateException.invalid("RENDER_INPUT_LIMIT", "Nội dung bố cục vượt giới hạn");
         compiler.validate(layout, false);
         var manifest = layoutManifest(layout, template);
-        int taxType = forms.findByTemplateId(id).stream()
-                .findFirst()
-                .map(FormInvoiceEntity::getType)
-                .orElse(1);
-        return renders.designerPreview(layout, fixtures.sample(template.getCategory(), taxType, rows), assets.json(manifest), template.getScope(), template.getCompanyId());
+        return renders.designerPreview(layout, sampleXml(template, rows), assets.json(manifest), template.getScope(), template.getCompanyId());
     }
 
     private Map<String, InvoiceAssetService.AssetRef> layoutManifest(JsonNode layout, InvoiceTemplateEntity template) {
@@ -533,7 +556,7 @@ public class InvoiceTemplateService {
 
     private InvoiceRenderJobEntity preview(InvoiceTemplateEntity template, InvoiceTemplateDraftEntity draft, int rows, Long storageCompanyId) {
         return renders.enqueue(template.getScope(), storageCompanyId, "DRAFT_PREVIEW", null, draft.getId(), draft.getLockVersion(), null,
-                draft.getSourceContent(), draft.getManifestJson(), fixtures.sample(template.getCategory(), rows),
+                draft.getSourceContent(), draft.getManifestJson(), sampleXml(template, rows),
                 Map.of("sampleMarker", "SAMPLE", "status", "Dữ liệu minh họa", "lookup_code", "SAMPLE0001", "code_cqt", "MCCQT-MINH-HOA"));
     }
 

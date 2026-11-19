@@ -58,6 +58,7 @@ public class InvoiceViewModelMapper {
             }
             result.putAll(mapGroupRow(roots.isEmpty() ? null : roots.getFirst(), group, groupFields, context, count));
         }
+        addSignatureDateContext(result, context);
         return Collections.unmodifiableMap(result);
     }
 
@@ -72,6 +73,7 @@ public class InvoiceViewModelMapper {
         Map<String, Object> result = new LinkedHashMap<>();
         for (var field : fields) {
             String value = root == null ? "" : relativeText(root, field.sourcePath());
+            if ("invoice.DSCKS.NBan.Signature.SignedAt".equals(field.key())) value = formatSignatureDate(value);
             result.put(field.key(), typed(field, value));
         }
         return result;
@@ -94,6 +96,7 @@ public class InvoiceViewModelMapper {
             }
             result.putAll(mapRow(roots.getFirst(), dataset, snapshot, context, count, 0));
         }
+        addSignatureDateContext(result, context);
         return Collections.unmodifiableMap(result);
     }
 
@@ -110,6 +113,7 @@ public class InvoiceViewModelMapper {
         for (var field : snapshot.fields()) {
             if (!dataset.code().equals(field.dataset())) continue;
             String value = relativeText(root, field.sourcePath());
+            if ("invoice.DSCKS.NBan.Signature.SignedAt".equals(field.key())) value = formatSignatureDate(value);
             result.put(field.key(), typed(field, value));
         }
         for (var child : snapshot.datasets()) {
@@ -134,9 +138,40 @@ public class InvoiceViewModelMapper {
 
     private static void addPresentationContext(Map<String, Object> result, Map<String, String> context) {
         if (context == null) return;
-        for (String key : List.of("sampleMarker", "signatureSummary", "statusLabel", "lookupCode", "authorityCode")) {
+        for (String key : List.of("sampleMarker", "signatureSigner", "signatureSignedAt", "signatureValid", "statusLabel", "lookupCode", "authorityCode")) {
             String value = context.get(key);
             if (value != null) result.put("presentation." + key, value);
+        }
+    }
+
+    private static void addSignatureDateContext(Map<String, Object> result, Map<String, String> context) {
+        if (context == null) return;
+        String value = context.get("signatureSignedAt");
+        Object mapped = result.get("invoice.DSCKS.NBan.Signature.SignedAt");
+        if (value != null && !value.isBlank() && (mapped == null || mapped.toString().isBlank())) {
+            result.put("invoice.DSCKS.NBan.Signature.SignedAt", value);
+        }
+    }
+
+    public static String formatSignatureDate(String value) {
+        if (value == null || value.isBlank()) return "";
+        try {
+            return java.time.OffsetDateTime.parse(value).atZoneSameInstant(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))
+                    .format(java.time.format.DateTimeFormatter.ofPattern("dd / MM / yyyy"));
+        } catch (RuntimeException ignored) { }
+        try {
+            return java.time.Instant.parse(value).atZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))
+                    .format(java.time.format.DateTimeFormatter.ofPattern("dd / MM / yyyy"));
+        } catch (RuntimeException ignored) { }
+        try {
+            return java.time.LocalDateTime.parse(value)
+                    .format(java.time.format.DateTimeFormatter.ofPattern("dd / MM / yyyy"));
+        } catch (RuntimeException ignored) { }
+        try {
+            return java.time.LocalDate.parse(value)
+                    .format(java.time.format.DateTimeFormatter.ofPattern("dd / MM / yyyy"));
+        } catch (RuntimeException ignored) {
+            return value;
         }
     }
 

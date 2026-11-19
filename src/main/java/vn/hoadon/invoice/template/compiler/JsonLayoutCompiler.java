@@ -16,7 +16,7 @@ import java.util.*;
 @Component
 public class JsonLayoutCompiler {
     public static final String SCHEMA_VERSION = "invoice-layout/1";
-    public static final String COMPILER_VERSION = "layout-compiler/4";
+    public static final String COMPILER_VERSION = "layout-compiler/6";
     private static final Set<String> FORMATTERS = Set.of("plainText", "moneyByCurrency", "decimal", "date", "invoiceNumber");
     private static final Set<String> TYPES = Set.of("stack", "columns", "text", "field", "image", "itemsTable", "taxSummaryTable", "feesTable", "relatedInvoice", "totals", "signatureSummary", "divider", "spacer", "pageBreak", "table");
     private final InvoiceFieldCatalog catalog;
@@ -79,12 +79,18 @@ public class JsonLayoutCompiler {
     private void validateBlock(JsonNode block, JsonNode layout, Set<String> ids, Set<String> bindings, String group,
                                int depth, boolean conditional, InvoiceCatalogSnapshot definitions) {
         if (depth > 16 || ids.size() >= 500) fail("Bố cục vượt giới hạn độ sâu hoặc số khối");
-        properties(block, Set.of("id", "type", "children", "style", "headerStyle", "cellStyle", "condition", "text", "fieldKey", "formatter", "label", "asset", "widthMm", "heightMm", "gapMm", "ratios", "columns", "dataSource", "repeatHeader", "rowSplitPolicy"));
+        properties(block, Set.of("id", "type", "children", "style", "position", "headerStyle", "cellStyle", "condition", "text", "fieldKey", "formatter", "label", "asset", "widthMm", "heightMm", "gapMm", "ratios", "columns", "dataSource", "repeatHeader", "rowSplitPolicy"));
         String id = block.path("id").asText();
         if (!id.matches("[a-zA-Z][a-zA-Z0-9_-]{0,63}") || !ids.add(id)) fail("ID khối thiếu, trùng hoặc không hợp lệ");
         String type = block.path("type").asText();
         if (!TYPES.contains(type)) fail("Loại khối không được hỗ trợ: " + type);
         validateStyle(block.path("style"));
+        if (block.has("position")) {
+            JsonNode position = block.get("position");
+            properties(position, Set.of("xMm", "yMm"));
+            number(position, "xMm", -1000, 1000, 0);
+            number(position, "yMm", -1000, 1000, 0);
+        }
         number(block, "gapMm", 0, 20, 2);
         number(block, "widthMm", 1, 270, 30);
         number(block, "heightMm", 1, 150, 10);
@@ -124,7 +130,8 @@ public class JsonLayoutCompiler {
             choice(block, "rowSplitPolicy", Set.of("splitIfOversized"), "splitIfOversized");
         }
         JsonNode children = block.path("children");
-        if (Set.of("stack", "columns", "totals", "relatedInvoice").contains(type)) {
+        if ("signatureSummary".equals(type) && !block.has("children")) return;
+        if (Set.of("stack", "columns", "totals", "relatedInvoice", "signatureSummary").contains(type)) {
             if (!children.isArray() || children.size() > 100) fail("Danh sách khối con không hợp lệ");
             for (JsonNode child : children) validateBlock(child, layout, ids, bindings, group, depth + 1, hasCondition, definitions);
             if (type.equals("columns") && children.size() > 6) fail("Tối đa 6 cột trong một vùng");
@@ -160,12 +167,15 @@ public class JsonLayoutCompiler {
 
     private void validateStyle(JsonNode style) {
         if (style.isMissingNode()) return;
-        properties(style, Set.of("fontSizePt", "fontWeight", "fontStyle", "textAlign", "color", "backgroundColor", "paddingMm", "borderWidthMm", "borderColor", "wrap"));
+        properties(style, Set.of("fontSizePt", "fontWeight", "fontStyle", "textTransform", "textAlign", "color", "backgroundColor", "paddingMm", "borderWidthMm", "borderColor", "marginLeftMm", "offsetTopMm", "wrap"));
         number(style, "fontSizePt", 7, 36, 10);
         number(style, "paddingMm", 0, 10, 0);
         number(style, "borderWidthMm", 0, 2, 0);
+        number(style, "marginLeftMm", -100, 270, 0);
+        number(style, "offsetTopMm", -150, 150, 0);
         choice(style, "fontWeight", Set.of("400", "700"), "400");
         choice(style, "fontStyle", Set.of("normal", "italic"), "normal");
+        choice(style, "textTransform", Set.of("none", "uppercase", "lowercase", "capitalize"), "none");
         choice(style, "textAlign", Set.of("left", "center", "right"), "left");
         choice(style, "wrap", Set.of("expand"), "expand");
         for (String key : List.of("color", "backgroundColor", "borderColor")) color(style, key);
@@ -179,7 +189,7 @@ public class JsonLayoutCompiler {
         String family = theme.path("fontAssetFamily").asText("body");
         String css = "@page{size:" + page.path("format").asText("A4") + " " + page.path("orientation").asText("portrait") + ";margin:" + margin + "}"
                 + "*{box-sizing:border-box}html,body{margin:0;padding:0}body{font-family:'invoice-" + family + "';font-size:" + theme.path("fontSizePt").asText("10") + "pt;line-height:" + theme.path("lineHeight").asText("1.3") + ";color:" + theme.path("color").asText("#000000") + "}"
-                + ".block{overflow-wrap:anywhere;min-width:0}.text{white-space:pre-wrap}.stack,.totals{display:flex;flex-direction:column}.columns{display:flex;align-items:stretch}.columns>.block{flex:1}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{padding:1.5mm;border:.2mm solid #cbd5e1;vertical-align:top;overflow-wrap:anywhere}thead{display:table-header-group}tr{break-inside:avoid}tr.oversized{break-inside:auto}.totals,.signature{break-inside:avoid}.divider hr{margin:0;border:0;border-top:.25mm solid currentColor}.page-break{break-before:page}img{max-width:100%;object-fit:contain}p{margin:0}";
+                + ".block{overflow-wrap:anywhere;min-width:0;transform:translate(var(--block-x,0mm),var(--block-y,0mm))}.text{white-space:pre-wrap}.stack,.totals{display:flex;flex-direction:column}.columns{display:flex;align-items:stretch}.columns>.block{flex:1}.columns>.block[data-width-fixed]{flex:0 0 auto}.columns>.block[data-height-fixed]{align-self:flex-start}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{padding:1.5mm;border:.2mm solid #cbd5e1;vertical-align:top;overflow-wrap:anywhere}thead{display:table-header-group}tr{break-inside:avoid}tr.oversized{break-inside:auto}.totals,.signature,.signatureSummary{break-inside:avoid}.signature,.signatureSummary{text-align:center}.signature-valid-box{position:relative;display:inline-block;width:100%;height:100%;min-height:100%;margin-top:2mm;border:.25mm solid #174a8b;padding:2mm 3mm;text-align:left;color:#f00;font-size:9pt;line-height:1.35}.signature-valid-box-children{margin-top:0;border:0;padding:0}.signature-valid-box>.block{width:max-content;max-width:100%}.signature-valid-title{margin-bottom:1mm}.signatureSummary:not([style*='width']) .signature-valid-box{width:62mm;height:auto;min-height:0}.signature-valid-check{position:absolute;left:50%;top:50%;width:10mm;height:8mm;display:block;line-height:0;opacity:.72;transform:translate(-50%,-50%)}.signature-valid-check svg{display:block;width:100%;height:100%;overflow:visible}.divider hr{margin:0;border:0;border-top:.25mm solid currentColor}.page-break{break-before:page}img{max-width:100%;object-fit:contain}p{margin:0}";
         boolean landscape = "landscape".equals(page.path("orientation").asText());
         boolean a5 = "A5".equals(page.path("format").asText());
         double shortSide = a5 ? 148 : 210, longSide = a5 ? 210 : 297;
@@ -193,8 +203,13 @@ public class JsonLayoutCompiler {
     private void renderBlock(JsonNode block, JsonNode layout, Map<String, Object> data, StringBuilder out) {
         if (block.has("condition") && !matches(block.get("condition"), data)) return;
         String type = block.path("type").asText();
-        out.append("<div class=\"block ").append(type).append("\" data-block-id=\"").append(escape(block.path("id").asText())).append("\" style=\"").append(style(block.path("style")));
+        out.append("<div");
+        if (block.has("widthMm")) out.append(" data-width-fixed=\"true\"");
+        if (block.has("heightMm")) out.append(" data-height-fixed=\"true\"");
+        out.append(" class=\"block ").append(type).append("\" data-block-id=\"").append(escape(block.path("id").asText())).append("\" style=\"").append(style(block.path("style"))).append(positionStyle(block));
         if (Set.of("stack", "columns", "totals").contains(type)) out.append("gap:").append(block.path("gapMm").asText("2")).append("mm;");
+        if (block.has("widthMm")) out.append("width:").append(block.path("widthMm").asText()).append("mm;");
+        if (block.has("heightMm")) out.append("min-height:").append(block.path("heightMm").asText()).append("mm;");
         out.append("\">");
         switch (type) {
             case "stack", "columns", "totals", "relatedInvoice" -> { for (JsonNode child : block.path("children")) renderBlock(child, layout, data, out); }
@@ -208,10 +223,36 @@ public class JsonLayoutCompiler {
             case "divider" -> out.append("<hr>");
             case "spacer" -> out.append("<div style=\"height:").append(block.path("heightMm").asText("5")).append("mm\"></div>");
             case "pageBreak" -> out.append("<div class=\"page-break\"></div>");
-            case "signatureSummary" -> out.append("<div class=\"signature\">").append(escape(String.valueOf(data.getOrDefault("presentation.signatureSummary", "")))).append("</div>");
+            case "signatureSummary" -> renderSignatureSummary(block, layout, data, out);
             default -> throw new IllegalStateException(type);
         }
         out.append("</div>");
+    }
+
+    private void renderSignatureSummary(JsonNode block, JsonNode layout, Map<String, Object> data, StringBuilder out) {
+        JsonNode children = block.path("children");
+        if (children.isArray() && !children.isEmpty()) {
+            boolean blockHasFrame = block.path("style").path("borderWidthMm").asDouble(0) > 0;
+            out.append("<div class=\"signature-valid-box").append(blockHasFrame ? " signature-valid-box-children" : "").append("\">");
+            for (JsonNode child : children) renderBlock(child, layout, data, out);
+            if ("true".equalsIgnoreCase(String.valueOf(data.getOrDefault("presentation.signatureValid", "")))) {
+                out.append(signatureValidMark());
+            }
+            out.append("</div>");
+            return;
+        }
+        if ("true".equalsIgnoreCase(String.valueOf(data.getOrDefault("presentation.signatureValid", "")))) {
+            String signer = escape(String.valueOf(data.getOrDefault("presentation.signatureSigner", "")));
+            String signedAt = escape(String.valueOf(data.getOrDefault("presentation.signatureSignedAt", "")));
+            out.append("<div class=\"signature-valid-box\"><div class=\"signature-valid-title\">Signature Valid</div>")
+                    .append("<div>Ký bởi: ").append(signer).append("</div>")
+                    .append("<div>Ký ngày: ").append(signedAt).append("</div>")
+                    .append(signatureValidMark()).append("</div>");
+        }
+    }
+
+    private static String signatureValidMark() {
+        return "<span class=\"signature-valid-check\" aria-label=\"Signature Valid\"><svg viewBox=\"0 0 52 40\" aria-hidden=\"true\"><path d=\"M2 17L10 9l13 12L43 1l8 8-28 29z\" fill=\"#3f7008\"/><path d=\"M4 16l6-5 13 12L43 3l5 5-25 25z\" fill=\"#78a92e\"/><path d=\"M10 11l13 12L43 3\" fill=\"none\" stroke=\"#a8cf5b\" stroke-width=\"2\"/></svg></span>";
     }
 
     @SuppressWarnings("unchecked")
@@ -255,10 +296,18 @@ public class JsonLayoutCompiler {
 
     private static String style(JsonNode node) {
         StringBuilder css = new StringBuilder();
-        Map<String, String> names = Map.of("fontSizePt", "font-size", "fontWeight", "font-weight", "fontStyle", "font-style", "textAlign", "text-align", "color", "color", "backgroundColor", "background-color", "paddingMm", "padding", "borderColor", "border-color");
+        Map<String, String> names = Map.of("fontSizePt", "font-size", "fontWeight", "font-weight", "fontStyle", "font-style", "textTransform", "text-transform", "textAlign", "text-align", "color", "color", "backgroundColor", "background-color", "paddingMm", "padding", "borderColor", "border-color");
         names.forEach((key, name) -> { if (node.has(key)) css.append(name).append(':').append(node.get(key).asText()).append(key.endsWith("Pt") ? "pt" : key.endsWith("Mm") ? "mm" : "").append(';'); });
         if (node.path("borderWidthMm").asDouble() > 0) css.append("border-style:solid;border-width:").append(node.get("borderWidthMm").asText()).append("mm;");
         return css.toString();
+    }
+
+    private static String positionStyle(JsonNode block) {
+        JsonNode position = block.path("position");
+        JsonNode legacy = block.path("style");
+        String x = block.has("position") ? position.path("xMm").asText("0") : legacy.path("marginLeftMm").asText("0");
+        String y = block.has("position") ? position.path("yMm").asText("0") : legacy.path("offsetTopMm").asText("0");
+        return "--block-x:" + x + "mm;--block-y:" + y + "mm;";
     }
 
     static String format(Object value, String formatter) {

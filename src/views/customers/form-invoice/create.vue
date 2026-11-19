@@ -140,6 +140,25 @@
 <script>
 import axios from '@/plugins/axios'
 
+const isLatinLetter = (value) => /^\p{Script=Latin}$/u.test(value)
+
+const isUppercaseLatinLetter = (value) => (
+  isLatinLetter(value) &&
+  value === value.toLocaleUpperCase('vi-VN') &&
+  value !== value.toLocaleLowerCase('vi-VN')
+)
+
+const normalizeSerialSuffix = (value) => Array.from(value || '')
+  .filter(isLatinLetter)
+  .join('')
+  .toLocaleUpperCase('vi-VN')
+  .slice(0, 2)
+
+const isValidSerialSuffix = (value) => {
+  const chars = Array.from((value || '').trim())
+  return chars.length === 2 && chars.every(isUppercaseLatinLetter)
+}
+
 export default {
   name: 'CustomerFormInvoiceCreate',
   data() {
@@ -187,7 +206,7 @@ export default {
     suffixValidState() {
       const suf = (this.serialSuffix || '').trim()
       if (!this.suffixValidated && !suf) return null
-      return /^[A-Z]{2}$/.test(suf)
+      return isValidSerialSuffix(suf)
     },
     nameValidState() {
       const v = (this.form.name || '').trim()
@@ -217,14 +236,13 @@ export default {
       const c2 = this.serialCK || 'C'
       const c34 = this.serialYear || ''
       const c5 = 'T'
-      const suf = (this.serialSuffix || '').toUpperCase().slice(0, 2)
+      const suf = normalizeSerialSuffix(this.serialSuffix)
       const serial = `${c1}${c2}${c34}${c5}${suf}`
       this.form.serial = serial
     },
     onSuffixInput() {
       const raw = (this.serialSuffix || '')
-      const lettersOnly = raw.replace(/[^a-zA-Z]/g, '')
-      this.serialSuffix = lettersOnly.toUpperCase().slice(0, 2)
+      this.serialSuffix = normalizeSerialSuffix(raw)
       this.suffixError = ''
       this.suffixValidated = false
       this.nameError = ''
@@ -297,8 +315,8 @@ export default {
         })
         return
       }
-      if (!/^[A-Z]{2}$/.test(suf)) {
-        this.suffixError = 'Khoảng ký tự không hợp lệ'
+      if (!isValidSerialSuffix(suf)) {
+        this.suffixError = 'Ký hiệu phải kết thúc bằng 2 chữ cái viết hoa'
         this.$nextTick(() => {
           if (this.$refs.suffixInput && typeof this.$refs.suffixInput.focus === 'function') {
             this.$refs.suffixInput.focus()
@@ -342,12 +360,14 @@ export default {
 </script>
 
 <style scoped>
-.container { max-width: 1180px; }
+.container { width: 100%; max-width: none; }
 .card-soft { border-radius: 14px; box-shadow: 0 6px 20px rgba(17, 24, 39, 0.06); }
 .card.shadow-sm { border: 1px solid #e9eef5; }
 
-.layout-grid.layout-left-preview { display: grid; grid-template-columns: 360px 1fr; gap: 18px; align-items: start; }
-.layout-aside { position: sticky; top: 12px; }
+.layout-grid.layout-left-preview { display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 18px; align-items: stretch; }
+.layout-aside, .layout-main { min-width: 0; display: flex; }
+.layout-aside { position: sticky; top: 12px; align-self: stretch; }
+.layout-aside .preview-card, .layout-main > .card { width: 100%; height: 100%; }
 
 .page-header { padding: 4px 4px 0; }
 .page-title { font-weight: 700; color: #0f172a; letter-spacing: -0.2px; }

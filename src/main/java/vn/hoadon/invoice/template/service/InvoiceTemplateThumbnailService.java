@@ -9,12 +9,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.hoadon.entity.FormInvoiceEntity;
+import vn.hoadon.entity.CompanyBankEntity;
+import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.invoice.template.catalog.InvoiceFixtureFactory;
 import vn.hoadon.invoice.template.persistence.InvoiceTemplateDraftEntity;
 import vn.hoadon.invoice.template.persistence.InvoiceTemplateEntity;
 import vn.hoadon.invoice.template.render.TemplateRenderService;
 import vn.hoadon.repositories.FormInvoiceRepository;
 import vn.hoadon.repositories.CompanyRepository;
+import vn.hoadon.repositories.CompanyBankRepository;
 import vn.hoadon.util.UploadPath;
 
 import javax.imageio.ImageIO;
@@ -33,15 +36,17 @@ public class InvoiceTemplateThumbnailService {
     private static final Logger log = LoggerFactory.getLogger(InvoiceTemplateThumbnailService.class);
     private final FormInvoiceRepository forms;
     private final CompanyRepository companies;
+    private final CompanyBankRepository banks;
     private final InvoiceFixtureFactory fixtures;
     private final ObjectMapper mapper;
     private final TemplateRenderService renders;
 
-    public InvoiceTemplateThumbnailService(FormInvoiceRepository forms, CompanyRepository companies,
+    public InvoiceTemplateThumbnailService(FormInvoiceRepository forms, CompanyRepository companies, CompanyBankRepository banks,
                                            InvoiceFixtureFactory fixtures, ObjectMapper mapper,
                                            TemplateRenderService renders) {
         this.forms = forms;
         this.companies = companies;
+        this.banks = banks;
         this.fixtures = fixtures;
         this.mapper = mapper;
         this.renders = renders;
@@ -53,8 +58,14 @@ public class InvoiceTemplateThumbnailService {
         if (linkedForms.isEmpty()) return;
 
         try {
-            int taxType = linkedForms.getFirst().getType() == null ? 1 : linkedForms.getFirst().getType();
-            String xml = fixtures.sample(template.getCategory(), taxType, 3);
+            FormInvoiceEntity sampleForm = linkedForms.getFirst();
+            CompanyEntity company = null;
+            CompanyBankEntity bank = null;
+            if ("COMPANY".equals(template.getScope()) && template.getCompanyId() != null) {
+                company = companies.findById(template.getCompanyId()).orElse(null);
+                if (company != null) bank = banks.findByCompany(company).stream().findFirst().orElse(null);
+            }
+            String xml = fixtures.sample(sampleForm, company, bank, 3);
             com.fasterxml.jackson.databind.JsonNode layout = mapper.readTree(draft.getSourceContent());
             byte[] pdf = renders.renderPdf(layout, xml, draft.getManifestJson(), template.getScope(), template.getCompanyId());
             byte[] png = firstPage(pdf);

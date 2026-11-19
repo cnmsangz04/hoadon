@@ -30,6 +30,10 @@ public class InvoiceTemplateCatalogMigrationPublisher {
                 .noneMatch(field -> "invoice.MCCQT".equals(field.key()))
                 || latest.fields().stream()
                 .noneMatch(field -> "invoice.other.TTinMTCuu.DLieu".equals(field.key()));
+        boolean missingSignatureDate = latest.fields().stream()
+                .noneMatch(field -> "invoice.DSCKS.NBan.Signature.SignedAt".equals(field.key()));
+        boolean legacySignatureDate = latest.fields().stream()
+                .anyMatch(field -> "invoice.signature.SignedAt".equals(field.key()));
         boolean missingInvoiceOtherGroup = latest.groups().stream()
                 .noneMatch(group -> "invoice.other".equals(group.code()));
         boolean lookupCodeInWrongGroup = latest.fields().stream()
@@ -40,7 +44,7 @@ public class InvoiceTemplateCatalogMigrationPublisher {
                 .anyMatch(field -> "invoice.codeCqt".equals(field.key())
                         || "invoice.lookupCode".equals(field.key())
                         || "invoice.other.maTraCuu".equals(field.key()));
-        if (oldGroupPaths || retiredSystemFields || missingCompatibilityFields || missingInvoiceOtherGroup
+        if (oldGroupPaths || retiredSystemFields || missingCompatibilityFields || missingSignatureDate || legacySignatureDate || missingInvoiceOtherGroup
                 || lookupCodeInWrongGroup || legacyFieldKeys) {
             catalog.checkpoint(null);
             jdbc.update("update invoice_template_drafts set field_catalog_version = ?", catalog.version());

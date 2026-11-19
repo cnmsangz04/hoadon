@@ -1,6 +1,10 @@
 package vn.hoadon.invoice.template.config;
 
 import jakarta.annotation.PostConstruct;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -19,9 +23,11 @@ import java.util.regex.Pattern;
 @Component
 public class InvoiceTemplateFieldGroupSchemaInitializer {
     private final JdbcTemplate jdbc;
+    private final ObjectMapper mapper;
 
-    public InvoiceTemplateFieldGroupSchemaInitializer(JdbcTemplate jdbc) {
+    public InvoiceTemplateFieldGroupSchemaInitializer(JdbcTemplate jdbc, ObjectMapper mapper) {
         this.jdbc = jdbc;
+        this.mapper = mapper;
     }
 
     @PostConstruct
@@ -52,7 +58,9 @@ public class InvoiceTemplateFieldGroupSchemaInitializer {
             // Remove the retired non-XML field type from the catalog.
             jdbc.update("delete from invoice_template_fields where source_type = 'CONTEXT'");
             ensureInvoiceOtherGroup();
+            removeLegacySignatureDateField();
             migrateFieldKeysBySourcePath();
+            migrateSignatureBlocks();
             ensureInvoiceFields();
 
             if (columnExists("invoice_template_field_groups", "parent_id")) {
@@ -111,10 +119,105 @@ public class InvoiceTemplateFieldGroupSchemaInitializer {
 
         ensureInvoiceField(groupId, "invoice.MCCQT", "Mã của cơ quan thuế", "MCCQT",
                 "Mã cơ quan thuế trên XML hóa đơn");
+        ensureInvoiceField(groupId, "invoice.DSCKS.NBan.Signature.SignedAt", "Ngày ký số",
+                "DSCKS/NBan/Signature/SignedAt",
+                "Ngày ký số trong HDon/DSCKS/NBan/Signature; được Java định dạng trước khi hiển thị");
         ensureInvoiceField(otherGroupId, "invoice.other.TTinMTCuu.DLieu", "Mã tra cứu hóa đơn",
                 "DLHDon/TTKhac/TTin[TTruong='MTCuu']/DLieu",
                 "Mã tra cứu trong HDon/DLHDon/TTKhac");
     }
+
+    private void removeLegacySignatureDateField() {
+        jdbc.update("update invoice_template_drafts set source_content = replace(source_content, ?, ?), manifest_json = replace(manifest_json, ?, ?) where source_content like ? or manifest_json like ?",
+                "invoice.signature.SignedAt", "invoice.DSCKS.NBan.Signature.SignedAt",
+                "invoice.signature.SignedAt", "invoice.DSCKS.NBan.Signature.SignedAt",
+                "%invoice.signature.SignedAt%", "%invoice.signature.SignedAt%");
+        jdbc.update("delete from invoice_template_fields where field_key = ?", "invoice.signature.SignedAt");
+    }
+
+    private void migrateSignatureBlocks() {
+        var rows = jdbc.query(
+                "select id, source_content from invoice_template_drafts where source_content like '%signatureSummary%'",
+                (rs, rowNum) -> new LayoutRow(rs.getLong("id"), rs.getString("source_content")));
+        for (LayoutRow row : rows) {
+            try {
+                JsonNode layout = mapper.readTree(row.sourceContent());
+                boolean changed = addSignatureChildren(layout.path("body"));
+                if (changed) {
+                    jdbc.update("update invoice_template_drafts set source_content = ? where id = ?",
+                            mapper.writeValueAsString(layout), row.id());
+                }
+            } catch (Exception ex) {
+                throw new IllegalStateException("Không thể cập nhật khối thông tin chữ ký số", ex);
+            }
+        }
+    }
+
+    private boolean addSignatureChildren(JsonNode node) {
+        if (node == null || !node.isObject()) return false;
+        boolean changed = false;
+        if ("signatureSummary".equals(node.path("type").asText())) {
+            String id = node.path("id").asText("signature");
+            ObjectNode object = (ObjectNode) node;
+            if (!node.has("children")) {
+                ArrayNode children = mapper.createArrayNode();
+                children.add(textBlock(id + "Signature", "Signature", true));
+                children.add(textBlock(id + "By", "Ký bởi:", false));
+                children.add(fieldBlock(id + "Signer", "seller.Ten", ""));
+                children.add(fieldBlock(id + "SignedAt", "invoice.DSCKS.NBan.Signature.SignedAt", "Ký ngày"));
+                object.set("children", children);
+                changed = true;
+            }
+            if (!node.has("widthMm")) {
+                object.put("widthMm", 62);
+                changed = true;
+            }
+            if (!node.has("heightMm")) {
+                object.put("heightMm", 24);
+                changed = true;
+            }
+            ObjectNode style = object.with("style");
+            if (!style.has("borderWidthMm")) {
+                style.put("borderWidthMm", 0.25);
+                changed = true;
+            }
+            if (!style.has("borderColor")) {
+                style.put("borderColor", "#174a8b");
+                changed = true;
+            }
+            if (!style.has("paddingMm")) {
+                style.put("paddingMm", 2);
+                changed = true;
+            }
+        }
+        JsonNode children = node.path("children");
+        if (children.isArray()) for (JsonNode child : children) changed |= addSignatureChildren(child);
+        return changed;
+    }
+
+    private ObjectNode textBlock(String id, String text, boolean bold) {
+        ObjectNode block = mapper.createObjectNode();
+        block.put("id", id);
+        block.put("type", "text");
+        block.put("text", text);
+        ObjectNode style = block.putObject("style");
+        style.put("color", "#ff0000");
+        if (bold) style.put("fontWeight", 700);
+        return block;
+    }
+
+    private ObjectNode fieldBlock(String id, String key, String label) {
+        ObjectNode block = mapper.createObjectNode();
+        block.put("id", id);
+        block.put("type", "field");
+        block.put("fieldKey", key);
+        block.put("formatter", "plainText");
+        block.put("label", label);
+        block.putObject("style").put("color", "#ff0000");
+        return block;
+    }
+
+    private record LayoutRow(Long id, String sourceContent) {}
 
     private void ensureInvoiceField(Long groupId, String key, String label, String sourcePath, String description) {
         Integer count = jdbc.queryForObject(

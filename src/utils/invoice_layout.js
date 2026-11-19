@@ -25,6 +25,21 @@ export function copyBlock(block) {
   return copy
 }
 
+export function selectedBlockRoots(root, ids = []) {
+  const selected = new Set(ids)
+  const result = []
+  const visit = (block, parent = null) => {
+    if (!block) return
+    if (selected.has(block.id)) {
+      result.push({ block, parent })
+      return
+    }
+    ;(block.children || []).forEach((child) => visit(child, block))
+  }
+  visit(root)
+  return result
+}
+
 export function placeBlock(root, block, targetId, placement, moving = false) {
   const target = findBlock(root, targetId)
   const source = moving ? findBlock(root, block.id) : null

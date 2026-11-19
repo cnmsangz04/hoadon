@@ -99,6 +99,12 @@ public class InvoiceDocumentService {
         context.put("authorityCode", Objects.toString(invoice.getCodeCqt(), ""));
         context.put("statusLabel", String.valueOf(invoice.getStatus()));
         context.put("status", String.valueOf(invoice.getStatus()));
+        if (!"DRAFT".equals(source.stage())) {
+            SignatureDetails signature = signatureDetails(source.content());
+            context.put("signatureValid", Boolean.toString(signature.valid()));
+            context.put("signatureSigner", signature.signer());
+            context.put("signatureSignedAt", signature.signedAt());
+        }
         var catalogSnapshot = fieldCatalog.snapshot(version.getFieldCatalogVersion());
         context.put("invoiceCategory", String.valueOf(template.getCategory()));
         context.put("taxMode", Objects.equals(form.getType(), 2) ? "MULTI_RATE" : "SINGLE_RATE");
@@ -151,4 +157,27 @@ public class InvoiceDocumentService {
         if (invoice.getIdAttr() != null && !invoice.getIdAttr().equals(data.getAttribute("Id"))) throw TemplateException.invalid("SOURCE_XML_MISMATCH", "XML đã ký không khớp định danh hóa đơn");
         return new XmlSource(stage, xml);
     }
+
+    private static SignatureDetails signatureDetails(String xml) {
+        var document = InvoiceViewModelMapper.parse(xml);
+        var signatures = document.getElementsByTagNameNS("*", "Signature");
+        if (signatures.getLength() == 0) return new SignatureDetails("", "", false);
+        var signature = (org.w3c.dom.Element) signatures.item(0);
+        String signer = childText(signature, "SignerName");
+        var sellers = document.getElementsByTagNameNS("*", "NBan");
+        if (sellers.getLength() > 0) {
+            String sellerName = childText((org.w3c.dom.Element) sellers.item(0), "Ten");
+            if (!sellerName.isBlank()) signer = sellerName;
+        }
+        String signedAt = childText(signature, "SignedAt");
+        if (signedAt.isBlank()) signedAt = childText(signature, "SigningTime");
+        return new SignatureDetails(signer, InvoiceViewModelMapper.formatSignatureDate(signedAt), true);
+    }
+
+    private static String childText(org.w3c.dom.Element parent, String name) {
+        var nodes = parent.getElementsByTagNameNS("*", name);
+        return nodes.getLength() == 0 ? "" : nodes.item(0).getTextContent().trim();
+    }
+
+    private record SignatureDetails(String signer, String signedAt, boolean valid) { }
 }

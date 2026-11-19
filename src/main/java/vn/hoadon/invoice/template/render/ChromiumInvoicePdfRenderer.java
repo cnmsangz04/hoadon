@@ -29,6 +29,7 @@ public class ChromiumInvoicePdfRenderer implements InvoicePdfRenderer {
     public Result render(String html, Map<Long, Resource> resources) {
         if (html.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > properties.getMaxInputBytes()) throw TemplateException.invalid("RENDER_INPUT_LIMIT", "Nội dung bản in vượt giới hạn");
         Document document = Jsoup.parse(html);
+        document.outputSettings().prettyPrint(false);
         if (document.body().text().isBlank() && document.select("img,svg").isEmpty()) throw TemplateException.invalid("EMPTY_DOCUMENT", "Mẫu không tạo được nội dung bản in");
         document.select("script,iframe,frame,frameset,object,embed,base,form,input,button,meta[http-equiv=refresh]").remove();
         document.getAllElements().forEach(element -> {
@@ -102,8 +103,38 @@ public class ChromiumInvoicePdfRenderer implements InvoicePdfRenderer {
                         """);
                 if (!Boolean.TRUE.equals(knownFonts)) throw TemplateException.invalid("FONT_UNAVAILABLE", "Mẫu sử dụng font chưa được đóng gói; hãy chọn font được cấp");
                 page.evaluate("() => { const mm = Number(document.querySelector('meta[name=invoice-printable-height-mm]')?.content); const h = mm > 0 ? mm * 96 / 25.4 : 900; document.querySelectorAll('tr').forEach(r => { if (r.getBoundingClientRect().height > h) r.classList.add('oversized'); }); }");
-                Boolean clipped = (Boolean) page.evaluate("() => Array.from(document.querySelectorAll('[data-block-id]')).some(e => e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 2)");
-                if (Boolean.TRUE.equals(clipped)) throw TemplateException.invalid("LAYOUT_OVERFLOW", "Nội dung vượt chiều rộng khối; cần chỉnh bố cục");
+                Boolean clipped = (Boolean) page.evaluate("""
+                        () => {
+                          const mm = Number(document.querySelector('meta[name=invoice-printable-width-mm]')?.content);
+                          const width = mm > 0 ? mm * 96 / 25.4 : document.documentElement.clientWidth;
+                          const outside = rect => rect.width > 0 && rect.height > 0 &&
+                            (rect.left < -2 || rect.right > width + 2);
+                          const visibleColor = color => color !== 'transparent' &&
+                            !/^rgba\\([^)]*,\\s*0(?:\\.0+)?\\)$/.test(color);
+                          const paintsFrame = element => {
+                            const style = getComputedStyle(element);
+                            return visibleColor(style.backgroundColor) || ['Top','Right','Bottom','Left'].some(side =>
+                              parseFloat(style['border' + side + 'Width']) > 0 &&
+                              !['none','hidden'].includes(style['border' + side + 'Style']) &&
+                              visibleColor(style['border' + side + 'Color']));
+                          };
+                          for (const element of document.querySelectorAll('[data-block-id]')) {
+                            if (paintsFrame(element) && outside(element.getBoundingClientRect())) return true;
+                            if (element.querySelector('[data-block-id]')) continue;
+                            if (element.clientWidth > 0 && element.scrollWidth > element.clientWidth + 2) return true;
+                            const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+                            while (walker.nextNode()) {
+                              if (!walker.currentNode.textContent.trim()) continue;
+                              const range = document.createRange();
+                              range.selectNodeContents(walker.currentNode);
+                              if (Array.from(range.getClientRects()).some(outside)) return true;
+                            }
+                          }
+                          return Array.from(document.querySelectorAll('img,svg,hr,table,.signature-valid-box'))
+                            .some(element => outside(element.getBoundingClientRect()));
+                        }
+                        """);
+                if (Boolean.TRUE.equals(clipped)) throw TemplateException.invalid("LAYOUT_OVERFLOW", "Nội dung vượt vùng in hoặc chiều rộng phần tử; cần chỉnh bố cục");
                 byte[] pdf = page.pdf(new Page.PdfOptions().setFormat("A4").setPreferCSSPageSize(true).setPrintBackground(true));
                 try (PDDocument output = PDDocument.load(pdf)) {
                     int count = output.getNumberOfPages();

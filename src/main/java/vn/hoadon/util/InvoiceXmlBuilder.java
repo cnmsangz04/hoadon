@@ -36,7 +36,7 @@ public final class InvoiceXmlBuilder {
                 ? inv.getIdAttr()
                 : java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
         String pban = "2.1.1";
-        String thdon = nullToEmpty(inv.getName());
+        String thdon = invoiceTitle(inv, form);
         String khmshdon = form != null && form.getFormCode() != null ? form.getFormCode() : "";
         String khhdon = form != null && form.getSerial() != null ? form.getSerial() : "";
         String shdon = inv.getNo() != null ? String.valueOf(inv.getNo()) : "0";
@@ -311,6 +311,10 @@ public final class InvoiceXmlBuilder {
     private static String trimZeros(Double v) { if (v == null) return ""; String s = String.valueOf(v); if (s.endsWith(".0")) s = s.substring(0, s.length()-2); return s; }
     private static String trimZeros(Number v) { if (v == null) return ""; String s = String.valueOf(v); if (s.endsWith(".0")) s = s.substring(0, s.length()-2); return s; }
     private static String nullToEmpty(String s) { return s == null ? "" : s; }
+    private static String invoiceTitle(InvoiceEntity invoice, FormInvoiceEntity form) {
+        if (form != null && hasText(form.getName())) return form.getName().trim();
+        return nullToEmpty(invoice.getName());
+    }
     private static boolean hasText(String s) { return s != null && !s.trim().isEmpty(); }
 
     private static String tag(String name, String value) {

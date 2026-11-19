@@ -98,12 +98,16 @@ public class InvoiceFieldCatalog {
         }
         String dataset = "document";
         List<InvoiceCatalogSnapshot.Field> fields = new ArrayList<>();
-        Set<String> compatibilityKeys = Set.of("invoice.MCCQT", "invoice.other.TTinMTCuu.DLieu");
+        Set<String> compatibilityKeys = Set.of("invoice.MCCQT", "invoice.DSCKS.NBan.Signature.SignedAt", "invoice.other.TTinMTCuu.DLieu");
         for (var field : source.fields()) {
+            if ("invoice.signature.SignedAt".equals(field.key())) continue;
             boolean currentLookupField = "invoice.other.TTinMTCuu.DLieu".equals(field.key())
                     && "invoice.other".equals(field.group())
                     && "TTin[TTruong='MTCuu']/DLieu".equals(field.sourcePath());
-            if (!compatibilityKeys.contains(field.key()) || currentLookupField) {
+            boolean currentSignatureField = "invoice.DSCKS.NBan.Signature.SignedAt".equals(field.key())
+                    && "invoice".equals(field.group())
+                    && "DSCKS/NBan/Signature/SignedAt".equals(field.sourcePath());
+            if (!compatibilityKeys.contains(field.key()) || currentLookupField || currentSignatureField) {
                 fields.add(field);
                 continue;
             }
@@ -116,6 +120,11 @@ public class InvoiceFieldCatalog {
         if (fields.stream().noneMatch(field -> "invoice.MCCQT".equals(field.key()))) {
             fields.add(compatibilityField("invoice.MCCQT", "Mã của cơ quan thuế", "MCCQT", dataset, 1000));
         }
+        if (fields.stream().noneMatch(field -> "invoice.DSCKS.NBan.Signature.SignedAt".equals(field.key()))) {
+            fields.add(compatibilityField(
+                    "invoice.DSCKS.NBan.Signature.SignedAt", "Ngày ký số",
+                    "DSCKS/NBan/Signature/SignedAt", dataset, 1005));
+        }
         if (fields.stream().noneMatch(field -> "invoice.other.TTinMTCuu.DLieu".equals(field.key()))) {
             fields.add(compatibilityField(
                     "invoice.other.TTinMTCuu.DLieu", "Mã tra cứu hóa đơn",
@@ -126,15 +135,20 @@ public class InvoiceFieldCatalog {
 
     private InvoiceCatalogSnapshot.Field compatibilityField(
             String key, String label, String path, String dataset, int sortOrder) {
+        String description = "invoice.DSCKS.NBan.Signature.SignedAt".equals(key)
+                ? "Ngày ký số từ HDon/DSCKS/NBan/Signature, đã được Java định dạng"
+                : "Phần tử XML tương thích với mẫu cũ";
         return new InvoiceCatalogSnapshot.Field(
                 null, key, label, "invoice", dataset, false, "XML", path, "STRING", 255,
-                "plainText", "Phần tử XML tương thích với mẫu cũ", false, true, sortOrder, 0L);
+                "plainText", description, false, true, sortOrder, 0L);
     }
 
     private String compatibilityPath(String key) {
-        return "invoice.MCCQT".equals(key)
-                ? "MCCQT"
-                : "DLHDon/TTKhac/TTin[TTruong='MTCuu']/DLieu";
+        return switch (key) {
+            case "invoice.MCCQT" -> "MCCQT";
+            case "invoice.DSCKS.NBan.Signature.SignedAt" -> "DSCKS/NBan/Signature/SignedAt";
+            default -> "DLHDon/TTKhac/TTin[TTruong='MTCuu']/DLieu";
+        };
     }
 
     public InvoiceCatalogSnapshot working() {

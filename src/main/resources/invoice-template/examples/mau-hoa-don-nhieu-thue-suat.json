@@ -18,7 +18,11 @@
     "color": "#000000"
   },
   "fontFamilies": {},
-  "assets": {},
+  "assets": {
+    "image7": {
+      "assetId": 7
+    }
+  },
   "body": {
     "id": "block29",
     "type": "stack",
@@ -28,60 +32,79 @@
     },
     "children": [
       {
-        "id": "sellerPanel",
-        "type": "stack",
-        "gapMm": 1,
+        "id": "bmwmw6c13fvcj8ya57rt",
+        "type": "columns",
         "style": {},
+        "gapMm": 3,
         "children": [
           {
-            "id": "block7",
-            "type": "field",
-            "fieldKey": "seller.Ten",
-            "formatter": "plainText",
-            "label": "Đơn vị bán hàng",
+            "id": "sellerPanel",
+            "type": "stack",
+            "gapMm": 1,
+            "style": {},
+            "children": [
+              {
+                "id": "block7",
+                "type": "field",
+                "fieldKey": "seller.Ten",
+                "formatter": "plainText",
+                "label": "Đơn vị bán hàng",
+                "style": {
+                  "fontSizePt": 13,
+                  "fontWeight": 700
+                }
+              },
+              {
+                "id": "block8",
+                "type": "field",
+                "fieldKey": "seller.MST",
+                "formatter": "plainText",
+                "label": "Mã số thuế",
+                "style": {}
+              },
+              {
+                "id": "block9",
+                "type": "field",
+                "fieldKey": "seller.DChi",
+                "formatter": "plainText",
+                "label": "Địa chỉ",
+                "style": {}
+              },
+              {
+                "id": "block10",
+                "type": "field",
+                "fieldKey": "seller.STKNHang",
+                "formatter": "plainText",
+                "label": "Số tài khoản",
+                "style": {},
+                "condition": {
+                  "op": "hasValue",
+                  "fieldKey": "seller.STKNHang"
+                }
+              },
+              {
+                "id": "block11",
+                "type": "field",
+                "fieldKey": "seller.TNHang",
+                "formatter": "plainText",
+                "label": "Ngân hàng",
+                "style": {},
+                "condition": {
+                  "op": "hasValue",
+                  "fieldKey": "seller.TNHang"
+                }
+              }
+            ],
+            "widthMm": 126.16904296875
+          },
+          {
+            "id": "image7",
+            "type": "image",
+            "asset": "image7",
+            "widthMm": 54.8431640625,
+            "heightMm": 25.1,
             "style": {
-              "fontSizePt": 13,
-              "fontWeight": 700
-            }
-          },
-          {
-            "id": "block8",
-            "type": "field",
-            "fieldKey": "seller.MST",
-            "formatter": "plainText",
-            "label": "Mã số thuế",
-            "style": {}
-          },
-          {
-            "id": "block9",
-            "type": "field",
-            "fieldKey": "seller.DChi",
-            "formatter": "plainText",
-            "label": "Địa chỉ",
-            "style": {}
-          },
-          {
-            "id": "block10",
-            "type": "field",
-            "fieldKey": "seller.STKNHang",
-            "formatter": "plainText",
-            "label": "Số tài khoản",
-            "style": {},
-            "condition": {
-              "op": "hasValue",
-              "fieldKey": "seller.STKNHang"
-            }
-          },
-          {
-            "id": "block11",
-            "type": "field",
-            "fieldKey": "seller.TNHang",
-            "formatter": "plainText",
-            "label": "Ngân hàng",
-            "style": {},
-            "condition": {
-              "op": "hasValue",
-              "fieldKey": "seller.TNHang"
+              "textAlign": "right"
             }
           }
         ]
@@ -101,7 +124,8 @@
         "style": {
           "fontSizePt": 18,
           "fontWeight": 700,
-          "textAlign": "center"
+          "textAlign": "center",
+          "textTransform": "uppercase"
         }
       },
       {
@@ -509,7 +533,8 @@
       {
         "id": "signatureSpacing",
         "type": "spacer",
-        "heightMm": 3
+        "heightMm": 3,
+        "style": {}
       },
       {
         "id": "block27",
@@ -546,9 +571,11 @@
               {
                 "id": "buyerSignatureSpace",
                 "type": "spacer",
-                "heightMm": 24
+                "heightMm": 15.4,
+                "style": {}
               }
-            ]
+            ],
+            "heightMm": 40.3
           },
           {
             "id": "sellerSignature",
@@ -577,18 +604,80 @@
                 }
               },
               {
+                "id": "bmwncq5dm0bgsuzj2mgqr",
+                "type": "signatureSummary",
+                "style": {
+                  "fontSizePt": 10,
+                  "fontWeight": 400,
+                  "textAlign": "left",
+                  "borderWidthMm": 0.25,
+                  "borderColor": "#174a8b",
+                  "paddingMm": 2
+                },
+                "children": [
+                  {
+                    "id": "bmwncq5dm0bgsuzj2mgqrSignature",
+                    "type": "text",
+                    "text": "Signature",
+                    "style": {
+                      "color": "#ff0000",
+                      "fontWeight": 700
+                    }
+                  },
+                  {
+                    "id": "bmwncq5dm0bgsuzj2mgqrBy",
+                    "type": "text",
+                    "text": "Ký bởi:",
+                    "style": {
+                      "color": "#ff0000"
+                    }
+                  },
+                  {
+                    "id": "bmwncq5dm0bgsuzj2mgqrSigner",
+                    "type": "field",
+                    "fieldKey": "seller.Ten",
+                    "formatter": "plainText",
+                    "label": "",
+                    "style": {
+                      "color": "#ff0000"
+                    },
+                    "position": {
+                      "xMm": 11.36,
+                      "yMm": -4.07
+                    }
+                  },
+                  {
+                    "id": "bmwncq5dm0bgsuzj2mgqrSignedAt",
+                    "type": "field",
+                    "fieldKey": "invoice.DSCKS.NBan.Signature.SignedAt",
+                    "formatter": "plainText",
+                    "label": "Ký ngày",
+                    "style": {
+                      "color": "#ff0000"
+                    },
+                    "position": {
+                      "xMm": 0,
+                      "yMm": -4.07
+                    }
+                  }
+                ],
+                "widthMm": 62,
+                "heightMm": 14.8,
+                "position": {
+                  "xMm": 11,
+                  "yMm": 0
+                }
+              },
+              {
                 "id": "sellerSignatureSpace",
                 "type": "spacer",
-                "heightMm": 24
+                "heightMm": 6.3,
+                "style": {}
               }
-            ]
+            ],
+            "heightMm": 40.3
           }
         ]
-      },
-      {
-        "id": "block28",
-        "type": "signatureSummary",
-        "label": "Chữ ký số (DSCKS)"
       },
       {
         "id": "documentFooter",
@@ -601,7 +690,7 @@
             "type": "field",
             "fieldKey": "invoice.MCCQT",
             "formatter": "plainText",
-            "label": "Mã cơ quan thuế (MCCQT)",
+            "label": "Mã cơ quan thuế",
             "style": {
               "fontSizePt": 10,
               "textAlign": "center"

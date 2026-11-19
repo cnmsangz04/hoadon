@@ -45,3 +45,4 @@ logs/
 /docs/
 /logs/
 /src/test/
+/uploads/*/invoice-pdfs/

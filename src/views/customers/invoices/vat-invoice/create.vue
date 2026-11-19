@@ -727,7 +727,7 @@ export default {
           address: company.address || null
         }
         this.formInvoices.form_id = this.prepare.formId || null
-        this.formInvoices.name = this.prepare.formName || 'Hóa đơn GTGT'
+        this.formInvoices.name = this.prepare.formName || 'Hóa đơn giá trị gia tăng'
         this.formInvoices.form_code = this.prepare.formCode || null
         this.formInvoices.serial = this.prepare.serial || null
         this.formInvoices.have_code = this.prepare.haveCode

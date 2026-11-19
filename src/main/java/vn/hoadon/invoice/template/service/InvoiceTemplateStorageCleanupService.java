@@ -142,6 +142,24 @@ public class InvoiceTemplateStorageCleanupService {
     }
 
     @Transactional
+    public void deleteCompletedTemplateSamples(String scope, Long companyId, Long templateVersionId) {
+        if (scope == null || templateVersionId == null) return;
+        List<Long> jobIds = entityManager.createQuery(
+                        "select j.id from InvoiceRenderJobEntity j " +
+                                "where j.purpose = 'TEMPLATE_SAMPLE' " +
+                                "and j.templateVersionId = :versionId " +
+                                "and j.scope = :scope " +
+                                "and ((:companyId is null and j.companyId is null) or j.companyId = :companyId) " +
+                                "and j.state in ('SUCCEEDED', 'FAILED')",
+                        Long.class)
+                .setParameter("versionId", templateVersionId)
+                .setParameter("scope", scope)
+                .setParameter("companyId", companyId)
+                .getResultList();
+        deleteRenderJobs(jobIds);
+    }
+
+    @Transactional
     public void deleteRenderJobs(List<Long> jobIds) {
         if (jobIds == null || jobIds.isEmpty()) return;
         List<Long> artifactIds = new ArrayList<>();
