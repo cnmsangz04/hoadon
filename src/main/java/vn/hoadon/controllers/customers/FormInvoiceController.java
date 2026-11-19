@@ -180,7 +180,7 @@ public class FormInvoiceController extends BaseController {
         FormInvoiceEntity form = opt.get();
         if (!Objects.equals(form.getCompanyId(), user.getCompanyId()) || !Objects.equals(form.getSystem(), 0)) return ResponseEntity.status(403).build();
         var access = new TemplateAccess(user.getCompanyId(), user.getId(), false);
-        return documentBridge.viewer(documentBridge.sample(id, false, access), "/v1/form-invoices/" + id + "/download-pdf");
+        return documentBridge.sampleHtml(id, false, access);
     }
 
     @PostMapping

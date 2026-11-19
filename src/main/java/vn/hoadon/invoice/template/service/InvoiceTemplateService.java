@@ -226,6 +226,7 @@ public class InvoiceTemplateService {
         } else if (initialLayout == null) {
             throw TemplateException.invalid("LAYOUT_REQUIRED", "Phải tải file JSON bố cục trước khi tạo mẫu");
         } else {
+            initialLayout = normalizeCatalogVersion(initialLayout);
             compiler.validate(initialLayout, false);
         }
         var template = new InvoiceTemplateEntity();
@@ -291,8 +292,16 @@ public class InvoiceTemplateService {
         ensureEditableState(template);
         var draft = draft(id);
         checkRevision(draft, expectedVersion);
+        layout = normalizeCatalogVersion(layout);
         if (!draft.getFieldCatalogVersion().equals(layout.path("fieldCatalogVersion").asText())) throw TemplateException.conflict("Danh mục phần tử đã thay đổi; vui lòng mở lại mẫu để cập nhật");
         return saveDraft(template, draft, layout, access);
+    }
+
+    private JsonNode normalizeCatalogVersion(JsonNode layout) {
+        if (layout == null || !"CURRENT".equalsIgnoreCase(layout.path("fieldCatalogVersion").asText())) return layout;
+        var normalized = (com.fasterxml.jackson.databind.node.ObjectNode) layout.deepCopy();
+        normalized.put("fieldCatalogVersion", catalog.version());
+        return normalized;
     }
 
     private InvoiceTemplateDraftEntity saveDraft(InvoiceTemplateEntity template, InvoiceTemplateDraftEntity draft, JsonNode layout, TemplateAccess access) {
@@ -360,7 +369,11 @@ public class InvoiceTemplateService {
             throw TemplateException.invalid("RENDER_INPUT_LIMIT", "Nội dung bố cục vượt giới hạn");
         compiler.validate(layout, false);
         var manifest = layoutManifest(layout, template);
-        return renders.designerPreview(layout, fixtures.sample(template.getCategory(), rows), assets.json(manifest), template.getScope(), template.getCompanyId());
+        int taxType = forms.findByTemplateId(id).stream()
+                .findFirst()
+                .map(FormInvoiceEntity::getType)
+                .orElse(1);
+        return renders.designerPreview(layout, fixtures.sample(template.getCategory(), taxType, rows), assets.json(manifest), template.getScope(), template.getCompanyId());
     }
 
     private Map<String, InvoiceAssetService.AssetRef> layoutManifest(JsonNode layout, InvoiceTemplateEntity template) {

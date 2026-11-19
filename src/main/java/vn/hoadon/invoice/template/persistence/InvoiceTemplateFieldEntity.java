@@ -29,9 +29,6 @@ public class InvoiceTemplateFieldEntity {
     @Column(name = "group_id", nullable = false)
     private Long groupId;
 
-    @Column(name = "dataset_id", nullable = false)
-    private Long datasetId;
-
     @Column(name = "source_type", nullable = false, length = 20)
     private String sourceType;
 
@@ -109,14 +106,6 @@ public class InvoiceTemplateFieldEntity {
 
     public void setGroupId(Long value) {
         this.groupId = value;
-    }
-
-    public Long getDatasetId() {
-        return datasetId;
-    }
-
-    public void setDatasetId(Long value) {
-        this.datasetId = value;
     }
 
     public String getSourceType() {

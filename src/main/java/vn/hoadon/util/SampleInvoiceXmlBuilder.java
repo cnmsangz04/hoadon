@@ -130,10 +130,19 @@ public final class SampleInvoiceXmlBuilder {
           .append(tag("TgTTTBSo", ""))
           .append(tag("TgTTTBChu", ""))
         .append("</TToan>");
+        sb.append("<TTKhac>")
+          .append("<TTin>")
+            .append(tag("TTruong", "MTCuu"))
+            .append(tag("KDLieu", "string"))
+            .append(tag("DLieu", "SAMPLE0001"))
+          .append("</TTin>")
+        .append("</TTKhac>");
         sb.append("</DLHDon>");
+        sb.append(tag("MCCQT", "MCCQT-MINH-HOA"));
         sb.append("<DSCKS>")
           .append("<NBan></NBan>")
           .append("<NMua></NMua>")
+          .append("<CCKSKhac></CCKSKhac>")
         .append("</DSCKS>");
         sb.append("</HDon>");
         return sb.toString();

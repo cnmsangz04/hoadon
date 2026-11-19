@@ -35,6 +35,12 @@ public class InvoiceTemplateFieldController extends BaseController {
         return service.update(id, body, access());
     }
 
+    @DeleteMapping("/{id}")
+    public void delete(
+            @PathVariable Long id, @RequestParam Long expectedLockVersion) {
+        service.deleteField(id, expectedLockVersion, access());
+    }
+
     @GetMapping("/metadata")
     public Object metadata() {
         return service.metadata(access());
@@ -51,15 +57,9 @@ public class InvoiceTemplateFieldController extends BaseController {
         return service.saveGroup(id, body, access());
     }
 
-    @PostMapping("/datasets")
-    public Object createDataset(@RequestBody InvoiceTemplateFieldService.DatasetInput body) {
-        return service.saveDataset(null, body, access());
-    }
-
-    @PutMapping("/datasets/{id}")
-    public Object updateDataset(
-            @PathVariable Long id, @RequestBody InvoiceTemplateFieldService.DatasetInput body) {
-        return service.saveDataset(id, body, access());
+    @DeleteMapping("/groups/{id}")
+    public void deleteGroup(@PathVariable Long id, @RequestParam Long expectedLockVersion) {
+        service.deleteGroup(id, expectedLockVersion, access());
     }
 
     private TemplateAccess access() {

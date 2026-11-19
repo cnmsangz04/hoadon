@@ -400,10 +400,14 @@ export default {
       const fieldKey = event.dataTransfer.getData(
         "application/x-invoice-field-key"
       );
+      const dataSource = event.dataTransfer.getData(
+        "application/x-invoice-data-source"
+      );
       if (target && type)
         this.$emit("insert", {
           type,
           fieldKey,
+          dataSource,
           targetId: target.id,
           placement: target.placement,
         });

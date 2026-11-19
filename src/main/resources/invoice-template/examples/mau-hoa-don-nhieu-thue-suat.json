@@ -1,6 +1,6 @@
 {
   "schemaVersion": "invoice-layout/1",
-  "fieldCatalogVersion": "invoice-xml-2.1.1/catalog-1",
+  "fieldCatalogVersion": "CURRENT",
   "page": {
     "format": "A4",
     "orientation": "portrait",
@@ -27,16 +27,6 @@
       "paddingMm": 1
     },
     "children": [
-      {
-        "id": "multi_tax_note",
-        "type": "text",
-        "text": "Bảng tổng hợp thuế GTGT theo từng mức thuế suất",
-        "style": {
-          "fontSizePt": 10,
-          "fontWeight": 700,
-          "textAlign": "right"
-        }
-      },
       {
         "id": "sellerPanel",
         "type": "stack",
@@ -597,7 +587,8 @@
       },
       {
         "id": "block28",
-        "type": "signatureSummary"
+        "type": "signatureSummary",
+        "label": "Chữ ký số (DSCKS)"
       },
       {
         "id": "documentFooter",
@@ -608,31 +599,31 @@
           {
             "id": "authorityCode",
             "type": "field",
-            "fieldKey": "invoice.codeCqt",
+            "fieldKey": "invoice.MCCQT",
             "formatter": "plainText",
-            "label": "Mã của cơ quan thuế",
+            "label": "Mã cơ quan thuế (MCCQT)",
             "style": {
               "fontSizePt": 10,
               "textAlign": "center"
             },
             "condition": {
               "op": "hasValue",
-              "fieldKey": "invoice.codeCqt"
+              "fieldKey": "invoice.MCCQT"
             }
           },
           {
             "id": "lookupCode",
             "type": "field",
-            "fieldKey": "invoice.lookupCode",
+            "fieldKey": "invoice.other.TTinMTCuu.DLieu",
             "formatter": "plainText",
-            "label": "Mã tra cứu",
+            "label": "Mã tra cứu hóa đơn",
             "style": {
               "fontSizePt": 10,
               "textAlign": "center"
             },
             "condition": {
               "op": "hasValue",
-              "fieldKey": "invoice.lookupCode"
+              "fieldKey": "invoice.other.TTinMTCuu.DLieu"
             }
           },
           {

@@ -29,13 +29,12 @@ public class InvoiceDocumentService {
     private final InvoiceAssetService assets;
     private final InvoiceFixtureFactory fixtures;
     private final InvoiceFieldCatalog fieldCatalog;
-    private final InvoiceExternalFieldRegistry externalFields;
 
     public InvoiceDocumentService(InvoiceRepository invoices, FormInvoiceRepository forms, CompanyRepository companies, CompanyBankRepository banks,
                                    SignatureVatRepository signatures, SignatureAuthoritiesTaxService authoritySignatures, InvoiceTemplateRepository templates,
                                    InvoiceDocumentSnapshotRepository snapshots, InvoiceFormTemplateService formTemplates,
                                    TemplateRenderService renders, InvoiceAssetService assets, InvoiceFixtureFactory fixtures,
-                                   InvoiceFieldCatalog fieldCatalog, InvoiceExternalFieldRegistry externalFields) {
+                                   InvoiceFieldCatalog fieldCatalog) {
         this.invoices = invoices;
         this.forms = forms;
         this.companies = companies;
@@ -49,7 +48,6 @@ public class InvoiceDocumentService {
         this.assets = assets;
         this.fixtures = fixtures;
         this.fieldCatalog = fieldCatalog;
-        this.externalFields = externalFields;
     }
 
     @Transactional
@@ -102,7 +100,6 @@ public class InvoiceDocumentService {
         context.put("statusLabel", String.valueOf(invoice.getStatus()));
         context.put("status", String.valueOf(invoice.getStatus()));
         var catalogSnapshot = fieldCatalog.snapshot(version.getFieldCatalogVersion());
-        context.putAll(externalFields.capture(invoice, catalogSnapshot));
         context.put("invoiceCategory", String.valueOf(template.getCategory()));
         context.put("taxMode", Objects.equals(form.getType(), 2) ? "MULTI_RATE" : "SINGLE_RATE");
         context.put("catalogCode", catalogSnapshot.code());

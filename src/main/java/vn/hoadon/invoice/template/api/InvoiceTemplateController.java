@@ -62,12 +62,13 @@ public class InvoiceTemplateController extends BaseController {
         var fields = source.fields().stream().map(field -> {
             Map<String, Object> row = new java.util.LinkedHashMap<>();
             row.put("key", field.key()); row.put("label", field.label()); row.put("group", field.group());
-            row.put("dataset", field.dataset()); row.put("repeated", field.repeated());
-            row.put("rowScope", source.rowScope(field.dataset()));
-            row.put("valueType", field.valueType()); row.put("defaultFormatter", field.defaultFormatter()); row.put("active", field.active());
+            row.put("repeated", field.repeated());
+            row.put("rowScope", source.groupRowScope(field.group()));
+            row.put("sourceType", field.sourceType());
+            row.put("valueType", field.valueType()); row.put("defaultFormatter", field.defaultFormatter()); row.put("active", source.isFieldAvailable(field));
             return row;
         }).toList();
-        return Map.of("version", source.code(), "fields", fields, "groups", source.groups(), "datasets", source.datasets());
+        return Map.of("version", source.code(), "fields", fields, "groups", source.groups(), "tableGroups", source.tableGroups());
     }
 
     @GetMapping("/designer-fonts")

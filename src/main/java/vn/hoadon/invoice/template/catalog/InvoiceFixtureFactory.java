@@ -23,16 +23,27 @@ public class InvoiceFixtureFactory {
         invoice.setExchangeRate(1d);
         invoice.setPaymentType((short) 3);
         invoice.setVatRate((short) 10);
-        invoice.setVatRateOther(0);
         invoice.setLookupCode("SAMPLE0001");
-        invoice.setTotal(rows * 100000d);
-        invoice.setVatAmount(rows * 10000d);
-        invoice.setAmount(rows * 110000d);
+        invoice.setCodeCqt("MCCQT-MINH-HOA");
         invoice.setAmountInWords("Số tiền bằng chữ dùng để minh họa bố cục hóa đơn.");
         invoice.setDiscountAmount(0d);
         invoice.setCustomer(json(Map.of("name", "Công ty khách hàng minh họa", "taxcode", "0100000000", "address", "Số 10, đường Nguyễn Huệ, Thành phố Hồ Chí Minh", "buyer", "Nguyễn Văn An")));
         List<Map<String, Object>> details = new ArrayList<>();
-        for (int i = 1; i <= rows; i++) details.add(Map.of("name", i == 2 ? "Dịch vụ có nội dung mô tả dài để kiểm tra tự xuống dòng, giữ nguyên tiếng Việt và không mất dữ liệu khi phân trang hóa đơn" : "Hàng hóa, dịch vụ minh họa " + i, "unit", "Lần", "num", i, "quantity", 1, "feature", 1, "price", 100000, "total", 100000, "vatAmount", 10000, "amount", 110000, "vatRate", 10));
+        boolean multiRate = Objects.equals(form.getType(), 2);
+        double total = 0d;
+        double vatAmount = 0d;
+        int[] sampleRates = {5, 10, 8};
+        for (int i = 1; i <= rows; i++) {
+            int vatRate = multiRate ? sampleRates[(i - 1) % sampleRates.length] : 10;
+            double lineTotal = 100000d;
+            double lineVat = lineTotal * vatRate / 100d;
+            total += lineTotal;
+            vatAmount += lineVat;
+            details.add(Map.of("name", i == 2 ? "Dịch vụ có nội dung mô tả dài để kiểm tra tự xuống dòng, giữ nguyên tiếng Việt và không mất dữ liệu khi phân trang hóa đơn" : "Hàng hóa, dịch vụ minh họa " + i, "unit", "Lần", "num", i, "quantity", 1, "feature", 1, "price", lineTotal, "total", lineTotal, "vatAmount", lineVat, "amount", lineTotal + lineVat, "vatRate", vatRate));
+        }
+        invoice.setTotal(total);
+        invoice.setVatAmount(vatAmount);
+        invoice.setAmount(total + vatAmount);
         invoice.setDetail(json(details));
         if (company == null) {
             company = new CompanyEntity();
@@ -44,9 +55,13 @@ public class InvoiceFixtureFactory {
     }
 
     public String sample(int category, int rows) {
+        return sample(category, 1, rows);
+    }
+
+    public String sample(int category, int type, int rows) {
         FormInvoiceEntity form = new FormInvoiceEntity();
         form.setCategory(category);
-        form.setType(1);
+        form.setType(type);
         form.setFormCode(String.valueOf(category));
         form.setSerial("C26TAA");
         return sample(form, null, null, rows);

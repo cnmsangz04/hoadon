@@ -29,7 +29,7 @@ public class FileController {
     @GetMapping(value = {"/{id}/view", "/file/{id}/view", "/{id}/view-pdf-html"}, produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<?> viewHtml(@PathVariable Long id) {
         requirePublicTemplate(id);
-        return documents.viewer(documents.sample(id, true, publicAccess()), "/v1/file/" + id + "/download-pdf");
+        return documents.sampleHtml(id, true, publicAccess());
     }
 
     @GetMapping(value = "/{id}/download-xml", produces = MediaType.APPLICATION_XML_VALUE)

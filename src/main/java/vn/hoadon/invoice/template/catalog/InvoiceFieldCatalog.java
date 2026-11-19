@@ -17,7 +17,6 @@ import java.util.*;
 public class InvoiceFieldCatalog {
     private final InvoiceTemplateFieldRepository fields;
     private final InvoiceTemplateFieldGroupRepository groups;
-    private final InvoiceTemplateDatasetRepository datasets;
     private final InvoiceTemplateCatalogReleaseRepository releases;
     private final ObjectMapper mapper;
     private final InvoiceCatalogSnapshot fixed;
@@ -26,12 +25,10 @@ public class InvoiceFieldCatalog {
     public InvoiceFieldCatalog(
             InvoiceTemplateFieldRepository fields,
             InvoiceTemplateFieldGroupRepository groups,
-            InvoiceTemplateDatasetRepository datasets,
             InvoiceTemplateCatalogReleaseRepository releases,
             ObjectMapper mapper) {
         this.fields = fields;
         this.groups = groups;
-        this.datasets = datasets;
         this.releases = releases;
         this.mapper = mapper;
         this.fixed = null;
@@ -41,7 +38,6 @@ public class InvoiceFieldCatalog {
         this.fixed = fixed.withDerivedScopes();
         this.fields = null;
         this.groups = null;
-        this.datasets = null;
         this.releases = null;
         this.mapper = null;
     }
@@ -62,6 +58,7 @@ public class InvoiceFieldCatalog {
     }
 
     public InvoiceCatalogSnapshot snapshot(String code) {
+        if ("CURRENT".equalsIgnoreCase(code)) return latest();
         if (fixed != null && fixed.code().equals(code)) return fixed;
         if (fixed != null)
             throw TemplateException.invalid("CATALOG_MISSING", "Danh mục không tồn tại");
@@ -75,20 +72,75 @@ public class InvoiceFieldCatalog {
         if (!DocumentStorage.sha256(release.getSnapshotJson()).equals(release.getContentHash()))
             throw new IllegalStateException("Catalog checksum mismatch");
         try {
-            return mapper.readValue(release.getSnapshotJson(), InvoiceCatalogSnapshot.class)
-                    .withDerivedScopes();
+            return ensureCompatibilityFields(
+                    mapper.readValue(release.getSnapshotJson(), InvoiceCatalogSnapshot.class));
         } catch (Exception ex) {
             throw new IllegalStateException("Không đọc được danh mục", ex);
         }
     }
 
-    private InvoiceCatalogSnapshot working() {
+    /**
+     * Existing layouts can keep an older catalog version. Keep the two XML
+     * document fields available in those snapshots after the old CONTEXT
+     * fields were removed from the working catalog.
+     */
+    private InvoiceCatalogSnapshot ensureCompatibilityFields(InvoiceCatalogSnapshot source) {
+        List<InvoiceCatalogSnapshot.Group> groups = new ArrayList<>(source.groups());
+        if (groups.stream().noneMatch(group -> "invoice".equals(group.code()))) {
+            groups.add(new InvoiceCatalogSnapshot.Group(
+                    null, "invoice", "Thông tin hóa đơn", "ONE", "/HDon", 1000, true, 0L));
+        }
+
+        List<InvoiceCatalogSnapshot.Dataset> datasets = new ArrayList<>(source.datasets());
+        if (datasets.stream().noneMatch(item -> "document".equals(item.code()))) {
+            datasets.add(new InvoiceCatalogSnapshot.Dataset(
+                    null, "document", "Hóa đơn", null, "ONE", "/HDon", true, 0L));
+        }
+        String dataset = "document";
+        List<InvoiceCatalogSnapshot.Field> fields = new ArrayList<>();
+        Set<String> compatibilityKeys = Set.of("invoice.MCCQT", "invoice.other.TTinMTCuu.DLieu");
+        for (var field : source.fields()) {
+            boolean currentLookupField = "invoice.other.TTinMTCuu.DLieu".equals(field.key())
+                    && "invoice.other".equals(field.group())
+                    && "TTin[TTruong='MTCuu']/DLieu".equals(field.sourcePath());
+            if (!compatibilityKeys.contains(field.key()) || currentLookupField) {
+                fields.add(field);
+                continue;
+            }
+            fields.add(new InvoiceCatalogSnapshot.Field(
+                    field.id(), field.key(), field.label(), "invoice", dataset, false,
+                    "XML", compatibilityPath(field.key()), "STRING", 255,
+                    "plainText", field.description(), field.requiredDisplay(), field.active(),
+                    field.sortOrder(), field.lockVersion()));
+        }
+        if (fields.stream().noneMatch(field -> "invoice.MCCQT".equals(field.key()))) {
+            fields.add(compatibilityField("invoice.MCCQT", "Mã của cơ quan thuế", "MCCQT", dataset, 1000));
+        }
+        if (fields.stream().noneMatch(field -> "invoice.other.TTinMTCuu.DLieu".equals(field.key()))) {
+            fields.add(compatibilityField(
+                    "invoice.other.TTinMTCuu.DLieu", "Mã tra cứu hóa đơn",
+                    "DLHDon/TTKhac/TTin[TTruong='MTCuu']/DLieu", dataset, 1010));
+        }
+        return new InvoiceCatalogSnapshot(source.code(), groups, datasets, fields).withDerivedScopes();
+    }
+
+    private InvoiceCatalogSnapshot.Field compatibilityField(
+            String key, String label, String path, String dataset, int sortOrder) {
+        return new InvoiceCatalogSnapshot.Field(
+                null, key, label, "invoice", dataset, false, "XML", path, "STRING", 255,
+                "plainText", "Phần tử XML tương thích với mẫu cũ", false, true, sortOrder, 0L);
+    }
+
+    private String compatibilityPath(String key) {
+        return "invoice.MCCQT".equals(key)
+                ? "MCCQT"
+                : "DLHDon/TTKhac/TTin[TTruong='MTCuu']/DLieu";
+    }
+
+    public InvoiceCatalogSnapshot working() {
         var groupRows = groups.findAllByOrderBySortOrderAscIdAsc();
-        var datasetRows = datasets.findAll(org.springframework.data.domain.Sort.by("id"));
         Map<Long, String> groupCodes = new HashMap<>();
-        Map<Long, String> datasetCodes = new HashMap<>();
         groupRows.forEach(group -> groupCodes.put(group.getId(), group.getCode()));
-        datasetRows.forEach(dataset -> datasetCodes.put(dataset.getId(), dataset.getCode()));
         var groupDefinitions =
                 groupRows.stream()
                         .map(
@@ -97,36 +149,45 @@ public class InvoiceFieldCatalog {
                                                 group.getId(),
                                                 group.getCode(),
                                                 group.getLabel(),
+                                                group.getCardinality(),
+                                                group.getRootPath(),
                                                 group.getSortOrder(),
                                                 group.isActive(),
                                                 group.getLockVersion()))
                         .toList();
-        var datasetDefinitions =
-                datasetRows.stream()
-                        .map(
-                                dataset ->
-                                        new InvoiceCatalogSnapshot.Dataset(
-                                                dataset.getId(),
-                                                dataset.getCode(),
-                                                dataset.getLabel(),
-                                                datasetCodes.get(dataset.getParentId()),
-                                                dataset.getCardinality(),
-                                                dataset.getRootPath(),
-                                                dataset.isActive(),
-                                                dataset.getLockVersion()))
-                        .toList();
+        List<InvoiceCatalogSnapshot.Dataset> datasetDefinitions = new ArrayList<>();
+        datasetDefinitions.add(
+                new InvoiceCatalogSnapshot.Dataset(
+                        null, "document", "Hóa đơn", null, "ONE", "/HDon", true, 0L));
+        groupDefinitions.stream()
+                .filter(group -> !"document".equals(group.code()) && "MANY".equals(group.cardinality()))
+                .map(
+                        group ->
+                                new InvoiceCatalogSnapshot.Dataset(
+                                        group.id(),
+                                        group.code(),
+                                        group.label(),
+                                        null,
+                                        group.cardinality(),
+                                        group.rootPath(),
+                                        group.active(),
+                                        group.lockVersion()))
+                .forEach(datasetDefinitions::add);
         var structure =
                 new InvoiceCatalogSnapshot(
                         "CURRENT", groupDefinitions, datasetDefinitions, List.of());
         List<InvoiceCatalogSnapshot.Field> definitions = new ArrayList<>();
         for (var field : fields.findAllByOrderBySortOrderAscIdAsc()) {
-            String dataset = datasetCodes.get(field.getDatasetId());
+            String groupCode = groupCodes.get(field.getGroupId());
+            if (groupCode == null)
+                throw TemplateException.invalid("INVALID_CATALOG", "Nhóm chưa được gắn phạm vi dữ liệu");
+            String dataset = structure.groupRowScope(groupCode);
             definitions.add(
                     new InvoiceCatalogSnapshot.Field(
                             field.getId(),
                             field.getFieldKey(),
                             field.getLabel(),
-                            groupCodes.get(field.getGroupId()),
+                            groupCode,
                             dataset,
                             !"document".equals(structure.rowScope(dataset)),
                             field.getSourceType(),

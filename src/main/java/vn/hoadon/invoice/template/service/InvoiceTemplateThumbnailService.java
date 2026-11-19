@@ -53,7 +53,8 @@ public class InvoiceTemplateThumbnailService {
         if (linkedForms.isEmpty()) return;
 
         try {
-            String xml = fixtures.sample(template.getCategory(), 3);
+            int taxType = linkedForms.getFirst().getType() == null ? 1 : linkedForms.getFirst().getType();
+            String xml = fixtures.sample(template.getCategory(), taxType, 3);
             com.fasterxml.jackson.databind.JsonNode layout = mapper.readTree(draft.getSourceContent());
             byte[] pdf = renders.renderPdf(layout, xml, draft.getManifestJson(), template.getScope(), template.getCompanyId());
             byte[] png = firstPage(pdf);

@@ -79,6 +79,36 @@ private Integer getInt(Map<String, Object> body, String key) {
         return documents.pdf(documents.sample(id, true, access), false, "invoice-" + id + ".pdf");
     }
 
+    @GetMapping(value = "/{id}/view", produces = org.springframework.http.MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<?> viewHtml(@PathVariable Long id) {
+        permission("form-invoice-manage");
+        var user = currentUser();
+        var access = new TemplateAccess(user.getCompanyId(), user.getId(), true);
+        return documents.sampleHtml(id, true, access);
+    }
+
+    @GetMapping(value = "/{id}/download-pdf", produces = org.springframework.http.MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<?> downloadPdf(@PathVariable Long id, @RequestParam(required = false) Long artifactId) {
+        permission("form-invoice-manage");
+        var user = currentUser();
+        var access = new TemplateAccess(user.getCompanyId(), user.getId(), true);
+        var artifact = documents.sampleArtifact(id, true, access, artifactId);
+        return documents.pdf(artifact, true, "invoice-" + id + ".pdf");
+    }
+
+    @GetMapping(value = "/{id}/download-xml", produces = org.springframework.http.MediaType.APPLICATION_XML_VALUE)
+    public ResponseEntity<?> downloadXml(@PathVariable Long id) {
+        permission("form-invoice-manage");
+        var user = currentUser();
+        var access = new TemplateAccess(user.getCompanyId(), user.getId(), true);
+        return ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.APPLICATION_XML)
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        org.springframework.http.ContentDisposition.attachment()
+                                .filename("invoice-" + id + ".xml").build().toString())
+                .body(documents.sampleXml(id, true, access));
+    }
+
     @PostMapping(value = "/saveOrUpdate")
     public ResponseEntity<?> saveOrUpdate(
             @RequestParam(value = "id", required = false) Long id,

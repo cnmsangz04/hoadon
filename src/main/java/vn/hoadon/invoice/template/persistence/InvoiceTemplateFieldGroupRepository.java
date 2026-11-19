@@ -7,4 +7,5 @@ public interface InvoiceTemplateFieldGroupRepository
     java.util.List<InvoiceTemplateFieldGroupEntity> findAllByOrderBySortOrderAscIdAsc();
 
     java.util.Optional<InvoiceTemplateFieldGroupEntity> findByCode(String code);
+
 }

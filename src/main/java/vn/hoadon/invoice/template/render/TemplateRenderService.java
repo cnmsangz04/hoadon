@@ -136,6 +136,46 @@ public class TemplateRenderService {
 
     public byte[] bytes(InvoiceRenderArtifactEntity artifact) { return storage.read(artifact.getStorageKey(), artifact.getSha256()); }
 
+    public String html(InvoiceRenderJobEntity job) {
+        String html = job.getSourceContent();
+        for (var entry : assets.resources(job.getManifestJson(), job.getScope(), job.getCompanyId()).entrySet()) {
+            String url = "https://invoice-assets.invalid/" + entry.getKey();
+            String data = "data:" + entry.getValue().mimeType() + ";base64," + Base64.getEncoder().encodeToString(entry.getValue().bytes());
+            html = html.replace("\"" + url + "\"", "\"" + data + "\"")
+                    .replace("'" + url + "'", "'" + data + "'");
+        }
+        String[] margins = previewMargins(job, html);
+        html = html.replace("</head>", "<style id=\"invoice-preview-style\">html{background:#fff}body{box-sizing:border-box;margin:0;padding:" +
+                margins[0] + " " + margins[1] + " " + margins[2] + " " + margins[3] +
+                "}</style></head>");
+        return html;
+    }
+
+    private String[] previewMargins(InvoiceRenderJobEntity job, String html) {
+        var meta = java.util.regex.Pattern.compile("<meta\\s+name=\\\"invoice-page-margin-mm\\\"\\s+content=\\\"([^\\\"]+)\\\"", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(html);
+        if (meta.find()) {
+            String[] values = meta.group(1).trim().split("\\s+");
+            if (values.length == 4) return values;
+        }
+        try {
+            if (job.getTemplateVersionId() != null) {
+                var version = versions.findById(job.getTemplateVersionId()).orElse(null);
+                if (version != null) {
+                    var layout = mapper.readTree(version.getSourceContent());
+                    var margin = layout.path("page").path("marginMm");
+                    return new String[]{
+                            margin.path("top").asText("10") + "mm",
+                            margin.path("right").asText("10") + "mm",
+                            margin.path("bottom").asText("10") + "mm",
+                            margin.path("left").asText("10") + "mm"
+                    };
+                }
+            }
+        } catch (Exception ignored) { }
+        return new String[]{"10mm", "10mm", "10mm", "10mm"};
+    }
+
     public String designerFontCss() { return designerFontCss; }
 
     public byte[] renderPdf(com.fasterxml.jackson.databind.JsonNode layout, String xml, String manifest, String scope, Long companyId) {

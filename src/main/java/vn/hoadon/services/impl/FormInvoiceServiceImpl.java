@@ -221,7 +221,14 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
     public void delete(Long id) {
         var form = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Không tìm thấy mẫu"));
         lockCompany(form);
-        if (!Integer.valueOf(0).equals(form.getStatus()) || invoices.existsByFormId(Math.toIntExact(id)) || !invoiceNumberRepository.findByCompanyIdAndFormId(form.getCompanyId(), id).isEmpty()) throw new IllegalArgumentException("Mẫu đang được sử dụng; hãy ngừng kích hoạt thay vì xóa");
+        if (!Integer.valueOf(0).equals(form.getStatus()) || invoices.existsByFormId(Math.toIntExact(id))) {
+            throw new IllegalArgumentException("Mẫu đang được sử dụng; hãy ngừng kích hoạt và xóa hết hóa đơn trước khi xóa mẫu");
+        }
+        var counters = invoiceNumberRepository.findByCompanyIdAndFormId(form.getCompanyId(), id);
+        if (!counters.isEmpty()) {
+            invoiceNumberRepository.deleteAll(counters);
+            invoiceNumberRepository.flush();
+        }
         var access = new vn.hoadon.invoice.template.service.TemplateAccess(
                 form.getCompanyId(), form.getUserId() == null ? 0L : form.getUserId(), Integer.valueOf(1).equals(form.getSystem()));
         String photo = form.getPhoto();

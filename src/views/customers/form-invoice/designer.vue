@@ -31,7 +31,7 @@
       show
       dismissible
       variant="success"
-      @dismissed="notice = ''"
+      @dismissed="dismissNotice"
       >{{ notice }}</b-alert
     >
     <template v-if="details && draft">
@@ -226,13 +226,13 @@
           </div>
           <div v-else-if="activeTab === 'insert'" class="insert-toolbar">
             <button
-              v-for="type in blockTypes"
-              :key="type.value"
+              v-for="type in insertionTools"
+              :key="type.dataSource || type.value"
               type="button"
               draggable="true"
-              @dragstart="dragPalette($event, type.value)"
+              @dragstart="dragPalette($event, type.value, type.dataSource)"
               @dragend="finishPaletteDrag"
-              @click="addBlock(type.value)"
+              @click="addBlock(type.value, null, null, '', false, type.dataSource)"
             >
               {{ type.text }}
             </button>
@@ -422,7 +422,7 @@
               :class="{ active: sidebarTab === 'elements' }"
               @click="sidebarTab = 'elements'"
             >
-              Thêm phần tử
+              Bố cục
             </button>
             <button
               type="button"
@@ -450,7 +450,7 @@
               size="sm"
               type="search"
               :placeholder="
-                sidebarTab === 'xml' ? 'Tìm tên hoặc mã XML…' : 'Tìm phần tử…'
+                sidebarTab === 'xml' ? 'Tìm tên hoặc mã XML…' : 'Tìm bảng, văn bản…'
               "
               aria-label="Tìm phần tử"
             />
@@ -459,35 +459,42 @@
                 <div class="palette-group-title">Phần tử XML</div>
                 <small>{{ visibleXmlFields.length }} phần tử</small>
               </div>
-              <b-form-select
-                v-model="xmlGroupFilter"
-                size="sm"
-                class="xml-group-select"
-                :options="xmlGroupOptions"
-                aria-label="Nhóm phần tử XML"
-              />
-              <div class="block-palette xml-field-list">
-                <button
-                  v-for="field in visibleXmlFields"
-                  :key="field.key"
-                  type="button"
-                  draggable="true"
-                  :disabled="busy"
-                  :title="`${field.label} (${field.key})`"
-                  @dragstart="dragXmlField($event, field)"
-                  @dragend="finishPaletteDrag"
-                  @click="addField(field)"
-                >
-                  <span class="palette-icon xml-field-icon" aria-hidden="true"
-                    >{ }</span
+              <div v-if="xmlFieldGroups.length" class="xml-field-groups">
+                <section v-for="group in xmlFieldGroups" :key="group.code" class="xml-field-group">
+                  <button
+                    type="button"
+                    class="xml-field-group-heading"
+                    :aria-expanded="xmlGroupExpanded(group.code)"
+                    @click="toggleXmlGroup(group.code)"
                   >
-                  <span class="xml-field-copy">
-                    <span class="xml-field-label">{{ field.label }}</span>
-                  </span>
-                  <span class="xml-field-add" aria-hidden="true">+</span>
-                </button>
+                    <span>Nhóm: {{ group.label }}</span>
+                    <span class="xml-field-group-meta">
+                      <small>{{ group.items.length }}</small>
+                      <span aria-hidden="true">{{ xmlGroupExpanded(group.code) ? "⌃" : "⌄" }}</span>
+                    </span>
+                  </button>
+                  <div v-if="xmlGroupExpanded(group.code)" class="block-palette xml-field-list">
+                    <button
+                      v-for="field in group.items"
+                      :key="field.key"
+                      type="button"
+                      draggable="true"
+                      :disabled="busy"
+                      :title="`${field.label} (${field.key})`"
+                      @dragstart="dragXmlField($event, field)"
+                      @dragend="finishPaletteDrag"
+                      @click="addField(field)"
+                    >
+                      <span class="palette-icon xml-field-icon" aria-hidden="true">{ }</span>
+                      <span class="xml-field-copy">
+                        <span class="xml-field-label">{{ field.label }}</span>
+                      </span>
+                      <span class="xml-field-add" aria-hidden="true">+</span>
+                    </button>
+                  </div>
+                </section>
               </div>
-              <p v-if="!visibleXmlFields.length" class="xml-field-empty">
+              <p v-else class="xml-field-empty">
                 Không có phần tử phù hợp
               </p>
             </div>
@@ -501,13 +508,13 @@
                 <div class="block-palette">
                   <button
                     v-for="type in group.items"
-                    :key="type.value"
+                    :key="type.dataSource || type.value"
                     type="button"
                     draggable="true"
                     :disabled="busy"
-                    @dragstart="dragPalette($event, type.value)"
+                    @dragstart="dragPalette($event, type.value, type.dataSource)"
                     @dragend="finishPaletteDrag"
-                    @click="addBlock(type.value)"
+                    @click="addBlock(type.value, null, null, '', false, type.dataSource)"
                   >
                     <span class="palette-icon" aria-hidden="true">{{
                       blockIcons[type.value]
@@ -619,11 +626,11 @@
               </template>
               <b-form-group
                 v-if="['table'].includes(selected.type)"
-                label="Danh sách dữ liệu"
+                label="Dữ liệu của bảng"
               >
                 <b-form-select
                   v-model="selected.dataSource"
-                  :options="repeatingDatasets"
+                  :options="tableGroups"
                   @change="changeDataset"
                 />
               </b-form-group>
@@ -883,23 +890,6 @@ const requestKey = () =>
     ? window.crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-const XML_GROUP_LABELS = Object.freeze({
-  common: "Thông tin chung",
-  related: "Hóa đơn liên quan",
-  invoice: "Thông tin hóa đơn",
-  seller: "Người bán",
-  buyer: "Người mua",
-  items: "Hàng hóa, dịch vụ",
-  "items.special": "Hàng hóa đặc thù",
-  taxGroups: "Tổng hợp thuế",
-  totals: "Tổng tiền",
-  fees: "Phí",
-});
-
-const XML_FIELD_LABEL_OVERRIDES = Object.freeze({
-  "common.PBan": "Phiên bản",
-});
-
 export default {
   name: "InvoiceTemplateDesigner",
   components: { LayoutBlockTree, PdfArtifactViewer, InvoiceLayoutCanvas },
@@ -911,14 +901,12 @@ export default {
     selected: null,
     fields: [],
     fieldGroups: [],
-    datasets: [],
-    xmlGroupFilter: "common",
-    newBlockType: "field",
     busy: false,
     dirty: false,
     savedLayout: "",
     error: "",
     notice: "",
+    noticeTimer: null,
     jobId: null,
     generation: 0,
     showPdf: false,
@@ -957,6 +945,7 @@ export default {
     historyTimer: null,
     historyApplying: false,
     paletteDragActive: false,
+    xmlGroupOpen: {},
     editorTabs: [
       { value: "home", text: "Trang đầu" },
       { value: "insert", text: "Chèn" },
@@ -976,23 +965,25 @@ export default {
       { value: "date", text: "Ngày tháng" },
       { value: "invoiceNumber", text: "Số hóa đơn" },
     ],
-    blockTypes: [
-      { value: "field", text: "Trường dữ liệu" },
-      { value: "text", text: "Văn bản" },
-      { value: "stack", text: "Nhóm dọc" },
-      { value: "columns", text: "Nhóm cột" },
-      { value: "itemsTable", text: "Bảng hàng hóa" },
-      { value: "table", text: "Bảng dữ liệu" },
-      { value: "taxSummaryTable", text: "Bảng thuế" },
-      { value: "feesTable", text: "Bảng phí" },
-      { value: "totals", text: "Nhóm tổng tiền" },
-      { value: "signatureSummary", text: "Thông tin chữ ký" },
-      { value: "divider", text: "Đường kẻ" },
-      { value: "spacer", text: "Khoảng trống" },
-      { value: "pageBreak", text: "Ngắt trang" },
-    ],
   }),
   computed: {
+    insertionTools() {
+      return [
+        { value: "text", text: "Văn bản", section: "Nội dung" },
+        ...this.tableGroups
+          .map((group) => ({
+            value: "table",
+            dataSource: group.value,
+            text: `Bảng: ${group.text}`,
+            section: "Bảng từ dữ liệu hóa đơn",
+          })),
+        { value: "stack", text: "Xếp theo chiều dọc", section: "Sắp xếp bố cục" },
+        { value: "columns", text: "Chia vùng thành các cột", section: "Sắp xếp bố cục" },
+        { value: "divider", text: "Đường kẻ", section: "Sắp xếp bố cục" },
+        { value: "spacer", text: "Khoảng trống", section: "Sắp xếp bố cục" },
+        { value: "pageBreak", text: "Sang trang mới", section: "Sắp xếp bố cục" },
+      ];
+    },
     paletteGroups() {
       const normalize = (value) =>
         value
@@ -1001,53 +992,19 @@ export default {
           .replace(/đ/g, "d")
           .toLowerCase();
       const query = normalize(this.elementSearch);
-      const groups = [
-        { label: "Nội dung", types: ["field", "text", "signatureSummary"] },
-        {
-          label: "Bảng và tổng tiền",
-          types: [
-            "itemsTable",
-            "table",
-            "taxSummaryTable",
-            "feesTable",
-            "totals",
-          ],
-        },
-        {
-          label: "Sắp xếp bố cục",
-          types: ["stack", "columns", "divider", "spacer", "pageBreak"],
-        },
-      ];
+      const groups = ["Nội dung", "Bảng từ dữ liệu hóa đơn", "Sắp xếp bố cục"];
       return groups
-        .map((group) => ({
-          label: group.label,
-          items: this.blockTypes.filter(
+        .map((label) => ({
+          label,
+          items: this.insertionTools.filter(
             (type) =>
-              group.types.includes(type.value) &&
+              type.section === label &&
               normalize(type.text).includes(query)
           ),
         }))
         .filter((group) => group.items.length);
     },
     xmlCatalogGroups() {
-      const groups = new Map();
-      this.fields
-        .filter((field) => field.active !== false)
-        .forEach((field) => {
-          const code = field.group || "common";
-          if (!groups.has(code)) groups.set(code, []);
-          groups.get(code).push(field);
-        });
-      return Array.from(groups, ([code, items]) => ({
-        code,
-        label: this.xmlGroupLabel(code),
-        items: items.map((field) => ({
-          ...field,
-          label: this.xmlFieldLabel(field),
-        })),
-      }));
-    },
-    xmlFieldGroups() {
       const normalize = (value) =>
         String(value || "")
           .normalize("NFD")
@@ -1055,36 +1012,34 @@ export default {
           .replace(/đ/g, "d")
           .toLowerCase();
       const query = normalize(this.elementSearch);
-      if (!query) return this.xmlCatalogGroups;
-      return this.xmlCatalogGroups
-        .map((group) => ({
-          ...group,
-          items: group.items.filter((field) =>
-            normalize(`${field.label} ${field.key} ${field.group}`).includes(
-              query
-            )
-          ),
-        }))
-        .filter((group) => group.items.length);
+      const groups = new Map();
+      this.fields
+        .filter((field) => field.active !== false)
+        .filter((field) => field.sourceType === "XML")
+        .forEach((field) => {
+          const groupCode = field.group || "common";
+          const searchable = normalize(`${field.label} ${field.key} ${groupCode}`);
+          if (query && !searchable.includes(query)) return;
+          if (!groups.has(groupCode)) {
+            groups.set(groupCode, {
+              code: groupCode,
+              label: this.xmlGroupLabel(groupCode),
+              items: [],
+            });
+          }
+          groups.get(groupCode).items.push({
+            ...field,
+            label: this.xmlFieldLabel(field),
+          });
+        });
+      return Array.from(groups.values());
     },
-    xmlGroupOptions() {
-      return [
-        { value: "", text: "Tất cả nhóm XML" },
-        ...this.xmlCatalogGroups.map((group) => ({
-          value: group.code,
-          text: group.label,
-        })),
-      ];
+    xmlFieldGroups() {
+      return this.xmlCatalogGroups;
     },
     visibleXmlFields() {
-      const groups = this.xmlGroupFilter
-        ? this.xmlFieldGroups.filter(
-            (group) => group.code === this.xmlGroupFilter
-          )
-        : this.xmlFieldGroups;
-      return groups.flatMap((group) => group.items);
+      return this.xmlFieldGroups.flatMap((group) => group.items);
     },
-
     canUndo() {
       return this.historyIndex > 0 || this.pendingHistory;
     },
@@ -1139,12 +1094,15 @@ export default {
         .filter((f) => f.active !== false || this.selected?.fieldKey === f.key)
         .map((f) => ({ value: f.key, text: this.xmlFieldLabel(f) }));
     },
-    repeatingDatasets() {
-      return this.datasets
+    tableGroups() {
+      return this.fieldGroups
         .filter(
-          (d) => d.cardinality === "MANY" && d.parent === "document" && d.active
+          (group) =>
+            group.active !== false &&
+            group.code !== "document" &&
+            this.fields.some((field) => field.group === group.code && field.sourceType === "XML" && field.active !== false)
         )
-        .map((d) => ({ value: d.code, text: d.label }));
+        .map((group) => ({ value: group.code, text: group.label }));
     },
   },
   watch: {
@@ -1173,14 +1131,6 @@ export default {
       const { data } = await axios.get(`${this.base}/catalog`);
       this.fields = data.fields;
       this.fieldGroups = data.groups || [];
-      this.datasets = data.datasets || [];
-      if (
-        !this.xmlCatalogGroups.some(
-          (group) => group.code === this.xmlGroupFilter
-        )
-      ) {
-        this.xmlGroupFilter = this.xmlCatalogGroups[0]?.code || "";
-      }
       if (this.formId) {
         const response = await axios.post(
           `${this.base}/from-form/${this.formId}`,
@@ -1212,22 +1162,21 @@ export default {
     next(!this.dirty || window.confirm("Bỏ các thay đổi chưa lưu?"));
   },
   methods: {
+    xmlGroupExpanded(code) {
+      return this.xmlGroupOpen[code] !== false;
+    },
+    toggleXmlGroup(code) {
+      this.$set(this.xmlGroupOpen, code, !this.xmlGroupExpanded(code));
+    },
     xmlGroupLabel(code) {
       const configured = this.fieldGroups.find(
         (group) => group.code === code
       )?.label;
-      if (configured && configured.trim().toLowerCase() !== code.toLowerCase()) {
-        return configured;
-      }
-      return XML_GROUP_LABELS[code] || configured || code;
+      return configured || code;
     },
     xmlFieldLabel(field) {
       if (!field) return "";
-      if (XML_FIELD_LABEL_OVERRIDES[field.key]) {
-        return XML_FIELD_LABEL_OVERRIDES[field.key];
-      }
       return String(field.label || field.key || "")
-        .replace(/\s*\([^)]*\)\s*$/u, "")
         .replace(/\s+/g, " ")
         .trim();
     },
@@ -1249,13 +1198,16 @@ export default {
     },
 
     blockLabel(block) {
+      if (this.tableSource(block))
+        return `Bảng: ${this.groupLabel(this.tableSource(block))}`;
       return (
         block.label ||
         block.text ||
         this.xmlFieldLabel(
           this.fields.find((field) => field.key === block.fieldKey)
         ) ||
-        this.blockTypes.find((type) => type.value === block.type)?.text ||
+        this.insertionTools.find((type) => type.value === block.type)?.text ||
+        { field: "Trường dữ liệu", totals: "Nhóm tổng tiền", signatureSummary: "Thông tin chữ ký" }[block.type] ||
         block.type
       );
     },
@@ -1352,13 +1304,15 @@ export default {
         this.error =
           "Không thể đặt phần tử ở vị trí này. Một nhóm cột chứa tối đa 6 phần tử.";
     },
-    dragPalette(event, type) {
+    dragPalette(event, type, dataSource = null) {
       if (this.busy) {
         event.preventDefault();
         return;
       }
       this.paletteDragActive = true;
       event.dataTransfer.setData("application/x-invoice-block-type", type);
+      if (dataSource)
+        event.dataTransfer.setData("application/x-invoice-data-source", dataSource);
       event.dataTransfer.effectAllowed = "copy";
     },
     dragXmlField(event, field) {
@@ -1376,17 +1330,73 @@ export default {
         this.paletteDragActive = false;
       }, 0);
     },
-    insertBlock({ type, fieldKey, targetId, placement }) {
+    insertBlock({ type, fieldKey, dataSource, targetId, placement }) {
+      if (this.busy || !this.layout) return;
       const field = fieldKey
         ? this.fields.find((item) => item.key === fieldKey)
         : null;
-      this.addBlock(
-        type,
-        { targetId, placement },
-        fieldKey,
-        this.xmlFieldLabel(field),
-        true
-      );
+      const position = { targetId, placement };
+      if (field) return this.addXmlField(field, position);
+      this.addBlock(type, position, null, "", true, dataSource);
+    },
+    tableSource(block) {
+      if (!block) return null;
+      return block.type === "table" ? block.dataSource : {
+        itemsTable: "items", taxSummaryTable: "taxGroups", feesTable: "fees",
+      }[block.type];
+    },
+    groupLabel(code) {
+      return this.fieldGroups.find((group) => group.code === code)?.label || code;
+    },
+    fieldScope(field) {
+      if (field.rowScope) return field.rowScope;
+      const group = this.fieldGroups.find((item) => item.code === field.group);
+      return group?.cardinality === "MANY" ? group.code : "document";
+    },
+    addXmlField(field, position = null) {
+      if (this.busy || !this.layout || !field || field.active === false) return;
+      this.error = "";
+      this.dismissNotice();
+      const scope = this.fieldScope(field);
+      const target = position
+        ? findBlock(this.layout.body, position.targetId)?.block
+        : this.selected;
+      const source = this.tableSource(target);
+      if (source && target.columns) {
+        if (this.tableFieldGroup(field) !== source) {
+          const tableGroup = this.tableFieldGroup(field);
+          this.error = `“${this.xmlFieldLabel(field)}” thuộc ${this.groupLabel(tableGroup)}. Hãy thả vào bảng ${this.groupLabel(tableGroup)} hoặc vùng trống để tạo bảng mới.`;
+          return;
+        }
+        this.selected = target;
+        this.inspectorTab = "content";
+        if (target.columns.some((column) => column.fieldKey === field.key)) {
+          this.showNotice(`Bảng đã có cột “${this.xmlFieldLabel(field)}”.`, 4000);
+          return;
+        }
+        if (target.columns.length >= 15) {
+          this.error = "Bảng đã có 15 cột. Xóa bớt một cột trước khi thêm.";
+          return;
+        }
+        this.recordHistory();
+        target.columns.push(this.makeColumn(field));
+        this.balanceColumns(target.columns);
+        this.recordHistory();
+        return;
+      }
+      if (scope === "document")
+        return this.addBlock("field", position, field.key, this.xmlFieldLabel(field), true);
+      return this.addBlock("table", position, field.key, "", true, scope);
+    },
+    makeColumn(field) {
+      return {
+        id: blockId(),
+        label: this.xmlFieldLabel(field),
+        fieldKey: field.key,
+        widthPercent: 100,
+        formatter: this.fieldFormatter(field.key),
+        style: {},
+      };
     },
     duplicateSelected() {
       if (!this.selected || this.busy) return;
@@ -1427,11 +1437,30 @@ export default {
         e.message ||
         "Không thực hiện được thao tác";
     },
+    dismissNotice() {
+      if (this.noticeTimer) {
+        clearTimeout(this.noticeTimer);
+        this.noticeTimer = null;
+      }
+      this.notice = "";
+    },
+    showNotice(message, timeout = 0) {
+      this.dismissNotice();
+      this.notice = message;
+      if (timeout > 0) {
+        this.noticeTimer = setTimeout(() => this.dismissNotice(), timeout);
+      }
+    },
     fieldsFor(group, currentKey = null) {
       return this.fields
-        .filter((f) => (f.rowScope || f.dataset || f.group) === group)
+        .filter((f) => f.sourceType === "XML")
+        .filter((f) => this.tableFieldGroup(f) === group)
         .filter((f) => f.active !== false || f.key === currentKey)
         .map((f) => ({ value: f.key, text: this.xmlFieldLabel(f) }));
+    },
+    tableFieldGroup(field) {
+      const scope = this.fieldScope(field);
+      return scope === "document" ? field.group : scope;
     },
     async syncCatalog() {
       const { data: catalog } = await axios.get(`${this.base}/catalog`);
@@ -1445,18 +1474,9 @@ export default {
     changeDataset() {
       if (!this.selected?.columns) return;
       const first = this.fieldsFor(this.selected.dataSource)[0];
-      this.selected.columns = first
-        ? [
-            {
-              id: blockId(),
-              label: first.text,
-              fieldKey: first.value,
-              widthPercent: 100,
-              formatter: "plainText",
-              style: {},
-            },
-          ]
-        : [];
+      const field = this.fields.find((item) => item.key === first?.value);
+      this.selected.columns = field ? [this.makeColumn(field)] : [];
+      this.balanceColumns(this.selected.columns);
     },
     async install(data) {
       this.details = data;
@@ -1496,7 +1516,6 @@ export default {
         }
         this.fields = response.data.fields;
         this.fieldGroups = response.data.groups || [];
-        this.datasets = response.data.datasets || [];
         normalize(this.layout.body);
       }
       this.savedLayout = this.layout ? JSON.stringify(this.layout) : "";
@@ -1516,7 +1535,7 @@ export default {
         return;
       }
       this.error = "";
-      this.notice = "";
+      this.dismissNotice();
       this.busy = true;
       try {
         const { data } = await axios.get(
@@ -1554,11 +1573,11 @@ export default {
       if (this.busy || !this.layout) return;
       this.busy = true;
       this.error = "";
-      this.notice = "";
+      this.dismissNotice();
       try {
         if (this.dirty) await this.saveDraft();
         await this.syncCatalog();
-        this.notice = "Đã lưu nháp";
+        this.showNotice("Đã lưu nháp", 4000);
       } catch (e) {
         this.fail(e);
       } finally {
@@ -1589,7 +1608,7 @@ export default {
       if (this.busy) return;
       this.busy = true;
       this.error = "";
-      this.notice = "Đang kiểm tra bản in với 0, 1 và 60 dòng hàng hóa…";
+      this.showNotice("Đang kiểm tra bản in với 0, 1 và 60 dòng hàng hóa…");
       const generation = ++this.generation;
       try {
         if (this.dirty) await this.saveDraft();
@@ -1631,17 +1650,14 @@ export default {
           { headers: { "Idempotency-Key": requestKey() } }
         );
         this.dirty = false;
-        this.notice = this.formId
+        const message = this.formId
           ? "Đã lưu và áp dụng mẫu hóa đơn"
           : "Đã lưu mẫu";
-        await this.$router.push({
-          name: this.isAdmin
-            ? "admin-form-invoice-list"
-            : "CustomerFormInvoiceList",
-        });
+        await this.load();
+        this.showNotice(message, 4000);
       } catch (e) {
         this.fail(e);
-        this.notice = "";
+        this.dismissNotice();
       } finally {
         this.busy = false;
       }
@@ -1659,7 +1675,7 @@ export default {
       if (this.busy || !window.confirm("Xóa mẫu đã lưu này?")) return;
       this.busy = true;
       this.error = "";
-      this.notice = "";
+      this.dismissNotice();
       try {
         const { data } = await axios.delete(
           `${this.base}/${this.selectedTemplateId}/versions/${version.id}`
@@ -1674,7 +1690,7 @@ export default {
           };
           this.details.draft = this.draft;
         }
-        this.notice = "Đã xóa mẫu đã lưu";
+        this.showNotice("Đã xóa mẫu đã lưu", 4000);
       } catch (e) {
         this.fail(e);
       } finally {
@@ -1689,7 +1705,7 @@ export default {
       ) return;
       this.busy = true;
       this.error = "";
-      this.notice = "";
+      this.dismissNotice();
       try {
         const { data: draft } = await axios.post(
           `${this.base}/${this.selectedTemplateId}/draft-from-version`,
@@ -1700,7 +1716,7 @@ export default {
         );
         await this.install({ ...this.details, draft });
         this.activeTab = "home";
-        this.notice = "Đang chỉnh sửa từ mẫu đã lưu";
+        this.showNotice("Đang chỉnh sửa từ mẫu đã lưu", 4000);
       } catch (e) {
         this.fail(e);
       } finally {
@@ -1708,17 +1724,18 @@ export default {
       }
     },
     async addBlock(
-      type = this.newBlockType,
+      type = "text",
       position = null,
       fieldKey = null,
       fieldLabel = "",
-      fromDrop = false
+      fromDrop = false,
+      dataSource = null
     ) {
       if (this.paletteDragActive && !fromDrop) return;
       if (
         this.busy ||
         !this.layout ||
-        !this.blockTypes.some((item) => item.value === type)
+        (type !== "field" && !this.insertionTools.some((item) => item.value === type))
       )
         return;
       const templateId = this.selectedTemplateId;
@@ -1740,60 +1757,32 @@ export default {
           formatter: "plainText",
         });
       if (block.type === "text") block.text = "Nội dung";
-      if (["stack", "columns", "totals"].includes(block.type)) {
+      if (["stack", "columns"].includes(block.type)) {
         block.children = [];
         block.gapMm = 2;
       }
       if (block.type === "spacer") block.heightMm = 5;
-      if (["table"].includes(block.type)) {
-        const source = this.repeatingDatasets[0];
+      if (block.type === "table") {
+        const source = dataSource
+          ? this.tableGroups.find((item) => item.value === dataSource)
+          : this.tableGroups[0];
         if (!source) {
-          this.error = "Danh mục chưa có danh sách lặp";
+          this.error = "Chưa có nguồn dữ liệu phù hợp để tạo bảng.";
           return;
         }
         block.dataSource = source.value;
-        if (block.type === "table") {
-          const field = this.fieldsFor(source.value)[0];
-          block.columns = field
-            ? [
-                {
-                  id: blockId(),
-                  label: field.text,
-                  fieldKey: field.value,
-                  widthPercent: 100,
-                  formatter: "plainText",
-                  style: {},
-                },
-              ]
-            : [];
-          block.repeatHeader = true;
-          block.rowSplitPolicy = "splitIfOversized";
+        const available = this.fields.filter((field) =>
+          field.active !== false && field.sourceType === "XML" && this.tableFieldGroup(field) === source.value &&
+          (!fieldKey || field.key === fieldKey)
+        ).slice(0, 15);
+        if (!available.length) {
+          this.error = `Chưa có phần tử được phép sử dụng cho ${source.text}.`;
+          return;
         }
-      }
-      if (block.type.endsWith("Table")) {
-        block.dataSource = {
-          itemsTable: "items",
-          taxSummaryTable: "taxGroups",
-          feesTable: "fees",
-        }[block.type];
+        block.columns = available.map(this.makeColumn);
+        this.balanceColumns(block.columns);
         block.repeatHeader = true;
         block.rowSplitPolicy = "splitIfOversized";
-        const available = new Map(this.fields.map((field) => [field.key, field]));
-        const limit = block.type === "taxSummaryTable" ? 3 : block.type === "itemsTable" ? 7 : 6;
-        const fields = this.fieldsFor(block.dataSource).slice(0, limit).map((field) => ({
-          field: available.get(field.value),
-          label: field.text,
-          formatter: block.type === "feesTable" ? "decimal" : "plainText",
-        })).filter((item) => item.field);
-        const width = fields.length ? Math.floor(100 / fields.length) : 100;
-        block.columns = fields.map((item, index) => ({
-          id: blockId(),
-          fieldKey: item.field.key,
-          label: item.label,
-          widthPercent: index === fields.length - 1 ? 100 - width * index : width,
-          formatter: item.formatter,
-          style: {},
-        }));
       }
       if (block.columns) {
         block.headerStyle = block.headerStyle || {};
@@ -1839,11 +1828,7 @@ export default {
     },
     async addField(field) {
       if (!field || this.paletteDragActive) return;
-      await this.addBlock("field");
-      if (!this.selected || this.selected.type !== "field") return;
-      this.$set(this.selected, "fieldKey", field.key);
-      this.$set(this.selected, "label", this.xmlFieldLabel(field));
-      this.recordHistory();
+      return this.addXmlField(field);
     },
     addColumn() {
       const field = this.fieldsFor(this.selected.dataSource)[0];
@@ -1853,17 +1838,23 @@ export default {
         label: field.text,
         fieldKey: field.value,
         widthPercent: 10,
-        formatter: "plainText",
+        formatter: this.fieldFormatter(field.value),
         style: {},
       });
-      this.balanceColumns();
+      this.balanceColumns(this.selected.columns);
     },
     removeColumn(index) {
       this.selected.columns.splice(index, 1);
-      this.balanceColumns();
+      this.balanceColumns(this.selected.columns);
     },
-    balanceColumns() {
-      const columns = this.selected.columns;
+    fieldFormatter(fieldKey) {
+      const field = this.fields.find((item) => item.key === fieldKey);
+      if (field?.defaultFormatter && field.defaultFormatter !== "plainText")
+        return field.defaultFormatter;
+      return { DECIMAL: "decimal", DATE: "date" }[field?.valueType] || "plainText";
+    },
+    balanceColumns(columns = this.selected?.columns || []) {
+      if (!columns.length) return;
       const width = Math.floor(100 / columns.length);
       columns.forEach((column, index) => {
         column.widthPercent =
@@ -2408,10 +2399,51 @@ export default {
   white-space: nowrap;
 }
 .xml-group-select {
-  margin-bottom: 6px;
+  margin: 8px 0 10px;
 }
 .xml-field-list {
   gap: 4px;
+}
+.xml-field-group {
+  margin-top: 12px;
+}
+.xml-field-group:first-child {
+  margin-top: 10px;
+}
+.xml-field-group-heading {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+  padding: 5px 7px;
+  color: #334155;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.xml-field-group-heading:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.xml-field-group-heading small {
+  color: #94a3b8;
+  font-weight: 600;
+}
+.xml-field-group-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.xml-field-group-meta > span {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1;
 }
 .xml-field-list button {
   width: 100%;

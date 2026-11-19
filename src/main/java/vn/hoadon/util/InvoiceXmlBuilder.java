@@ -211,15 +211,9 @@ public final class InvoiceXmlBuilder {
           .append(tag("TTKhac", ""))
           .append("</TToan>");
         sb.append("</NDHDon>");
-        // TTKhac with lookup code
-        sb.append("<TTKhac>")
-          .append("<TTin>")
-          .append(tag("TTruong", "MTCuu"))
-          .append(tag("KDLieu", "string"))
-          .append(tag("DLieu", nullToEmpty(inv.getLookupCode())))
-          .append("</TTin>")
-          .append("</TTKhac>");
+        sb.append(additionalInformation(inv));
         sb.append("</DLHDon>");
+        sb.append(tag("MCCQT", nullToEmpty(inv.getCodeCqt())));
         sb.append("<DLQRCode/>");
         sb.append("<DSCKS><NBan/><NMua/><CCKSKhac/></DSCKS>");
         sb.append("</HDon>");
@@ -322,6 +316,20 @@ public final class InvoiceXmlBuilder {
     private static String tag(String name, String value) {
         return "<" + name + ">" + escapeXml(value) + "</" + name + ">";
     }
+
+    /**
+     * Mã tra cứu là thông tin mở rộng của chứng từ, không phải một trường
+     * trong TTChung.  Vì vậy nó phải nằm tại HDon/DLHDon/TTKhac.
+     */
+    private static String additionalInformation(InvoiceEntity invoice) {
+        return new StringBuilder("<TTKhac><TTin>")
+                .append(tag("TTruong", "MTCuu"))
+                .append(tag("KDLieu", "string"))
+                .append(tag("DLieu", nullToEmpty(invoice.getLookupCode())))
+                .append("</TTin></TTKhac>")
+                .toString();
+    }
+
     private static String escapeXml(String s) {
         if (s == null) return "";
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;");

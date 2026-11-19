@@ -634,7 +634,7 @@ public class InvoiceController extends BaseController {
         ResponseEntity<?> accessError = validatePublicInvoiceAccess(taxcode, company, MediaType.TEXT_HTML);
         if (accessError != null) return accessError;
 
-        return documentBridge.viewer(documentBridge.invoice(inv.getId(), null), "/v1/invoices/" + lookup + "/download-pdf");
+        return documentBridge.invoiceHtml(inv.getId());
     }
 
     @GetMapping(value = "/{lookup}/download-xml", produces = MediaType.APPLICATION_XML_VALUE)

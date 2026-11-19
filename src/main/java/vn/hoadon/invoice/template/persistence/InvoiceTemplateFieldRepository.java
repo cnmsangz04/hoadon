@@ -17,6 +17,8 @@ public interface InvoiceTemplateFieldRepository
     @Query("select coalesce(max(f.sortOrder), 0) from InvoiceTemplateFieldEntity f")
     int maximumSortOrder();
 
+    long countByGroupId(Long groupId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select f from InvoiceTemplateFieldEntity f where f.id = :id")
     Optional<InvoiceTemplateFieldEntity> lockById(@Param("id") Long id);

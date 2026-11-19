@@ -50,6 +50,22 @@ public class InvoiceDocumentBridge {
         return ready(documents.sample(formId, publicSample, access));
     }
 
+    public ResponseEntity<String> sampleHtml(Long formId, boolean publicSample, TemplateAccess access) {
+        var job = documents.sample(formId, publicSample, access);
+        return htmlResponse(renders.html(job));
+    }
+
+    public ResponseEntity<String> invoiceHtml(Long invoiceId) {
+        return htmlResponse(renders.html(documents.invoice(invoiceId)));
+    }
+
+    private ResponseEntity<String> htmlResponse(String html) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .contentType(MediaType.TEXT_HTML)
+                .body(html);
+    }
+
     public String sampleXml(Long formId, boolean publicSample, TemplateAccess access) {
         return documents.sampleXml(formId, publicSample, access);
     }
@@ -86,30 +102,4 @@ public class InvoiceDocumentBridge {
     public ResponseEntity<byte[]> pdf(InvoiceRenderArtifactEntity artifact, boolean attachment, String name) { return renders.response(artifact, attachment, name); }
     public byte[] bytes(InvoiceRenderArtifactEntity artifact) { return renders.bytes(artifact); }
 
-    public ResponseEntity<String> viewer(InvoiceRenderArtifactEntity artifact, String downloadUrl) {
-        String encoded = Base64.getEncoder().encodeToString(bytes(artifact));
-        String html = """
-                <!doctype html><html><head><meta charset="UTF-8"><style>
-                html,body{height:100%;min-height:720px;margin:0;font:14px sans-serif}
-                nav{height:40px;display:flex;gap:16px;align-items:center;padding:0 12px;background:#f5f5f5}
-                iframe{border:0;width:100%;height:calc(100vh - 40px);min-height:680px}
-                </style></head><body><nav><a id="download" download="invoice.pdf">Tải PDF</a><button onclick="printInvoice()">In hóa đơn</button></nav>
-                <iframe id="pdf" title="Hóa đơn"></iframe><script>
-                const raw=atob('__PDF__');const bytes=new Uint8Array(raw.length);
-                for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
-                const url=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
-                document.getElementById('pdf').src=url;document.getElementById('download').href=url;
-                window.invoiceArtifactId=__ID__;
-                window.printInvoice=()=>{try{const w=document.getElementById('pdf').contentWindow;w.focus();w.print();}catch(e){window.open(url,'_blank');}};
-                window.addEventListener('beforeunload',()=>URL.revokeObjectURL(url));
-                window.parent.postMessage({type:'invoice-artifact',artifactId:__ID__,documentKey:__KEY__},'*');
-                </script></body></html>
-                """.replace("__PDF__", encoded).replace("__ID__", artifact.getId().toString()).replace("__KEY__", scriptString(downloadUrl));
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).contentType(MediaType.TEXT_HTML).header("X-Artifact-Id", artifact.getId().toString()).body(html);
-    }
-
-    private String scriptString(String value) {
-        try { return mapper.writeValueAsString(value).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026"); }
-        catch (com.fasterxml.jackson.core.JsonProcessingException ex) { throw new IllegalStateException(ex); }
-    }
 }

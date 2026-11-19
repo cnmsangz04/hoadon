@@ -10,7 +10,10 @@ import vn.hoadon.invoice.template.catalog.*;
 import vn.hoadon.invoice.template.persistence.*;
 
 import java.time.*;
+import java.text.Normalizer;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @Transactional(isolation = Isolation.SERIALIZABLE)
@@ -19,7 +22,6 @@ public class InvoiceTemplateFieldService {
             String key,
             String label,
             String group,
-            String dataset,
             String sourceType,
             String sourcePath,
             String valueType,
@@ -32,14 +34,11 @@ public class InvoiceTemplateFieldService {
             Long expectedLockVersion) {}
 
     public record GroupInput(
-            String code, String label, int sortOrder, boolean active, Long expectedLockVersion) {}
-
-    public record DatasetInput(
             String code,
             String label,
-            String parent,
             String cardinality,
             String rootPath,
+            int sortOrder,
             boolean active,
             Long expectedLockVersion) {}
 
@@ -48,21 +47,15 @@ public class InvoiceTemplateFieldService {
 
     private final InvoiceTemplateFieldRepository fields;
     private final InvoiceTemplateFieldGroupRepository groups;
-    private final InvoiceTemplateDatasetRepository datasets;
     private final InvoiceFieldCatalog catalog;
-    private final InvoiceExternalFieldRegistry context;
 
     public InvoiceTemplateFieldService(
             InvoiceTemplateFieldRepository fields,
             InvoiceTemplateFieldGroupRepository groups,
-            InvoiceTemplateDatasetRepository datasets,
-            InvoiceFieldCatalog catalog,
-            InvoiceExternalFieldRegistry context) {
+            InvoiceFieldCatalog catalog) {
         this.fields = fields;
         this.groups = groups;
-        this.datasets = datasets;
         this.catalog = catalog;
-        this.context = context;
     }
 
     @Transactional(readOnly = true)
@@ -111,8 +104,9 @@ public class InvoiceTemplateFieldService {
                             return cb.and(filters.toArray(Predicate[]::new));
                         },
                         pageable);
+        var source = catalog.working();
         return new FieldList(
-                result.stream().map(this::row).toList(),
+                result.stream().map(f -> source.requireField(f.getFieldKey())).toList(),
                 result.getTotalElements(),
                 pageable.getPageNumber() + 1,
                 pageable.getPageSize());
@@ -121,31 +115,96 @@ public class InvoiceTemplateFieldService {
     @Transactional(readOnly = true)
     public Object metadata(TemplateAccess access) {
         access.requireSystemManager();
+        var source = catalog.working();
+        var groupMetadata = source.groups().stream().map(group -> {
+            var groupFields = source.fields().stream().filter(f -> f.group().equals(group.code())).toList();
+            var item = new LinkedHashMap<String, Object>();
+            item.put("id", group.id());
+            item.put("code", group.code());
+            item.put("label", group.label());
+            item.put("sortOrder", group.sortOrder());
+            item.put("active", group.active());
+            item.put("lockVersion", group.lockVersion());
+            item.put("cardinality", group.cardinality());
+            item.put("rootPath", group.rootPath());
+            item.put("fieldCount", groupFields.size());
+            return item;
+        }).toList();
         return Map.of(
-                "groups",
-                groups.findAllByOrderBySortOrderAscIdAsc(),
-                "datasets",
-                datasets.findAll(Sort.by("id")),
-                "contextFields",
-                context.available(),
+                "groups", groupMetadata,
+                "groupUsage",
+                source.groups().stream().collect(java.util.stream.Collectors.toMap(
+                        InvoiceCatalogSnapshot.Group::code,
+                        group -> Map.of(
+                                "fieldCount", source.fields().stream().filter(f -> f.group().equals(group.code())).count(),
+                                "xmlRoot", group.rootPath(),
+                                "active", group.active()
+                        ))),
                 "nextSortOrder",
                 fields.maximumSortOrder() + 10);
     }
 
     public InvoiceCatalogSnapshot.Field create(FieldInput input, TemplateAccess access) {
         access.requireSystemManager();
-        if (input.key() == null
-                || !input.key().matches("[a-z][A-Za-z0-9]*(?:\\.[A-Za-z][A-Za-z0-9]*)+")
-                || input.key().length() > 160) invalid("Mã phần tử không hợp lệ");
-        if (fields.existsByFieldKey(input.key()))
+        String key = generatedFieldKey(input.group(), input.sourcePath());
+        if (!key.matches("[a-z][A-Za-z0-9]*(?:\\.[A-Za-z][A-Za-z0-9]*)+") || key.length() > 160)
+            invalid("Mã phần tử không hợp lệ");
+        if (fields.existsByFieldKey(key))
             throw TemplateException.conflict("Mã phần tử đã tồn tại");
         var entity = new InvoiceTemplateFieldEntity();
-        entity.setFieldKey(input.key());
+        entity.setFieldKey(key);
         entity.setCreatedAt(now());
         entity.setCreatedBy(access.actorId());
         entity = apply(entity, input, access);
         catalog.checkpoint(access.actorId());
-        return row(entity);
+        return catalog.working().requireField(entity.getFieldKey());
+    }
+
+    private String generatedFieldKey(String group, String sourcePath) {
+        String prefix = identifier(group, "field");
+        if (sourcePath == null || sourcePath.isBlank()) invalid("Thiếu đường dẫn XML tương đối");
+        String path = Arrays.stream(sourcePath.trim().split("/"))
+                .map(this::pathSegmentIdentifier)
+                .filter(segment -> !segment.isBlank())
+                .reduce((left, right) -> left + "." + right)
+                .orElseThrow(() -> TemplateException.invalid("INVALID_FIELD_KEY", "Đường dẫn XML tương đối không hợp lệ"));
+        return prefix + "." + path;
+    }
+
+    private String pathSegmentIdentifier(String segment) {
+        String normalized = normalize(segment).trim();
+        Matcher base = Pattern.compile("^([^\\[]+)").matcher(normalized);
+        if (!base.find()) return "";
+        StringBuilder result = new StringBuilder(xmlIdentifier(base.group(1)));
+        Matcher predicate = Pattern.compile("\\[[^=\\]]+=(?:'([^']*)'|\"([^\"]*)\")\\]").matcher(normalized);
+        while (predicate.find()) {
+            String value = predicate.group(1) == null ? predicate.group(2) : predicate.group(1);
+            result.append(xmlIdentifier(value));
+        }
+        return result.toString();
+    }
+
+    private String xmlIdentifier(String value) {
+        String result = value == null ? "" : value.replaceAll("[^A-Za-z0-9]+", "");
+        if (result.isBlank()) return "";
+        return Character.isLetter(result.charAt(0)) ? result : "Field" + result;
+    }
+
+    private String identifier(String value, String fallback) {
+        String normalized = normalize(value);
+        StringJoiner result = new StringJoiner(".");
+        for (String segment : normalized.replaceAll("[^A-Za-z0-9.]+", " ").split("\\.")) {
+            segment = segment.replaceAll("\\s+", "");
+            if (segment.isBlank() || !Character.isLetter(segment.charAt(0))) return fallback;
+            result.add(Character.toLowerCase(segment.charAt(0)) + segment.substring(1));
+        }
+        return result.length() == 0 ? fallback : result.toString();
+    }
+
+    private String normalize(String value) {
+        if (value == null) return "";
+        return Normalizer.normalize(value.replace('đ', 'd').replace('Đ', 'D'), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
     }
 
     public InvoiceCatalogSnapshot.Field update(Long id, FieldInput input, TemplateAccess access) {
@@ -153,9 +212,25 @@ public class InvoiceTemplateFieldService {
         var entity = fields.lockById(id).orElseThrow(TemplateException::missing);
         revision(entity.getLockVersion(), input.expectedLockVersion());
         if (!entity.getFieldKey().equals(input.key())) invalid("Mã phần tử không được thay đổi");
+        var currentGroup = groups.findById(entity.getGroupId()).orElseThrow(TemplateException::missing);
+        if (!Objects.equals(entity.getLabel(), Objects.toString(input.label(), "").trim())
+                || !Objects.equals(currentGroup.getCode(), Objects.toString(input.group(), "").trim())
+                || !Objects.equals(entity.getSourceType(), Objects.toString(input.sourceType(), "").trim())
+                || !Objects.equals(entity.getSourcePath(), Objects.toString(input.sourcePath(), "").trim())) {
+            invalid("Không thể thay đổi tên, nhóm hoặc đường dẫn của phần tử đã tạo");
+        }
         entity = apply(entity, input, access);
         catalog.checkpoint(access.actorId());
-        return row(entity);
+        return catalog.working().requireField(entity.getFieldKey());
+    }
+
+    public void deleteField(Long id, Long expectedLockVersion, TemplateAccess access) {
+        access.requireSystemManager();
+        var entity = fields.lockById(id).orElseThrow(TemplateException::missing);
+        revision(entity.getLockVersion(), expectedLockVersion);
+        fields.delete(entity);
+        fields.flush();
+        catalog.checkpoint(access.actorId());
     }
 
     private InvoiceTemplateFieldEntity apply(
@@ -163,16 +238,17 @@ public class InvoiceTemplateFieldService {
         if (input.label() == null
                 || input.label().isBlank()
                 || input.label().length() > 500
-                || input.group() == null
-                || input.dataset() == null) invalid("Thiếu tên, nhóm hoặc phạm vi dữ liệu");
+                || input.group() == null) invalid("Thiếu tên hoặc nhóm");
         var group = groups.findByCode(input.group()).orElseThrow(TemplateException::missing);
-        var dataset = datasets.findByCode(input.dataset()).orElseThrow(TemplateException::missing);
-        if (!group.isActive() || !dataset.isActive())
-            invalid("Nhóm hoặc phạm vi dữ liệu đã ngừng sử dụng");
+        var working = catalog.working();
+        if (!group.isActive())
+            invalid("Nhóm đã ngừng sử dụng");
         if (input.sourcePath() == null || input.sourcePath().length() > 700)
             invalid("Đường dẫn nguồn không hợp lệ");
-        if (!Set.of("XML", "CONTEXT").contains(Objects.toString(input.sourceType(), "")))
-            invalid("Nguồn dữ liệu không hợp lệ");
+        String sourcePath = input.sourcePath().trim();
+        if (sourcePath.startsWith("/") || sourcePath.startsWith("HDon/") || sourcePath.startsWith("DLHDon/"))
+            invalid("Đường dẫn XML phải là đường dẫn tương đối của bảng dữ liệu");
+        if (!"XML".equals(input.sourceType())) invalid("Phần tử chỉ được lấy dữ liệu từ XML hóa đơn");
         if (!Set.of("STRING", "INTEGER", "DECIMAL", "DATE", "BOOLEAN")
                 .contains(Objects.toString(input.valueType(), "")))
             invalid("Kiểu dữ liệu không hợp lệ");
@@ -184,7 +260,6 @@ public class InvoiceTemplateFieldService {
                         .contains(input.defaultFormatter())) invalid("Định dạng không hợp lệ");
         entity.setLabel(input.label().trim());
         entity.setGroupId(group.getId());
-        entity.setDatasetId(dataset.getId());
         entity.setSourceType(input.sourceType());
         entity.setSourcePath(input.sourcePath().trim());
         entity.setValueType(input.valueType());
@@ -215,8 +290,16 @@ public class InvoiceTemplateFieldService {
         }
         if (id == null && groups.findByCode(input.code()).isPresent())
             throw TemplateException.conflict("Mã nhóm đã tồn tại");
+        if (input.cardinality() == null || !Set.of("ONE", "MANY").contains(input.cardinality()))
+            invalid("Kiểu nhóm không hợp lệ");
+        if (input.rootPath() == null || input.rootPath().isBlank() || input.rootPath().length() > 700)
+            invalid("Đường dẫn XML của nhóm không hợp lệ");
+        if (!input.rootPath().trim().matches("/HDon(?:/[A-Za-z_][A-Za-z0-9_.-]*)*"))
+            invalid("Đường dẫn XML của bảng phải là đường dẫn tuyệt đối bắt đầu bằng /HDon");
         entity.setCode(input.code());
         entity.setLabel(input.label().trim());
+        entity.setCardinality(input.cardinality());
+        entity.setRootPath(input.rootPath().trim());
         entity.setSortOrder(input.sortOrder());
         entity.setActive(input.active());
         entity = groups.saveAndFlush(entity);
@@ -224,67 +307,15 @@ public class InvoiceTemplateFieldService {
         return entity;
     }
 
-    public Object saveDataset(Long id, DatasetInput input, TemplateAccess access) {
+    public void deleteGroup(Long id, Long expectedLockVersion, TemplateAccess access) {
         access.requireSystemManager();
-        validateCode(input.code(), input.label());
-        if (input.rootPath() == null
-                || input.rootPath().length() > 700
-                || !Set.of("ONE", "MANY").contains(Objects.toString(input.cardinality(), "")))
-            invalid("Phạm vi dữ liệu không hợp lệ");
-        var entity =
-                id == null
-                        ? new InvoiceTemplateDatasetEntity()
-                        : datasets.findById(id).orElseThrow(TemplateException::missing);
-        if (id != null) {
-            revision(entity.getLockVersion(), input.expectedLockVersion());
-            if (!entity.getCode().equals(input.code()))
-                invalid("Mã phạm vi dữ liệu không được thay đổi");
-        }
-        if (id == null && datasets.findByCode(input.code()).isPresent())
-            throw TemplateException.conflict("Mã phạm vi dữ liệu đã tồn tại");
-        entity.setCode(input.code());
-        entity.setLabel(input.label().trim());
-        entity.setParentId(
-                input.parent() == null || input.parent().isBlank()
-                        ? null
-                        : datasets.findByCode(input.parent())
-                                .orElseThrow(TemplateException::missing)
-                                .getId());
-        entity.setCardinality(input.cardinality());
-        entity.setRootPath(input.rootPath());
-        entity.setActive(input.active());
-        entity = datasets.saveAndFlush(entity);
+        var entity = groups.findById(id).orElseThrow(TemplateException::missing);
+        revision(entity.getLockVersion(), expectedLockVersion);
+        if (fields.countByGroupId(id) > 0)
+            throw TemplateException.conflict("Không thể xóa nhóm đang được sử dụng");
+        groups.delete(entity);
+        groups.flush();
         catalog.checkpoint(access.actorId());
-        return entity;
-    }
-
-    private InvoiceCatalogSnapshot.Field row(InvoiceTemplateFieldEntity f) {
-        var group = groups.findById(f.getGroupId()).orElseThrow();
-        var dataset = datasets.findById(f.getDatasetId()).orElseThrow();
-        var scope = dataset;
-        Set<Long> seen = new HashSet<>();
-        while (!"MANY".equals(scope.getCardinality()) && scope.getParentId() != null) {
-            if (!seen.add(scope.getId()) || seen.size() > 16)
-                invalid("Danh sách cha có vòng hoặc quá sâu");
-            scope = datasets.findById(scope.getParentId()).orElseThrow();
-        }
-        return new InvoiceCatalogSnapshot.Field(
-                f.getId(),
-                f.getFieldKey(),
-                f.getLabel(),
-                group.getCode(),
-                dataset.getCode(),
-                "MANY".equals(scope.getCardinality()),
-                f.getSourceType(),
-                f.getSourcePath(),
-                f.getValueType(),
-                f.getMaxLength(),
-                f.getDefaultFormatter(),
-                f.getDescription(),
-                f.isRequiredDisplay(),
-                f.isActive(),
-                f.getSortOrder(),
-                f.getLockVersion());
     }
 
     private static LocalDateTime now() {

@@ -16,7 +16,7 @@ import java.util.*;
 @Component
 public class JsonLayoutCompiler {
     public static final String SCHEMA_VERSION = "invoice-layout/1";
-    public static final String COMPILER_VERSION = "layout-compiler/3";
+    public static final String COMPILER_VERSION = "layout-compiler/4";
     private static final Set<String> FORMATTERS = Set.of("plainText", "moneyByCurrency", "decimal", "date", "invoiceNumber");
     private static final Set<String> TYPES = Set.of("stack", "columns", "text", "field", "image", "itemsTable", "taxSummaryTable", "feesTable", "relatedInvoice", "totals", "signatureSummary", "divider", "spacer", "pageBreak", "table");
     private final InvoiceFieldCatalog catalog;
@@ -103,10 +103,9 @@ public class JsonLayoutCompiler {
             validateStyle(block.path("cellStyle"));
             String expected = type.equals("table") ? block.path("dataSource").asText() : switch (type) { case "itemsTable" -> "items"; case "feesTable" -> "fees"; default -> "taxGroups"; };
             if (!block.path("dataSource").asText(expected).equals(expected)) fail("Nguồn bảng không khớp loại bảng");
-            var dataset = definitions.requireDataset(expected);
-            if (!"MANY".equals(dataset.cardinality()) || dataset.parent() == null
-                    || !"document".equals(definitions.rowScope(dataset.parent())))
-                fail("Bảng chỉ hỗ trợ danh sách lặp ở cấp hóa đơn");
+            if (!definitions.isTableGroup(expected))
+                fail("Bảng dữ liệu không tồn tại hoặc không có phần tử: " + expected
+                        + " (không thuộc cấp hóa đơn)");
             JsonNode columns = block.path("columns");
             if (!columns.isArray() || columns.isEmpty() || columns.size() > 15) fail("Số cột bảng không hợp lệ");
             double total = 0;
@@ -134,9 +133,14 @@ public class JsonLayoutCompiler {
 
     private void validateField(String key, String group, InvoiceCatalogSnapshot definitions) {
         var field = definitions.requireField(key);
+        if (!group.isEmpty()) {
+            String scope = definitions.rowScope(field.dataset());
+            if (!group.equals(scope) && !("document".equals(scope) && group.equals(field.group())))
+                fail("Phần tử không thuộc bảng " + group + ": " + key);
+            return;
+        }
         String scope = definitions.rowScope(field.dataset());
         if (!"document".equals(scope) && !scope.equals(group)) fail("Trường lặp phải nằm trong bảng đúng nhóm: " + key);
-        if (!group.isEmpty() && !scope.equals(group)) fail("Binding cột không thuộc nhóm " + group);
     }
 
     private void validateCondition(JsonNode condition, int depth, InvoiceCatalogSnapshot definitions) {
@@ -175,14 +179,13 @@ public class JsonLayoutCompiler {
         String family = theme.path("fontAssetFamily").asText("body");
         String css = "@page{size:" + page.path("format").asText("A4") + " " + page.path("orientation").asText("portrait") + ";margin:" + margin + "}"
                 + "*{box-sizing:border-box}html,body{margin:0;padding:0}body{font-family:'invoice-" + family + "';font-size:" + theme.path("fontSizePt").asText("10") + "pt;line-height:" + theme.path("lineHeight").asText("1.3") + ";color:" + theme.path("color").asText("#000000") + "}"
-                + ".block{overflow-wrap:anywhere;min-width:0}.text{white-space:pre-wrap}.stack,.totals{display:flex;flex-direction:column}.columns{display:flex;align-items:stretch}.columns>.block{flex:1}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{padding:1.5mm;border:.2mm solid #cbd5e1;vertical-align:top;overflow-wrap:anywhere}thead{display:table-header-group}tr{break-inside:avoid}tr.oversized{break-inside:auto}.totals,.signature{break-inside:avoid}.divider hr{margin:0;border:0;border-top:.25mm solid currentColor}.page-break{break-before:page}img{max-width:100%;object-fit:contain}p{margin:0}.sample{color:#64748b;text-align:center;font-size:8pt;margin-bottom:3mm}";
+                + ".block{overflow-wrap:anywhere;min-width:0}.text{white-space:pre-wrap}.stack,.totals{display:flex;flex-direction:column}.columns{display:flex;align-items:stretch}.columns>.block{flex:1}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{padding:1.5mm;border:.2mm solid #cbd5e1;vertical-align:top;overflow-wrap:anywhere}thead{display:table-header-group}tr{break-inside:avoid}tr.oversized{break-inside:auto}.totals,.signature{break-inside:avoid}.divider hr{margin:0;border:0;border-top:.25mm solid currentColor}.page-break{break-before:page}img{max-width:100%;object-fit:contain}p{margin:0}";
         boolean landscape = "landscape".equals(page.path("orientation").asText());
         boolean a5 = "A5".equals(page.path("format").asText());
         double shortSide = a5 ? 148 : 210, longSide = a5 ? 210 : 297;
         double width = (landscape ? longSide : shortSide) - page.path("marginMm").path("left").asDouble(10) - page.path("marginMm").path("right").asDouble(10);
         double height = (landscape ? shortSide : longSide) - page.path("marginMm").path("top").asDouble(10) - page.path("marginMm").path("bottom").asDouble(10);
-        StringBuilder out = new StringBuilder("<!doctype html><html><head><meta charset=\"UTF-8\"><meta name=\"invoice-printable-width-mm\" content=\"" + width + "\"><meta name=\"invoice-printable-height-mm\" content=\"" + height + "\"><style>" + css + "</style></head><body>");
-        if (!String.valueOf(data.getOrDefault("presentation.sampleMarker", "")).isBlank()) out.append("<div class=\"sample\">Mẫu — Dữ liệu minh họa</div>");
+        StringBuilder out = new StringBuilder("<!doctype html><html><head><meta charset=\"UTF-8\"><meta name=\"invoice-printable-width-mm\" content=\"" + width + "\"><meta name=\"invoice-printable-height-mm\" content=\"" + height + "\"><meta name=\"invoice-page-margin-mm\" content=\"" + margin + "\"><style>" + css + "</style></head><body>");
         renderBlock(layout.path("body"), layout, data, out);
         return out.append("</body></html>").toString();
     }
@@ -220,13 +223,19 @@ public class JsonLayoutCompiler {
         for (JsonNode column : block.path("columns")) out.append("<th style=\"").append(style(block.path("headerStyle"))).append("\">").append(escape(column.path("label").asText())).append("</th>");
         out.append("</tr></thead><tbody>");
         Object value = data.get(group);
-        if (value instanceof List<?> rows) {
-            for (Object row : rows) {
-                Map<String, Object> values = (Map<String, Object>) row;
+        List<Map<String, Object>> rows = new ArrayList<>();
+        if (value instanceof List<?> list) {
+            for (Object row : list) if (row instanceof Map<?, ?> map) rows.add((Map<String, Object>) map);
+        } else if (value instanceof Map<?, ?> map) {
+            rows.add((Map<String, Object>) map);
+        } else if (data.keySet().stream().anyMatch(key -> key.startsWith(group + "."))) {
+            // Scalar groups are stored flat for backwards-compatible field bindings.
+            rows.add(data);
+        }
+        for (Map<String, Object> values : rows) {
                 out.append("<tr>");
                 for (JsonNode column : block.path("columns")) out.append("<td style=\"").append(style(block.path("cellStyle"))).append(style(column.path("style"))).append("\">").append(escape(format(values.get(column.path("fieldKey").asText()), column.path("formatter").asText("plainText")))).append("</td>");
                 out.append("</tr>");
-            }
         }
         out.append("</tbody></table>");
     }

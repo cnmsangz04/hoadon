@@ -140,6 +140,45 @@
                 @size-change="onPageSizeChange"
             />
         </b-card>
+        <b-modal
+            id="adminModalFormInvoice"
+            size="lg"
+            :no-close-on-esc="false"
+            title="Xem hóa đơn"
+            body-class="invoice-preview-body"
+        >
+            <iframe
+                id="viewAdminInv"
+                class="invoice-preview-frame"
+                :src="iframe.src"
+                :srcdoc="iframe.srcdoc"
+                onload="((obj) => {try{obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';}catch(e){obj.style.height = 0;}})(this)"
+            ></iframe>
+            <template #modal-footer>
+                <div class="modal-footer-spread">
+                    <b-button variant="light" size="sm" @click="closePreview">Đóng</b-button>
+                    <div class="modal-footer-actions">
+                        <b-dropdown
+                            id="admin-invoice-download"
+                            text="Tải xuống"
+                            extra-toggle-classes="nav-link-custom"
+                            variant="success"
+                            size="sm"
+                        >
+                            <b-dropdown-item href="#" @click.prevent="downloadFormFile('pdf')">
+                                <i class="fas fa-file-pdf mr-1"></i> Tải PDF
+                            </b-dropdown-item>
+                            <b-dropdown-item href="#" @click.prevent="downloadFormFile('xml')">
+                                <i class="fas fa-file-code mr-1"></i> Tải XML
+                            </b-dropdown-item>
+                        </b-dropdown>
+                        <b-button variant="info" size="sm" @click="printPreview">
+                            <i class="fas fa-print mr-1"></i> In hóa đơn
+                        </b-button>
+                    </div>
+                </div>
+            </template>
+        </b-modal>
     </div>
 </template>
 
@@ -159,6 +198,7 @@ export default {
             total: 0,
             pageSizes: [10, 20, 50, 100],
             filters: { q: '', category: null, type: null, status: null },
+            iframe: { src: 'about:blank', srcdoc: '', form_id: null },
             fields: [
                 { key: 'id', label: 'STT', thStyle: { width: '60px' } },
                 { key: 'name', label: 'Tên mẫu' },
@@ -217,22 +257,54 @@ export default {
         onPageSizeChange(size) { this.size = Number(size) || this.size; this.page = 1; this.fetch() },
         goCreate() { this.$router.push({ name: 'admin-form-invoice-create' }) },
         edit(item) { this.$router.push({ name: 'admin-form-invoice-edit', params: { id: item.id } }) },
+        closePreview() { this.$root.$emit('bv::hide::modal', 'adminModalFormInvoice') },
         async preview(item) {
             if (!item.id) return
-            const viewer = window.open('', '_blank')
-            if (!viewer) {
-                this.$bvToast && this.$bvToast.toast('Cho phép mở cửa sổ mới để xem mẫu', { title: 'Xem mẫu', variant: 'warning', solid: true })
-                return
-            }
             try {
-                const { data } = await axios.get(`/administrator/form-invoices/${item.id}/preview`, { responseType: 'blob' })
-                if (!data.type.includes('application/pdf')) throw new Error('Phản hồi không phải PDF')
-                const url = URL.createObjectURL(data)
-                viewer.location.replace(url)
-                setTimeout(() => URL.revokeObjectURL(url), 300000)
+                const { data } = await axios.get(`/administrator/form-invoices/${item.id}/view`, {
+                    responseType: 'text',
+                    headers: { Accept: 'text/html' }
+                })
+                this.iframe.form_id = item.id
+                this.iframe.src = 'about:blank'
+                this.iframe.srcdoc = data || ''
+                this.$root.$emit('bv::show::modal', 'adminModalFormInvoice')
             } catch (e) {
-                viewer.close()
                 this.$bvToast && this.$bvToast.toast('Không thể tạo bản xem mẫu', { title: 'Lỗi', variant: 'danger', solid: true })
+            }
+        },
+        async downloadFormFile(type) {
+            const id = this.iframe.form_id
+            if (!id) return
+            const ext = type === 'pdf' ? 'pdf' : 'xml'
+            const mime = type === 'pdf' ? 'application/pdf' : 'application/xml;charset=utf-8'
+            try {
+                const { data } = await axios.get(`/administrator/form-invoices/${id}/download-${ext}`, {
+                    responseType: 'blob',
+                    headers: { Accept: mime }
+                })
+                const blob = data instanceof Blob ? data : new Blob([data], { type: mime })
+                const url = URL.createObjectURL(blob)
+                const link = document.createElement('a')
+                link.href = url
+                link.download = `mau-hoa-don-${id}.${ext}`
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+                URL.revokeObjectURL(url)
+            } catch (e) {
+                this.$bvToast && this.$bvToast.toast('Không thể tải tệp mẫu hóa đơn', { title: 'Lỗi', variant: 'danger', solid: true })
+            }
+        },
+        printPreview() {
+            const frame = document.getElementById('viewAdminInv')
+            try {
+                if (frame && frame.contentWindow) {
+                    frame.contentWindow.focus()
+                    frame.contentWindow.print()
+                }
+            } catch (e) {
+                this.$bvToast && this.$bvToast.toast('Không thể in hóa đơn', { title: 'Lỗi', variant: 'danger', solid: true })
             }
         },
         async setStatus(id, status) {
@@ -365,5 +437,9 @@ export default {
     height: 36px;
     object-fit: cover;
     width: 48px;
+}
+
+.invoice-preview-frame {
+    min-height: 300px;
 }
 </style>

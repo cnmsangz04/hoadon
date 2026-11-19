@@ -3,18 +3,18 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
       <h4 class="mb-0 font-weight-bold">Phần tử mẫu hóa đơn</h4>
       <div class="page-actions">
-        <b-button size="sm" variant="outline-primary" @click="reload"
+        <b-button size="sm" variant="outline-primary" class="mr-2" @click="reload"
           ><i class="fas fa-sync-alt mr-1"></i>Làm mới</b-button
         >
-        <b-button size="sm" variant="outline-primary" @click="openGroup()">Nhóm</b-button>
-        <b-button size="sm" variant="outline-primary" @click="openDataset()"
-          >Danh sách dữ liệu</b-button
+        <b-button size="sm" variant="outline-primary" class="mr-2" @click="openGroup()"
+          >Nhóm dữ liệu</b-button
         >
         <b-button size="sm" variant="success" @click="openField()"
           ><i class="fas fa-plus mr-1"></i>Thêm phần tử</b-button
         >
       </div>
     </div>
+    <b-alert v-if="error" show dismissible variant="danger" @dismissed="error = ''">{{ error }}</b-alert>
     <b-card class="mb-3 shadow-sm">
       <b-row>
         <b-col md="5" class="mb-2"
@@ -23,10 +23,10 @@
             placeholder="Tìm mã, tên hoặc đường dẫn dữ liệu"
             @keyup.enter="applyFilters"
         /></b-col>
-        <b-col md="3" class="mb-2"
+        <b-col md="2" class="mb-2"
           ><b-form-select
             v-model="filters.group"
-            :options="[{ value: null, text: 'Tất cả nhóm' }, ...groupOptions]"
+            :options="[{ value: null, text: 'Tất cả nhóm dữ liệu' }, ...groupOptions]"
         /></b-col>
         <b-col md="2" class="mb-2"
           ><b-form-select
@@ -37,7 +37,7 @@
               { value: false, text: 'Đã ẩn' }
             ]"
         /></b-col>
-        <b-col md="2" class="mb-2 text-right"
+        <b-col md="12" class="mb-2 text-right"
           ><b-button size="sm" variant="primary" @click="applyFilters">Tìm kiếm</b-button></b-col
         >
       </b-row>
@@ -60,21 +60,16 @@
           <code>{{ item.key }}</code></template
         >
         <template #cell(group)="{ item }"
-          ><div>{{ groupLabel(item.group) }}</div>
-          <small v-if="item.repeated" class="text-muted"
-            >{{ datasetLabel(item.dataset) }} (lặp)</small
-          ></template
+          ><div>{{ groupLabel(item.group) }}</div></template
         >
         <template #cell(sourcePath)="{ item }"
-          ><small class="text-muted">{{
-            item.sourceType === 'XML' ? 'XML hóa đơn' : 'Thông tin hệ thống'
-          }}</small
-          ><code class="d-block">{{ item.sourcePath }}</code></template
+          ><small class="text-muted">XML hóa đơn</small
+          ><code class="d-block">{{ fieldXmlPath(item) }}</code></template
         >
         <template #cell(valueType)="{ item }">{{ typeLabel(item.valueType) }}</template>
         <template #cell(active)="{ item }"
-          ><b-badge :variant="item.active ? 'success' : 'secondary'">{{
-            item.active ? 'Đang dùng' : 'Đã ẩn'
+          ><b-badge :variant="fieldAvailable(item) ? 'success' : 'secondary'">{{
+            fieldAvailable(item) ? 'Đang dùng' : 'Đã ẩn'
           }}</b-badge
           ><small v-if="item.requiredDisplay" class="d-block text-muted mt-1"
             >Bắt buộc trên mẫu</small
@@ -83,7 +78,12 @@
         <template #cell(actions)="{ item }"
           ><b-dropdown size="sm" right variant="link" no-caret boundary="window"
             ><template #button-content><i class="fas fa-ellipsis-h"></i></template
-            ><b-dropdown-item @click="openField(item)">Cập nhật</b-dropdown-item></b-dropdown
+            ><b-dropdown-item class="text-center" @click="openField(item)">Cập nhật</b-dropdown-item
+            ><b-dropdown-divider /><b-dropdown-item
+              class="text-center text-danger"
+              @click="deleteField(item)"
+              >Xóa</b-dropdown-item
+            ></b-dropdown
           ></template
         >
       </b-table>
@@ -105,59 +105,46 @@
       <b-form @submit.prevent="saveField">
         <b-row>
           <b-col md="6"
-            ><b-form-group label="Tên hiển thị"
+            ><b-form-group :label="form.id ? 'Tên hiển thị (không đổi)' : 'Tên hiển thị'"
               ><b-form-input
                 v-model.trim="form.label"
                 required
+                :readonly="!!form.id"
                 maxlength="500"
                 placeholder="Ví dụ: Mã tra cứu" /></b-form-group
           ></b-col>
           <b-col md="6"
-            ><b-form-group label="Mã phần tử"
+            ><b-form-group :label="form.id ? 'Mã phần tử (không đổi)' : 'Mã phần tử'"
               ><b-form-input
                 v-model.trim="form.key"
                 required
-                :disabled="!!form.id"
-                placeholder="invoice.lookupCode"
+                readonly
+                placeholder="common.PBan"
                 maxlength="160" /></b-form-group
           ></b-col>
-          <b-col md="6"
-            ><b-form-group label="Nhóm thư viện"
-              ><b-form-select v-model="form.group" :options="groupOptions" required /></b-form-group
+          <b-col md="12"
+          ><b-form-group label="Nguồn dữ liệu"
+              ><div class="static-source">Thẻ XML hóa đơn</div></b-form-group
           ></b-col>
           <b-col md="6"
-            ><b-form-group label="Phạm vi dữ liệu"
-              ><b-form-select
-                v-model="form.dataset"
-                :options="datasetOptions"
-                required /></b-form-group
+            ><b-form-group :label="form.id ? 'Nhóm dữ liệu (không đổi)' : 'Nhóm dữ liệu'" label-for="field-group"
+              ><b-form-select id="field-group" v-model="form.group" :options="fieldGroupOptions" :disabled="!!form.id" required @change="syncGeneratedKey" /></b-form-group
           ></b-col>
           <b-col md="6"
-            ><b-form-group label="Lấy dữ liệu từ"
-              ><b-form-select
-                v-model="form.sourceType"
-                :options="[
-                  { value: 'XML', text: 'Thẻ XML hóa đơn' },
-                  { value: 'CONTEXT', text: 'Thông tin hệ thống' }
-                ]"
-                @change="form.sourcePath = ''" /></b-form-group
-          ></b-col>
-          <b-col md="6"
-            ><b-form-group
-              :label="form.sourceType === 'XML' ? 'Đường dẫn XML' : 'Thông tin hiển thị'"
+            ><b-form-group :label="form.id ? 'Đường dẫn XML tương đối (không đổi)' : 'Đường dẫn XML tương đối'" label-for="field-xml-path"
               ><b-form-input
-                v-if="form.sourceType === 'XML'"
+                id="field-xml-path"
                 v-model.trim="form.sourcePath"
                 required
-                placeholder="DLHDon/TTChung/SHDon"
-                maxlength="700" /><b-form-select
-                v-else
-                v-model="form.sourcePath"
-                :options="contextOptions"
-                required /></b-form-group
+                :readonly="!!form.id"
+                placeholder="PBan"
+                maxlength="700"
+                @input="syncGeneratedKey" /></b-form-group
           ></b-col>
         </b-row>
-        <p class="small text-muted">{{ sourceHelp }}</p>
+        <b-form-group label="Đường dẫn XML đầy đủ" label-for="field-full-path">
+          <b-form-input id="field-full-path" :value="fieldXmlPath(form)" readonly />
+        </b-form-group>
         <details class="field-options mb-3">
           <summary>Thông tin bổ sung</summary>
           <b-row class="mt-3">
@@ -193,7 +180,7 @@
           >
         </div>
         <b-alert v-if="error" show variant="danger">{{ error }}</b-alert>
-        <div class="text-right">
+        <div class="modal-actions">
           <b-button variant="light" class="mr-2" :disabled="saving" @click="$refs.fieldModal.hide()"
             >Hủy</b-button
           ><b-button type="submit" variant="primary" :disabled="saving"
@@ -202,85 +189,48 @@
         </div>
       </b-form>
     </b-modal>
-    <b-modal ref="groupModal" title="Nhóm thư viện" hide-footer>
+    <b-modal ref="groupModal" :title="groupForm.id ? 'Cập nhật nhóm dữ liệu' : 'Thêm nhóm dữ liệu'" hide-footer>
       <b-form @submit.prevent="saveGroup">
-        <b-form-group label="Nhóm"
-          ><b-form-select
+        <b-form-group label="Nhóm dữ liệu hiện có">
+          <b-form-select
             :value="groupForm.id"
             :options="[
-              { value: null, text: 'Thêm nhóm mới' },
-              ...metadata.groups.map((g) => ({ value: g.id, text: g.label }))
+              { value: null, text: 'Thêm nhóm dữ liệu mới' },
+              ...metadata.groups
+                .filter((g) => g.code !== 'document')
+                .map((g) => ({ value: g.id, text: g.label }))
             ]"
             @change="selectGroup"
-        /></b-form-group>
-        <b-form-group label="Tên nhóm"
+          />
+        </b-form-group>
+        <b-form-group label="Tên nhóm dữ liệu"
           ><b-form-input v-model.trim="groupForm.label" required maxlength="255"
         /></b-form-group>
-        <b-form-group label="Mã nhóm"
+        <b-form-group label="Mã kỹ thuật"
           ><b-form-input
             v-model.trim="groupForm.code"
             required
             :disabled="!!groupForm.id"
             maxlength="80"
         /></b-form-group>
-        <b-form-group label="Thứ tự"
+        <b-form-group label="Thứ tự hiển thị"
           ><b-form-input v-model.number="groupForm.sortOrder" type="number" min="0"
         /></b-form-group>
+        <b-form-group label="Đường dẫn XML của nhóm">
+          <b-form-input v-model.trim="groupForm.rootPath" required maxlength="700" :readonly="!!groupForm.id" />
+        </b-form-group>
         <b-form-checkbox v-model="groupForm.active" class="mb-3">Cho phép sử dụng</b-form-checkbox>
         <b-alert v-if="error" show variant="danger">{{ error }}</b-alert>
-        <div class="text-right">
-          <b-button variant="light" class="mr-2" @click="$refs.groupModal.hide()">Đóng</b-button
-          ><b-button type="submit" variant="primary" :disabled="saving">Lưu nhóm</b-button>
-        </div>
-      </b-form>
-    </b-modal>
-    <b-modal ref="datasetModal" title="Danh sách dữ liệu" hide-footer>
-      <b-form @submit.prevent="saveDataset">
-        <b-form-group label="Danh sách"
-          ><b-form-select
-            :value="datasetForm.id"
-            :options="[
-              { value: null, text: 'Thêm danh sách mới' },
-              ...metadata.datasets.map((d) => ({ value: d.id, text: d.label }))
-            ]"
-            @change="selectDataset"
-        /></b-form-group>
-        <b-form-group label="Tên hiển thị"
-          ><b-form-input v-model.trim="datasetForm.label" required maxlength="255"
-        /></b-form-group>
-        <b-form-group label="Mã danh sách"
-          ><b-form-input
-            v-model.trim="datasetForm.code"
-            required
-            :disabled="!!datasetForm.id"
-            maxlength="80"
-        /></b-form-group>
-        <b-form-group label="Dữ liệu cha"
-          ><b-form-select
-            v-model="datasetForm.parent"
-            :options="[
-              { value: null, text: 'Không có (root)' },
-              ...datasetOptions.filter((d) => d.value !== datasetForm.code)
-            ]"
-        /></b-form-group>
-        <b-form-group label="Loại"
-          ><b-form-select
-            v-model="datasetForm.cardinality"
-            :options="[
-              { value: 'ONE', text: 'Thông tin đơn' },
-              { value: 'MANY', text: 'Danh sách lặp' }
-            ]"
-        /></b-form-group>
-        <b-form-group label="Đường dẫn XML gốc"
-          ><b-form-input v-model.trim="datasetForm.rootPath" required maxlength="700"
-        /></b-form-group>
-        <b-form-checkbox v-model="datasetForm.active" class="mb-3"
-          >Cho phép sử dụng</b-form-checkbox
-        >
-        <b-alert v-if="error" show variant="danger">{{ error }}</b-alert>
-        <div class="text-right">
-          <b-button variant="light" class="mr-2" @click="$refs.datasetModal.hide()">Đóng</b-button
-          ><b-button type="submit" variant="primary" :disabled="saving">Lưu danh sách</b-button>
+        <div class="modal-actions">
+          <b-button
+            v-if="groupForm.id"
+            variant="outline-danger"
+            class="mr-auto"
+            :disabled="saving"
+            @click="deleteGroup(groupForm)"
+            >Xóa nhóm</b-button
+          ><b-button variant="light" class="mr-2" @click="$refs.groupModal.hide()">Đóng</b-button
+          ><b-button type="submit" variant="primary" :disabled="saving">Lưu nhóm dữ liệu</b-button>
         </div>
       </b-form>
     </b-modal>
@@ -310,46 +260,45 @@ export default {
       page: 1,
       size: 20,
       total: 0,
-      metadata: { groups: [], datasets: [], contextFields: [], nextSortOrder: 10 },
+      metadata: { groups: [], groupUsage: {}, nextSortOrder: 10 },
       filters: { q: '', group: null, active: null },
       form: this.emptyForm(),
       groupForm: {},
-      datasetForm: {},
       columns: [
-        { key: 'index', label: 'STT', thStyle: { width: '5%' } },
-        { key: 'field', label: 'Phần tử', thStyle: { width: '24%' } },
-        { key: 'group', label: 'Nhóm', thStyle: { width: '16%' } },
+        { key: 'index', label: 'STT', thStyle: { width: '5%' }, class: 'text-center' },
+        { key: 'field', label: 'Phần tử', thStyle: { width: '22%' } },
+        { key: 'group', label: 'Nhóm dữ liệu', thStyle: { width: '20%' } },
         { key: 'sourcePath', label: 'Dữ liệu', thStyle: { width: '26%' } },
         { key: 'valueType', label: 'Kiểu', thStyle: { width: '12%' } },
-        { key: 'active', label: 'Trạng thái', thStyle: { width: '12%' } },
-        { key: 'actions', label: '', thStyle: { width: '5%' } }
+        { key: 'active', label: 'Trạng thái', thStyle: { width: '12%' }, class: 'text-center' },
+        {
+          key: 'actions',
+          label: '',
+          thStyle: { width: '5%' },
+          class: 'text-center table-action-cell'
+        }
       ]
     }
   },
   computed: {
     groupOptions() {
-      return this.metadata.groups.map((g) => ({ value: g.code, text: g.label }))
+      return this.metadata.groups
+        .filter((g) => g.code !== 'document')
+        .map((g) => ({
+        value: g.code,
+        text: g.label
+        }))
     },
-    datasetOptions() {
-      return this.metadata.datasets.map((d) => ({
-        value: d.code,
-        text: d.label + (d.cardinality === 'MANY' ? ' (lặp)' : '')
-      }))
-    },
-    contextOptions() {
-      return [
-        { value: '', text: 'Chọn thông tin' },
-        ...this.metadata.contextFields.map((f) => ({ value: f.key, text: f.label }))
-      ]
+    fieldGroupOptions() {
+      return this.metadata.groups
+        .filter((g) => g.code !== 'document' && (g.active || g.code === this.form.group))
+        .map((g) => ({
+          value: g.code,
+          text: g.label
+        }))
     },
     typeOptions() {
       return Object.entries(types).map(([value, text]) => ({ value, text }))
-    },
-    sourceHelp() {
-      const dataset = this.metadata.datasets.find((d) => d.code === this.form.dataset)
-      return this.form.sourceType === 'CONTEXT'
-        ? 'Chọn thông tin cần đưa lên mẫu, ví dụ mã cơ quan thuế hoặc mã tra cứu.'
-        : `Đường dẫn tương đối với ${dataset?.rootPath || 'phạm vi dữ liệu đã chọn'}.`
     }
   },
   mounted() {
@@ -362,7 +311,6 @@ export default {
         key: '',
         label: '',
         group: 'common',
-        dataset: 'document',
         sourceType: 'XML',
         sourcePath: '',
         valueType: 'STRING',
@@ -406,11 +354,19 @@ export default {
       this.page = 1
       this.fetchItems()
     },
+    groupUsage(code) {
+      return this.metadata.groupUsage[code] || { fieldCount: 0, groups: [], rowScope: code }
+    },
+    fieldXmlPath(field) {
+      const root = this.groupUsage(field.group).xmlRoot || ''
+      return field.sourcePath ? `${root}/${field.sourcePath}` : root
+    },
+    fieldAvailable(field) {
+      return field.active && this.groupUsage(field.group).active &&
+        this.metadata.groups.some((g) => g.code === field.group && g.active)
+    },
     groupLabel(code) {
       return this.metadata.groups.find((g) => g.code === code)?.label || code
-    },
-    datasetLabel(code) {
-      return this.metadata.datasets.find((d) => d.code === code)?.label || code
     },
     typeLabel(code) {
       return types[code] || code
@@ -418,8 +374,38 @@ export default {
     openField(item) {
       this.error = ''
       this.form = item ? { ...item, expectedLockVersion: item.lockVersion } : this.emptyForm()
-      if (!item) this.form.sortOrder = this.metadata.nextSortOrder
+      delete this.form.dataset
+      if (!item) {
+        this.form.sortOrder = this.metadata.nextSortOrder
+        this.form.group = this.filters.group || this.fieldGroupOptions[0]?.value || ''
+        this.syncGeneratedKey()
+      }
       this.$refs.fieldModal.show()
+    },
+    syncGeneratedKey() {
+      if (this.form.id) return
+      const normalize = (value) => (value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/gi, 'd')
+      const group = normalize(this.form.group || 'field')
+        .split('.')
+        .map((part) => part.replace(/[^A-Za-z0-9]/g, ''))
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toLowerCase() + part.slice(1))
+        .join('.') || 'field'
+      const path = normalize(this.form.sourcePath)
+        .split('/')
+        .map((segment) => {
+          const base = segment.match(/^([^\[]+)/)?.[1] || ''
+          const values = [...segment.matchAll(/\[[^=\]]+=(?:'([^']*)'|"([^"]*)")\]/g)]
+            .map((match) => match[1] || match[2] || '')
+          return [base, ...values]
+            .join('')
+            .replace(/[^A-Za-z0-9]/g, '')
+        })
+        .filter(Boolean)
+      this.form.key = path.length ? `${group}.${path.join('.')}` : `${group}.field`
     },
     requiredChanged(value) {
       if (value) this.form.active = true
@@ -433,15 +419,27 @@ export default {
         await this.reload()
       })
     },
+    async deleteField(item) {
+      if (!window.confirm(`Xóa phần tử “${item.label}” khỏi danh mục?`)) return
+      await this.perform(
+        async () => {
+          await axios.delete(`${endpoint}/${item.id}`, {
+            params: { expectedLockVersion: item.lockVersion }
+          })
+          await this.reload()
+        },
+        'Đã xóa phần tử'
+      )
+    },
     selectGroup(id) {
       const item = this.metadata.groups.find((g) => g.id === id)
       this.groupForm = item
         ? { ...item, expectedLockVersion: item.lockVersion }
-        : { id: null, code: '', label: '', sortOrder: 0, active: true }
+        : { id: null, code: '', label: '', cardinality: 'ONE', rootPath: '/HDon', sortOrder: 0, active: true }
       this.error = ''
     },
-    openGroup() {
-      this.selectGroup(null)
+    openGroup(item) {
+      this.selectGroup(item ? item.id : null)
       this.$refs.groupModal.show()
     },
     async saveGroup() {
@@ -453,44 +451,25 @@ export default {
         this.$refs.groupModal.hide()
       })
     },
-    selectDataset(id) {
-      const item = this.metadata.datasets.find((d) => d.id === id)
-      this.datasetForm = item
-        ? {
-            ...item,
-            parent: this.metadata.datasets.find((d) => d.id === item.parentId)?.code || null,
-            expectedLockVersion: item.lockVersion
-          }
-        : {
-            id: null,
-            code: '',
-            label: '',
-            parent: 'document',
-            cardinality: 'MANY',
-            rootPath: '',
-            active: true
-          }
-      this.error = ''
+    async deleteGroup(item) {
+      if (!window.confirm(`Xóa nhóm “${item.label}”?`)) return
+      await this.perform(
+        async () => {
+          await axios.delete(`${endpoint}/groups/${item.id}`, {
+            params: { expectedLockVersion: item.expectedLockVersion ?? item.lockVersion }
+          })
+          this.$refs.groupModal.hide()
+          await this.reload()
+        },
+        'Đã xóa nhóm'
+      )
     },
-    openDataset() {
-      this.selectDataset(null)
-      this.$refs.datasetModal.show()
-    },
-    async saveDataset() {
-      await this.perform(async () => {
-        const f = this.datasetForm
-        if (f.id) await axios.put(`${endpoint}/datasets/${f.id}`, f)
-        else await axios.post(`${endpoint}/datasets`, f)
-        await this.reload()
-        this.$refs.datasetModal.hide()
-      })
-    },
-    async perform(action) {
+    async perform(action, successMessage = 'Đã lưu thay đổi') {
       this.error = ''
       this.saving = true
       try {
         await action()
-        this.$bvToast.toast('Đã lưu thay đổi', { variant: 'success', solid: true })
+        this.$bvToast.toast(successMessage, { variant: 'success', solid: true })
       } catch (e) {
         this.error = this.errorMessage(e)
       } finally {
@@ -511,11 +490,20 @@ export default {
   border: 1px solid #e9ecef;
   border-radius: 10px;
 }
-.page-actions,
+.form-invoice-fields .table thead th {
+  background: #f7f9fc;
+  border-bottom: 1px solid #ecf0f6;
+  color: #4a5568;
+  font-weight: 700;
+}
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+}
 .field-flags {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 20px;
 }
 .fields-table {
   table-layout: fixed;
@@ -544,5 +532,28 @@ export default {
 }
 .field-flags {
   gap: 20px;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+.static-source {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.875rem;
+}
+.fields-table :deep(.badge) {
+  white-space: normal;
+  line-height: 1.4;
+}
+.fields-table :deep(.dropdown-item) {
+  text-align: center;
 }
 </style>

@@ -2,6 +2,7 @@ package vn.hoadon.invoice.template.service;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.hoadon.invoice.template.persistence.InvoiceTemplateVersionRepository;
@@ -9,7 +10,12 @@ import vn.hoadon.invoice.template.storage.DocumentStorage;
 import vn.hoadon.util.UploadPath;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -161,6 +167,74 @@ public class InvoiceTemplateStorageCleanupService {
                 storage.delete(key);
             } catch (RuntimeException ignored) {
             }
+        }
+    }
+
+    @Scheduled(
+            fixedDelayString = "${invoice.template.sample-cleanup-delay-ms:3600000}",
+            initialDelayString = "${invoice.template.sample-cleanup-initial-delay-ms:10000}"
+    )
+    @Transactional
+    public void cleanupExpiredSampleJobs() {
+        LocalDateTime cutoff = LocalDateTime.now(ZoneOffset.UTC).minusMinutes(10);
+        List<Long> jobIds = entityManager.createQuery(
+                        "select j.id from InvoiceRenderJobEntity j " +
+                                "where j.purpose = 'TEMPLATE_SAMPLE' " +
+                                "and j.state in ('SUCCEEDED', 'FAILED') " +
+                                "and j.createdAt < :cutoff", Long.class)
+                .setParameter("cutoff", cutoff)
+                .getResultList();
+        deleteRenderJobs(jobIds);
+        cleanupOrphanAssetRows();
+        cleanupOrphanAssetFiles();
+    }
+
+    private void cleanupOrphanAssetRows() {
+        entityManager.createNativeQuery(
+                        "delete from invoice_asset_pins " +
+                                "where (owner_type = 'RENDER_JOB' and not exists (select 1 from invoice_render_jobs where id = owner_id)) " +
+                                "or (owner_type = 'VERSION' and not exists (select 1 from invoice_template_versions where id = owner_id)) " +
+                                "or (owner_type = 'DRAFT' and not exists (select 1 from invoice_template_drafts where id = owner_id)) " +
+                                "or (owner_type = 'SNAPSHOT' and not exists (select 1 from invoice_document_snapshots where id = owner_id))")
+                .executeUpdate();
+        List<Object[]> orphanAssets = entityManager.createQuery(
+                        "select a.id, a.storageKey from InvoiceAssetEntity a " +
+                                "where not exists (select p.id from InvoiceAssetPinEntity p where p.assetId = a.id) " +
+                                "and not exists (select v.id from InvoiceTemplateVersionAssetEntity v where v.assetId = a.id) " +
+                                "and not exists (select i.id from InvoiceTemplateImportJobEntity i where i.sourceAssetId = a.id)", Object[].class)
+                .getResultList();
+        if (orphanAssets.isEmpty()) return;
+        List<Long> ids = orphanAssets.stream().map(row -> (Long) row[0]).toList();
+        entityManager.createQuery("delete from InvoiceAssetEntity a where a.id in :ids")
+                .setParameter("ids", ids)
+                .executeUpdate();
+        entityManager.flush();
+        for (Object[] row : orphanAssets) {
+            try {
+                storage.delete((String) row[1]);
+            } catch (RuntimeException ignored) {
+            }
+        }
+    }
+
+    private void cleanupOrphanAssetFiles() {
+        Set<String> referencedKeys = new HashSet<>(entityManager.createQuery(
+                "select a.storageKey from InvoiceAssetEntity a", String.class).getResultList());
+        Path root = UploadPath.basePath();
+        if (!Files.isDirectory(root)) return;
+        try (var paths = Files.walk(root)) {
+            paths.filter(Files::isRegularFile).forEach(path -> {
+                Path relative = root.relativize(path);
+                if (relative.getNameCount() != 3 ||
+                        !"invoice-assets".equals(relative.getName(1).toString())) return;
+                String key = relative.toString().replace(path.getFileSystem().getSeparator(), "/");
+                if (referencedKeys.contains(key)) return;
+                try {
+                    storage.delete(key);
+                } catch (RuntimeException ignored) {
+                }
+            });
+        } catch (IOException ignored) {
         }
     }
 

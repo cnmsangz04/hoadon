@@ -19,6 +19,12 @@ public class InvoiceTemplateFieldGroupEntity {
     @Column(name = "label", nullable = false, columnDefinition = "NVARCHAR(255)")
     private String label;
 
+    @Column(name = "cardinality", nullable = false, length = 8)
+    private String cardinality;
+
+    @Column(name = "root_path", length = 700)
+    private String rootPath;
+
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
@@ -55,6 +61,22 @@ public class InvoiceTemplateFieldGroupEntity {
 
     public void setLabel(String value) {
         this.label = value;
+    }
+
+    public String getCardinality() {
+        return cardinality;
+    }
+
+    public void setCardinality(String value) {
+        this.cardinality = value;
+    }
+
+    public String getRootPath() {
+        return rootPath;
+    }
+
+    public void setRootPath(String value) {
+        this.rootPath = value;
     }
 
     public int getSortOrder() {

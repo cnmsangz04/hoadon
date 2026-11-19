@@ -230,11 +230,10 @@ export default {
       const formId = item.form_id != null ? item.form_id : (item.id != null ? item.id : null)
       if (!formId) return false
       try {
-        const { data, headers } = await axios.get(`/form-invoices/${formId}/view`, {
+        const { data } = await axios.get(`/form-invoices/${formId}/view`, {
           responseType: 'text',
           headers: { Accept: 'text/html' }
         })
-        this.$set(this.iframe, 'artifactId', headers['x-artifact-id'] || null)
         this.iframe.form_id = formId
         this.iframe.src = 'about:blank'
         this.iframe.srcdoc = data || ''
@@ -258,7 +257,6 @@ export default {
       try {
         const { data } = await axios.get(`/form-invoices/${id}/download-${ext}`, {
           responseType: 'blob',
-          params: ext === 'pdf' && this.iframe.artifactId ? { artifactId: this.iframe.artifactId } : {},
           headers: { Accept: mime }
         })
         const blob = data instanceof Blob ? data : new Blob([data], { type: mime })
@@ -336,7 +334,7 @@ export default {
         let msg = 'Xóa mẫu hóa đơn thất bại'
         if (e && e.response) {
           if (e.response.status === 400) {
-            msg = 'Không thể xóa mẫu đã tạo hóa đơn'
+            msg = e.response.data?.message || 'Mẫu đang được sử dụng; hãy xóa hết hóa đơn trước khi xóa mẫu'
           } else if (e.response.status === 403) {
             msg = 'Không có quyền xóa mẫu này'
           } else if (e.response.status === 404) {
