@@ -23,11 +23,11 @@
         <div class="canvas-sheet" :style="sheetStyle">
           <div class="canvas-ruler" aria-hidden="true" />
           <iframe
+            v-if="previewUrl"
             ref="frame"
-            :srcdoc="documentHtml"
+            :src="previewUrl"
             :style="{ width: pageWidth + 'px', height: documentHeight + 'px' }"
             title="Trang thiết kế mẫu hóa đơn"
-            sandbox="allow-same-origin"
             @load="attachDocument"
           />
           <div
@@ -120,6 +120,7 @@ export default {
   },
   data: () => ({
     documentHtml: "",
+    previewUrl: "",
     fontCss: "",
     documentHeight: 1123,
     loading: false,
@@ -222,6 +223,7 @@ export default {
     this.stopAutoScroll();
     window.removeEventListener("blur", this.cancelInteraction);
     window.removeEventListener("keydown",this.globalKeyDown,true);
+    this.revokePreviewUrl();
   },
   mounted() {
     window.addEventListener("blur", this.cancelInteraction);
@@ -254,7 +256,7 @@ export default {
           { meta: { suppressGlobalErrorToast: true } }
         );
         if (generation !== this.generation || this.destroyed) return;
-        this.documentHtml = this.decorate(data.html);
+        this.setPreviewDocument(this.decorate(data.html));
       } catch (e) {
         if (generation !== this.generation || this.destroyed) return;
         this.error =
@@ -292,9 +294,42 @@ export default {
         .pageBreak{outline:1px dashed #94a3b8}.pageBreak:after{content:'Ngắt trang';position:absolute;top:0;left:0;font:8pt sans-serif;color:#64748b;pointer-events:none}
       `;
       const policy = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline';">`;
-      return html
+      return this.sanitizePreviewHtml(html)
         .replace("<head>", "<head>" + policy)
         .replace("</head>", `<style>${css}</style></head>`);
+    },
+    sanitizePreviewHtml(html) {
+      const parsed = new DOMParser().parseFromString(String(html || ""), "text/html");
+      parsed
+        .querySelectorAll(
+          "script, iframe, frame, frameset, object, embed, base, form, input, button, meta[http-equiv='refresh']"
+        )
+        .forEach((element) => element.remove());
+      parsed.querySelectorAll("*").forEach((element) => {
+        [...element.attributes].forEach((attribute) => {
+          const name = attribute.name.toLowerCase();
+          const value = attribute.value.trim().toLowerCase();
+          if (
+            name.startsWith("on") ||
+            (["href", "src", "xlink:href", "formaction"].includes(name) &&
+              value.startsWith("javascript:"))
+          )
+            element.removeAttribute(attribute.name);
+        });
+      });
+      return parsed.documentElement.outerHTML;
+    },
+    setPreviewDocument(html) {
+      this.revokePreviewUrl();
+      this.documentHtml = html;
+      this.previewUrl = URL.createObjectURL(
+        new Blob([html], { type: "text/html;charset=utf-8" })
+      );
+    },
+    revokePreviewUrl() {
+      if (!this.previewUrl) return;
+      URL.revokeObjectURL(this.previewUrl);
+      this.previewUrl = "";
     },
     attachDocument() {
       const doc = this.$refs.frame?.contentDocument;
