@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+umask 027
+
+source_dir="/opt/apps/hoadon"
+app_jar="/opt/hoadon-prod/app.jar"
+new_jar="/opt/hoadon-prod/app.jar.new"
+backup_dir="/var/backups/hoadon/jars"
+lock_file="/run/lock/hoadon-deploy.lock"
+health_url="http://127.0.0.1:8081/"
+max_backups=3
+timestamp="$(date +%Y%m%d-%H%M%S)"
+backup_jar="${backup_dir}/app.jar.${timestamp}"
+
+exec 9>"$lock_file"
+if ! flock -n 9; then
+    echo "Một tiến trình deploy khác đang chạy"
+    exit 1
+fi
+
+cleanup_build_outputs() {
+    if [[ -d "$source_dir/.git" ]]; then
+        git -C "$source_dir" restore --source=HEAD --staged --worktree -- \
+            node_modules \
+            src/main/resources/static/index.html \
+            src/main/resources/static/js 2>/dev/null || true
+        git -C "$source_dir" clean -fd -- \
+            src/main/resources/static/js >/dev/null 2>&1 || true
+    fi
+
+    if [[ -d "$source_dir/target" ]]; then
+        find "$source_dir/target" -depth -delete
+    fi
+
+    if [[ -f "$new_jar" ]]; then
+        find "$new_jar" -maxdepth 0 -type f -delete
+    fi
+}
+
+finish() {
+    deploy_status=$?
+    cleanup_build_outputs
+    exit "$deploy_status"
+}
+trap finish EXIT
+
+cleanup_build_outputs
+
+if [[ -n "$(git -C "$source_dir" status --porcelain --untracked-files=no)" ]]; then
+    echo "Source có thay đổi tracked ngoài output build; dừng deploy để tránh ghi đè"
+    git -C "$source_dir" status --short --untracked-files=no
+    exit 1
+fi
+
+git -C "$source_dir" fetch --prune origin main
+git -C "$source_dir" merge --ff-only origin/main
+
+cd "$source_dir"
+
+npm ci
+npm run build
+
+chmod +x mvnw
+./mvnw clean package -DskipTests
+
+# Mỗi phiên bản Playwright cần Chromium tương ứng. Lệnh này không tải lại nếu
+# đúng browser version đã có trên VPS.
+./mvnw -q exec:java \
+    -Dexec.mainClass=com.microsoft.playwright.CLI \
+    -Dexec.args="install chromium"
+
+built_jar="$(find target -maxdepth 1 -type f -name 'hoadon-*.jar' ! -name '*.original' | sort | tail -n 1)"
+if [[ -z "$built_jar" || ! -f "$built_jar" ]]; then
+    echo "Không tìm thấy file JAR sau khi build"
+    exit 1
+fi
+
+install -d -m 750 "$backup_dir"
+cp -a "$app_jar" "$backup_jar"
+install -m 0644 "$built_jar" "$new_jar"
+mv "$new_jar" "$app_jar"
+
+systemctl restart hoadon
+
+health_ok=false
+for _ in $(seq 1 30); do
+    if systemctl is-active --quiet hoadon \
+        && curl --fail --silent --show-error --max-time 3 "$health_url" >/dev/null; then
+        health_ok=true
+        break
+    fi
+    sleep 2
+done
+
+if [[ "$health_ok" != true ]]; then
+    echo "Bản mới không vượt qua health-check; đang rollback JAR"
+    journalctl -u hoadon -n 100 --no-pager || true
+    install -m 0644 "$backup_jar" "$new_jar"
+    mv "$new_jar" "$app_jar"
+    systemctl restart hoadon
+    exit 1
+fi
+
+mapfile -t jar_backups < <(
+    find "$backup_dir" -maxdepth 1 -type f -name 'app.jar.*' -printf '%f\n' | sort -r
+)
+for ((index=max_backups; index<${#jar_backups[@]}; index++)); do
+    stale_backup="${backup_dir}/${jar_backups[$index]}"
+    find "$stale_backup" -maxdepth 0 -type f -delete
+done
+
+echo "Deploy thành công commit $(git -C "$source_dir" rev-parse HEAD)"
+echo "Health-check: $health_url"
+echo "Rollback JAR: $backup_jar"

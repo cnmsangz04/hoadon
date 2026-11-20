@@ -1,0 +1,329 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+umask 027
+
+db_repo="/opt/apps/hoadon_db"
+git_backup="${db_repo}/hoadon_database.bak"
+env_file="/etc/hoadon/hoadon.env"
+database_name="hoadon_database"
+app_service="hoadon"
+health_url="http://127.0.0.1:8081/"
+sql_backup_dir="/var/opt/mssql/backup/hoadon"
+rollback_dir="${sql_backup_dir}/rollback"
+lock_file="/run/lock/hoadon-deploy.lock"
+max_rollbacks=3
+timestamp="$(date +%Y%m%d-%H%M%S)"
+import_backup="${sql_backup_dir}/from-git.${timestamp}.bak"
+rollback_backup="${rollback_dir}/before-git-restore.${timestamp}.bak"
+
+if [[ "$EUID" -ne 0 ]]; then
+    echo "Phải chạy script bằng sudo hoặc tài khoản root"
+    exit 1
+fi
+
+if [[ "$#" -gt 1 ]]; then
+    cat <<'EOF'
+Lệnh này sẽ THAY TOÀN BỘ database production bằng file .bak mới nhất từ Git.
+
+Kiểm tra an toàn, không thay database:
+  sudo /usr/local/sbin/hoadon-db-deploy --check
+
+Thay database production:
+  sudo /usr/local/sbin/hoadon-db-deploy
+EOF
+    exit 2
+fi
+
+case "${1:-}" in
+    --check)
+        check_only=true
+        ;;
+    "")
+        check_only=false
+        ;;
+    *)
+        echo "Tham số không hợp lệ: ${1:-}"
+        exit 2
+        ;;
+esac
+
+exec 9>"$lock_file"
+if ! flock -n 9; then
+    echo "Một tiến trình deploy hoặc restore khác đang chạy"
+    exit 1
+fi
+
+cleanup() {
+    if [[ -f "$import_backup" ]]; then
+        find "$import_backup" -maxdepth 0 -type f -delete
+    fi
+    unset SQLCMDPASSWORD
+}
+trap cleanup EXIT
+
+for required_command in git flock systemctl curl awk install find sort seq chown chmod journalctl id; do
+    if ! command -v "$required_command" >/dev/null 2>&1; then
+        echo "Thiếu lệnh bắt buộc: $required_command"
+        exit 1
+    fi
+done
+
+if command -v sqlcmd >/dev/null 2>&1; then
+    sqlcmd_bin="$(command -v sqlcmd)"
+elif [[ -x /opt/mssql-tools18/bin/sqlcmd ]]; then
+    sqlcmd_bin="/opt/mssql-tools18/bin/sqlcmd"
+elif [[ -x /opt/mssql-tools/bin/sqlcmd ]]; then
+    sqlcmd_bin="/opt/mssql-tools/bin/sqlcmd"
+else
+    echo "Không tìm thấy sqlcmd trên VPS"
+    exit 1
+fi
+
+if [[ ! -d "$db_repo/.git" ]]; then
+    echo "Không tìm thấy Git clone database tại $db_repo"
+    exit 1
+fi
+
+if [[ ! -r "$env_file" ]]; then
+    echo "Không đọc được file cấu hình $env_file"
+    exit 1
+fi
+
+read_env_value() {
+    local key="$1"
+    awk -v key="$key" '
+        index($0, key "=") == 1 {
+            print substr($0, length(key) + 2)
+            exit
+        }
+    ' "$env_file"
+}
+
+db_user="$(read_env_value SPRING_DATASOURCE_USERNAME)"
+SQLCMDPASSWORD="$(read_env_value SPRING_DATASOURCE_PASSWORD)"
+export SQLCMDPASSWORD
+
+if [[ -z "$db_user" || -z "$SQLCMDPASSWORD" ]]; then
+    echo "Thiếu tài khoản SQL Server trong $env_file"
+    exit 1
+fi
+
+sqlcmd_base=(
+    "$sqlcmd_bin"
+    -S "localhost,1433"
+    -U "$db_user"
+    -C
+    -b
+    -V 16
+    -l 30
+)
+
+sql_query() {
+    "${sqlcmd_base[@]}" -W -h -1 -s '|' -Q "$1"
+}
+
+sql_literal() {
+    local value="$1"
+    value="${value//\'/\'\'}"
+    printf '%s' "$value"
+}
+
+nonempty_lines() {
+    awk 'NF { gsub(/\r/, ""); print }'
+}
+
+logical_files_from_list() {
+    local type="$1"
+    awk -F '|' -v wanted="$type" '
+        {
+            gsub(/\r/, "")
+            logical = $1
+            file_type = $3
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", logical)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", file_type)
+            if (file_type == wanted && logical != "") print logical
+        }
+    '
+}
+
+if [[ -n "$(git -C "$db_repo" status --porcelain --untracked-files=no)" ]]; then
+    echo "Repository database có thay đổi tracked; dừng để tránh ghi đè"
+    git -C "$db_repo" status --short --untracked-files=no
+    exit 1
+fi
+
+echo "Đang cập nhật backup database từ Git..."
+git -C "$db_repo" fetch --prune origin main
+git -C "$db_repo" merge --ff-only origin/main
+
+if [[ ! -s "$git_backup" ]]; then
+    echo "Không tìm thấy backup hợp lệ tại $git_backup"
+    exit 1
+fi
+
+if ! id mssql >/dev/null 2>&1; then
+    echo "Không tìm thấy tài khoản hệ thống mssql"
+    exit 1
+fi
+
+install -d -o mssql -g mssql -m 750 "$sql_backup_dir" "$rollback_dir"
+install -o mssql -g mssql -m 0640 "$git_backup" "$import_backup"
+
+import_backup_sql="$(sql_literal "$import_backup")"
+rollback_backup_sql="$(sql_literal "$rollback_backup")"
+
+echo "Đang kiểm tra file backup từ Git..."
+"${sqlcmd_base[@]}" -Q "RESTORE VERIFYONLY FROM DISK = N'${import_backup_sql}';"
+source_file_list="$(sql_query "SET NOCOUNT ON; RESTORE FILELISTONLY FROM DISK = N'${import_backup_sql}';")"
+mapfile -t source_data_names < <(printf '%s\n' "$source_file_list" | logical_files_from_list D)
+mapfile -t source_log_names < <(printf '%s\n' "$source_file_list" | logical_files_from_list L)
+
+if [[ "${#source_data_names[@]}" -ne 1 || "${#source_log_names[@]}" -ne 1 ]]; then
+    echo "Backup phải có đúng một data file và một log file; dừng restore"
+    exit 1
+fi
+
+database_count="$(sql_query "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name = N'${database_name}';" | nonempty_lines)"
+if [[ "$database_count" != "1" ]]; then
+    echo "Không tìm thấy database production ${database_name}; dừng để tránh tạo nhầm"
+    exit 1
+fi
+
+mapfile -t current_data_paths < <(
+    sql_query "SET NOCOUNT ON; SELECT physical_name FROM sys.master_files WHERE database_id = DB_ID(N'${database_name}') AND type = 0;" \
+        | nonempty_lines
+)
+mapfile -t current_log_paths < <(
+    sql_query "SET NOCOUNT ON; SELECT physical_name FROM sys.master_files WHERE database_id = DB_ID(N'${database_name}') AND type = 1;" \
+        | nonempty_lines
+)
+
+if [[ "${#current_data_paths[@]}" -ne 1 || "${#current_log_paths[@]}" -ne 1 ]]; then
+    echo "Database hiện tại phải có đúng một data file và một log file; dừng restore"
+    exit 1
+fi
+
+data_path_sql="$(sql_literal "${current_data_paths[0]}")"
+log_path_sql="$(sql_literal "${current_log_paths[0]}")"
+
+if [[ "$check_only" == true ]]; then
+    echo "Kiểm tra thành công; chưa thay đổi database"
+    echo "Git commit: $(git -C "$db_repo" rev-parse HEAD)"
+    echo "Backup từ Git: $git_backup"
+    exit 0
+fi
+
+if ! systemctl is-active --quiet "$app_service"; then
+    echo "Service ${app_service} không hoạt động; dừng để tránh restore trong trạng thái bất thường"
+    exit 1
+fi
+
+restore_database() {
+    local backup_path="$1"
+    local logical_data="$2"
+    local logical_log="$3"
+    local backup_path_sql logical_data_sql logical_log_sql
+
+    backup_path_sql="$(sql_literal "$backup_path")"
+    logical_data_sql="$(sql_literal "$logical_data")"
+    logical_log_sql="$(sql_literal "$logical_log")"
+
+    "${sqlcmd_base[@]}" -Q "
+SET NOCOUNT ON;
+ALTER DATABASE [${database_name}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+RESTORE DATABASE [${database_name}]
+FROM DISK = N'${backup_path_sql}'
+WITH REPLACE,
+     MOVE N'${logical_data_sql}' TO N'${data_path_sql}',
+     MOVE N'${logical_log_sql}' TO N'${log_path_sql}',
+     RECOVERY,
+     STATS = 5;
+ALTER DATABASE [${database_name}] SET MULTI_USER;
+"
+}
+
+set_multi_user_best_effort() {
+    "${sqlcmd_base[@]}" -Q "
+IF DB_ID(N'${database_name}') IS NOT NULL
+    ALTER DATABASE [${database_name}] SET MULTI_USER WITH ROLLBACK IMMEDIATE;
+" >/dev/null 2>&1 || true
+}
+
+wait_for_health() {
+    local attempt
+    for attempt in $(seq 1 30); do
+        if systemctl is-active --quiet "$app_service" \
+            && curl --fail --silent --show-error --max-time 3 "$health_url" >/dev/null; then
+            return 0
+        fi
+        sleep 2
+    done
+    return 1
+}
+
+echo "Đang backup database production hiện tại..."
+"${sqlcmd_base[@]}" -Q "
+BACKUP DATABASE [${database_name}]
+TO DISK = N'${rollback_backup_sql}'
+WITH COPY_ONLY, INIT, CHECKSUM, STATS = 5;
+RESTORE VERIFYONLY FROM DISK = N'${rollback_backup_sql}' WITH CHECKSUM;
+"
+chown mssql:mssql "$rollback_backup"
+chmod 0640 "$rollback_backup"
+
+rollback_file_list="$(sql_query "SET NOCOUNT ON; RESTORE FILELISTONLY FROM DISK = N'${rollback_backup_sql}';")"
+mapfile -t rollback_data_names < <(printf '%s\n' "$rollback_file_list" | logical_files_from_list D)
+mapfile -t rollback_log_names < <(printf '%s\n' "$rollback_file_list" | logical_files_from_list L)
+
+if [[ "${#rollback_data_names[@]}" -ne 1 || "${#rollback_log_names[@]}" -ne 1 ]]; then
+    echo "Không đọc được logical file của backup rollback; chưa thay database"
+    exit 1
+fi
+
+rollback_after_failure() {
+    echo "Restore/health-check thất bại; đang phục hồi database trước đó..."
+    systemctl stop "$app_service" || true
+    set_multi_user_best_effort
+
+    if restore_database "$rollback_backup" "${rollback_data_names[0]}" "${rollback_log_names[0]}"; then
+        if systemctl start "$app_service" && wait_for_health; then
+            echo "Đã phục hồi database trước đó từ $rollback_backup"
+        else
+            echo "NGHIÊM TRỌNG: Database cũ đã restore nhưng ứng dụng không vượt qua health-check."
+            echo "Kiểm tra: journalctl -u ${app_service} -n 100 --no-pager"
+        fi
+    else
+        echo "NGHIÊM TRỌNG: Không thể tự phục hồi database. Ứng dụng đang được giữ ở trạng thái dừng."
+        echo "Backup khẩn cấp: $rollback_backup"
+    fi
+    exit 1
+}
+
+echo "Đang dừng ứng dụng và thay database bằng backup từ Git..."
+systemctl stop "$app_service"
+
+if ! restore_database "$import_backup" "${source_data_names[0]}" "${source_log_names[0]}"; then
+    rollback_after_failure
+fi
+
+if ! systemctl start "$app_service"; then
+    rollback_after_failure
+fi
+if ! wait_for_health; then
+    journalctl -u "$app_service" -n 100 --no-pager || true
+    rollback_after_failure
+fi
+
+mapfile -t rollback_backups < <(
+    find "$rollback_dir" -maxdepth 1 -type f -name 'before-git-restore.*.bak' -printf '%f\n' | sort -r
+)
+for ((index=max_rollbacks; index<${#rollback_backups[@]}; index++)); do
+    stale_backup="${rollback_dir}/${rollback_backups[$index]}"
+    find "$stale_backup" -maxdepth 0 -type f -delete
+done
+
+echo "Restore database từ Git thành công"
+echo "Git commit: $(git -C "$db_repo" rev-parse HEAD)"
+echo "Backup rollback: $rollback_backup"
+echo "Health-check: $health_url"
