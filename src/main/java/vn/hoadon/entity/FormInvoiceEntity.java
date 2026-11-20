@@ -38,7 +38,7 @@ public class FormInvoiceEntity {
     private Integer system; // 0: company/customer, 1: system
 
     @Column(name = "type", columnDefinition = "tinyint")
-    private Integer type; // 1: one rate, 2: multi rate
+    private Integer type; // 0: no tax (sales), 1: one rate, 2: multi rate
 
     @Column(name = "category", columnDefinition = "tinyint")
     private Integer category; // 1: VAT, 2: Sales

@@ -212,6 +212,7 @@ export default {
         { value: 2, text: 'Hóa đơn bán hàng' }
       ],
       typeOptions: [
+        { value: 0, text: 'Đã bao gồm thuế' },
         { value: 1, text: 'Một thuế suất' },
         { value: 2, text: 'Nhiều thuế suất' }
       ],
@@ -359,8 +360,8 @@ export default {
 
     categoryLabel(v) { return v === 1 ? 'Giá trị gia tăng' : v === 2 ? 'Bán hàng' : '—' },
     categoryVariant(v) { return v === 1 ? 'primary' : v === 2 ? 'info' : 'secondary' },
-    typeLabel(v) { return v === 1 ? 'Một thuế suất' : v === 2 ? 'Nhiều thuế suất' : '—' },
-    typeVariant(v) { return v === 1 ? 'success' : v === 2 ? 'warning' : 'secondary' },
+    typeLabel(v) { return v === 0 ? 'Đã bao gồm thuế' : v === 1 ? 'Một thuế suất' : v === 2 ? 'Nhiều thuế suất' : '—' },
+    typeVariant(v) { return v === 0 ? 'info' : v === 1 ? 'success' : v === 2 ? 'warning' : 'secondary' },
     statusText(v) { return Number(v) === 1 ? 'Kích hoạt' : 'Chưa kích hoạt' },
     statusVariant(v) { return Number(v) === 1 ? 'success' : 'secondary' },
     formatDate(dt) { try { return (dt || '').toString().replace('T', ' ') } catch { return '—' } },

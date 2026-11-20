@@ -213,6 +213,7 @@ export default {
                 { value: 2, text: 'Hóa đơn bán hàng' }
             ],
             typeOptions: [
+                { value: 0, text: 'Đã bao gồm thuế' },
                 { value: 1, text: 'Một thuế suất' },
                 { value: 2, text: 'Nhiều thuế suất' }
             ],

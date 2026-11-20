@@ -1,0 +1,1176 @@
+﻿<template>
+  <div class="container-fluid py-3 sales-invoices">
+    <!-- Tiêu đề và thao tác -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="d-flex align-items-center">
+        <h4 class="mb-0 font-weight-bold">{{ listTitle }}</h4>
+      </div>
+      <div>
+        <b-dropdown size="sm" variant="primary" class="mr-2" :disabled="!selectedIds.length || isBusy" right boundary="window">
+          <template #button-content>
+            <i class="fas fa-signature"></i>
+            Ký số
+            <span v-if="selectedIds.length">({{ selectedIds.length }})</span>
+          </template>
+          <b-dropdown-item href="#" @click.prevent="signSelectedInvoices('usb-token')">
+            <i class="fas fa-plug mr-1"></i>
+            Ký USB token
+          </b-dropdown-item>
+        </b-dropdown>
+        <b-button size="sm" variant="outline-primary" class="mr-2" @click="reload">
+          <i class="fas fa-sync-alt"></i>
+          Làm mới
+        </b-button>
+        <b-button size="sm" variant="outline-success" class="mr-2" to="/imports/invoice">
+          <i class="fas fa-file-invoice"></i>
+          Import hóa đơn
+        </b-button>
+        <b-button size="sm" variant="success" @click="goCreate">
+          <i class="fas fa-file-invoice"></i>
+          Lập hóa đơn
+        </b-button>
+      </div>
+    </div>
+
+    <!-- Bộ lọc -->
+    <b-card class="mb-3 shadow-sm">
+      <b-row>
+        <b-col md="4" class="mb-2">
+          <b-input-group>
+            <b-input-group-prepend is-text>
+              <i class="fas fa-search text-muted"></i>
+            </b-input-group-prepend>
+            <b-form-input v-model.trim="filters.keyword" placeholder="Tìm theo mã tra cứu / khách hàng / ký hiệu" @keyup.enter="applyFilters" />
+          </b-input-group>
+        </b-col>
+        <b-col md="3" class="mb-2">
+          <b-form-select v-model="filters.status" :options="statusOptions">
+            <template #first>
+              <b-form-select-option :value="null">Tất cả trạng thái</b-form-select-option>
+            </template>
+          </b-form-select>
+        </b-col>
+        <b-col md="3" class="mb-2">
+          <manual-date-picker
+            v-model="filters.date"
+            placeholder="Lọc theo ngày lập"
+          />
+        </b-col>
+        <b-col md="2" class="mb-2 text-right">
+          <b-button size="sm" variant="primary" @click="applyFilters">Tìm kiếm</b-button>
+        </b-col>
+      </b-row>
+      <b-row class="mt-2">
+        <b-col md="12" class="mb-2 d-flex align-items-center justify-content-end">
+          <b-button size="sm" variant="outline-secondary" class="mr-2" @click="resetFilters">Xóa lọc</b-button>
+          <b-button size="sm" variant="outline-primary" @click="applyFilters">
+            <i class="fas fa-filter"></i>
+            Áp dụng
+          </b-button>
+        </b-col>
+      </b-row>
+    </b-card>
+
+    <!-- Bảng hóa đơn -->
+    <b-card class="shadow-sm">
+      <b-table
+        class="sales-invoices-table"
+        bordered
+        hover
+        responsive
+        small
+        show-empty
+        :items="list.data"
+        :fields="fields"
+        :busy="isBusy"
+        :key="refreshKey"
+        empty-text="Không có dữ liệu"
+      >
+        <template #head(select)>
+          <b-form-checkbox
+            :checked="allVisibleSelected"
+            :indeterminate="selectedIds.length > 0 && !allVisibleSelected"
+            aria-label="Chọn tất cả hóa đơn có thể ký"
+            @change="toggleSelectAll"
+          />
+        </template>
+
+        <template #cell(select)="{ item }">
+          <b-form-checkbox
+            :checked="isSelected(item.id)"
+            :disabled="Number(item.status) !== 0"
+            aria-label="Chọn hóa đơn"
+            @change="checked => toggleRowSelection(item.id, checked)"
+          />
+        </template>
+
+        <template #cell(index)="{ index }">
+          {{ index + 1 + (list.current_page - 1) * list.per_page }}
+        </template>
+
+        <template #cell(form_serial)="{ item }">
+          <code>{{ (item.formCode || '') + (item.serial || '') }}</code>
+        </template>
+
+        <template #cell(no)="{ item }">
+          {{ item.no || '—' }}
+        </template>
+
+        <template #cell(date_export)="{ item }">
+          {{ formatDate(item.dateExport) }}
+        </template>
+
+        <template #cell(lookup_code)="{ item }">
+          <code>{{ item.lookupCode || '—' }}</code>
+        </template>
+
+        <template #cell(customer_or_cqt)="{ item }">
+          <div>
+            <div>{{ item.customerName || '—' }}</div>
+            <small class="text-muted">Mã CQT: {{ item.codeCqt ? 'Đã cấp mã' : 'Chưa cấp mã' }}</small>
+          </div>
+        </template>
+
+        <template #cell(amount)="{ item }">
+          {{ formatCurrency(item.amount) }}
+        </template>
+
+        <template #cell(username)="{ item }">
+          {{ item.username || usernameOf(item.userId) }}
+        </template>
+
+        <template #cell(status)="{ item }">
+          <b-badge :variant="statusVariant(item.status)">{{ statusText(item.status) }}</b-badge>
+        </template>
+
+        <template #cell(invoice_relation)="{ item }">
+          <b-badge :variant="relationVariant(item)" class="relation-chip" :title="relationTitle(item)">
+            {{ relationColumnText(item) }}
+          </b-badge>
+        </template>
+
+        <template #cell(option)="{ item }">
+          <b-dropdown size="sm" right variant="link" toggle-class="text-decoration-none" no-caret boundary="window">
+            <template #button-content>
+              <i class="fas fa-ellipsis-h"></i>
+            </template>
+            <b-dropdown-item class="text-center" href="#" @click.prevent="goEdit(item)">Cập nhật</b-dropdown-item>
+            <b-dropdown-item class="text-center" href="#" @click.prevent="cloneInvoice(item)">Sao chép</b-dropdown-item>
+            <b-dropdown-item class="text-center" href="#" @click.prevent="viewInvoice(item)">Xem</b-dropdown-item>
+
+            <b-dropdown-item v-if="Number(item.status) === 0" class="text-center" href="#" @click.prevent="signInvoice(item, 'usb-token')">Ký USB token</b-dropdown-item>
+            <b-dropdown-item v-if="canSendToCqt(item)" class="text-center" href="#" @click.prevent="sendToCqt(item)">
+              {{ Number(item.status) === 2 ? 'Gửi lại CQT' : 'Gửi CQT' }}
+            </b-dropdown-item>
+            <b-dropdown-item v-if="Number(item.status) === 3" class="text-center" href="#" @click.prevent="sendMail(item)">Gửi mail</b-dropdown-item>
+            <b-dropdown-item v-if="Number(item.status) > 1" class="text-center" href="#" @click.prevent="viewHistory(item)">Lịch sử truyền nhận</b-dropdown-item>
+            <b-dropdown-item v-if="Number(item.status) > 2" class="text-center" href="#" @click.prevent="createErrorMessage(item)">Lập TB sai sót</b-dropdown-item>
+
+            <b-dropdown-item v-if="Number(item.status) === 0" class="text-center text-danger" href="#" @click.prevent="deleteItem(item)">Xóa hóa đơn</b-dropdown-item>
+          </b-dropdown>
+        </template>
+      </b-table>
+
+      <!-- Khung tải khi chuyển trang -->
+      <div v-if="isBusy" class="mt-2">
+        <b-skeleton width="100%" height="20px" animated class="mb-2" />
+        <b-skeleton width="96%" height="20px" animated class="mb-2" />
+        <b-skeleton width="92%" height="20px" animated class="mb-2" />
+      </div>
+
+      <pagination-bar
+        :current.sync="list.current_page"
+        :size.sync="list.per_page"
+        :total="list.total"
+        :sizes="pageSizes"
+        @page-change="onPageChange"
+        @size-change="onPageSizeChange"
+      />
+    </b-card>
+
+    <!-- Hộp thoại xem hóa đơn (HTML qua iframe) -->
+    <b-modal
+      id="modalSalesInvoice"
+      size="lg"
+      :no-close-on-esc="false"
+      title="Xem hóa đơn"
+      body-class="invoice-preview-body"
+    >
+      <iframe
+        id="viewSalesInv"
+        class="invoice-preview-frame"
+        :src="iframe.src"
+        onload="((obj) => {try{obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';}catch(e){obj.style.height = 0;}})(this)"
+      ></iframe>
+      <template #modal-footer>
+        <div class="modal-footer-spread">
+          <b-button variant="light" size="sm" @click="closeModal('modalSalesInvoice')">Đóng</b-button>
+          <div class="modal-footer-actions">
+            <b-dropdown
+              id="ddown-right-sales"
+              text="Tải xuống"
+              extra-toggle-classes="nav-link-custom"
+              variant="success"
+              size="sm"
+            >
+              <b-dropdown-item :href="invoicePublicUrl(iframe.lookup_code, '/download-pdf')">
+                <i class="fas fa-file-pdf mr-1"></i> Tải PDF
+              </b-dropdown-item>
+              <b-dropdown-item :href="invoicePublicUrl(iframe.lookup_code, '/download-xml')">
+                <i class="fas fa-file-code mr-1"></i> Tải XML
+              </b-dropdown-item>
+            </b-dropdown>
+
+            <b-button variant="info" size="sm" @click="print(iframe.lookup_code)">
+              <i class="fas fa-print mr-1"></i> In hóa đơn
+            </b-button>
+          </div>
+        </div>
+      </template>
+    </b-modal>
+
+    <!-- Hộp thoại lịch sử -->
+    <b-modal ref="historyModal" size="lg" title="Lịch sử truyền nhận" hide-header-close>
+      <div>
+        <b-table-simple class="modal-history-table" bordered small responsive show-empty :busy="historyBusy" empty-text="Không có dữ liệu">
+          <b-thead>
+            <b-tr>
+              <b-th class="text-center modal-history-col-index">STT</b-th>
+              <b-th class="modal-history-col-title">Tiêu đề</b-th>
+              <b-th>Mô tả</b-th>
+              <b-th class="modal-history-col-user">Người thao tác</b-th>
+              <b-th class="modal-history-col-date">Ngày thực hiện</b-th>
+            </b-tr>
+          </b-thead>
+          <b-tbody>
+            <b-tr v-for="(row, idx) in historyRows" :key="row.id || idx">
+              <b-td class="text-center">{{ idx + 1 }}</b-td>
+              <b-td>{{ row.title || '—' }}</b-td>
+              <b-td>{{ row.description || '—' }}</b-td>
+              <b-td>{{ row.username || row.user_id || row.userId || '—' }}</b-td>
+              <b-td>{{ formatDateTime(row.created_at || row.createdAt) }}</b-td>
+            </b-tr>
+            <b-tr v-if="!historyRows || historyRows.length === 0">
+              <b-td colspan="5" class="text-center">Không có dữ liệu</b-td>
+            </b-tr>
+          </b-tbody>
+        </b-table-simple>
+      </div>
+      <template #modal-footer>
+        <div class="modal-footer-actions">
+          <b-button size="sm" variant="light" @click="$refs.historyModal.hide()">Đóng</b-button>
+        </div>
+      </template>
+    </b-modal>
+
+    <!-- Hộp thoại gửi thông báo email -->
+    <b-modal
+      id="modalSendEmail"
+      size="md"
+      :no-close-on-esc="false"
+      :hide-header="false"
+      :busy="mail.loading"
+      title="Gửi thông báo phát hành hóa đơn"
+    >
+      <div v-if="mail.invoice">
+        <b-alert show variant="light" class="py-2">
+          <div class="d-flex flex-column small">
+            <div><b>Ký hiệu:</b> <code>{{ mail.invoice.formSerial || '—' }}</code></div>
+            <div><b>Số hóa đơn:</b> {{ mail.invoice.no || '—' }}</div>
+            <div><b>Ngày lập:</b> {{ formatDate(mail.invoice.dateExport) }}</div>
+            <div><b>Tổng tiền:</b> {{ formatCurrency(mail.invoice.amount) }}</div>
+          </div>
+        </b-alert>
+      </div>
+
+      <b-form @submit.prevent="confirmSendEmail">
+        <b-form-group label="Tên người nhận" label-for="mailName" :state="mail.errors.name === null">
+          <b-form-input
+            id="mailName"
+            v-model.trim="mail.name"
+            :state="mail.errors.name === null"
+            placeholder="Nhập tên người nhận"
+            autocomplete="name"
+          />
+          <b-form-invalid-feedback v-if="mail.errors.name">{{ mail.errors.name }}</b-form-invalid-feedback>
+        </b-form-group>
+
+        <b-form-group label="Email người nhận" label-for="mailEmail" :state="mail.errors.email === null">
+          <b-form-input
+            id="mailEmail"
+            v-model.trim="mail.email"
+            :state="mail.errors.email === null"
+            placeholder="Nhập email người nhận"
+            type="email"
+            autocomplete="email"
+          />
+          <b-form-invalid-feedback v-if="mail.errors.email">{{ mail.errors.email }}</b-form-invalid-feedback>
+        </b-form-group>
+      </b-form>
+
+      <template #modal-footer>
+        <div class="d-flex align-items-center w-100 justify-content-between">
+          <div>
+            <b-button variant="light" size="sm" @click="closeModal('modalSendEmail')" :disabled="mail.loading">Đóng</b-button>
+          </div>
+          <div>
+            <b-button variant="primary" size="sm" @click="confirmSendEmail" :disabled="mail.loading">
+              <b-spinner small v-if="mail.loading" class="mr-2"/>
+              Gửi
+            </b-button>
+          </div>
+        </div>
+      </template>
+    </b-modal>
+  </div>
+</template>
+
+<script>
+import axios from '@/plugins/axios'
+import PaginationBar from '@/views/components/pagination_bar.vue'
+import { toastSuccess, toastWarning } from '@/utils/toast'
+import { confirmUsbTokenSignature } from '@/utils/pasigner'
+
+export default {
+  name: 'SalesInvoiceList',
+  components: { PaginationBar },
+  data () {
+    return {
+      isBusy: false,
+      usersMap: {},
+      refreshKey: 0,
+      selectedIds: [],
+      sellerTaxcode: '',
+      // iframe state for viewing invoice
+      iframe: {
+        src: null,
+        lookup_code: null,
+        status: null,
+      },
+      // Trạng thái hộp thoại gửi email
+      mail: {
+        id: null,
+        invoice: { formSerial: '', no: null, dateExport: null, amount: 0 },
+        name: '',
+        email: '',
+        errors: { name: null, email: null },
+        loading: false,
+      },
+      list: {
+        current_page: 1,
+        data: [],
+        last_page: 1,
+        prev_page_url: null,
+        next_page_url: null,
+        per_page: 10,
+        total: 0,
+        from: 0,
+        to: 0
+      },
+      pageSizes: [10, 20, 50, 100],
+      filters: {
+        keyword: '',
+        status: null,
+        date: null,
+      },
+      // Hiển thị dd/mm/YYYY trong datepicker
+      dateFormatOptions: { year: 'numeric', month: '2-digit', day: '2-digit' },
+      fields: [
+        { key: 'select', label: '', thStyle: { width: '3%' }, tdClass: 'text-center' },
+        { key: 'index', label: 'STT', thStyle: { width: '4%' } },
+        { key: 'form_serial', label: 'Ký hiệu', thStyle: { width: '9%' } },
+        { key: 'no', label: 'Số', thStyle: { width: '6%' } },
+        { key: 'date_export', label: 'Ngày lập', thStyle: { width: '8%' } },
+        { key: 'lookup_code', label: 'Mã tra cứu', thStyle: { width: '9%' } },
+        { key: 'customer_or_cqt', label: 'Khách hàng / Mã CQT', thStyle: { width: '18%' } },
+        { key: 'amount', label: 'Tổng tiền', thStyle: { width: '9%' }, tdClass: 'text-right' },
+        { key: 'username', label: 'Người phát hành', thStyle: { width: '11%' } },
+        { key: 'status', label: 'Trạng thái', thStyle: { width: '10%' } },
+        { key: 'invoice_relation', label: 'Loại hóa đơn', thStyle: { width: '8%' } },
+        { key: 'option', label: 'Chức năng', thStyle: { width: '8%' } },
+      ],
+      statusOptions: [
+        { value: 0, text: 'Mới khởi tạo' },
+        { value: 1, text: 'Đã ký' },
+        { value: 2, text: 'Đã gửi thuế' },
+        { value: 3, text: 'Đã phát hành' },
+        { value: 4, text: 'Bị thay thế' },
+        { value: 5, text: 'Bị điều chỉnh' },
+        { value: 6, text: 'Đã hủy' },
+        { value: 7, text: 'Không đủ điều kiện' },
+      ],
+      // Poll trackers to cancel on component destroy
+      pollTimers: {},
+      pollAttempts: {},
+      // Trạng thái hộp thoại lịch sử
+      historyBusy: false,
+      historyRows: [],
+      historyForId: null,
+    }
+  },
+  created () {
+    this.ensureSellerTaxcode()
+    this.fetchList()
+  },
+  beforeDestroy () {
+    // Clear all pending poll timers
+    try {
+      Object.values(this.pollTimers || {}).forEach(t => clearTimeout(t))
+      this.pollTimers = {}
+      this.pollAttempts = {}
+    } catch {}
+  },
+  computed: {
+    invoiceCategory () {
+      return 2
+    },
+    listTitle () {
+      return 'Danh sách hóa đơn bán hàng'
+    },
+    createRouteName () {
+      return 'CustomerSalesInvoiceCreate'
+    },
+    editRouteName () {
+      return 'CustomerSalesInvoiceEdit'
+    },
+    signableVisibleIds () {
+      return (this.list.data || [])
+        .filter(item => Number(item.status) === 0)
+        .map(item => Number(item.id))
+        .filter(Boolean)
+    },
+    allVisibleSelected () {
+      const ids = this.signableVisibleIds
+      return ids.length > 0 && ids.every(id => this.selectedIds.includes(id))
+    },
+  },
+  methods: {
+    closeModal(id) { this.$root.$emit('bv::hide::modal', id) },
+
+    appSellerTaxcode () {
+      const company = this.$app?.info?.company || {}
+      return (company.taxcode || company.taxCode || '').toString().trim()
+    },
+
+    async ensureSellerTaxcode () {
+      const fromApp = this.appSellerTaxcode()
+      if (fromApp) {
+        this.sellerTaxcode = fromApp
+        return this.sellerTaxcode
+      }
+      if (this.sellerTaxcode) return this.sellerTaxcode
+      try {
+        const { data } = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
+        const company = data?.company || {}
+        this.sellerTaxcode = (company.taxcode || company.taxCode || '').toString().trim()
+      } catch (e) {}
+      return this.sellerTaxcode
+    },
+
+    invoicePublicPath (lookupCode, action) {
+      const code = encodeURIComponent(lookupCode || '')
+      const taxcode = (this.sellerTaxcode || this.appSellerTaxcode() || '').toString().trim()
+      const query = taxcode ? `?taxcode=${encodeURIComponent(taxcode)}` : ''
+      return `/invoices/${code}${action}${query}`
+    },
+
+    invoicePublicUrl (lookupCode, action) {
+      const base = (axios.defaults?.baseURL || '/v1').replace(/\/$/, '')
+      return `${base}${this.invoicePublicPath(lookupCode, action)}`
+    },
+
+    // Chuyển datepicker value về yyyy-MM-dd để backend parse LocalDate ổn định
+    formatDateParam (d) {
+      if (!d) return null
+      try {
+        // bootstrap-vue datepicker thường trả về 'YYYY-MM-DD' (string) hoặc Date
+        if (typeof d === 'string') {
+          // Nếu đã đúng format thì trả luôn
+          if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d
+          const dt = new Date(d)
+          if (!isNaN(dt.getTime())) {
+            const yyyy = dt.getFullYear()
+            const mm = String(dt.getMonth() + 1).padStart(2, '0')
+            const dd = String(dt.getDate()).padStart(2, '0')
+            return `${yyyy}-${mm}-${dd}`
+          }
+          return null
+        }
+        if (d instanceof Date) {
+          const yyyy = d.getFullYear()
+          const mm = String(d.getMonth() + 1).padStart(2, '0')
+          const dd = String(d.getDate()).padStart(2, '0')
+          return `${yyyy}-${mm}-${dd}`
+        }
+        // fallback: attempt to new Date
+        const dt = new Date(d)
+        if (isNaN(dt.getTime())) return null
+        const yyyy = dt.getFullYear()
+        const mm = String(dt.getMonth() + 1).padStart(2, '0')
+        const dd = String(dt.getDate()).padStart(2, '0')
+        return `${yyyy}-${mm}-${dd}`
+      } catch {
+        return null
+      }
+    },
+
+    async fetchList () {
+      this.isBusy = true
+      try {
+        const params = {
+          page: this.list.current_page,
+          size: this.list.per_page,
+          q: this.filters.keyword || undefined,
+          status: this.filters.status != null ? Number(this.filters.status) : undefined,
+          // gửi về YYYY-MM-DD để backend parse ổn định
+          date: this.formatDateParam(this.filters.date) || undefined,
+          category: this.invoiceCategory,
+        }
+        const { data } = await axios.get('/invoices', { params })
+        const items = (data.items || data.data || []).map(it => ({
+          id: it.id,
+          formCode: it.formCode,
+          serial: it.serial,
+          no: it.no,
+          dateExport: it.dateExport,
+          lookupCode: it.lookupCode,
+          customerName: it.customerName,
+          codeCqt: it.codeCqt,
+          amount: it.amount,
+          userId: it.userId,
+          username: it.username,
+          status: it.status,
+          referenceId: it.referenceId,
+          referenceNo: it.referenceNo,
+          referenceFormCode: it.referenceFormCode,
+          referenceSerial: it.referenceSerial,
+          invoiceType: it.invoiceType,
+          invoiceTypeAdjust: it.invoiceTypeAdjust,
+        }))
+        this.list.data = items
+        this.list.total = data.total || 0
+        this.list.per_page = data.per_page || this.list.per_page
+        this.list.current_page = data.current_page || this.list.current_page
+        this.list.last_page = data.last_page || 1
+        this.selectedIds = this.selectedIds.filter(id => items.some(item => Number(item.id) === Number(id) && Number(item.status) === 0))
+        const from = (this.list.current_page - 1) * this.list.per_page + (items.length ? 1 : 0)
+        const to = from + (items.length ? (items.length - 1) : 0)
+        this.list.from = from
+        this.list.to = to
+        // Đổi key để bảng render lại
+        this.refreshKey++
+      } catch (e) {
+        // Giữ danh sách hiện tại nếu tải dữ liệu mới thất bại
+      } finally {
+        this.isBusy = false
+      }
+    },
+
+    reload () { this.fetchList() },
+    goCreate () { this.$router.push({ name: this.createRouteName }) },
+    goEdit (item) { this.$router.push({ name: this.editRouteName, params: { id: item.id } }) },
+    createErrorMessage (item) {
+      if (!item || !item.id) return
+      this.$router.push({ name: 'CustomerErrorMessageCreate', query: { ids: String(item.id) } })
+    },
+
+    onPageSizeChange (size) {
+      this.list.per_page = Number(size) || this.list.per_page
+      this.list.current_page = 1
+      this.fetchList()
+    },
+    onPageChange (page) {
+      this.list.current_page = Number(page) || 1
+      this.fetchList()
+    },
+    applyFilters () { this.list.current_page = 1; this.fetchList() },
+    resetFilters () { this.filters = { keyword: '', status: null, date: null }; this.applyFilters() },
+
+    statusText (s) {
+      const v = Number(s)
+      switch (v) {
+        case 0: return 'Mới khởi tạo'
+        case 1: return 'Đã ký'
+        case 2: return 'Đã gửi thuế'
+        case 3: return 'Đã phát hành'
+        case 4: return 'Bị thay thế'
+        case 5: return 'Bị điều chỉnh'
+        case 6: return 'Đã hủy'
+        case 7: return 'Không đủ điều kiện'
+        default: return '—'
+      }
+    },
+    statusVariant (s) {
+      const v = Number(s)
+      switch (v) {
+        case 0: return 'secondary' // Mới khởi tạo - xám
+        case 1: return 'info'      // Ký số - xanh dương
+        case 2: return 'warning'   // Gửi cơ quan thuế - vàng
+        case 3: return 'success'   // Đã phát hành - xanh lá
+        case 4: return 'primary'   // Bị thay thế - tím/xanh đậm
+        case 5: return 'dark'      // Bị điều chỉnh - đen/xám đậm
+        case 6: return 'danger'    // Đã hủy - đỏ
+        case 7: return 'light'     // Không đủ điều kiện cấp mã - trắng/xám nhạt
+        default: return 'secondary'
+      }
+    },
+    canSendToCqt (item) {
+      const status = Number(item?.status)
+      return status === 1 || status === 2
+    },
+    relationColumnText (item) {
+      const type = Number(item?.invoiceType || 0)
+      const status = Number(item?.status)
+      if (status === 4) return 'Bị thay'
+      if (status === 5) return 'Bị ĐC'
+      const no = item?.referenceNo || item?.referenceId || ''
+      const suffix = no ? ` #${no}` : ''
+      if (type === 1) return `Thay${suffix}`
+      if (type === 2) return `${this.adjustTypeShort(item?.invoiceTypeAdjust)}${suffix}`
+      return 'Gốc'
+    },
+    relationTitle (item) {
+      const type = Number(item?.invoiceType || 0)
+      const status = Number(item?.status)
+      const no = item?.referenceNo || item?.referenceId || ''
+      const serial = `${item?.referenceFormCode || ''}${item?.referenceSerial || ''}`
+      const suffix = [no ? `số ${no}` : '', serial ? `ký hiệu ${serial}` : ''].filter(Boolean).join(', ')
+      if (status === 4) return 'Hóa đơn gốc đã bị thay thế'
+      if (status === 5) return 'Hóa đơn gốc đã bị điều chỉnh'
+      if (type === 1) return suffix ? `Hóa đơn thay thế cho ${suffix}` : 'Hóa đơn thay thế'
+      if (type === 2) return suffix ? `Hóa đơn điều chỉnh cho ${suffix}` : 'Hóa đơn điều chỉnh'
+      return 'Hóa đơn gốc'
+    },
+    relationVariant (item) {
+      const type = Number(item?.invoiceType || 0)
+      const status = Number(item?.status)
+      if (type === 1) return 'primary'
+      if (type === 2) return 'dark'
+      if (status === 4) return 'primary'
+      if (status === 5) return 'dark'
+      return 'secondary'
+    },
+    adjustTypeShort (type) {
+      const v = Number(type)
+      if (v === 1) return 'ĐC tăng'
+      if (v === 2) return 'ĐC giảm'
+      if (v === 3) return 'ĐC TT'
+      return 'Điều chỉnh'
+    },
+    usernameOf (uid) { return this.usersMap[uid] || '—' },
+    formatDate (dt) { try { return (dt || '').toString().replace('T', ' ') } catch { return '—' } },
+    formatCurrency (v) {
+      try { const n = Number(v || 0); return n.toLocaleString('vi-VN') } catch { return '0' }
+    },
+    isSelected (id) {
+      return this.selectedIds.includes(Number(id))
+    },
+    toggleRowSelection (id, checked) {
+      const value = Number(id)
+      if (!value) return
+      if (checked && !this.selectedIds.includes(value)) {
+        this.selectedIds = [...this.selectedIds, value]
+      } else if (!checked) {
+        this.selectedIds = this.selectedIds.filter(x => x !== value)
+      }
+    },
+    toggleSelectAll (checked) {
+      const ids = this.signableVisibleIds
+      if (checked) {
+        this.selectedIds = Array.from(new Set([...this.selectedIds, ...ids]))
+      } else {
+        this.selectedIds = this.selectedIds.filter(id => !ids.includes(id))
+      }
+    },
+
+    async cloneInvoice (item) {
+      if (!item || !item.id) return
+      this.isBusy = true
+      try {
+        const { data } = await axios.post(`/invoices/${item.id}/clone`)
+        const newId = data && (data.id || data.data && data.data.id)
+        await this.fetchList()
+        if (newId) {
+          this.$bvToast && this.$bvToast.toast('Đã sao chép hóa đơn', { title: 'Thành công', variant: 'success', solid: true, autoHideDelay: 2000 })
+          this.$router.push({ name: this.editRouteName, params: { id: newId } })
+        } else {
+          this.$bvToast && this.$bvToast.toast('Không lấy được ID hóa đơn mới', { title: 'Cảnh báo', variant: 'warning', solid: true, autoHideDelay: 3000 })
+        }
+      } catch (e) {
+        const msg = (e && e.response && e.response.data && e.response.data.message) || 'Không thể sao chép hóa đơn'
+        this.$bvToast && this.$bvToast.toast(msg, { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 4000 })
+      } finally { this.isBusy = false }
+    },
+    async viewInvoice (item) {
+      const lookupCode = item.lookupCode || item.orderCode || item.lookup_code || null
+      if (!lookupCode) return false
+      await this.ensureSellerTaxcode()
+      if (!this.sellerTaxcode && !this.appSellerTaxcode()) {
+        this.$bvToast && this.$bvToast.toast('Không xác định được mã số thuế bên bán', { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 3000 })
+        return false
+      }
+      this.iframe.lookup_code = lookupCode
+      const viewUrl = this.invoicePublicUrl(lookupCode, '/view')
+      this.iframe.src = `${viewUrl}${viewUrl.includes('?') ? '&' : '?'}viewRevision=${Date.now()}`
+      this.$root.$emit('bv::show::modal', 'modalSalesInvoice')
+      return false
+    },
+    async downloadXml (item) {
+      const lookupCode = item?.lookupCode || item?.orderCode || item?.lookup_code
+      if (!lookupCode) {
+        this.$bvToast && this.$bvToast.toast('Không có mã tra cứu hóa đơn', { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 3000 })
+        return
+      }
+      await this.ensureSellerTaxcode()
+      window.open(this.invoicePublicUrl(lookupCode, '/download-xml'), '_blank')
+    },
+    async downloadPdf (item) {
+      const lookupCode = item?.lookupCode || item?.orderCode || item?.lookup_code
+      if (!lookupCode) {
+        this.$bvToast && this.$bvToast.toast('Không có mã tra cứu hóa đơn', { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 3000 })
+        return
+      }
+      await this.ensureSellerTaxcode()
+      window.open(this.invoicePublicUrl(lookupCode, '/download-pdf'), '_blank')
+    },
+
+    print (lookupCode) {
+      if (!lookupCode) {
+        this.$bvToast && this.$bvToast.toast('Không có mã tra cứu hóa đơn', { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 3000 })
+        return
+      }
+      try {
+        const iframe = document.getElementById('viewSalesInv')
+        if (iframe && iframe.contentWindow) {
+          if (iframe.contentWindow.printInvoice) iframe.contentWindow.printInvoice()
+          else iframe.contentWindow.print()
+        } else {
+          // Dự phòng: open print dialog for current window
+          window.print()
+        }
+      } catch (e) {
+        this.$bvToast && this.$bvToast.toast('Không thể in hóa đơn', { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 3000 })
+      }
+    },
+
+    async signInvoice (item, method = 'usb-token') {
+      const id = item && (item.id || item.ID || item.Id)
+      if (!id) return
+      await this.signInvoices([Number(id)], method)
+    },
+    async signSelectedInvoices (method = 'usb-token') {
+      await this.signInvoices(this.selectedIds, method)
+    },
+    async signInvoices (ids, method = 'usb-token') {
+      try {
+        if (method !== 'usb-token') throw new Error('Chưa hỗ trợ kiểu ký số này')
+        const arrId = Array.from(new Set((ids || []).map(Number).filter(Boolean)))
+        if (!arrId.length) return
+        const ok = await confirmUsbTokenSignature(arrId.length > 1
+          ? `Bạn có chắc chắn muốn ký số ${arrId.length} hóa đơn bằng USB token?`
+          : `Bạn có chắc chắn muốn ký số hóa đơn #${arrId[0]} bằng USB token?`)
+        if (!ok) return
+        this.isBusy = true
+        const { data } = await axios.post('/invoices/sign-token/prepare', { ids: arrId })
+        const hash = data?.hash || null
+        if (!hash) throw new Error('Không tạo được mã hash ký số')
+        this.launchPasigner(hash)
+        toastSuccess('Đã gửi yêu cầu đến ứng dụng ký số USB token')
+        this.pollSignatureResult(hash, arrId)
+      } catch (e) {
+        const message = e?.response?.data?.message || e?.message || 'Không thể ký số bằng USB token'
+        this.$bvToast && this.$bvToast.toast(message, { title: 'Lỗi ký số', variant: 'danger', solid: true, autoHideDelay: 5000 })
+      } finally {
+        this.isBusy = false
+      }
+    },
+    launchPasigner (hash) {
+      const pid = this.IdProcess(6)
+      const jsonData = {
+        src: 'web',
+        action: 'signature',
+        pid: pid,
+        data: {
+          hash: hash,
+          domain: window.location.hostname
+        }
+      }
+      location.href =
+        'pasigner://' +
+        encodeURIComponent(JSON.stringify(jsonData))
+    },
+    pollSignatureResult (hash, ids) {
+      const key = `signature:${hash}`
+      const intervalMs = 1200
+      const maxAttempts = 100
+      try { clearTimeout(this.pollTimers[key]) } catch {}
+      this.pollAttempts[key] = 0
+
+      const check = async () => {
+        try {
+          const { data } = await axios.get('/invoices/sign-token/status', {
+            params: { hash, ids: ids.join(',') },
+            meta: { suppressGlobalErrorToast: true }
+          })
+          if (data?.state === 'signed') {
+            clearTimeout(this.pollTimers[key])
+            delete this.pollTimers[key]
+            delete this.pollAttempts[key]
+            toastSuccess(`Ký số thành công ${data.signed || ids.length} hóa đơn`)
+            await this.fetchList()
+            return
+          }
+          if (data?.state === 'failed') {
+            clearTimeout(this.pollTimers[key])
+            delete this.pollTimers[key]
+            delete this.pollAttempts[key]
+            toastWarning('Ứng dụng ký số không trả về dữ liệu hợp lệ. Vui lòng ký lại.')
+            return
+          }
+        } catch (e) {
+          // Lỗi mạng ngắn hạn không làm mất phiên ký; tiếp tục kiểm tra đến khi hết thời gian.
+        }
+
+        const attempts = (this.pollAttempts[key] || 0) + 1
+        this.pollAttempts[key] = attempts
+        if (attempts >= maxAttempts) {
+          delete this.pollTimers[key]
+          delete this.pollAttempts[key]
+          toastWarning('Chưa nhận được dữ liệu ký số. Hãy kiểm tra P.A Signer hoặc thử ký lại.')
+          return
+        }
+        this.pollTimers[key] = setTimeout(check, intervalMs)
+      }
+
+      this.pollTimers[key] = setTimeout(check, intervalMs)
+    },
+    IdProcess (length) {
+      let result = ''
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+      for (let i = 0; i < length; i += 1) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length))
+      }
+      return result
+    },
+    async sendToCqt (item) {
+      try {
+        const id = item && (item.id || item.ID || item.Id)
+        if (!id) return
+        const isResend = Number(item?.status) === 2
+        let ok = true
+        if (typeof window.$?.confirm === 'function') {
+          ok = await new Promise(resolve => {
+            window.$.confirm({
+              title: isResend ? 'Xác nhận gửi lại hóa đơn' : 'Xác nhận gửi hóa đơn',
+              content: isResend
+                ? 'Hóa đơn đang ở trạng thái Đã gửi thuế. Xác nhận gửi lại hóa đơn lên Cơ quan thuế?'
+                : 'Xác nhận gửi hóa đơn lên Cơ quan thuế',
+              theme: 'bootstrap',
+              type: 'blue',
+              icon: 'fas fa-paper-plane',
+              animation: 'zoom',
+              closeAnimation: 'scale',
+              boxWidth: '420px',
+              useBootstrap: true,
+              backgroundDismiss: true,
+              escapeKey: 'cancel',
+              buttons: {
+                cancel: { text: 'Hủy', btnClass: 'btn-light', action: function(){ resolve(false) } },
+                ok: { text: isResend ? 'Gửi lại' : 'Gửi', btnClass: 'btn-primary', action: function(){ resolve(true) } }
+              }
+            })
+          })
+        } else {
+          ok = window.confirm(isResend ? 'Xác nhận gửi lại hóa đơn lên Cơ quan thuế?' : 'Xác nhận gửi hóa đơn lên Cơ quan thuế?')
+        }
+        if (!ok) return
+        this.isBusy = true
+        await axios.post(`/invoices/${id}/send-to-cqt`, null, { successMessage: isResend ? 'Đã gửi lại hóa đơn lên Cơ quan thuế' : 'Đã gửi hóa đơn lên Cơ quan thuế' })
+        await this.fetchList()
+        // Theo dõi lịch sử để thông báo kết quả xử lý bất đồng bộ từ CQT
+        this.pollHistoryAndNotify(id)
+      } catch (e) {
+        // Lỗi đã được interceptor axios xử lý
+      } finally {
+        this.isBusy = false
+      }
+    },
+
+    // Gửi email: mở hộp thoại và điền sẵn tên/email từ khách hàng của hóa đơn
+    async sendMail (item) {
+      try {
+        const id = item && (item.id || item.ID || item.Id)
+        if (!id) return
+        // Prefill invoice info from list item
+        const formSerial = `${item.formCode || ''}${item.serial || ''}`
+        this.mail = {
+          id,
+          invoice: { formSerial, no: item.no || null, dateExport: item.dateExport || null, amount: item.amount || 0 },
+          name: '',
+          email: '',
+          errors: { name: null, email: null },
+          loading: false,
+        }
+        // Tải chi tiết khách hàng từ API chi tiết hóa đơn
+        try {
+          const { data } = await axios.get(`/invoices/${id}`, { meta: { suppressGlobalErrorToast: true } })
+          const c = data && data.customer ? data.customer : null
+          let recvName = ''
+          let recvEmail = ''
+          if (c && typeof c === 'object') {
+            recvName = c.name || c.buyer || ''
+            recvEmail = c.email || ''
+          }
+          this.mail.name = (recvName || '').toString()
+          this.mail.email = (recvEmail || '').toString()
+        } catch (e) {
+          // b? qua, keep defaults
+        }
+        this.$root.$emit('bv::show::modal', 'modalSendEmail')
+      } catch (e) {
+        // noop
+      }
+    },
+    async confirmSendEmail () {
+      // Validate
+      this.mail.errors = { name: null, email: null }
+      const name = (this.mail.name || '').trim()
+      const email = (this.mail.email || '').trim()
+      if (!name) this.mail.errors.name = 'Vui lòng nhập tên người nhận'
+      if (!email) this.mail.errors.email = 'Vui lòng nhập email người nhận'
+      else if (!this.isValidEmail(email)) this.mail.errors.email = 'Email không đúng định dạng'
+      if (this.mail.errors.name || this.mail.errors.email) {
+        toastWarning('Vui lòng nhập đầy đủ thông tin hợp lệ')
+        return
+      }
+      // Submit
+      try {
+        this.mail.loading = true
+        await axios.post(`/invoices/${this.mail.id}/send-email`, { name, email }, { successMessage: 'Đã gửi email thông báo phát hành hóa đơn' })
+        this.mail.loading = false
+        this.closeModal('modalSendEmail')
+      } catch (e) {
+        this.mail.loading = false
+        // Lỗi đã được toast toàn cục hiển thị
+      }
+    },
+    isValidEmail (email) {
+      try { return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(String(email || '').trim()) } catch { return false }
+    },
+
+    // Cập nhật local list item status by invoiceId
+    _updateLocalStatus (invoiceId, status, extras = {}) {
+      try {
+        const id = Number(invoiceId)
+        const idx = this.list.data.findIndex(x => Number(x.id) === id)
+        if (idx >= 0) {
+          const current = this.list.data[idx]
+          // Giữ các trường hiện có, cập nhật trạng thái và dữ liệu bổ sung nếu có
+          const updated = { ...current, status: Number(status), ...extras }
+          this.$set(this.list.data, idx, updated)
+          // Đổi key để bảng render lại
+          this.refreshKey++
+        }
+      } catch {}
+    },
+
+    // Theo dõi lịch sử để thông báo sau khi backend lưu kết quả
+    async pollHistoryAndNotify (invoiceId) {
+      if (!invoiceId && invoiceId !== 0) return
+      if (!this.pollTimers || typeof this.pollTimers !== 'object') this.pollTimers = {}
+      if (!this.pollAttempts || typeof this.pollAttempts !== 'object') this.pollAttempts = {}
+      const key = String(invoiceId)
+      try { clearTimeout(this.pollTimers[key]) } catch {}
+      this.pollAttempts[key] = 0
+      const maxAttempts = 30
+      const intervalMs = 1500
+      const check = async () => {
+        try {
+          const { data: history = [] } = await axios.get(`/invoices/${invoiceId}/history`, { meta: { suppressGlobalErrorToast: true } })
+          let outcome = null
+          for (const h of Array.isArray(history) ? history : []) {
+            if (h && (h.type === 202 || h.type === 204)) { outcome = h; break }
+          }
+          if (outcome) {
+            const type = Number(outcome.type)
+            const title = outcome.title || 'Kết quả từ CQT'
+            const desc = outcome.description || ''
+            if (type === 202) {
+              // CQT cấp mã thành công, có thể kèm mã trả về
+              toastSuccess(desc ? `${title}: ${desc}` : title)
+              const code = desc || null
+              this._updateLocalStatus(invoiceId, 3, code ? { codeCqt: code } : {})
+            } else if (type === 204) {
+              const xml = String(outcome.xmlData || '')
+              const m = xml.match(/<LTBao>\s*(\d+)\s*<\/LTBao>/i)
+              const lt = m ? m[1] : null
+              if (lt === '2') {
+                // CQT chấp nhận sau thông điệp 203
+                toastSuccess(title)
+                this._updateLocalStatus(invoiceId, 3)
+              } else {
+                // CQT từ chối
+                toastWarning(title)
+                this._updateLocalStatus(invoiceId, 7)
+              }
+            }
+            // Đồng bộ lại dữ liệu mới nhất từ backend
+            await this.fetchList()
+            try { clearTimeout(this.pollTimers[key]) } catch {}
+            delete this.pollTimers[key]
+            delete this.pollAttempts[key]
+            return
+          }
+        } catch (e) {}
+        const attempts = (this.pollAttempts[key] || 0) + 1
+        this.pollAttempts[key] = attempts
+        if (attempts >= maxAttempts) {
+          delete this.pollTimers[key]
+          delete this.pollAttempts[key]
+          return
+        }
+        this.pollTimers[key] = setTimeout(check, intervalMs)
+      }
+      this.pollTimers[key] = setTimeout(check, 800)
+    },
+
+    formatDateTime(d) {
+      if (!d) return '—'
+      try {
+        const dt = new Date(d)
+        const yyyy = dt.getFullYear()
+        const mm = String(dt.getMonth() + 1).padStart(2, '0')
+        const dd = String(dt.getDate()).padStart(2, '0')
+        const HH = String(dt.getHours()).padStart(2, '0')
+        const MM = String(dt.getMinutes()).padStart(2, '0')
+        const SS = String(dt.getSeconds()).padStart(2, '0')
+        return `${dd}/${mm}/${yyyy} ${HH}:${MM}:${SS}`
+      } catch {
+        return String(d)
+      }
+    },
+
+    async deleteItem(item) {
+      try {
+        const id = item.id || item.ID || item.Id
+        if (!id) return
+        
+        // Check if invoice has a number - prevent deletion
+        if (item.no && Number(item.no) > 0) {
+          this.$bvToast && this.$bvToast.toast('Không thể xóa hóa đơn đã có số', {
+            title: 'Thông báo',
+            variant: 'warning',
+            solid: true,
+            autoHideDelay: 3000
+          })
+          return
+        }
+        
+        // Check status - only allow delete if status = 0
+        if (Number(item.status) !== 0) {
+          this.$bvToast && this.$bvToast.toast('Chỉ có thể xóa hóa đơn ở trạng thái "Mới khởi tạo"', {
+            title: 'Thông báo',
+            variant: 'warning',
+            solid: true,
+            autoHideDelay: 3000
+          })
+          return
+        }
+
+        const ok = await this.$bvModal.msgBoxConfirm(
+          `Bạn có chắc muốn xóa hóa đơn #${id}?`,
+          {
+            title: 'Xác nhận xóa',
+            size: 'sm',
+            buttonSize: 'sm',
+            okVariant: 'danger',
+            okTitle: 'Xóa',
+            cancelTitle: 'Hủy',
+            footerClass: 'p-2',
+            hideHeaderClose: false
+          }
+        )
+        if (!ok) return
+
+        await axios.delete(`/invoices/${id}`)
+        this.$bvToast && this.$bvToast.toast('Đã xóa hóa đơn thành công', {
+          title: 'Thành công',
+          variant: 'success',
+          solid: true,
+          autoHideDelay: 3000
+        })
+        // Tải lại danh sách sau khi xóa
+        this.fetchList()
+      } catch (e) {
+        const code = e?.response?.status
+        const msg = e?.response?.data?.message || 
+          (code === 403
+            ? 'Không có quyền xóa hóa đơn'
+            : code === 404
+            ? 'Hóa đơn không tồn tại'
+            : code === 400
+            ? e?.response?.data?.message || 'Không thể xóa hóa đơn này'
+            : 'Xóa hóa đơn thất bại')
+        this.$bvToast && this.$bvToast.toast(msg, {
+          title: 'Lỗi',
+          variant: 'danger',
+          solid: true,
+          autoHideDelay: 4000
+        })
+      }
+    },
+
+    async viewHistory(item) {
+      try {
+        const id = item.id || item.ID || item.Id
+        if (!id) return
+        this.historyBusy = true
+        this.historyRows = []
+        this.historyForId = id
+        const { data } = await axios.get(`/invoices/${id}/history`)
+        // Chuẩn hóa key sang snake_case cho phần hiển thị
+        this.historyRows = Array.isArray(data) ? data.map(r => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          username: r.username || r.userName || r.user_name || null,
+          user_id: r.userId || r.user_id || null,
+          created_at: r.createdAt || r.created_at || null,
+        })) : []
+        this.$refs.historyModal.show()
+      } catch (e) {
+        this.historyRows = []
+        this.$refs.historyModal && this.$refs.historyModal.show()
+      } finally {
+        this.historyBusy = false
+      }
+    }
+  }
+}
+</script>
+
+<style scoped>
+.relation-chip {
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.sales-invoices::v-deep .table-responsive {
+  overflow-x: hidden;
+}
+
+.sales-invoices::v-deep .sales-invoices-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.sales-invoices::v-deep .sales-invoices-table th,
+.sales-invoices::v-deep .sales-invoices-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: middle;
+}
+</style>
+

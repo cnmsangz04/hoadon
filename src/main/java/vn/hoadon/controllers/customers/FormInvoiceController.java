@@ -386,6 +386,7 @@ public class FormInvoiceController extends BaseController {
     private String typeLabel(Integer v) {
         if (v == null) return "";
         return switch (v) {
+            case 0 -> "Đã bao gồm thuế";
             case 1 -> "Một thuế suất";
             case 2 -> "Nhiều thuế suất";
             default -> "";

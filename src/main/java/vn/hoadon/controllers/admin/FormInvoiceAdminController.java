@@ -159,7 +159,7 @@ private Integer getInt(Map<String, Object> body, String key) {
         if (!StringUtils.hasText(name)) return ResponseEntity.badRequest().body(Map.of("message", "Name required"));
         e.setName(name);
         e.setCategory(category != null ? category : 1);
-        e.setType(type != null ? type : 1);
+        e.setType(type != null ? type : (category != null && category == 2 ? 0 : 1));
         boolean activateAfterCreate = creating && Integer.valueOf(1).equals(status);
         e.setStatus(creating ? 0 : (status != null ? status : 0));
         e.setHaveCode(haveCode != null ? haveCode : 1);

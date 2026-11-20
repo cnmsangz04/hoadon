@@ -373,7 +373,7 @@ public class InvoiceTemplateService {
         FormInvoiceEntity form = forms.findByTemplateId(template.getId()).stream().findFirst().orElseGet(() -> {
             FormInvoiceEntity fallback = new FormInvoiceEntity();
             fallback.setCategory(template.getCategory());
-            fallback.setType(1);
+            fallback.setType(template.getCategory() == 2 ? 0 : 1);
             fallback.setFormCode(String.valueOf(template.getCategory()));
             fallback.setSerial("C26TAA");
             return fallback;

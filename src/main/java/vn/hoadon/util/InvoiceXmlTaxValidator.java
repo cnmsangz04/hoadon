@@ -25,6 +25,7 @@ public final class InvoiceXmlTaxValidator {
 
     private static final String HDCTT_CHINH_DEFAULT = "<HDCTTChinh>0</HDCTTChinh>";
     private static final Pattern HDCTT_CHINH_TAG = Pattern.compile("(?is)<(?:\\w+:)?HDCTTChinh\\b");
+    private static final Pattern HDDCKPT_QUAN_TAG = Pattern.compile("(?is)<(?:\\w+:)?HDDCKPTQuan\\b");
     private static final Pattern TT_CHUNG_BLOCK = Pattern.compile("(?is)<(?:\\w+:)?TTChung\\b[^>]*>.*?</(?:\\w+:)?TTChung>");
     private static final Pattern N_LAP_CLOSE_TAG = Pattern.compile("(?is)</(?:\\w+:)?NLap>");
     private static final Pattern S_BKE_OPEN_TAG = Pattern.compile("(?is)<(?:\\w+:)?SBKe\\b");
@@ -45,7 +46,7 @@ public final class InvoiceXmlTaxValidator {
         }
 
         String ttChung = ttChungMatcher.group();
-        if (HDCTT_CHINH_TAG.matcher(ttChung).find()) {
+        if (HDCTT_CHINH_TAG.matcher(ttChung).find() || HDDCKPT_QUAN_TAG.matcher(ttChung).find()) {
             return xml;
         }
 
@@ -101,8 +102,9 @@ public final class InvoiceXmlTaxValidator {
         Element ndhDon = requireChild(errors, dlhDon, "HDon/DLHDon", "NDHDon");
         Element dscks = requireChild(errors, hdon, "HDon", "DSCKS");
 
-        if (ttChung != null) validateTtChung(errors, ttChung);
-        if (ndhDon != null) validateNdHDon(errors, ndhDon);
+        boolean salesInvoice = ttChung != null && isSalesInvoice(ttChung);
+        if (ttChung != null) validateTtChung(errors, ttChung, salesInvoice);
+        if (ndhDon != null) validateNdHDon(errors, ndhDon, salesInvoice);
         validateDscks(errors, dscks);
 
         optionalLength(errors, hdon, "HDon", "MCCQT", 34);
@@ -144,7 +146,12 @@ public final class InvoiceXmlTaxValidator {
         }
     }
 
-    private static void validateTtChung(List<String> errors, Element ttChung) {
+    private static boolean isSalesInvoice(Element ttChung) {
+        if (child(ttChung, "HDDCKPTQuan") != null) return true;
+        return "2".equals(text(child(ttChung, "KHMSHDon")));
+    }
+
+    private static void validateTtChung(List<String> errors, Element ttChung, boolean salesInvoice) {
         String path = "HDon/DLHDon/TTChung";
         String pban = requireText(errors, ttChung, path, "PBan", 6);
         if (hasText(pban) && !"2.1.1".equals(pban)) {
@@ -156,9 +163,10 @@ public final class InvoiceXmlTaxValidator {
         requireNumber(errors, ttChung, path, "SHDon", 8, 0);
         optionalLength(errors, ttChung, path, "MHSo", 20);
         requireDate(errors, ttChung, path, "NLap");
-        String hdcttChinh = requireNumber(errors, ttChung, path, "HDCTTChinh", 1, 0);
-        if (hasText(hdcttChinh) && !"0".equals(hdcttChinh) && !"1".equals(hdcttChinh)) {
-            errors.add(path + "/HDCTTChinh: chỉ nhận 0 hoặc 1");
+        String invoiceFlag = requireNumber(errors, ttChung, path,
+                salesInvoice ? "HDDCKPTQuan" : "HDCTTChinh", 1, 0);
+        if (hasText(invoiceFlag) && !"0".equals(invoiceFlag) && !"1".equals(invoiceFlag)) {
+            errors.add(path + (salesInvoice ? "/HDDCKPTQuan" : "/HDCTTChinh") + ": chỉ nhận 0 hoặc 1");
         }
         optionalLength(errors, ttChung, path, "SBKe", 50);
         optionalDate(errors, ttChung, path, "NBKe");
@@ -204,7 +212,7 @@ public final class InvoiceXmlTaxValidator {
         optionalDate(errors, related, path, "NBKCLQuan");
     }
 
-    private static void validateNdHDon(List<String> errors, Element ndhDon) {
+    private static void validateNdHDon(List<String> errors, Element ndhDon, boolean salesInvoice) {
         Element nban = requireChild(errors, ndhDon, "HDon/DLHDon/NDHDon", "NBan");
         Element nmua = requireChild(errors, ndhDon, "HDon/DLHDon/NDHDon", "NMua");
         Element dshhdvu = requireChild(errors, ndhDon, "HDon/DLHDon/NDHDon", "DSHHDVu");
@@ -212,7 +220,7 @@ public final class InvoiceXmlTaxValidator {
         if (nban != null) validateSeller(errors, nban);
         if (nmua != null) validateBuyer(errors, nmua);
         if (dshhdvu != null) validateLineItems(errors, dshhdvu);
-        if (ttoan != null) validatePayment(errors, ttoan);
+        if (ttoan != null) validatePayment(errors, ttoan, salesInvoice);
     }
 
     private static void validateSeller(List<String> errors, Element nban) {
@@ -296,7 +304,7 @@ public final class InvoiceXmlTaxValidator {
         }
     }
 
-    private static void validatePayment(List<String> errors, Element ttoan) {
+    private static void validatePayment(List<String> errors, Element ttoan, boolean salesInvoice) {
         String path = "HDon/DLHDon/NDHDon/TToan";
         Element thttltsuat = child(ttoan, "THTTLTSuat");
         if (thttltsuat != null) {
@@ -309,9 +317,11 @@ public final class InvoiceXmlTaxValidator {
                 optionalNumber(errors, ltsuat, ratePath, "TThue", 21, 6);
             }
         }
-        requireNumber(errors, ttoan, path, "TgTCThue", 21, 6);
-        optionalNumber(errors, ttoan, path, "TGTKCThue", 21, 6);
-        requireNumber(errors, ttoan, path, "TgTThue", 21, 6);
+        if (!salesInvoice) {
+            requireNumber(errors, ttoan, path, "TgTCThue", 21, 6);
+            optionalNumber(errors, ttoan, path, "TGTKCThue", 21, 6);
+            requireNumber(errors, ttoan, path, "TgTThue", 21, 6);
+        }
         validateFees(errors, child(ttoan, "DSLPhi"), path + "/DSLPhi");
         optionalNumber(errors, ttoan, path, "TTCKTMai", 21, 6);
         optionalNumber(errors, ttoan, path, "TGTKhac", 21, 6);

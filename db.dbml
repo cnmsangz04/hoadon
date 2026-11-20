@@ -301,7 +301,7 @@ Table invoices {
   exchange_rate float [not null]
   send_mail_directly smallint [not null]
   discount float [not null]
-  vat_rate smallint [not null]
+  vat_rate smallint
   vat_rate_other int [not null]
   vat_amount float [not null]
   vat_amount_discount float [not null]

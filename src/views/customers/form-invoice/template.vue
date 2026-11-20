@@ -110,6 +110,7 @@ export default {
           { code: 2, label: 'Hóa đơn bán hàng' },
         ],
         types: [
+          { code: 0, label: 'Đã bao gồm thuế' },
           { code: 1, label: 'Một thuế suất' },
           { code: 2, label: 'Nhiều thuế suất' },
         ],
@@ -148,7 +149,7 @@ export default {
     },
     categoryLabel(v) { return Number(v) === 1 ? 'Hóa đơn giá trị gia tăng' : Number(v) === 2 ? 'Hóa đơn bán hàng' : '—' },
     categoryVariant(v) { return Number(v) === 1 ? 'info' : Number(v) === 2 ? 'secondary' : 'light' },
-    typeLabel(v) { return Number(v) === 1 ? 'Một thuế suất' : Number(v) === 2 ? 'Nhiều thuế suất' : '—' },
+    typeLabel(v) { return Number(v) === 0 ? 'Đã bao gồm thuế' : Number(v) === 1 ? 'Một thuế suất' : Number(v) === 2 ? 'Nhiều thuế suất' : '—' },
     typeVariant(v) { return Number(v) === 1 ? 'success' : Number(v) === 2 ? 'warning' : 'light' },
     copyTemplate(templateId) {
       this.$router.push({

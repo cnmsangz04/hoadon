@@ -95,7 +95,7 @@ public class InvoiceEntity {
     @Column(name = "discount", nullable = false)
     private Double discount;
 
-    @Column(name = "vat_rate", nullable = false)
+    @Column(name = "vat_rate")
     private Short vatRate;
 
     @Column(name = "vat_rate_other", nullable = false)

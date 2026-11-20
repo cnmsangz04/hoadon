@@ -84,6 +84,7 @@ export default {
           icon: 'fas fa-file-invoice-dollar',
           children: [
             { title: 'Hóa đơn GTGT', icon: 'fas fa-receipt', to: '/invoice/vat-invoice/list' },
+            { title: 'Hóa đơn bán hàng', icon: 'fas fa-file-invoice', to: '/invoice/sales-invoice/list' },
           ],
         },
         {

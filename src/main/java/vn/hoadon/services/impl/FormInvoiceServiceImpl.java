@@ -166,7 +166,11 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
     private void validate(FormInvoiceEntity form) {
         if (form.getName() == null || form.getName().isBlank() || form.getName().length() > 255) throw new IllegalArgumentException("Tên mẫu không hợp lệ");
         if (!java.util.Set.of(0, 1).contains(form.getStatus())) throw new IllegalArgumentException("Trạng thái mẫu không hợp lệ");
-        if (form.getCategory() == null || !java.util.Set.of(1, 2).contains(form.getCategory()) || form.getType() == null || !java.util.Set.of(1, 2).contains(form.getType())) throw new IllegalArgumentException("Loại hóa đơn hoặc loại thuế suất không hợp lệ");
+        boolean validTaxType = form.getCategory() != null && form.getType() != null
+                && (form.getCategory() == 2
+                    ? form.getType() == 0
+                    : form.getCategory() == 1 && java.util.Set.of(1, 2).contains(form.getType()));
+        if (form.getCategory() == null || !java.util.Set.of(1, 2).contains(form.getCategory()) || !validTaxType) throw new IllegalArgumentException("Loại hóa đơn hoặc loại thuế suất không hợp lệ");
         if (form.getHaveCode() == null || !java.util.Set.of(0, 1).contains(form.getHaveCode())) throw new IllegalArgumentException("Hình thức có mã/không mã không hợp lệ");
         if (Integer.valueOf(1).equals(form.getStatus()) && form.getTemplateVersionId() == null) throw new IllegalArgumentException("Mẫu chưa có phiên bản thiết kế hợp lệ");
         if (!Integer.valueOf(0).equals(form.getSystem())) return;

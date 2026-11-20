@@ -54,6 +54,12 @@ public class InvoiceServiceImpl implements InvoiceService {
         return mapToDto(page);
     }
 
+    @Override
+    public Page<InvoiceDTO> search(Long companyId, Integer category, String q, Short status, java.time.LocalDate date, Pageable pageable) {
+        Page<InvoiceEntity> page = invoiceRepository.searchByCategory(companyId, category, q, status, date, pageable);
+        return mapToDto(page);
+    }
+
     private Page<InvoiceDTO> mapToDto(Page<InvoiceEntity> page) {
         // Preload related forms and users to avoid N+1 lookups
         Map<Long, FormInvoiceEntity> formCache = new HashMap<>();
@@ -79,6 +85,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                     form = InvoiceTemplateBindingService.frozenForm(inv, form);
                     dto.formCode = form.getFormCode();
                     dto.serial = form.getSerial();
+                    dto.category = form.getCategory();
                 }
             }
             // Populate customerName from invoices.customer JSON
@@ -203,8 +210,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setVatAmount(src.getVatAmount());
         e.setAmount(src.getAmount());
         e.setAmountInWords(src.getAmountInWords());
-        e.setVatRate(src.getVatRate());
-        e.setVatRateOther(src.getVatRateOther());
+        boolean salesInvoice = sourceForm != null && Integer.valueOf(0).equals(sourceForm.getType());
+        e.setVatRate(salesInvoice ? null : src.getVatRate());
+        e.setVatRateOther(salesInvoice ? 0 : src.getVatRateOther());
         e.setBill(src.getBill());
         e.setOthers(src.getOthers());
         e.setRelated(src.getRelated());
@@ -253,6 +261,15 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
         if (!Integer.valueOf(0).equals(form.getSystem()) || companyId == null || !companyId.equals(form.getCompanyId())) {
             throw new IllegalArgumentException("Mẫu hóa đơn không thuộc công ty hiện tại");
+        }
+        if (form.getCategory() == null || (form.getCategory() != 1 && form.getCategory() != 2)) {
+            throw new IllegalArgumentException("Loại mẫu hóa đơn không hợp lệ");
+        }
+        boolean validTaxType = Integer.valueOf(2).equals(form.getCategory())
+                ? Integer.valueOf(0).equals(form.getType())
+                : form.getType() != null && (Integer.valueOf(1).equals(form.getType()) || Integer.valueOf(2).equals(form.getType()));
+        if (!validTaxType) {
+            throw new IllegalArgumentException("Loại thuế suất của mẫu hóa đơn không hợp lệ");
         }
     }
 
@@ -306,6 +323,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         FormInvoiceEntity selectedForm = selectedFormId == null
                 ? null
                 : formInvoiceRepository.findById(selectedFormId).orElse(null);
+        boolean salesInvoice = selectedForm != null && Integer.valueOf(0).equals(selectedForm.getType());
         e.setName(invoiceTitle(selectedForm, e.getName()));
         e.setNo(p.no);
         e.setDateExport(p.dateExport);
@@ -317,11 +335,11 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setExchangeRate(p.exchangeRate != null ? p.exchangeRate : 1d);
         // Totals
         e.setTotal(p.total != null ? p.total : 0d);
-        e.setVatAmount(p.vatAmount != null ? p.vatAmount : 0d);
-        e.setAmount(p.amount != null ? p.amount : 0d);
+        e.setVatAmount(salesInvoice ? 0d : (p.vatAmount != null ? p.vatAmount : 0d));
+        e.setAmount(salesInvoice ? (p.total != null ? p.total : 0d) : (p.amount != null ? p.amount : 0d));
         e.setAmountInWords(p.amountInWords);
-        e.setVatRate(p.vatRate != null ? p.vatRate : (short)-1);
-        e.setVatRateOther(p.vatRateOther != null ? p.vatRateOther : 0);
+        e.setVatRate(salesInvoice ? null : (p.vatRate != null ? p.vatRate : (short)-1));
+        e.setVatRateOther(salesInvoice ? 0 : (p.vatRateOther != null ? p.vatRateOther : 0));
         // JSON blobs
         e.setBill(null);
         e.setOthers(null);
@@ -341,7 +359,10 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     private String invoiceTitle(FormInvoiceEntity form, String currentName) {
         if (form != null && form.getName() != null && !form.getName().isBlank()) return form.getName().trim();
-        return currentName == null || currentName.isBlank() ? "Hóa đơn giá trị gia tăng" : currentName;
+        if (currentName != null && !currentName.isBlank()) return currentName;
+        return form != null && Integer.valueOf(2).equals(form.getCategory())
+                ? "Hóa đơn bán hàng"
+                : "Hóa đơn giá trị gia tăng";
     }
 
     private void applyInvoiceRelationFields(InvoiceEntity e, InvoicePayload p, boolean isCreate) {

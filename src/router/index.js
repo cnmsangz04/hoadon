@@ -103,6 +103,12 @@ const router = new VueRouter({
 					meta: { requiresUser: true, title: 'Danh sách hóa đơn GTGT' }
 				},
 				{
+					path: '/invoice/sales-invoice/list',
+					name: 'CustomerSalesInvoiceList',
+					component: () => import('@/views/customers/invoices/sales-invoice/list.vue'),
+					meta: { requiresUser: true, title: 'Danh sách hóa đơn bán hàng' }
+				},
+				{
 					path: '/invoice-packages',
 					name: 'CustomerInvoicePackages',
 					component: () => import('@/views/customers/invoice-packages/index.vue'),
@@ -113,6 +119,12 @@ const router = new VueRouter({
 					name: 'CustomerVatInvoiceCreate',
 					component: () => import('@/views/customers/invoices/vat-invoice/create.vue'),
 					meta: { requiresUser: true, title: 'Lập hóa đơn GTGT' }
+				},
+				{
+					path: '/invoice/sales-invoice/create',
+					name: 'CustomerSalesInvoiceCreate',
+					component: () => import('@/views/customers/invoices/sales-invoice/create.vue'),
+					meta: { requiresUser: true, title: 'Lập hóa đơn bán hàng' }
 				},
 				{
 					path: '/invoice/replace',
@@ -149,6 +161,12 @@ const router = new VueRouter({
 					name: 'CustomerVatInvoiceEdit',
 					component: () => import('@/views/customers/invoices/vat-invoice/create.vue'),
 					meta: { requiresUser: true, title: 'Cập nhật hóa đơn GTGT' }
+				},
+				{
+					path: '/invoice/sales-invoice/:id/edit',
+					name: 'CustomerSalesInvoiceEdit',
+					component: () => import('@/views/customers/invoices/sales-invoice/create.vue'),
+					meta: { requiresUser: true, title: 'Cập nhật hóa đơn bán hàng' }
 				},
 				{
 					path: '/imports/invoice',

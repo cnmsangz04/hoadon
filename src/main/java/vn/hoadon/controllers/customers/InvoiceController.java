@@ -99,6 +99,7 @@ public class InvoiceController extends BaseController {
             @AuthenticationPrincipal UserEntity user,
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "status", required = false) Short status,
+            @RequestParam(name = "category", defaultValue = "1") Integer category,
             // Lọc theo ngày lập (dateExport). Frontend gửi yyyy-MM-dd.
             @RequestParam(name = "date", required = false)
             @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
@@ -121,22 +122,34 @@ public class InvoiceController extends BaseController {
         
         int pageIndex = Math.max(page - 1, 0);
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "id"));
-        Page<InvoiceDTO> result = invoiceService.search(companyId, q, status, date, pageable);
+        if (category == null || (category != 1 && category != 2)) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Loại hóa đơn không hợp lệ"));
+        }
+        Page<InvoiceDTO> result = invoiceService.search(companyId, category, q, status, date, pageable);
         return ResponseEntity.ok(new PageDTO<>(result.getContent(), result.getNumber() + 1, result.getSize(), result.getTotalElements(), result.getTotalPages()));
     }
 
     @GetMapping("/prepare")
-    public ResponseEntity<?> prepare(@AuthenticationPrincipal UserEntity user) {
+    public ResponseEntity<?> prepare(
+            @AuthenticationPrincipal UserEntity user,
+            @RequestParam(name = "category", defaultValue = "1") Integer category) {
         permission("invoice-save");
 
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Không xác định được công ty/người dùng"));
         }
         Long companyId = user.getCompanyId();
-        // 1) Active VAT form
-        FormInvoiceEntity activeVatForm = templateBindings.activeForm(companyId, 1);
+        if (category == null || (category != 1 && category != 2)) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Loại hóa đơn không hợp lệ"));
+        }
+        // 1) Active form for the requested invoice category
+        FormInvoiceEntity activeVatForm = templateBindings.activeForm(companyId, category);
         if (activeVatForm == null) {
-            return ResponseEntity.badRequest().body(new ErrorDTO("Chưa có mẫu hóa đơn GTGT được kích hoạt"));
+            return ResponseEntity.badRequest().body(new ErrorDTO(
+                    category == 2 ? "Chưa có mẫu hóa đơn bán hàng được kích hoạt" : "Chưa có mẫu hóa đơn GTGT được kích hoạt"));
+        }
+        if (category == 2 && !Integer.valueOf(0).equals(activeVatForm.getType())) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Mẫu hóa đơn bán hàng phải có form_invoices.type = 0 (đã bao gồm thuế)"));
         }
         // 2) Accepted register invoice (status=6), pick latest by effective_date (deterministic, limit 1)
         java.util.List<RegisterInvoiceEntity> acceptedList = registerInvoiceRepository.findLatestAccepted(companyId, org.springframework.data.domain.PageRequest.of(0, 1));
@@ -144,12 +157,13 @@ public class InvoiceController extends BaseController {
         if (latestAccepted == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Chưa có tờ khai được chấp nhận"));
         }
-        // 3) Vat category requires invoice_types contain HDGTGT (array of strings)
-        if (activeVatForm.getCategory() != null && activeVatForm.getCategory() == 1) {
-            java.util.List<String> invoiceTypes = safeList(latestAccepted.getInvoiceTypes());
-            if (!containsToken(invoiceTypes, "HDGTGT")) {
-                return ResponseEntity.badRequest().body(new ErrorDTO("Tờ khai không đăng ký loại hóa đơn GTGT"));
-            }
+        // 3) The accepted declaration must contain the requested invoice category.
+        java.util.List<String> invoiceTypes = safeList(latestAccepted.getInvoiceTypes());
+        String requiredType = category == 2 ? "HDBHang" : "HDGTGT";
+        if (!containsToken(invoiceTypes, requiredType)) {
+            return ResponseEntity.badRequest().body(new ErrorDTO(category == 2
+                    ? "Tờ khai không đăng ký loại hóa đơn bán hàng"
+                    : "Tờ khai không đăng ký loại hóa đơn GTGT"));
         }
         // 4) Check invoice_forms CMa/KCMa depending on haveCode (array of strings)
         java.util.List<String> invoiceForms = safeList(latestAccepted.getInvoiceForms());
@@ -167,6 +181,7 @@ public class InvoiceController extends BaseController {
         dto.serial = activeVatForm.getSerial();
         dto.haveCode = activeVatForm.getHaveCode();
         dto.formType = activeVatForm.getType();
+        dto.category = activeVatForm.getCategory();
         dto.registerId = latestAccepted.getId();
         dto.registerEffectiveDate = latestAccepted.getEffectiveDate() != null ? latestAccepted.getEffectiveDate().toString() : null;
         dto.companyId = user.getCompanyId();
@@ -377,6 +392,7 @@ public class InvoiceController extends BaseController {
                 resp.put("serial", form.getSerial());
                 resp.put("haveCode", form.getHaveCode());
                 resp.put("formType", form.getType());
+                resp.put("category", form.getCategory());
             }
         }
         // Parse JSON fields
@@ -577,7 +593,7 @@ public class InvoiceController extends BaseController {
         }
     }
     public static class ErrorDTO { public String message; public ErrorDTO(String m){ this.message = m; } }
-    public static class PrepareDTO { public Long formId; public String formName; public String formCode; public String serial; public Integer haveCode; public Integer formType; public Long registerId; public String registerEffectiveDate; public Long companyId; }
+    public static class PrepareDTO { public Long formId; public String formName; public String formCode; public String serial; public Integer haveCode; public Integer formType; public Integer category; public Long registerId; public String registerEffectiveDate; public Long companyId; }
 
     // Incoming request from Vue create form
     public static class CreateRequest {

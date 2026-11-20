@@ -230,7 +230,7 @@ export default {
   },
   methods: {
     categoryLabel(v) { return Number(v) === 1 ? 'Hóa đơn giá trị gia tăng' : Number(v) === 2 ? 'Hóa đơn bán hàng' : '' },
-    typeLabel(v) { return Number(v) === 1 ? 'Một thuế suất' : Number(v) === 2 ? 'Nhiều thuế suất' : '' },
+    typeLabel(v) { return Number(v) === 0 ? 'Đã bao gồm thuế' : Number(v) === 1 ? 'Một thuế suất' : Number(v) === 2 ? 'Nhiều thuế suất' : '' },
     composeSerial() {
       const c1 = this.categoryChar
       const c2 = this.serialCK || 'C'

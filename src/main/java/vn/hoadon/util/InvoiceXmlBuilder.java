@@ -36,6 +36,7 @@ public final class InvoiceXmlBuilder {
                 ? inv.getIdAttr()
                 : java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
         String pban = "2.1.1";
+        boolean salesInvoice = form != null && Integer.valueOf(0).equals(form.getType());
         String thdon = invoiceTitle(inv, form);
         String khmshdon = form != null && form.getFormCode() != null ? form.getFormCode() : "";
         String khhdon = form != null && form.getSerial() != null ? form.getSerial() : "";
@@ -87,8 +88,13 @@ public final class InvoiceXmlBuilder {
           .append(tag("KHHDon", khhdon))
           .append(tag("SHDon", shdon))
           .append(tag("MHSo", mhso))
-          .append(tag("NLap", nlap))
-          .append(tag("HDCTTChinh", hdcttChinh))
+          .append(tag("NLap", nlap));
+        if (salesInvoice) {
+            sb.append(tag("HDDCKPTQuan", "0"));
+        } else {
+            sb.append(tag("HDCTTChinh", hdcttChinh));
+        }
+        sb
           .append(tag("SBKe", sbke))
           .append(tag("NBKe", nbke))
           .append(tag("DVTTe", dvtte))
@@ -142,8 +148,8 @@ public final class InvoiceXmlBuilder {
           String unit = toStringOrDefault(d.get("unit"), "");
           String qty = toStringOrDefault(d.get("quantity"), "");
           String price = toStringOrDefault(d.get("price"), "");
-          String tlckhau = toStringOrDefault(d.get("num"), "");
-          String stckhau = toStringOrDefault(d.get("num"), "");
+          String tlckhau = firstText(d.get("discountRate"), d.get("discount_rate"), d.get("TLCKhau"));
+          String stckhau = firstText(d.get("discountAmount"), d.get("discount_amount"), d.get("STCKhau"));
           String total = toStringOrDefault(d.get("total"), "");
           String vatRate = oneVatRateForm ? invoiceVatRate : formatVatRate(d.get("vatRate"), d.get("vatRateOther"));
           String vatAmount = toStringOrDefault(d.get("vatAmount"), "");
@@ -158,51 +164,55 @@ public final class InvoiceXmlBuilder {
             .append(tag("DGia", price))
             .append(tag("TLCKhau", tlckhau))
             .append(tag("STCKhau", stckhau))
-            .append(tag("ThTien", total))
-            .append(tag("TSuat", vatRate))
-            .append("<TTKhac>")
-            .append("<TTin>")
-            .append(tag("TTruong", "TThue"))
-            .append(tag("KDLieu", "numeric"))
-            .append(tag("DLieu", vatAmount))
-            .append("</TTin>")
-            .append("<TTin>")
-            .append(tag("TTruong", "TCong"))
-            .append(tag("KDLieu", "numeric"))
-            .append(tag("DLieu", amount))
-            .append("</TTin>")
-            .append("</TTKhac>")
-            .append("</HHDVu>");
+            .append(tag("ThTien", total));
+          if (!salesInvoice) {
+              sb.append(tag("TSuat", vatRate))
+                .append("<TTKhac>")
+                .append("<TTin>")
+                .append(tag("TTruong", "TThue"))
+                .append(tag("KDLieu", "numeric"))
+                .append(tag("DLieu", vatAmount))
+                .append("</TTin>")
+                .append("<TTin>")
+                .append(tag("TTruong", "TCong"))
+                .append(tag("KDLieu", "numeric"))
+                .append(tag("DLieu", amount))
+                .append("</TTin>")
+                .append("</TTKhac>");
+          }
+          sb.append("</HHDVu>");
         }
         sb.append("</DSHHDVu>");
 
-        Map<String, Totals> totalsByRate = new LinkedHashMap<>();
-        if (oneVatRateForm) {
-            Totals t = totalsByRate.computeIfAbsent(invoiceVatRate, k -> new Totals());
-            t.thTien = inv.getTotal() != null ? inv.getTotal() : 0d;
-            t.tThue = inv.getVatAmount() != null ? inv.getVatAmount() : 0d;
-        } else {
-            for (Map<String,Object> d : details) {
-                String rateKey = formatVatRate(d.get("vatRate"), d.get("vatRateOther"));
-                Totals t = totalsByRate.computeIfAbsent(rateKey, k -> new Totals());
-                t.thTien += toDouble(d.get("total"));
-                t.tThue += toDouble(d.get("vatAmount"));
+        sb.append("<TToan>");
+        if (!salesInvoice) {
+            Map<String, Totals> totalsByRate = new LinkedHashMap<>();
+            if (oneVatRateForm) {
+                Totals t = totalsByRate.computeIfAbsent(invoiceVatRate, k -> new Totals());
+                t.thTien = inv.getTotal() != null ? inv.getTotal() : 0d;
+                t.tThue = inv.getVatAmount() != null ? inv.getVatAmount() : 0d;
+            } else {
+                for (Map<String,Object> d : details) {
+                    String rateKey = formatVatRate(d.get("vatRate"), d.get("vatRateOther"));
+                    Totals t = totalsByRate.computeIfAbsent(rateKey, k -> new Totals());
+                    t.thTien += toDouble(d.get("total"));
+                    t.tThue += toDouble(d.get("vatAmount"));
+                }
             }
+            sb.append("<THTTLTSuat>");
+            for (Map.Entry<String, Totals> e : totalsByRate.entrySet()) {
+                sb.append("<LTSuat>")
+                  .append(tag("TSuat", e.getKey()))
+                  .append(tag("ThTien", trimZeros(e.getValue().thTien)))
+                  .append(tag("TThue", trimZeros(e.getValue().tThue)))
+                  .append("</LTSuat>");
+            }
+            sb.append("</THTTLTSuat>")
+              .append(tag("TgTCThue", trimZeros(inv.getTotal())))
+              .append(tag("TGTKCThue", "0"))
+              .append(tag("TgTThue", trimZeros(inv.getVatAmount())));
         }
-        sb.append("<TToan>")
-          .append("<THTTLTSuat>");
-        for (Map.Entry<String, Totals> e : totalsByRate.entrySet()) {
-            sb.append("<LTSuat>")
-              .append(tag("TSuat", e.getKey()))
-              .append(tag("ThTien", trimZeros(e.getValue().thTien)))
-              .append(tag("TThue", trimZeros(e.getValue().tThue)))
-              .append("</LTSuat>");
-        }
-        sb.append("</THTTLTSuat>")
-          .append(tag("TgTCThue", trimZeros(inv.getTotal())))
-          .append(tag("TGTKCThue", "0"))
-          .append(tag("TgTThue", trimZeros(inv.getVatAmount())))
-          .append("<DSLPhi>")
+        sb.append("<DSLPhi>")
           .append("</DSLPhi>")
           .append(tag("TTCKTMai", trimZeros(inv.getDiscountAmount())))
           .append(tag("TGTKhac", "0"))

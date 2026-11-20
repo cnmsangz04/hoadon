@@ -16,6 +16,7 @@ public interface InvoiceService {
 
     // Lọc theo ngày lập (dateExport). Nếu date=null thì bỏ qua lọc.
     Page<InvoiceDTO> search(Long companyId, String q, Short status, java.time.LocalDate date, Pageable pageable);
+    Page<InvoiceDTO> search(Long companyId, Integer category, String q, Short status, java.time.LocalDate date, Pageable pageable);
 
     // Minimal payload contract matching Vue form
     class InvoicePayload {
