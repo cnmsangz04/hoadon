@@ -21,7 +21,7 @@
           <i class="fas fa-sync-alt"></i>
           Làm mới
         </b-button>
-        <b-button size="sm" variant="outline-success" class="mr-2" to="/imports/invoice">
+        <b-button size="sm" variant="outline-success" class="mr-2" to="/imports/invoice?category=1">
           <i class="fas fa-file-invoice"></i>
           Import hóa đơn
         </b-button>
@@ -558,7 +558,7 @@ export default {
     goEdit (item) { this.$router.push({ name: 'CustomerVatInvoiceEdit', params: { id: item.id } }) },
     createErrorMessage (item) {
       if (!item || !item.id) return
-      this.$router.push({ name: 'CustomerErrorMessageCreate', query: { ids: String(item.id) } })
+      this.$router.push({ name: 'CustomerErrorMessageCreate', query: { ids: String(item.id), category: '1' } })
     },
 
     onPageSizeChange (size) {

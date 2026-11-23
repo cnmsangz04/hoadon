@@ -67,8 +67,9 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
     private RegisterInvoiceRepository registerInvoiceRepository;
 
     @Override
-    public ResponseEntity<byte[]> template() {
+    public ResponseEntity<byte[]> template(Integer category) {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            boolean salesInvoice = Integer.valueOf(2).equals(category);
             Sheet sheet = workbook.createSheet("Import hóa đơn");
             CreationHelper helper = workbook.getCreationHelper();
             CellStyle headerStyle = workbook.createCellStyle();
@@ -84,7 +85,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
             headerStyle.setWrapText(true);
             headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
 
-            String[] headers = {
+            String[] commonHeaders = {
                     "Mã hóa đơn import\n(cùng mã gom thành 1 hóa đơn)",
                     "Ngày lập\n(dd/MM/yyyy)",
                     "Hình thức thanh toán\n(Tiền mặt/Chuyển khoản)",
@@ -102,12 +103,11 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
                     "Đơn vị tính",
                     "Số lượng",
                     "Đơn giá",
-                    "Thành tiền",
-                    "Thuế suất\n(0/5/8/10/KCT/KKKNT/Khác)",
-                    "Thuế suất khác\n(khi Thuế suất = Khác)",
-                    "Tính chất\n(1 HH,DV; 2 KM; 3 CK; 4 Ghi chú)",
-                    "Ghi chú"
+                    "Thành tiền"
             };
+            String[] headers = salesInvoice
+                    ? concat(commonHeaders, "Tính chất\n(1 HH,DV; 2 KM; 3 CK; 4 Ghi chú)", "Ghi chú")
+                    : concat(commonHeaders, "Thuế suất\n(0/5/8/10/KCT/KKKNT/Khác)", "Thuế suất khác\n(khi Thuế suất = Khác)", "Tính chất\n(1 HH,DV; 2 KM; 3 CK; 4 Ghi chú)", "Ghi chú");
             Row header = sheet.createRow(0);
             header.setHeightInPoints(48);
             Drawing<?> drawing = sheet.createDrawingPatriarch();
@@ -119,24 +119,34 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
                 sheet.setColumnWidth(i, Math.min(10000, Math.max(4200, visibleLength * 300)));
             }
             sheet.setColumnWidth(0, 9500);
-            sheet.setColumnWidth(18, 9500);
-            sheet.setColumnWidth(19, 9000);
-            sheet.setColumnWidth(20, 10000);
+            sheet.setColumnWidth(salesInvoice ? 18 : 20, 10000);
             addHeaderComment(sheet, helper, drawing, header.getCell(0),
                     "Các dòng cùng Mã hóa đơn import sẽ được gom thành 1 hóa đơn có nhiều dòng hàng. Đổi mã khi muốn tạo hóa đơn khác.");
-            addHeaderComment(sheet, helper, drawing, header.getCell(18),
-                    "Nhập 0, 5, 8, 10, KCT, KKKNT hoặc Khác. Nếu dùng mẫu một thuế suất, các dòng cùng mã phải cùng thuế suất.");
-            addHeaderComment(sheet, helper, drawing, header.getCell(19),
-                    "Chỉ nhập khi cột Thuế suất là Khác hoặc -3.");
-            addHeaderComment(sheet, helper, drawing, header.getCell(20),
-                    "1 HH,DV; 2 Khuyến mại; 3 Chiết khấu; 4 Ghi chú.");
+            if (!salesInvoice) {
+                sheet.setColumnWidth(18, 9500);
+                sheet.setColumnWidth(19, 9000);
+                sheet.setColumnWidth(20, 10000);
+                addHeaderComment(sheet, helper, drawing, header.getCell(18),
+                        "Nhập 0, 5, 8, 10, KCT, KKKNT hoặc Khác. Nếu dùng mẫu một thuế suất, các dòng cùng mã phải cùng thuế suất.");
+                addHeaderComment(sheet, helper, drawing, header.getCell(19),
+                        "Chỉ nhập khi cột Thuế suất là Khác hoặc -3.");
+                addHeaderComment(sheet, helper, drawing, header.getCell(20),
+                        "1 HH,DV; 2 Khuyến mại; 3 Chiết khấu; 4 Ghi chú.");
+            } else {
+                addHeaderComment(sheet, helper, drawing, header.getCell(18),
+                        "1 HH,DV; 2 Khuyến mại; 3 Chiết khấu; 4 Ghi chú. Hóa đơn bán hàng không sử dụng thuế suất.");
+            }
             sheet.createFreezePane(0, 1);
             sheet.setAutoFilter(new CellRangeAddress(0, 0, 0, headers.length - 1));
             addDropdown(sheet, 1, 500, 2, "Tiền mặt", "Chuyển khoản", "Tiền mặt/Chuyển khoản", "1", "2", "3");
-            addDropdown(sheet, 1, 500, 18, "0", "5", "8", "10", "KCT", "KKKNT", "Khác", "-1", "-2", "-3");
-            addDropdown(sheet, 1, 500, 20, "1", "2", "3", "4");
+            if (!salesInvoice) addDropdown(sheet, 1, 500, 18, "0", "5", "8", "10", "KCT", "KKKNT", "Khác", "-1", "-2", "-3");
+            addDropdown(sheet, 1, 500, salesInvoice ? 18 : 20, "1", "2", "3", "4");
 
-            Object[][] samples = {
+            Object[][] samples = salesInvoice ? new Object[][] {
+                    {"HD001", LocalDate.now(), "Chuyển khoản", "KH001", "Công ty TNHH Minh An", "Nguyễn Văn A", "0101234567", "12 Nguyễn Trãi, Hà Nội", "ketoan@minhan.vn", "0901000001", "VCB", "001100000001", "SP001", "Dịch vụ tư vấn", "Lần", 1, 3000000, "", 1, ""},
+                    {"HD001", LocalDate.now(), "Chuyển khoản", "KH001", "Công ty TNHH Minh An", "Nguyễn Văn A", "0101234567", "12 Nguyễn Trãi, Hà Nội", "ketoan@minhan.vn", "0901000001", "VCB", "001100000001", "SP002", "Phí triển khai", "Gói", 1, 2000000, "", 1, ""},
+                    {"HD002", LocalDate.now(), "Tiền mặt", "KH002", "Hộ kinh doanh Bình Minh", "Trần Thị B", "", "25 Lê Lợi, Đà Nẵng", "binhminh@example.com", "0902000002", "", "", "DV001", "Dịch vụ bảo trì", "Tháng", 2, 500000, "", 1, ""}
+            } : new Object[][] {
                     {"HD001", LocalDate.now(), "Chuyển khoản", "KH001", "Công ty TNHH Minh An", "Nguyễn Văn A", "0101234567", "12 Nguyễn Trãi, Hà Nội", "ketoan@minhan.vn", "0901000001", "VCB", "001100000001", "SP001", "Dịch vụ tư vấn", "Lần", 1, 3000000, "", 10, "", 1, ""},
                     {"HD001", LocalDate.now(), "Chuyển khoản", "KH001", "Công ty TNHH Minh An", "Nguyễn Văn A", "0101234567", "12 Nguyễn Trãi, Hà Nội", "ketoan@minhan.vn", "0901000001", "VCB", "001100000001", "SP002", "Phí triển khai", "Gói", 1, 2000000, "", 10, "", 1, ""},
                     {"HD002", LocalDate.now(), "Tiền mặt", "KH002", "Hộ kinh doanh Bình Minh", "Trần Thị B", "", "25 Lê Lợi, Đà Nẵng", "binhminh@example.com", "0902000002", "", "", "DV001", "Dịch vụ bảo trì", "Tháng", 2, 500000, "", 0, "", 1, ""}
@@ -166,13 +176,13 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
                     "HD002 là mã khác nên sẽ tạo hóa đơn khác.");
 
             Sheet guide = workbook.createSheet("Hướng dẫn");
-            writeGuideSheet(workbook, guide);
+            writeGuideSheet(workbook, guide, salesInvoice);
             guide.setColumnWidth(0, 18000);
 
             workbook.write(out);
             HttpHeaders headersOut = new HttpHeaders();
             headersOut.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-            headersOut.setContentDisposition(ContentDisposition.attachment().filename("mau-import-hoa-don.xlsx").build());
+            headersOut.setContentDisposition(ContentDisposition.attachment().filename(salesInvoice ? "mau-import-hoa-don-ban-hang.xlsx" : "mau-import-hoa-don-gtgt.xlsx").build());
             return new ResponseEntity<>(out.toByteArray(), headersOut, HttpStatus.OK);
         } catch (Exception ex) {
             throw new IllegalStateException("Không tạo được mẫu Excel import hóa đơn: " + ex.getMessage(), ex);
@@ -206,7 +216,13 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         sheet.addValidationData(validation);
     }
 
-    private void writeGuideSheet(Workbook workbook, Sheet guide) {
+    private String[] concat(String[] base, String... tail) {
+        String[] out = Arrays.copyOf(base, base.length + tail.length);
+        System.arraycopy(tail, 0, out, base.length, tail.length);
+        return out;
+    }
+
+    private void writeGuideSheet(Workbook workbook, Sheet guide, boolean salesInvoice) {
         CellStyle titleStyle = workbook.createCellStyle();
         Font titleFont = workbook.createFont();
         titleFont.setBold(true);
@@ -228,21 +244,25 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         row = writeGuideRow(guide, row, "- Các dòng cùng Mã hóa đơn import sẽ được gom thành 1 hóa đơn có nhiều dòng hàng.", null);
         row = writeGuideRow(guide, row, "- Nếu muốn tạo hóa đơn khác, hãy nhập Mã hóa đơn import khác.", null);
         row = writeGuideRow(guide, row, "- Ví dụ trong mẫu: HD001 có 2 dòng hàng nên import ra 1 hóa đơn có 2 dòng hàng; HD002 là hóa đơn khác.", null);
-        row = writeGuideRow(guide, row, "- Sheet Import hóa đơn có sẵn dữ liệu mẫu hợp lệ cho cả mẫu một thuế suất và mẫu nhiều thuế suất.", null);
-        row++;
-        row = writeGuideRow(guide, row, "Khi công ty dùng mẫu một thuế suất", sectionStyle);
-        row = writeGuideRow(guide, row, "- Các dòng cùng Mã hóa đơn import phải có cùng Thuế suất và cùng Thuế suất khác.", null);
-        row = writeGuideRow(guide, row, "- Ví dụ đúng: HD001 có 2 dòng và cả 2 dòng đều Thuế suất = 10.", null);
-        row = writeGuideRow(guide, row, "- Ví dụ sai: HD001 dòng 1 Thuế suất = 10, dòng 2 Thuế suất = 8.", null);
-        row++;
-        row = writeGuideRow(guide, row, "Khi công ty dùng mẫu nhiều thuế suất", sectionStyle);
-        row = writeGuideRow(guide, row, "- Cùng một Mã hóa đơn import có thể có nhiều Thuế suất khác nhau.", null);
-        row = writeGuideRow(guide, row, "- Ví dụ: một dòng dịch vụ 10% và một dòng hàng hóa 8% trong cùng một hóa đơn.", null);
+        if (salesInvoice) {
+            row = writeGuideRow(guide, row, "- Đây là mẫu dành cho hóa đơn bán hàng; không nhập thuế suất và tiền thuế.", null);
+        } else {
+            row = writeGuideRow(guide, row, "- Sheet Import hóa đơn có sẵn dữ liệu mẫu hợp lệ cho cả mẫu một thuế suất và mẫu nhiều thuế suất.", null);
+            row++;
+            row = writeGuideRow(guide, row, "Khi công ty dùng mẫu một thuế suất", sectionStyle);
+            row = writeGuideRow(guide, row, "- Các dòng cùng Mã hóa đơn import phải có cùng Thuế suất và cùng Thuế suất khác.", null);
+            row = writeGuideRow(guide, row, "- Ví dụ đúng: HD001 có 2 dòng và cả 2 dòng đều Thuế suất = 10.", null);
+            row = writeGuideRow(guide, row, "- Ví dụ sai: HD001 dòng 1 Thuế suất = 10, dòng 2 Thuế suất = 8.", null);
+            row++;
+            row = writeGuideRow(guide, row, "Khi công ty dùng mẫu nhiều thuế suất", sectionStyle);
+            row = writeGuideRow(guide, row, "- Cùng một Mã hóa đơn import có thể có nhiều Thuế suất khác nhau.", null);
+            row = writeGuideRow(guide, row, "- Ví dụ: một dòng dịch vụ 10% và một dòng hàng hóa 8% trong cùng một hóa đơn.", null);
+        }
         row++;
         row = writeGuideRow(guide, row, "Giá trị thường dùng", sectionStyle);
         row = writeGuideRow(guide, row, "- Ngày lập: yyyy-MM-dd hoặc dd/MM/yyyy; bỏ trống sẽ lấy ngày hiện tại.", null);
         row = writeGuideRow(guide, row, "- Hình thức thanh toán: Tiền mặt, Chuyển khoản, Tiền mặt/Chuyển khoản hoặc 1, 2, 3.", null);
-        row = writeGuideRow(guide, row, "- Thuế suất: 0, 5, 8, 10; KCT hoặc -1; KKKNT hoặc -2; Khác hoặc -3 và nhập thêm Thuế suất khác.", null);
+        if (!salesInvoice) row = writeGuideRow(guide, row, "- Thuế suất: 0, 5, 8, 10; KCT hoặc -1; KKKNT hoặc -2; Khác hoặc -3 và nhập thêm Thuế suất khác.", null);
         row = writeGuideRow(guide, row, "- Tính chất: 1 HH,DV; 2 Khuyến mại; 3 Chiết khấu; 4 Ghi chú.", null);
         writeGuideRow(guide, row, "- Thành tiền có thể để trống, hệ thống tự tính Số lượng x Đơn giá.", null);
     }
@@ -258,8 +278,9 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
     }
 
     @Override
-    public InvoiceImportResultDTO importFile(MultipartFile file, UserEntity user) {
+    public InvoiceImportResultDTO importFile(MultipartFile file, Integer category, UserEntity user) {
         requireUser(user);
+        category = normalizeCategory(category);
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Vui lòng chọn file Excel để import");
         }
@@ -282,6 +303,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
             entity.setCompanyId(companyId);
             entity.setUserId(user.getId());
             entity.setImportType(TYPE_INVOICE);
+            entity.setCategory(category);
             entity.setOriginalFilename(originalName);
             entity.setStoredFilename(storedName);
             entity.setFilePath(target.toString().replace("\\", "/"));
@@ -292,7 +314,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
             entity.setSuccessCount(0);
             entity.setErrorCount(0);
             entity = repository.save(entity);
-            return processStoredFile(entity, user, target);
+            return processStoredFile(entity, category, user, target);
         } catch (IllegalArgumentException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -301,12 +323,13 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
     }
 
     @Override
-    public InvoiceImportResultDTO reimport(Long importId, UserEntity user) {
+    public InvoiceImportResultDTO reimport(Long importId, Integer category, UserEntity user) {
         requireUser(user);
+        category = normalizeCategory(category);
         if (importId == null) {
             throw new IllegalArgumentException("Thiếu ID lần import");
         }
-        InvoiceImportEntity source = repository.findInvoiceImportByIdAndCompanyId(importId, user.getCompanyId())
+        InvoiceImportEntity source = repository.findInvoiceImportByIdAndCompanyIdAndCategory(importId, user.getCompanyId(), category)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy file import của công ty"));
         if (source.getFilePath() == null || source.getFilePath().isBlank()) {
             throw new IllegalArgumentException("Lần import này chưa có đường dẫn file");
@@ -320,6 +343,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         entity.setCompanyId(user.getCompanyId());
         entity.setUserId(user.getId());
         entity.setImportType(TYPE_INVOICE);
+        entity.setCategory(category);
         entity.setSourceImportId(source.getId());
         entity.setOriginalFilename(source.getOriginalFilename());
         entity.setStoredFilename(source.getStoredFilename());
@@ -331,21 +355,22 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         entity.setSuccessCount(0);
         entity.setErrorCount(0);
         entity = repository.save(entity);
-        return processStoredFile(entity, user, filePath);
+        return processStoredFile(entity, category, user, filePath);
     }
 
     @Override
-    public Page<InvoiceImportDTO> list(UserEntity user, Pageable pageable) {
+    public Page<InvoiceImportDTO> list(Integer category, UserEntity user, Pageable pageable) {
         requireUser(user);
-        return repository.findInvoiceImportsByCompanyId(user.getCompanyId(), pageable).map(this::toDto);
+        return repository.findInvoiceImportsByCompanyIdAndCategory(user.getCompanyId(), normalizeCategory(category), pageable).map(this::toDto);
     }
 
-    private InvoiceImportResultDTO processStoredFile(InvoiceImportEntity entity, UserEntity user, Path filePath) {
+    private InvoiceImportResultDTO processStoredFile(InvoiceImportEntity entity, Integer category, UserEntity user, Path filePath) {
         try {
-            FormInvoiceEntity form = resolveActiveVatForm(user.getCompanyId());
+            category = normalizeCategory(category);
+            FormInvoiceEntity form = resolveActiveForm(user.getCompanyId(), category);
             List<String> errors = new ArrayList<>();
-            List<ImportInvoiceGroup> groups = readGroups(filePath, errors);
-            validateOneVatRateForm(form, groups, errors);
+            List<ImportInvoiceGroup> groups = readGroups(filePath, category, errors);
+            if (category == 1) validateOneVatRateForm(form, groups, errors);
             entity.setTotalRows(groups.stream().mapToInt(g -> g.rows.size()).sum());
             entity.setInvoiceCount(groups.size());
             entity.setItemCount(groups.size());
@@ -356,7 +381,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
 
             List<String> lookupCodes = new ArrayList<>();
             for (ImportInvoiceGroup group : groups) {
-                InvoiceService.InvoicePayload payload = group.toPayload(form.getId());
+                InvoiceService.InvoicePayload payload = group.toPayload(form.getId(), category);
                 InvoiceEntity saved = invoiceService.create(payload, user.getCompanyId(), user.getId());
                 if (saved == null || saved.getId() == null) {
                     errors.add("Không lưu được hóa đơn import mã " + group.importCode);
@@ -382,7 +407,8 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         }
     }
 
-    private List<ImportInvoiceGroup> readGroups(Path filePath, List<String> errors) throws Exception {
+    private List<ImportInvoiceGroup> readGroups(Path filePath, Integer category, List<String> errors) throws Exception {
+        boolean salesInvoice = Integer.valueOf(2).equals(category);
         Map<String, ImportInvoiceGroup> map = new LinkedHashMap<>();
         try (InputStream input = Files.newInputStream(filePath); Workbook workbook = WorkbookFactory.create(input)) {
             Sheet sheet = workbook.getNumberOfSheets() > 0 ? workbook.getSheetAt(0) : null;
@@ -435,13 +461,15 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
                 if (price == null) price = 0d;
                 if (total == null) total = quantity * price;
 
-                Short vatRate = vatRate(row, 18);
-                Integer vatRateOther = integer(row, 19);
-                if (vatRate == null) vatRate = 10;
-                if (vatRate == -3 && vatRateOther == null) vatRateOther = 0;
-                double effectiveRate = vatRate == -3 ? safeNumber(vatRateOther) : safeNumber(vatRate);
-                double vatAmount = effectiveRate < 0 ? 0d : Math.round(total * effectiveRate / 100d);
-                double amount = total + vatAmount;
+                Short vatRate = salesInvoice ? null : vatRate(row, 18);
+                Integer vatRateOther = salesInvoice ? 0 : integer(row, 19);
+                if (!salesInvoice) {
+                    if (vatRate == null) vatRate = 10;
+                    if (vatRate == -3 && vatRateOther == null) vatRateOther = 0;
+                }
+                double effectiveRate = salesInvoice ? 0d : (vatRate == -3 ? safeNumber(vatRateOther) : safeNumber(vatRate));
+                double vatAmount = salesInvoice ? 0d : (effectiveRate < 0 ? 0d : Math.round(total * effectiveRate / 100d));
+                double amount = salesInvoice ? total : total + vatAmount;
 
                 Map<String, Object> detail = new LinkedHashMap<>();
                 detail.put("num", group.rows.size() + 1);
@@ -458,8 +486,8 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
                 detail.put("vatRateOther", vatRateOther != null ? vatRateOther : 0);
                 detail.put("vatAmount", vatAmount);
                 detail.put("amount", amount);
-                detail.put("feature", feature(row, 20));
-                String note = text(row, 21);
+                detail.put("feature", feature(row, salesInvoice ? 18 : 20));
+                String note = text(row, salesInvoice ? 19 : 21);
                 if (!note.isBlank()) detail.put("note", note);
                 group.rows.add(detail);
             }
@@ -499,30 +527,43 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         return rate + ":" + other;
     }
 
-    private FormInvoiceEntity resolveActiveVatForm(Long companyId) throws Exception {
-        FormInvoiceEntity activeVatForm = templateBindings.activeForm(companyId, 1);
-        if (activeVatForm == null) {
-            throw new IllegalArgumentException("Chưa có mẫu hóa đơn GTGT được kích hoạt");
+    private FormInvoiceEntity resolveActiveForm(Long companyId, Integer category) throws Exception {
+        FormInvoiceEntity activeForm = templateBindings.activeForm(companyId, category);
+        if (activeForm == null) {
+            throw new IllegalArgumentException(Integer.valueOf(2).equals(category)
+                    ? "Chưa có mẫu hóa đơn bán hàng được kích hoạt"
+                    : "Chưa có mẫu hóa đơn GTGT được kích hoạt");
+        }
+        if (Integer.valueOf(2).equals(category) && !Integer.valueOf(0).equals(activeForm.getType())) {
+            throw new IllegalArgumentException("Mẫu hóa đơn bán hàng phải có form_invoices.type = 0 (đã bao gồm thuế)");
+        }
+        if (Integer.valueOf(1).equals(category) && (activeForm.getType() == null || (activeForm.getType() != 1 && activeForm.getType() != 2))) {
+            throw new IllegalArgumentException("Loại thuế suất của mẫu hóa đơn GTGT không hợp lệ");
         }
         List<RegisterInvoiceEntity> acceptedList = registerInvoiceRepository.findLatestAccepted(companyId, org.springframework.data.domain.PageRequest.of(0, 1));
         RegisterInvoiceEntity latestAccepted = acceptedList != null && !acceptedList.isEmpty() ? acceptedList.get(0) : null;
         if (latestAccepted == null) {
             throw new IllegalArgumentException("Chưa có tờ khai được chấp nhận");
         }
-        if (activeVatForm.getCategory() != null && activeVatForm.getCategory() == 1) {
+        if (activeForm.getCategory() != null && activeForm.getCategory() == 1) {
             List<String> invoiceTypes = safeList(latestAccepted.getInvoiceTypes());
             if (!containsToken(invoiceTypes, "HDGTGT")) {
                 throw new IllegalArgumentException("Tờ khai không đăng ký loại hóa đơn GTGT");
             }
+        } else if (activeForm.getCategory() != null && activeForm.getCategory() == 2) {
+            List<String> invoiceTypes = safeList(latestAccepted.getInvoiceTypes());
+            if (!containsToken(invoiceTypes, "HDBHang")) {
+                throw new IllegalArgumentException("Tờ khai không đăng ký loại hóa đơn bán hàng");
+            }
         }
         List<String> invoiceForms = safeList(latestAccepted.getInvoiceForms());
-        Integer haveCode = activeVatForm.getHaveCode();
+        Integer haveCode = activeForm.getHaveCode();
         boolean requireCMa = haveCode != null && haveCode == 1;
         boolean okForm = requireCMa ? containsToken(invoiceForms, "CMa") : containsToken(invoiceForms, "KCMa");
         if (!okForm) {
             throw new IllegalArgumentException(requireCMa ? "Tờ khai không đăng ký hình thức Cấp mã" : "Tờ khai không đăng ký hình thức Không cấp mã");
         }
-        return activeVatForm;
+        return activeForm;
     }
 
     private void markError(InvoiceImportEntity entity, List<String> errors) {
@@ -544,6 +585,7 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         dto.userId = e.getUserId();
         dto.sourceImportId = e.getSourceImportId();
         dto.importType = e.getImportType();
+        dto.category = e.getCategory() != null ? e.getCategory() : 1;
         dto.originalFilename = e.getOriginalFilename();
         dto.storedFilename = e.getStoredFilename();
         dto.filePath = e.getFilePath();
@@ -583,6 +625,10 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         if (user == null || user.getCompanyId() == null) {
             throw new IllegalArgumentException("Không xác định được công ty/người dùng");
         }
+    }
+
+    private Integer normalizeCategory(Integer category) {
+        return category != null && category == 2 ? 2 : 1;
     }
 
     private String buildStoredFileName(String originalName) {
@@ -813,7 +859,8 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
         Map<String, Object> customer;
         List<Map<String, Object>> rows = new ArrayList<>();
 
-        InvoiceService.InvoicePayload toPayload(Long formId) {
+        InvoiceService.InvoicePayload toPayload(Long formId, Integer category) {
+            boolean salesInvoice = Integer.valueOf(2).equals(category);
             double total = rows.stream()
                     .filter(r -> Objects.equals(Number.class.cast(r.get("feature")).intValue(), 1))
                     .mapToDouble(r -> safeNumber((Number) r.get("total")))
@@ -841,8 +888,8 @@ public class InvoiceImportServiceImpl implements InvoiceImportService {
             payload.amountInWords = numberToWordsVn(amount);
             payload.currency = "VND";
             payload.exchangeRate = 1d;
-            payload.vatRate = rows.isEmpty() ? -1 : ((Number) rows.get(0).get("vatRate")).shortValue();
-            payload.vatRateOther = rows.isEmpty() ? 0 : ((Number) rows.get(0).get("vatRateOther")).intValue();
+            payload.vatRate = salesInvoice ? null : (rows.isEmpty() ? -1 : ((Number) rows.get(0).get("vatRate")).shortValue());
+            payload.vatRateOther = salesInvoice ? 0 : (rows.isEmpty() ? 0 : ((Number) rows.get(0).get("vatRateOther")).intValue());
             return payload;
         }
     }

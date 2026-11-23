@@ -21,9 +21,13 @@
           <i class="fas fa-sync-alt"></i>
           Làm mới
         </b-button>
-        <b-button size="sm" variant="outline-success" class="mr-2" to="/imports/invoice">
+        <b-button size="sm" variant="outline-success" class="mr-2" to="/imports/invoice?category=2">
           <i class="fas fa-file-invoice"></i>
           Import hóa đơn
+        </b-button>
+        <b-button size="sm" variant="outline-info" class="mr-2" to="/reports/invoice/list?category=2">
+          <i class="fas fa-file-excel"></i>
+          Báo cáo Excel
         </b-button>
         <b-button size="sm" variant="success" @click="goCreate">
           <i class="fas fa-file-invoice"></i>
@@ -571,7 +575,7 @@ export default {
     goEdit (item) { this.$router.push({ name: this.editRouteName, params: { id: item.id } }) },
     createErrorMessage (item) {
       if (!item || !item.id) return
-      this.$router.push({ name: 'CustomerErrorMessageCreate', query: { ids: String(item.id) } })
+      this.$router.push({ name: 'CustomerErrorMessageCreate', query: { ids: String(item.id), category: '2' } })
     },
 
     onPageSizeChange (size) {

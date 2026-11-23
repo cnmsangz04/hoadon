@@ -2,10 +2,10 @@
   <div class="container-fluid py-3 import-page">
     <div class="page-head">
       <div>
-        <h4>Import hóa đơn</h4>
+        <h4>Import {{ invoiceCategory === 2 ? 'hóa đơn bán hàng' : 'hóa đơn GTGT' }}</h4>
       </div>
       <div class="page-actions">
-        <b-button size="sm" variant="outline-secondary" to="/invoice/vat-invoice/list">
+        <b-button size="sm" variant="outline-secondary" :to="invoiceListRoute">
           <i class="fas fa-file-invoice mr-1"></i>
           Danh sách hóa đơn
         </b-button>
@@ -103,7 +103,7 @@
             <b-dropdown-item href="#" @click.prevent="reimport(item)">
               Import lại file này
             </b-dropdown-item>
-            <b-dropdown-item v-if="item.importedInvoiceIds" to="/invoice/vat-invoice/list">
+            <b-dropdown-item v-if="item.importedInvoiceIds" :to="invoiceListRoute">
               Xem danh sách hóa đơn
             </b-dropdown-item>
           </b-dropdown>
@@ -158,16 +158,30 @@ export default {
   mounted () {
     this.loadHistory()
   },
+  computed: {
+    invoiceCategory () {
+      return Number(this.$route?.query?.category || 1) === 2 ? 2 : 1
+    },
+    invoiceListRoute () {
+      return this.invoiceCategory === 2 ? '/invoice/sales-invoice/list' : '/invoice/vat-invoice/list'
+    }
+  },
+  watch: {
+    '$route.query.category' () {
+      this.list.current_page = 1
+      this.loadHistory()
+    }
+  },
   methods: {
     async downloadTemplate () {
       this.downloadingTemplate = true
       try {
-        const res = await axios.get('/invoice-imports/template', { responseType: 'blob' })
+        const res = await axios.get('/invoice-imports/template', { params: { category: this.invoiceCategory }, responseType: 'blob' })
         const blob = new Blob([res.data], { type: res.headers['content-type'] || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        link.download = 'mau-import-hoa-don.xlsx'
+        link.download = this.invoiceCategory === 2 ? 'mau-import-hoa-don-ban-hang.xlsx' : 'mau-import-hoa-don-gtgt.xlsx'
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
@@ -189,6 +203,7 @@ export default {
         const form = new FormData()
         form.append('file', this.selectedFile)
         const { data } = await axios.post('/invoice-imports/upload', form, {
+          params: { category: this.invoiceCategory },
           meta: { suppressGlobalErrorToast: true }
         })
         this.lastResult = data
@@ -209,6 +224,7 @@ export default {
       this.lastResult = null
       try {
         const { data } = await axios.post(`/invoice-imports/${item.id}/reimport`, null, {
+          params: { category: this.invoiceCategory },
           meta: { suppressGlobalErrorToast: true }
         })
         this.lastResult = data
@@ -226,7 +242,8 @@ export default {
         const { data } = await axios.get('/invoice-imports', {
           params: {
             page: this.list.current_page,
-            size: this.list.per_page
+            size: this.list.per_page,
+            category: this.invoiceCategory
           },
           meta: { suppressGlobalErrorToast: true }
         })

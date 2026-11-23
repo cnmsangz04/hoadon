@@ -229,11 +229,12 @@ public class ErrorMessageController extends BaseController {
                                               @RequestParam(required = false) String dateFrom,
                                               @RequestParam(required = false) String dateTo,
                                               @RequestParam(required = false) Integer no,
+                                              @RequestParam(required = false) Integer category,
                                               @RequestParam(defaultValue = "1") int page,
                                               @RequestParam(defaultValue = "10") int size) {
         permission("invoice-list");
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), Sort.by(Sort.Direction.DESC, "dateExport"));
-        Page<InvoiceEntity> p = invoiceRepository.searchReleasedForErrorMessage(requireCompanyId(), keyword, parseDate(dateFrom), parseDate(dateTo), no, pageable);
+        Page<InvoiceEntity> p = invoiceRepository.searchReleasedForErrorMessage(requireCompanyId(), category, keyword, parseDate(dateFrom), parseDate(dateTo), no, pageable);
         Page<Map<String, Object>> mapped = p.map(this::invoiceRow);
         return toPage(mapped);
     }
@@ -243,12 +244,17 @@ public class ErrorMessageController extends BaseController {
         permission("invoice-list");
         Long companyId = requireCompanyId();
         List<Long> ids = normalizeIds(body != null ? body.get("ids") : null);
+        Integer category = body != null && body.get("category") != null ? toInteger(body.get("category")) : null;
         if (ids.isEmpty()) return ResponseEntity.ok(Collections.emptyList());
         List<Map<String, Object>> rows = new ArrayList<>();
         for (Long id : ids) {
             InvoiceEntity invoice = invoiceRepository.findById(id).orElse(null);
             if (invoice == null || invoice.getCompanyId() == null || !companyId.equals(invoice.getCompanyId().longValue())) continue;
             if (invoice.getStatus() == null || invoice.getStatus() <= 2) continue;
+            if (category != null) {
+                FormInvoiceEntity form = invoice.getFormId() != null ? formInvoiceRepository.findById(invoice.getFormId().longValue()).orElse(null) : null;
+                if (form == null || !category.equals(form.getCategory())) continue;
+            }
             rows.add(invoiceRow(invoice));
         }
         return ResponseEntity.ok(rows);
@@ -313,6 +319,14 @@ public class ErrorMessageController extends BaseController {
     private Long parseLong(Object value) {
         try {
             return value == null ? null : Long.parseLong(String.valueOf(value).trim());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Integer toInteger(Object value) {
+        try {
+            return value == null ? null : Integer.valueOf(String.valueOf(value).trim());
         } catch (Exception e) {
             return null;
         }

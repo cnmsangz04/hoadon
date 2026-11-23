@@ -74,6 +74,13 @@ public class DashboardController extends BaseController {
         );
         stats.setValueThisYear(totalValue != null ? totalValue : 0.0);
 
+        Long salesIssued = invoiceRepository.countSalesByCompanyIdAndStatusInAndDateExportBetween(
+                companyId, java.util.Arrays.asList((short) 3, (short) 4, (short) 5), startOfYear, endOfYear);
+        Double salesValue = invoiceRepository.sumSalesAmountByCompanyIdAndStatusInAndDateExportBetween(
+                companyId, java.util.Arrays.asList((short) 3, (short) 4, (short) 5), startOfYear, endOfYear);
+        stats.setSalesIssuedThisYear(salesIssued != null ? salesIssued : 0L);
+        stats.setSalesValueThisYear(salesValue != null ? salesValue : 0.0);
+
         return ResponseEntity.ok(stats);
     }
 

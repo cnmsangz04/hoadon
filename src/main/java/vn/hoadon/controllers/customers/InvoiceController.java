@@ -321,7 +321,8 @@ public class InvoiceController extends BaseController {
     public ResponseEntity<?> lookupProcessingInvoice(
             @AuthenticationPrincipal UserEntity user,
             @RequestParam(name = "no") Integer no,
-            @RequestParam(name = "invoiceType") Short invoiceType
+            @RequestParam(name = "invoiceType") Short invoiceType,
+            @RequestParam(name = "category", defaultValue = "1") Integer category
     ) {
         permission("invoice-list");
 
@@ -334,9 +335,12 @@ public class InvoiceController extends BaseController {
         if (invoiceType == null || (invoiceType != 1 && invoiceType != 2)) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Loại xử lý hóa đơn không hợp lệ"));
         }
+        if (category == null || (category != 1 && category != 2)) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Loại hóa đơn không hợp lệ"));
+        }
 
         InvoiceEntity inv = invoiceRepository
-                .findFirstByCompanyIdAndNoOrderByIdDesc(user.getCompanyId().intValue(), no)
+                .findFirstByCompanyIdAndNoAndCategoryOrderByIdDesc(user.getCompanyId().intValue(), no, category)
                 .orElse(null);
         if (inv == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Không tìm thấy hóa đơn theo số đã nhập"));
@@ -823,7 +827,9 @@ public class InvoiceController extends BaseController {
             hash.setIds(ids);
             hash.setIdAttr("");
             hash.setSignBy("NBan");
-            hash.setType("HDGTGT");
+            boolean salesInvoice = forms.values().stream().anyMatch(form -> form != null && Integer.valueOf(2).equals(form.getCategory()));
+            boolean vatInvoice = forms.values().stream().anyMatch(form -> form != null && Integer.valueOf(1).equals(form.getCategory()));
+            hash.setType(salesInvoice && !vatInvoice ? "HDBHang" : "HDGTGT");
             hashInvoiceRepository.save(hash);
 
             java.util.Map<String,Object> resp = new java.util.LinkedHashMap<>();
@@ -938,7 +944,7 @@ public class InvoiceController extends BaseController {
             counter = new InvoiceNumberEntity();
             counter.setCompanyId(companyId);
             counter.setFormId(formId);
-            counter.setCategory(1); // VAT
+            counter.setCategory(form.getCategory() != null ? form.getCategory() : 1);
             counter.setTotal(0);
             counter.setStatus(1); // active
             counter.setCreatedAt(java.time.LocalDateTime.now());
@@ -1019,7 +1025,8 @@ public class InvoiceController extends BaseController {
         h.setUserId(user.getId());
         h.setTableName("invoices");
         h.setTableId(inv.getId().longValue());
-        h.setTitle("Gửi hóa đơn giá trị gia tăng lên cơ quan thuế");
+        boolean salesInvoice = form != null && Integer.valueOf(2).equals(form.getCategory());
+        h.setTitle(salesInvoice ? "Gửi hóa đơn bán hàng lên cơ quan thuế" : "Gửi hóa đơn giá trị gia tăng lên cơ quan thuế");
         h.setDescription(description);
         h.setShowNotify(1);
         h.setStatus(1);

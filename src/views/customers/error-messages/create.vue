@@ -393,12 +393,18 @@ export default {
     async searchInvoices() {
       this.invoiceBusy = true
       try {
-        const { data } = await axios.get('/error-messages/invoices/search', { params: { ...this.invoiceSearch, size: 50 } })
+        const category = Number(this.$route.query.category)
+        const params = { ...this.invoiceSearch, size: 50 }
+        if (category === 1 || category === 2) params.category = category
+        const { data } = await axios.get('/error-messages/invoices/search', { params })
         this.invoiceList = Array.isArray(data.data) ? data.data : []
       } finally { this.invoiceBusy = false }
     },
     async loadInvoicesByIds(ids) {
-      const { data } = await axios.post('/error-messages/invoices/by-ids', { ids })
+      const category = Number(this.$route.query.category)
+      const body = { ids }
+      if (category === 1 || category === 2) body.category = category
+      const { data } = await axios.post('/error-messages/invoices/by-ids', body)
       const rows = Array.isArray(data) ? data : []
       const exists = new Set(this.frm.invoices.map(x => Number(x.invoiceId)))
       rows.forEach(row => {

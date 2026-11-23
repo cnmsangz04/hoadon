@@ -37,13 +37,16 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
                                          @Param("date") java.time.LocalDate date,
                                          Pageable pageable);
 
-    @Query("SELECT i FROM InvoiceEntity i WHERE (:companyId IS NULL OR i.companyId = :companyId) " +
+    @Query("SELECT i FROM InvoiceEntity i JOIN FormInvoiceEntity f ON i.formId = f.id " +
+            "WHERE (:companyId IS NULL OR i.companyId = :companyId) " +
+            "AND (:category IS NULL OR f.category = :category) " +
             "AND i.status > 2 " +
             "AND (:q IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.codeCqt) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.lookupCode) LIKE LOWER(CONCAT('%', :q, '%'))) " +
             "AND (:fromDate IS NULL OR i.dateExport >= :fromDate) " +
             "AND (:toDate IS NULL OR i.dateExport <= :toDate) " +
             "AND (:no IS NULL OR i.no = :no)")
     Page<InvoiceEntity> searchReleasedForErrorMessage(@Param("companyId") Long companyId,
+                                                      @Param("category") Integer category,
                                                       @Param("q") String q,
                                                       @Param("fromDate") java.time.LocalDate fromDate,
                                                       @Param("toDate") java.time.LocalDate toDate,
@@ -57,6 +60,14 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
     java.util.Optional<InvoiceEntity> findByLookupCode(String lookupCode);
 
     java.util.Optional<InvoiceEntity> findFirstByCompanyIdAndNoOrderByIdDesc(Integer companyId, Integer no);
+
+    @Query("SELECT i FROM InvoiceEntity i JOIN FormInvoiceEntity f ON i.formId = f.id " +
+            "WHERE i.companyId = :companyId AND i.no = :no AND f.category = :category " +
+            "ORDER BY i.id DESC")
+    java.util.Optional<InvoiceEntity> findFirstByCompanyIdAndNoAndCategoryOrderByIdDesc(
+            @Param("companyId") Integer companyId,
+            @Param("no") Integer no,
+            @Param("category") Integer category);
 
     List<InvoiceEntity> findByCode(String code);
 
@@ -123,17 +134,38 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
             @Param("endDate") java.time.LocalDate endDate
     );
 
+    @Query("SELECT COUNT(i) FROM InvoiceEntity i JOIN FormInvoiceEntity f ON i.formId = f.id " +
+            "WHERE i.companyId = :companyId AND f.category = 2 AND i.status IN :statuses " +
+            "AND i.dateExport BETWEEN :startDate AND :endDate")
+    Long countSalesByCompanyIdAndStatusInAndDateExportBetween(
+            @Param("companyId") Long companyId,
+            @Param("statuses") java.util.List<Short> statuses,
+            @Param("startDate") java.time.LocalDate startDate,
+            @Param("endDate") java.time.LocalDate endDate
+    );
+
+    @Query("SELECT COALESCE(SUM(i.amount), 0.0) FROM InvoiceEntity i JOIN FormInvoiceEntity f ON i.formId = f.id " +
+            "WHERE i.companyId = :companyId AND f.category = 2 AND i.status IN :statuses " +
+            "AND i.dateExport BETWEEN :startDate AND :endDate")
+    Double sumSalesAmountByCompanyIdAndStatusInAndDateExportBetween(
+            @Param("companyId") Long companyId,
+            @Param("statuses") java.util.List<Short> statuses,
+            @Param("startDate") java.time.LocalDate startDate,
+            @Param("endDate") java.time.LocalDate endDate
+    );
+
     interface InvoiceStatusCount {
         Integer getCompanyId();
+        Integer getCategory();
         Short getStatus();
         Long getTotal();
     }
 
-    @Query("SELECT i.companyId AS companyId, i.status AS status, COUNT(i) AS total " +
-            "FROM InvoiceEntity i " +
+    @Query("SELECT i.companyId AS companyId, f.category AS category, i.status AS status, COUNT(i) AS total " +
+            "FROM InvoiceEntity i JOIN FormInvoiceEntity f ON i.formId = f.id " +
             "WHERE i.status IN :statuses " +
             "AND i.dateExport = :reportDate " +
-            "GROUP BY i.companyId, i.status")
+            "GROUP BY i.companyId, f.category, i.status")
     List<InvoiceStatusCount> countStatusByDateExport(
             @Param("statuses") List<Short> statuses,
             @Param("reportDate") java.time.LocalDate reportDate

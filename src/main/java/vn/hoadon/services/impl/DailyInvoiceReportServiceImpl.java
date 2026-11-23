@@ -62,11 +62,13 @@ public class DailyInvoiceReportServiceImpl implements DailyInvoiceReportService 
         List<InvoiceRepository.InvoiceStatusCount> counts =
                 invoiceRepository.countStatusByDateExport(REPORT_STATUSES, reportDate);
 
-        Map<Integer, Map<Short, Long>> byCompany = new LinkedHashMap<>();
+        Map<Integer, Map<Integer, Map<Short, Long>>> byCompany = new LinkedHashMap<>();
         if (counts != null) {
             for (InvoiceRepository.InvoiceStatusCount row : counts) {
                 if (row.getCompanyId() == null || row.getStatus() == null) continue;
+                int category = row.getCategory() != null && row.getCategory() == 2 ? 2 : 1;
                 byCompany.computeIfAbsent(row.getCompanyId(), key -> new LinkedHashMap<>())
+                        .computeIfAbsent(category, key -> new LinkedHashMap<>())
                         .put(row.getStatus(), row.getTotal() != null ? row.getTotal() : 0L);
             }
         }
@@ -92,16 +94,13 @@ public class DailyInvoiceReportServiceImpl implements DailyInvoiceReportService 
 
         List<String> lines = new ArrayList<>();
         lines.add(title);
-        for (Map.Entry<Integer, Map<Short, Long>> entry : data.byCompany().entrySet()) {
+        for (Map.Entry<Integer, Map<Integer, Map<Short, Long>>> entry : data.byCompany().entrySet()) {
             CompanyEntity company = data.companies().get(entry.getKey().longValue());
             String companyName = resolveCompanyName(company, entry.getKey());
-            ReportNumbers numbers = resolveNumbers(entry.getValue());
             lines.add("");
             lines.add("<b>" + escape(companyName) + "</b>");
-            lines.add("- Đã ký: " + numbers.signed());
-            lines.add("- Đã gửi thuế: " + numbers.taxSent());
-            lines.add("- Không đủ điều kiện cấp mã: " + numbers.notEligible());
-            lines.add("- Tổng: " + numbers.total());
+            appendCategoryReport(lines, "Hóa đơn GTGT", entry.getValue().getOrDefault(1, Map.of()));
+            appendCategoryReport(lines, "Hóa đơn bán hàng", entry.getValue().getOrDefault(2, Map.of()));
         }
         return String.join("\n", lines);
     }
@@ -154,7 +153,7 @@ public class DailyInvoiceReportServiceImpl implements DailyInvoiceReportService 
             return;
         }
 
-        for (Map.Entry<Integer, Map<Short, Long>> entry : data.byCompany().entrySet()) {
+        for (Map.Entry<Integer, Map<Integer, Map<Short, Long>>> entry : data.byCompany().entrySet()) {
             Long companyId = entry.getKey().longValue();
             if (companyId == SystemMail.COMPANY_ID) {
                 continue;
@@ -171,7 +170,12 @@ public class DailyInvoiceReportServiceImpl implements DailyInvoiceReportService 
             }
 
             String companyName = resolveCompanyName(company, entry.getKey());
-            ReportNumbers numbers = resolveNumbers(entry.getValue());
+            ReportNumbers vatNumbers = resolveNumbers(entry.getValue().getOrDefault(1, Map.of()));
+            ReportNumbers salesNumbers = resolveNumbers(entry.getValue().getOrDefault(2, Map.of()));
+            ReportNumbers numbers = new ReportNumbers(
+                    vatNumbers.signed() + salesNumbers.signed(),
+                    vatNumbers.taxSent() + salesNumbers.taxSent(),
+                    vatNumbers.notEligible() + salesNumbers.notEligible());
             Map<String, String> vars = new HashMap<>();
             vars.put("SUBJECT", "Báo cáo hóa đơn ngày " + data.reportDate().format(MAIL_DATE_FORMAT));
             vars.put("REPORT_DATE", data.reportDate().format(MAIL_DATE_FORMAT));
@@ -180,6 +184,14 @@ public class DailyInvoiceReportServiceImpl implements DailyInvoiceReportService 
             vars.put("TAX_SENT_COUNT", String.valueOf(numbers.taxSent()));
             vars.put("NOT_ELIGIBLE_COUNT", String.valueOf(numbers.notEligible()));
             vars.put("TOTAL_COUNT", String.valueOf(numbers.total()));
+            vars.put("VAT_SIGNED_COUNT", String.valueOf(vatNumbers.signed()));
+            vars.put("VAT_TAX_SENT_COUNT", String.valueOf(vatNumbers.taxSent()));
+            vars.put("VAT_NOT_ELIGIBLE_COUNT", String.valueOf(vatNumbers.notEligible()));
+            vars.put("VAT_TOTAL_COUNT", String.valueOf(vatNumbers.total()));
+            vars.put("SALES_SIGNED_COUNT", String.valueOf(salesNumbers.signed()));
+            vars.put("SALES_TAX_SENT_COUNT", String.valueOf(salesNumbers.taxSent()));
+            vars.put("SALES_NOT_ELIGIBLE_COUNT", String.valueOf(salesNumbers.notEligible()));
+            vars.put("SALES_TOTAL_COUNT", String.valueOf(salesNumbers.total()));
 
             MailJobMessage message = new MailJobMessage();
             message.setTemplateKey(DAILY_REPORT_MAIL_TEMPLATE);
@@ -202,6 +214,13 @@ public class DailyInvoiceReportServiceImpl implements DailyInvoiceReportService 
         long taxSent = statusCounts != null ? statusCounts.getOrDefault((short) 2, 0L) : 0L;
         long notEligible = statusCounts != null ? statusCounts.getOrDefault((short) 7, 0L) : 0L;
         return new ReportNumbers(signed, taxSent, notEligible);
+    }
+
+    private void appendCategoryReport(List<String> lines, String label, Map<Short, Long> counts) {
+        ReportNumbers numbers = resolveNumbers(counts);
+        if (numbers.total() == 0) return;
+        lines.add("- " + label + ": " + numbers.total());
+        lines.add("  Đã ký: " + numbers.signed() + ", đã gửi thuế: " + numbers.taxSent() + ", không đủ điều kiện: " + numbers.notEligible());
     }
 
     private String resolveCompanyName(CompanyEntity company, Integer fallbackId) {
@@ -227,7 +246,7 @@ public class DailyInvoiceReportServiceImpl implements DailyInvoiceReportService 
     }
 
     private record DailyInvoiceReportData(LocalDate reportDate,
-                                          Map<Integer, Map<Short, Long>> byCompany,
+                                          Map<Integer, Map<Integer, Map<Short, Long>>> byCompany,
                                           Map<Long, CompanyEntity> companies) {
     }
 

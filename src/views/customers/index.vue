@@ -132,6 +132,15 @@
                 <strong>{{ formatCurrency(averageInvoiceValue) }}</strong>
               </div>
             </div>
+            <div class="insight-row">
+              <div class="insight-icon info">
+                <i class="fas fa-file-invoice"></i>
+              </div>
+              <div>
+                <span>Hóa đơn bán hàng</span>
+                <strong>{{ formatNumber(invoiceStats.salesIssuedThisYear) }} hóa đơn / {{ formatCurrency(invoiceStats.salesValueThisYear) }}</strong>
+              </div>
+            </div>
           </div>
         </section>
       </div>
@@ -149,6 +158,20 @@
           <div>
             <strong>Danh sách hóa đơn</strong>
             <span>Kiểm tra hóa đơn đã tạo</span>
+          </div>
+        </router-link>
+        <router-link class="quick-action" to="/invoice/sales-invoice/create">
+          <i class="fas fa-file-invoice"></i>
+          <div>
+            <strong>Lập hóa đơn bán hàng</strong>
+            <span>Tạo hóa đơn bán hàng mới</span>
+          </div>
+        </router-link>
+        <router-link class="quick-action" to="/invoice/sales-invoice/list">
+          <i class="fas fa-list"></i>
+          <div>
+            <strong>Danh sách bán hàng</strong>
+            <span>Kiểm tra hóa đơn bán hàng</span>
           </div>
         </router-link>
         <router-link class="quick-action" to="/reports/invoice/list">
@@ -297,6 +320,14 @@ export default {
           note: 'Tổng giá trị hóa đơn',
           icon: 'fas fa-coins',
           tone: 'tone-dark',
+        },
+        {
+          key: 'sales',
+          label: 'Hóa đơn bán hàng',
+          value: this.formatNumber(this.invoiceStats.salesIssuedThisYear),
+          note: this.formatCurrency(this.invoiceStats.salesValueThisYear),
+          icon: 'fas fa-file-invoice',
+          tone: 'tone-info',
         },
       ]
     },

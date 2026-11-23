@@ -22,40 +22,47 @@ public class InvoiceImportController extends BaseController {
     private InvoiceImportService service;
 
     @GetMapping("/template")
-    public ResponseEntity<byte[]> template() {
+    public ResponseEntity<byte[]> template(@RequestParam(name = "category", defaultValue = "1") Integer category) {
         permission("invoice-save");
-        return service.template();
+        return service.template(normalizeCategory(category));
     }
 
     @GetMapping
     public ResponseEntity<PageDTO<InvoiceImportDTO>> list(
             @AuthenticationPrincipal UserEntity user,
             @RequestParam(name = "page", defaultValue = "1") int page,
-            @RequestParam(name = "size", defaultValue = "10") int size
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "category", defaultValue = "1") Integer category
     ) {
         permission("invoice-list|invoice-save");
         int pageIndex = Math.max(page - 1, 0);
         Pageable pageable = PageRequest.of(pageIndex, Math.max(size, 1));
-        Page<InvoiceImportDTO> result = service.list(user, pageable);
+        Page<InvoiceImportDTO> result = service.list(normalizeCategory(category), user, pageable);
         return ResponseEntity.ok(new PageDTO<>(result.getContent(), result.getNumber() + 1, result.getSize(), result.getTotalElements(), result.getTotalPages()));
     }
 
     @PostMapping("/upload")
     public ResponseEntity<InvoiceImportResultDTO> upload(
             @AuthenticationPrincipal UserEntity user,
-            @RequestParam("file") MultipartFile file
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(name = "category", defaultValue = "1") Integer category
     ) {
         permission("invoice-save");
-        return ResponseEntity.ok(service.importFile(file, user));
+        return ResponseEntity.ok(service.importFile(file, normalizeCategory(category), user));
     }
 
     @PostMapping("/{id}/reimport")
     public ResponseEntity<InvoiceImportResultDTO> reimport(
             @AuthenticationPrincipal UserEntity user,
-            @PathVariable("id") Long id
+            @PathVariable("id") Long id,
+            @RequestParam(name = "category", defaultValue = "1") Integer category
     ) {
         permission("invoice-save");
-        return ResponseEntity.ok(service.reimport(id, user));
+        return ResponseEntity.ok(service.reimport(id, normalizeCategory(category), user));
+    }
+
+    private Integer normalizeCategory(Integer category) {
+        return category != null && category == 2 ? 2 : 1;
     }
 
     public static class PageDTO<T> {

@@ -250,6 +250,21 @@ public class InvoiceServiceImpl implements InvoiceService {
             if (selected != null && selected.getId() != null) {
                 e.setInvoiceNumberId(selected.getId().intValue());
             }
+            return;
+        }
+        FormInvoiceEntity form = formInvoiceRepository.findById(formId).orElse(null);
+        if (form == null || form.getCategory() == null) return;
+        vn.hoadon.entity.InvoiceNumberEntity counter = new vn.hoadon.entity.InvoiceNumberEntity();
+        counter.setCompanyId(companyId);
+        counter.setFormId(formId);
+        counter.setCategory(form.getCategory());
+        counter.setTotal(0);
+        counter.setStatus(1);
+        counter.setCreatedAt(java.time.LocalDateTime.now());
+        counter.setUpdatedAt(java.time.LocalDateTime.now());
+        vn.hoadon.entity.InvoiceNumberEntity saved = invoiceNumberRepository.save(counter);
+        if (saved.getId() != null) {
+            e.setInvoiceNumberId(saved.getId().intValue());
         }
     }
 

@@ -22,6 +22,9 @@ public class InvoiceImportEntity {
     @Column(name = "import_type", length = 30)
     private String importType;
 
+    @Column(name = "category")
+    private Integer category;
+
     @Column(name = "original_filename", columnDefinition = "NVARCHAR(255)")
     private String originalFilename;
 
@@ -89,6 +92,8 @@ public class InvoiceImportEntity {
     public void setSourceImportId(Long sourceImportId) { this.sourceImportId = sourceImportId; }
     public String getImportType() { return importType; }
     public void setImportType(String importType) { this.importType = importType; }
+    public Integer getCategory() { return category; }
+    public void setCategory(Integer category) { this.category = category; }
     public String getOriginalFilename() { return originalFilename; }
     public void setOriginalFilename(String originalFilename) { this.originalFilename = originalFilename; }
     public String getStoredFilename() { return storedFilename; }

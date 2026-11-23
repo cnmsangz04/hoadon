@@ -15,9 +15,9 @@ public interface InvoiceImportRepository extends JpaRepository<InvoiceImportEnti
     Page<InvoiceImportEntity> findByCompanyIdAndImportTypeOrderByIdDesc(Long companyId, String importType, Pageable pageable);
     Optional<InvoiceImportEntity> findByIdAndCompanyIdAndImportType(Long id, Long companyId, String importType);
 
-    @Query("select e from InvoiceImportEntity e where e.companyId = :companyId and (e.importType = 'INVOICE' or e.importType is null) order by e.id desc")
-    Page<InvoiceImportEntity> findInvoiceImportsByCompanyId(@Param("companyId") Long companyId, Pageable pageable);
+    @Query("select e from InvoiceImportEntity e where e.companyId = :companyId and (e.importType = 'INVOICE' or e.importType is null) and (e.category = :category or (:category = 1 and e.category is null)) order by e.id desc")
+    Page<InvoiceImportEntity> findInvoiceImportsByCompanyIdAndCategory(@Param("companyId") Long companyId, @Param("category") Integer category, Pageable pageable);
 
-    @Query("select e from InvoiceImportEntity e where e.id = :id and e.companyId = :companyId and (e.importType = 'INVOICE' or e.importType is null)")
-    Optional<InvoiceImportEntity> findInvoiceImportByIdAndCompanyId(@Param("id") Long id, @Param("companyId") Long companyId);
+    @Query("select e from InvoiceImportEntity e where e.id = :id and e.companyId = :companyId and (e.importType = 'INVOICE' or e.importType is null) and (e.category = :category or (:category = 1 and e.category is null))")
+    Optional<InvoiceImportEntity> findInvoiceImportByIdAndCompanyIdAndCategory(@Param("id") Long id, @Param("companyId") Long companyId, @Param("category") Integer category);
 }

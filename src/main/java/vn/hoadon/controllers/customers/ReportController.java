@@ -172,7 +172,8 @@ public class ReportController extends BaseController {
         );
 
         try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            Sheet sheet = wb.createSheet("Bao_cao_hoa_don");
+            boolean salesInvoice = Integer.valueOf(2).equals(category);
+            Sheet sheet = wb.createSheet(salesInvoice ? "Bao_cao_ban_hang" : "Bao_cao_hoa_don");
             int rowIdx = 0;
 
             // Kiểu tiêu đề
@@ -183,7 +184,7 @@ public class ReportController extends BaseController {
 
             // Dòng tiêu đề
             Row header = sheet.createRow(rowIdx++);
-            String[] cols = new String[] {
+            String[] commonCols = new String[] {
                     "STT",
                     "Mã đơn hàng",
                     "Ký hiệu",
@@ -196,10 +197,11 @@ public class ReportController extends BaseController {
                     "Tên khách hàng",
                     "Mã số thuế",
                     "Địa chỉ",
-                    "Tổng tiền hàng",
-                    "Tổng tiền thuế",
-                    "Tổng tiền thanh toán"
+                    "Tổng tiền hàng"
             };
+            String[] cols = salesInvoice
+                    ? java.util.stream.Stream.concat(java.util.Arrays.stream(commonCols), java.util.stream.Stream.of("Tổng tiền thanh toán")).toArray(String[]::new)
+                    : java.util.stream.Stream.concat(java.util.Arrays.stream(commonCols), java.util.stream.Stream.of("Tổng tiền thuế", "Tổng tiền thanh toán")).toArray(String[]::new);
             for (int i = 0; i < cols.length; i++) {
                 Cell c = header.createCell(i);
                 c.setCellValue(cols[i]);
@@ -262,8 +264,10 @@ public class ReportController extends BaseController {
 
                 // Tổng tiền hàng
                 if (inv.getTotal() != null) row.createCell(col++).setCellValue(inv.getTotal()); else col++;
-                // Tổng tiền thuế
-                if (inv.getVatAmount() != null) row.createCell(col++).setCellValue(inv.getVatAmount()); else col++;
+                if (!salesInvoice) {
+                    // Tổng tiền thuế
+                    if (inv.getVatAmount() != null) row.createCell(col++).setCellValue(inv.getVatAmount()); else col++;
+                }
                 // Tổng tiền thanh toán
                 if (inv.getAmount() != null) row.createCell(col++).setCellValue(inv.getAmount()); else col++;
             }
@@ -278,8 +282,12 @@ public class ReportController extends BaseController {
             totalLabel.setCellValue("Tổng cộng");
             totalLabel.setCellStyle(headerStyle);
             summaryRow.createCell(12).setCellValue(reportSummary != null && reportSummary.getTotalBeforeTax() != null ? reportSummary.getTotalBeforeTax() : 0.0);
-            summaryRow.createCell(13).setCellValue(reportSummary != null && reportSummary.getTotalVat() != null ? reportSummary.getTotalVat() : 0.0);
-            summaryRow.createCell(14).setCellValue(reportSummary != null && reportSummary.getTotalAmount() != null ? reportSummary.getTotalAmount() : 0.0);
+            if (!salesInvoice) {
+                summaryRow.createCell(13).setCellValue(reportSummary != null && reportSummary.getTotalVat() != null ? reportSummary.getTotalVat() : 0.0);
+                summaryRow.createCell(14).setCellValue(reportSummary != null && reportSummary.getTotalAmount() != null ? reportSummary.getTotalAmount() : 0.0);
+            } else {
+                summaryRow.createCell(13).setCellValue(reportSummary != null && reportSummary.getTotalAmount() != null ? reportSummary.getTotalAmount() : 0.0);
+            }
 
             for (int i = 0; i < cols.length; i++) {
                 sheet.autoSizeColumn(i);
@@ -289,7 +297,7 @@ public class ReportController extends BaseController {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-            String filename = "bao-cao-hoa-don-" + LocalDateTime.now().toString().replace(":", "-") + ".xlsx";
+            String filename = (salesInvoice ? "bao-cao-hoa-don-ban-hang-" : "bao-cao-hoa-don-") + LocalDateTime.now().toString().replace(":", "-") + ".xlsx";
             headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename);
             return ResponseEntity.ok().headers(headers).body(out.toByteArray());
         } catch (Exception e) {

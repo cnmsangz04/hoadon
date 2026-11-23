@@ -9,8 +9,8 @@ import vn.hoadon.dto.invoiceimport.InvoiceImportResultDTO;
 import vn.hoadon.entity.UserEntity;
 
 public interface InvoiceImportService {
-    ResponseEntity<byte[]> template();
-    InvoiceImportResultDTO importFile(MultipartFile file, UserEntity user);
-    InvoiceImportResultDTO reimport(Long importId, UserEntity user);
-    Page<InvoiceImportDTO> list(UserEntity user, Pageable pageable);
+    ResponseEntity<byte[]> template(Integer category);
+    InvoiceImportResultDTO importFile(MultipartFile file, Integer category, UserEntity user);
+    InvoiceImportResultDTO reimport(Long importId, Integer category, UserEntity user);
+    Page<InvoiceImportDTO> list(Integer category, UserEntity user, Pageable pageable);
 }

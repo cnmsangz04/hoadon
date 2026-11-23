@@ -139,6 +139,18 @@ const router = new VueRouter({
 					meta: { requiresUser: true, title: 'Hóa đơn điều chỉnh', processingMode: 'adjust' }
 				},
 				{
+					path: '/invoice/sales-invoice/replace',
+					name: 'CustomerSalesInvoiceReplace',
+					component: () => import('@/views/customers/invoices/vat-invoice/process.vue'),
+					meta: { requiresUser: true, title: 'Hóa đơn bán hàng thay thế', processingMode: 'replace', invoiceCategory: 2 }
+				},
+				{
+					path: '/invoice/sales-invoice/adjust',
+					name: 'CustomerSalesInvoiceAdjust',
+					component: () => import('@/views/customers/invoices/vat-invoice/process.vue'),
+					meta: { requiresUser: true, title: 'Hóa đơn bán hàng điều chỉnh', processingMode: 'adjust', invoiceCategory: 2 }
+				},
+				{
 					path: '/error-message/list',
 					name: 'CustomerErrorMessageList',
 					component: () => import('@/views/customers/error-messages/list.vue'),

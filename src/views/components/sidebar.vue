@@ -91,7 +91,8 @@ export default {
           title: 'Import dữ liệu',
           icon: 'fas fa-file-import',
           children: [
-            { title: 'Import hóa đơn', icon: 'fas fa-file-excel', to: '/imports/invoice' },
+            { title: 'Import hóa đơn GTGT', icon: 'fas fa-file-excel', to: '/imports/invoice?category=1' },
+            { title: 'Import hóa đơn bán hàng', icon: 'fas fa-file-excel', to: '/imports/invoice?category=2' },
             { title: 'Import khách hàng', icon: 'fas fa-users', to: '/imports/customer' },
             { title: 'Import sản phẩm', icon: 'fas fa-box', to: '/imports/product' },
           ],
@@ -103,9 +104,18 @@ export default {
             { title: 'Thông báo hóa đơn sai sót', icon: 'fas fa-exclamation-triangle', to: '/error-message/list' },
             { title: 'Hóa đơn thay thế', icon: 'fas fa-exchange-alt', to: '/invoice/replace' },
             { title: 'Hóa đơn điều chỉnh', icon: 'fas fa-sliders-h', to: '/invoice/adjust' },
+            { title: 'Hóa đơn bán hàng thay thế', icon: 'fas fa-exchange-alt', to: '/invoice/sales-invoice/replace' },
+            { title: 'Hóa đơn bán hàng điều chỉnh', icon: 'fas fa-sliders-h', to: '/invoice/sales-invoice/adjust' },
           ],
         },
-        { title: 'Báo cáo', icon: 'fas fa-chart-bar', to: '/reports/invoice/list' },
+        {
+          title: 'Báo cáo',
+          icon: 'fas fa-chart-bar',
+          children: [
+            { title: 'Báo cáo hóa đơn', icon: 'fas fa-chart-bar', to: '/reports/invoice/list' },
+            { title: 'Báo cáo bán hàng', icon: 'fas fa-chart-line', to: '/reports/invoice/list?category=2' },
+          ],
+        },
         {
           title: 'Danh mục',
           icon: 'fas fa-th-list',

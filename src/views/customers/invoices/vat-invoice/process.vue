@@ -2,7 +2,7 @@
   <div class="container-fluid py-3 invoice-process">
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 font-weight-bold">{{ pageTitle }}</h4>
-      <b-button size="sm" variant="outline-secondary" @click="$router.push({ name: 'CustomerVatInvoiceList' })">
+      <b-button size="sm" variant="outline-secondary" @click="$router.push({ name: listRouteName })">
         <i class="fas fa-list mr-1"></i> Danh sách hóa đơn
       </b-button>
     </div>
@@ -135,11 +135,21 @@ export default {
     invoiceType () {
       return this.isAdjust ? 2 : 1
     },
+    invoiceCategory () {
+      return Number(this.$route?.meta?.invoiceCategory || 1) === 2 ? 2 : 1
+    },
+    listRouteName () {
+      return this.invoiceCategory === 2 ? 'CustomerSalesInvoiceList' : 'CustomerVatInvoiceList'
+    },
+    createRouteName () {
+      return this.invoiceCategory === 2 ? 'CustomerSalesInvoiceCreate' : 'CustomerVatInvoiceCreate'
+    },
     isProcessing () {
       return this.invoiceType === 1 || this.invoiceType === 2
     },
     pageTitle () {
-      return this.isAdjust ? 'Hóa đơn điều chỉnh' : 'Hóa đơn thay thế'
+      const prefix = this.invoiceCategory === 2 ? 'Hóa đơn bán hàng ' : 'Hóa đơn '
+      return prefix + (this.isAdjust ? 'điều chỉnh' : 'thay thế')
     },
     ruleText () {
       if (this.isAdjust) {
@@ -164,13 +174,14 @@ export default {
         const { data } = await axios.get('/invoices/processing/lookup', {
           params: {
             no,
-            invoiceType: this.invoiceType
+            invoiceType: this.invoiceType,
+            category: this.invoiceCategory
           },
           meta: { suppressGlobalErrorToast: true }
         })
         this.foundInvoice = data
         this.$router.push({
-          name: 'CustomerVatInvoiceCreate',
+          name: this.createRouteName,
           query: {
             referenceId: data.id,
             invoiceType: this.invoiceType,

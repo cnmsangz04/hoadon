@@ -88,7 +88,7 @@ public class PasignerHashController {
                         valueOrDefault(item.getSignBy(), "NNT")
                 ));
             }
-        } else if ("HDGTGT".equals(item.getType())) {
+        } else if ("HDGTGT".equals(item.getType()) || "HDBHang".equals(item.getType())) {
             CompanyBankEntity bank = resolveCompanyBank(company);
             for (Long id : item.getIds()) {
                 InvoiceEntity invoice = invoiceRepository.findById(id).orElse(null);
@@ -150,7 +150,7 @@ public class PasignerHashController {
                 if (!isSignedErrorMessageXml(signedXml)) continue;
                 String cert = req.has("certificate") ? req.get("certificate").toString() : resolveCompanyName(item.getCompanyId());
                 if (errorMessageService.attachSignedXml(id, signedXml, cert).isPresent()) signed++;
-            } else if ("HDGTGT".equals(item.getType())) {
+            } else if ("HDGTGT".equals(item.getType()) || "HDBHang".equals(item.getType())) {
                 InvoiceEntity invoice = invoiceRepository.findById(id).orElse(null);
                 if (invoice == null || invoice.getCompanyId() == null || !Objects.equals(invoice.getCompanyId().longValue(), item.getCompanyId())) continue;
                 if (invoice.getStatus() != null && invoice.getStatus() != 0) continue;

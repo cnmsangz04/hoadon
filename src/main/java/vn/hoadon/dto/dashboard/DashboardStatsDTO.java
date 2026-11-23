@@ -6,6 +6,8 @@ public class DashboardStatsDTO {
     private Integer remainingInvoices;       // Số hóa đơn còn lại (amount - amount_used)
     private Long issuedThisYear;             // Số hóa đơn phát hành trong năm (status 3,4,5)
     private Double valueThisYear;            // Giá trị hóa đơn phát hành trong năm (sum of amount)
+    private Long salesIssuedThisYear;
+    private Double salesValueThisYear;
 
     // Getters and Setters
     public Integer getTotalInvoices() {
@@ -47,4 +49,9 @@ public class DashboardStatsDTO {
     public void setValueThisYear(Double valueThisYear) {
         this.valueThisYear = valueThisYear;
     }
+
+    public Long getSalesIssuedThisYear() { return salesIssuedThisYear; }
+    public void setSalesIssuedThisYear(Long salesIssuedThisYear) { this.salesIssuedThisYear = salesIssuedThisYear; }
+    public Double getSalesValueThisYear() { return salesValueThisYear; }
+    public void setSalesValueThisYear(Double salesValueThisYear) { this.salesValueThisYear = salesValueThisYear; }
 }

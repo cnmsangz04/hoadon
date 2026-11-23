@@ -112,7 +112,7 @@
           <div class="summary-value">{{ formatNumber(summary.totalBeforeTax) }}</div>
         </div>
       </b-col>
-      <b-col md="3" sm="6" class="mb-2">
+      <b-col v-if="filters.category !== 2" md="3" sm="6" class="mb-2">
         <div class="summary-tile summary-tax">
           <div class="summary-label">Tổng tiền thuế</div>
           <div class="summary-value">{{ formatNumber(summary.totalVat) }}</div>
@@ -279,6 +279,8 @@ export default {
     }
   },
   created () {
+    const category = Number(this.$route?.query?.category || 0)
+    if (category === 1 || category === 2) this.filters.category = category
     this.syncDateRangeFromPeriod()
     this.fetchList()
   },
