@@ -154,7 +154,7 @@ public class TemplateRenderService {
         String printableHeight = metaValue(html, "invoice-printable-height-mm", "297");
         html = html.replace("</head>", "<style id=\"invoice-preview-style\">html{background:#fff}body{box-sizing:border-box;width:calc(" +
                 printableWidth + "mm + " + margins[1] + " + " + margins[3] + ");min-height:calc(" + printableHeight +
-                "mm + " + margins[0] + " + " + margins[2] + ");margin:0;padding:" +
+                "mm + " + margins[0] + " + " + margins[2] + ");margin:0 auto;padding:" +
                 margins[0] + " " + margins[1] + " " + margins[2] + " " + margins[3] +
                 "}</style></head>");
         return html;

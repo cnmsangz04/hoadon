@@ -44,6 +44,41 @@
             <b-form-invalid-feedback :state="state('taxcode')">{{ errors.taxcode }}</b-form-invalid-feedback>
           </b-form-group>
 
+          <b-form-group label="Mã xác nhận" label-for="lookup-captcha" :state="state('captcha')">
+            <div class="captcha-row">
+              <button
+                type="button"
+                class="captcha-image"
+                :disabled="captchaLoading || loading"
+                :title="captchaLoading ? 'Đang tạo mã xác nhận' : 'Tạo mã xác nhận mới'"
+                aria-label="Tạo mã xác nhận mới"
+                @click="loadCaptcha"
+              >
+                <img v-if="captcha.image" :src="captcha.image" alt="Mã xác nhận" />
+                <b-spinner v-else-if="captchaLoading" small></b-spinner>
+              </button>
+              <b-form-input
+                id="lookup-captcha"
+                v-model.trim="form.captchaAnswer"
+                autocomplete="off"
+                maxlength="5"
+                placeholder="Nhập 5 ký tự"
+                :disabled="loading || captchaLoading"
+                :state="state('captcha')"
+              />
+              <button
+                type="button"
+                class="captcha-refresh"
+                :disabled="captchaLoading || loading"
+                aria-label="Tải lại mã xác nhận"
+                @click="loadCaptcha"
+              >
+                <i class="fas fa-sync-alt"></i>
+              </button>
+            </div>
+            <b-form-invalid-feedback :state="state('captcha')">{{ errors.captcha }}</b-form-invalid-feedback>
+          </b-form-group>
+
           <b-alert v-if="error" show variant="danger" class="mb-3">{{ error }}</b-alert>
 
           <b-button type="submit" variant="primary" block :disabled="loading">
@@ -115,8 +150,14 @@ export default {
       form: {
         code: '',
         taxcode: '',
+        captchaAnswer: '',
       },
       errors: {},
+      captchaLoading: false,
+      captcha: {
+        token: '',
+        image: '',
+      },
     }
   },
   computed: {
@@ -129,7 +170,7 @@ export default {
     const query = this.$route?.query || {}
     this.form.code = query.code || this.form.code
     this.form.taxcode = query.taxcode || this.form.taxcode
-    if (this.form.code && this.form.taxcode) this.lookup()
+    this.loadCaptcha()
   },
   methods: {
     state(field) {
@@ -141,6 +182,12 @@ export default {
         taxcode: firstError([
           required(this.form.taxcode, 'Vui lòng nhập mã số thuế bên bán'),
           taxCode(this.form.taxcode),
+        ]),
+        captcha: firstError([
+          required(this.form.captchaAnswer, 'Vui lòng nhập mã xác nhận'),
+          this.form.captchaAnswer && this.form.captchaAnswer.length !== 5
+            ? 'Mã xác nhận gồm 5 ký tự'
+            : '',
         ]),
       }
       Object.keys(this.errors).forEach(key => {
@@ -157,18 +204,38 @@ export default {
       }
       this.loading = true
       try {
-        const { data } = await axios.get('/public/invoices/lookup', {
-          params: {
+        const { data } = await axios.post('/public/invoices/lookup', {
             code: this.form.code,
             taxcode: this.form.taxcode,
-          },
+            captchaToken: this.captcha.token,
+            captchaAnswer: this.form.captchaAnswer,
+          }, {
           meta: { suppressGlobalErrorToast: true },
         })
         this.result = data
       } catch (err) {
         this.error = err?.response?.data?.message || 'Không tìm thấy hóa đơn phù hợp'
+        await this.loadCaptcha()
+        this.form.captchaAnswer = ''
       } finally {
         this.loading = false
+      }
+    },
+    async loadCaptcha() {
+      if (this.captchaLoading) return
+      this.captchaLoading = true
+      this.captcha = { token: '', image: '' }
+      this.form.captchaAnswer = ''
+      try {
+        const { data } = await axios.get('/public/invoices/captcha', {
+          meta: { suppressGlobalErrorToast: true },
+        })
+        this.captcha.token = data.token || ''
+        this.captcha.image = data.image || ''
+      } catch {
+        this.error = 'Không thể tải mã xác nhận. Vui lòng thử lại.'
+      } finally {
+        this.captchaLoading = false
       }
     },
     apiUrl(path) {
@@ -354,6 +421,64 @@ export default {
   gap: 8px;
 }
 
+.captcha-row {
+  display: grid;
+  grid-template-columns: 180px 1fr 42px;
+  gap: 8px;
+  align-items: center;
+}
+
+.captcha-image {
+  height: 58px;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f6f8fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.captcha-image img {
+  width: 180px;
+  height: 58px;
+  object-fit: contain;
+  display: block;
+}
+
+.captcha-refresh {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #64748b;
+  outline: none;
+  box-shadow: none;
+}
+
+.captcha-refresh:focus,
+.captcha-refresh:focus-visible,
+.captcha-refresh:active {
+  outline: none;
+  border-color: #84a9ff;
+  box-shadow: 0 0 0 3px rgba(132, 169, 255, 0.18);
+}
+
+.captcha-row :deep(.form-control) {
+  height: 42px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.captcha-refresh:hover,
+.captcha-image:hover {
+  border-color: #84a9ff;
+}
+
 @media (max-width: 768px) {
   .auth-container {
     grid-template-columns: 1fr;
@@ -367,6 +492,25 @@ export default {
   .auth-card {
     width: 100%;
     max-height: none;
+  }
+
+  .captcha-row {
+    grid-template-columns: minmax(0, 1fr) 42px;
+  }
+
+  .captcha-row .captcha-image {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .captcha-row :deep(.form-control) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .captcha-row .captcha-refresh {
+    grid-column: 2;
+    grid-row: 1;
   }
 }
 

@@ -5,7 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.hoadon.entity.CompanyEntity;
 import vn.hoadon.entity.FormInvoiceEntity;
@@ -13,6 +14,7 @@ import vn.hoadon.entity.InvoiceEntity;
 import vn.hoadon.repositories.CompanyRepository;
 import vn.hoadon.repositories.FormInvoiceRepository;
 import vn.hoadon.repositories.InvoiceRepository;
+import vn.hoadon.services.PublicCaptchaService;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -28,22 +30,42 @@ public class PublicInvoiceLookupController {
     private final InvoiceRepository invoiceRepository;
     private final CompanyRepository companyRepository;
     private final FormInvoiceRepository formInvoiceRepository;
+    private final PublicCaptchaService captchaService;
 
     public PublicInvoiceLookupController(InvoiceRepository invoiceRepository,
                                          CompanyRepository companyRepository,
-                                         FormInvoiceRepository formInvoiceRepository) {
+                                         FormInvoiceRepository formInvoiceRepository,
+                                         PublicCaptchaService captchaService) {
         this.invoiceRepository = invoiceRepository;
         this.companyRepository = companyRepository;
         this.formInvoiceRepository = formInvoiceRepository;
+        this.captchaService = captchaService;
     }
 
-    @GetMapping("/lookup")
-    public ResponseEntity<?> lookup(@RequestParam(name = "code", required = false) String code,
-                                    @RequestParam(name = "taxcode", required = false) String taxcode) {
-        String lookupCode = trim(code);
-        String sellerTaxcode = trim(taxcode);
+    @GetMapping("/captcha")
+    public Map<String, Object> captcha() {
+        PublicCaptchaService.Challenge challenge = captchaService.create();
+        return Map.of(
+                "token", challenge.token(),
+                "image", challenge.image(),
+                "expiresInSeconds", challenge.expiresInSeconds()
+        );
+    }
+
+    @PostMapping("/lookup")
+    public ResponseEntity<?> lookup(@RequestBody(required = false) LookupRequest request) {
+        String lookupCode = trim(request != null ? request.code() : null);
+        String sellerTaxcode = trim(request != null ? request.taxcode() : null);
         if (lookupCode == null || sellerTaxcode == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "Vui lòng nhập mã tra cứu và mã số thuế"));
+        }
+        String captchaToken = trim(request.captchaToken());
+        String captchaAnswer = trim(request.captchaAnswer());
+        if (captchaToken == null || captchaAnswer == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Vui lòng nhập mã xác nhận"));
+        }
+        if (!captchaService.verify(captchaToken, captchaAnswer)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Mã xác nhận không đúng hoặc đã hết hạn"));
         }
 
         InvoiceEntity invoice = invoiceRepository.findByLookupCode(lookupCode).orElse(null);
@@ -137,4 +159,6 @@ public class PublicInvoiceLookupController {
             default -> "Không xác định";
         };
     }
+
+    public record LookupRequest(String code, String taxcode, String captchaToken, String captchaAnswer) {}
 }
