@@ -6,6 +6,7 @@ import java.util.List;
 public class ErrorMessageUpsertRequest {
     private String formPattern;
     private Integer notificationType;
+    private Integer category;
     private String taxNoticeNumber;
     private String taxNoticeDate;
     private String createPlace;
@@ -17,6 +18,8 @@ public class ErrorMessageUpsertRequest {
     public void setFormPattern(String formPattern) { this.formPattern = formPattern; }
     public Integer getNotificationType() { return notificationType; }
     public void setNotificationType(Integer notificationType) { this.notificationType = notificationType; }
+    public Integer getCategory() { return category; }
+    public void setCategory(Integer category) { this.category = category; }
     public String getTaxNoticeNumber() { return taxNoticeNumber; }
     public void setTaxNoticeNumber(String taxNoticeNumber) { this.taxNoticeNumber = taxNoticeNumber; }
     public String getTaxNoticeDate() { return taxNoticeDate; }

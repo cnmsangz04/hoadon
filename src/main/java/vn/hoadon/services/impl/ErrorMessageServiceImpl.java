@@ -48,8 +48,8 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
     }
 
     @Override
-    public Page<ErrorMessageEntity> search(Long companyId, String keyword, Integer status, Integer notificationType, LocalDate dateFrom, LocalDate dateTo, Pageable pageable) {
-        return repository.search(companyId, keyword, status, notificationType, dateFrom, dateTo, pageable);
+    public Page<ErrorMessageEntity> search(Long companyId, String keyword, Integer status, Integer notificationType, Integer category, LocalDate dateFrom, LocalDate dateTo, Pageable pageable) {
+        return repository.search(companyId, keyword, status, notificationType, category, dateFrom, dateTo, pageable);
     }
 
     @Override
@@ -123,7 +123,8 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
             existing.setMessageCode(patvanResult.maThongdiep());
             existing.setStatus(2);
             ErrorMessageEntity saved = repository.save(existing);
-            saveHistory(companyId, userId, id, 300, "Gửi thông báo hóa đơn sai sót lên cơ quan thuế", "Mã thông điệp 300", existing.getSignedXml(), 0);
+            String subject = Objects.equals(existing.getCategory(), 6) ? "phiếu xuất kho" : "hóa đơn";
+            saveHistory(companyId, userId, id, 300, "Gửi thông báo " + subject + " sai sót lên cơ quan thuế", "Mã thông điệp 300", existing.getSignedXml(), 0);
             if (patvanCallbackService.isLocalSimulation()) {
                 patvanCallbackService.simulateErrorMessageResult(patvanResult.maThongdiep(), taxCode);
             }
@@ -166,6 +167,7 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
         dto.setFormPattern(entity.getFormPattern());
         dto.setMessageType(entity.getMessageType());
         dto.setNotificationType(entity.getNotificationType());
+        dto.setCategory(entity.getCategory());
         dto.setTaxAuthorityCode(entity.getTaxAuthorityCode());
         dto.setTaxAuthorityName(entity.getTaxAuthorityName());
         dto.setTaxCode(entity.getTaxCode());
@@ -206,6 +208,7 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
         CompanyEntity company = companyRepository.findById(companyId).orElse(null);
         entity.setFormPattern(nonBlank(req.getFormPattern(), "04/SS-HĐĐT"));
         entity.setMessageType("TBSS");
+        entity.setCategory(normalizeCategory(req.getCategory()));
         entity.setNotificationType(req.getNotificationType() != null && req.getNotificationType() == 2 ? 2 : 1);
         entity.setTaxNoticeNumber(entity.getNotificationType() == 2 ? trim(req.getTaxNoticeNumber()) : null);
         entity.setTaxNoticeDate(entity.getNotificationType() == 2 ? parseDate(req.getTaxNoticeDate(), null) : null);
@@ -228,18 +231,18 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
         int lineNo = 1;
         if (rows == null) rows = List.of();
         for (ErrorMessageInvoiceRequest req : rows) {
-            ErrorMessageInvoiceEntity line = buildLine(companyId, req);
+            ErrorMessageInvoiceEntity line = buildLine(companyId, entity.getCategory(), req);
             if (line == null) continue;
             line.setErrorMessage(entity);
             line.setLineNo(lineNo++);
             entity.getInvoices().add(line);
         }
         if (entity.getInvoices().isEmpty()) {
-            throw new IllegalArgumentException("Vui lòng chọn ít nhất một hóa đơn sai sót");
+            throw new IllegalArgumentException("Vui lòng chọn ít nhất một đối tượng sai sót");
         }
     }
 
-    private ErrorMessageInvoiceEntity buildLine(Long companyId, ErrorMessageInvoiceRequest req) {
+    private ErrorMessageInvoiceEntity buildLine(Long companyId, Integer category, ErrorMessageInvoiceRequest req) {
         if (req == null) return null;
         InvoiceEntity invoice = null;
         if (req.getInvoiceId() != null) {
@@ -252,6 +255,9 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
         line.setInvoiceId(invoice != null ? invoice.getId() : req.getInvoiceId());
         if (invoice != null) {
             FormInvoiceEntity form = invoice.getFormId() != null ? formInvoiceRepository.findById(invoice.getFormId().longValue()).orElse(null) : null;
+            if (form != null && category != null && category != 0 && !Objects.equals(category, form.getCategory())) {
+                throw new IllegalArgumentException("Phiếu được chọn không thuộc loại thông báo");
+            }
             line.setTaxCode(nonBlank(req.getTaxCode(), invoice.getCodeCqt()));
             line.setFormSymbol(nonBlank(req.getFormSymbol(), form != null ? form.getFormCode() : firstSerialChar(form != null ? form.getSerial() : "")));
             line.setSerial(nonBlank(req.getSerial(), form != null ? form.getSerial() : ""));
@@ -269,7 +275,7 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
         line.setErrorType(req.getErrorType() != null ? req.getErrorType() : 0);
         line.setReason(trim(req.getReason()));
         if (line.getInvoiceNo() == null || line.getInvoiceNo().isBlank() || line.getInvoiceDate() == null) {
-            throw new IllegalArgumentException("Dòng hóa đơn sai sót thiếu số hoặc ngày hóa đơn");
+            throw new IllegalArgumentException("Dòng sai sót thiếu số hoặc ngày chứng từ");
         }
         return line;
     }
@@ -323,5 +329,12 @@ public class ErrorMessageServiceImpl implements ErrorMessageService {
 
     private String firstSerialChar(String serial) {
         return serial != null && !serial.isBlank() ? serial.substring(0, 1) : "";
+    }
+
+    private Integer normalizeCategory(Integer category) {
+        if (category != null && category == 6) return 6;
+        if (category != null && category == 2) return 2;
+        if (category != null && category == 1) return 1;
+        return 0;
     }
 }

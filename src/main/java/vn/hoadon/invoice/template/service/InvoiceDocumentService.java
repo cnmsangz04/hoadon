@@ -58,7 +58,7 @@ public class InvoiceDocumentService {
         String scope = publicSample ? "SYSTEM" : "COMPANY";
         return renders.enqueue(scope, access.companyId(), "TEMPLATE_SAMPLE", version.getId(), null, null, null, version.getSourceContent(), version.getManifestJson(), xml,
                 Map.of("sampleMarker", "SAMPLE", "status", "Dữ liệu minh họa", "lookup_code", "SAMPLE0001",
-                        "code_cqt", "MCCQT-MINH-HOA", "formId", formId.toString(), "invoiceCategory", String.valueOf(form.getCategory()), "taxMode", Objects.equals(form.getType(), 0) ? "NO_TAX" : (Objects.equals(form.getType(), 2) ? "MULTI_RATE" : "SINGLE_RATE"), "sourceStage", "DRAFT"));
+                        "code_cqt", "MCCQT-MINH-HOA", "formId", formId.toString(), "invoiceCategory", String.valueOf(form.getCategory()), "taxMode", taxMode(form), "sourceStage", "DRAFT"));
     }
 
     @Transactional(readOnly = true)
@@ -107,7 +107,7 @@ public class InvoiceDocumentService {
         }
         var catalogSnapshot = fieldCatalog.snapshot(version.getFieldCatalogVersion());
         context.put("invoiceCategory", String.valueOf(template.getCategory()));
-        context.put("taxMode", Objects.equals(form.getType(), 0) ? "NO_TAX" : (Objects.equals(form.getType(), 2) ? "MULTI_RATE" : "SINGLE_RATE"));
+        context.put("taxMode", taxMode(form));
         context.put("catalogCode", catalogSnapshot.code());
         String snapshotHash = DocumentStorage.sha256(hash + assets.json(context));
         var snapshot = snapshots.findTopByInvoiceIdAndTemplateVersionIdAndSourceStageAndSourceHashOrderByIdDesc(invoiceId, version.getId(), source.stage(), snapshotHash).orElse(null);
@@ -126,6 +126,11 @@ public class InvoiceDocumentService {
             assets.pin(version.getManifestJson(), "SNAPSHOT", snapshot.getId());
         }
         return renders.enqueue("COMPANY", companyId, "INVOICE", version.getId(), null, null, snapshot.getId(), version.getSourceContent(), version.getManifestJson(), snapshot.getSourceXml(), context);
+    }
+
+    private static String taxMode(FormInvoiceEntity form) {
+        if (form != null && (Objects.equals(form.getCategory(), 2) || Objects.equals(form.getCategory(), 6))) return "NO_TAX";
+        return form != null && Objects.equals(form.getType(), 2) ? "MULTI_RATE" : "SINGLE_RATE";
     }
 
     public record XmlSource(String stage, String content) { }

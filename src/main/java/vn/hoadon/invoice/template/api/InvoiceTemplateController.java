@@ -56,19 +56,35 @@ public class InvoiceTemplateController extends BaseController {
     }
 
     @GetMapping("/catalog")
-    public Object catalog(HttpServletRequest request, @RequestParam(required = false) String version) {
-        access(request, false);
+    public Object catalog(HttpServletRequest request,
+                          @RequestParam(required = false) String version,
+                          @RequestParam(required = false) Long formId,
+                          @RequestParam(required = false) Long templateId) {
+        var currentAccess = access(request, false);
         var source = version == null ? catalog.latest() : catalog.snapshot(version);
-        var fields = source.fields().stream().map(field -> {
+        Integer category = null;
+        Integer stockIssueType = null;
+        if (formId != null) {
+            var invoiceType = formTemplates.invoiceType(formId, currentAccess);
+            category = invoiceType.category();
+            stockIssueType = invoiceType.stockIssueType();
+        } else if (templateId != null) {
+            var invoiceType = service.invoiceType(templateId, currentAccess);
+            category = invoiceType.category();
+            stockIssueType = invoiceType.stockIssueType();
+        }
+        var filteredSource = category == null ? source : source.forInvoiceType(category, stockIssueType);
+        var fields = filteredSource.fields().stream().map(field -> {
             Map<String, Object> row = new java.util.LinkedHashMap<>();
             row.put("key", field.key()); row.put("label", field.label()); row.put("group", field.group());
             row.put("repeated", field.repeated());
-            row.put("rowScope", source.groupRowScope(field.group()));
+            row.put("rowScope", filteredSource.groupRowScope(field.group()));
             row.put("sourceType", field.sourceType());
-            row.put("valueType", field.valueType()); row.put("defaultFormatter", field.defaultFormatter()); row.put("active", source.isFieldAvailable(field));
+            row.put("valueType", field.valueType()); row.put("defaultFormatter", field.defaultFormatter()); row.put("active", filteredSource.isFieldAvailable(field));
+            row.put("applicableInvoiceTypes", field.applicableInvoiceTypes());
             return row;
         }).toList();
-        return Map.of("version", source.code(), "fields", fields, "groups", source.groups(), "tableGroups", source.tableGroups());
+        return Map.of("version", filteredSource.code(), "fields", fields, "groups", filteredSource.groups(), "tableGroups", filteredSource.tableGroups());
     }
 
     @GetMapping("/designer-fonts")

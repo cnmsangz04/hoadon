@@ -32,11 +32,14 @@ public final class InvoiceXmlBuilder {
         if (inv == null) return "";
         form = InvoiceTemplateBindingService.frozenForm(inv, form);
         relatedForm = InvoiceTemplateBindingService.frozenForm(relatedInvoice, relatedForm);
+        if (form != null && Integer.valueOf(6).equals(form.getCategory())) {
+            return buildStockIssue(inv, form, company, bank, relatedInvoice, relatedForm);
+        }
         String id = hasText(inv.getIdAttr())
                 ? inv.getIdAttr()
                 : java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
         String pban = "2.1.1";
-        boolean salesInvoice = form != null && Integer.valueOf(0).equals(form.getType());
+        boolean salesInvoice = form != null && Integer.valueOf(2).equals(form.getCategory());
         String thdon = invoiceTitle(inv, form);
         String khmshdon = form != null && form.getFormCode() != null ? form.getFormCode() : "";
         String khhdon = form != null && form.getSerial() != null ? form.getSerial() : "";
@@ -230,6 +233,65 @@ public final class InvoiceXmlBuilder {
         return sb.toString();
     }
 
+    private static String buildStockIssue(InvoiceEntity inv, FormInvoiceEntity form, CompanyEntity company, CompanyBankEntity bank,
+                                          InvoiceEntity relatedInvoice, FormInvoiceEntity relatedForm) {
+        Map<String, Object> info = parseJsonObject(inv.getOthers());
+        Map<String, Object> customer = parseJsonObject(inv.getCustomer());
+        List<Map<String, Object>> details = parseJsonArray(inv.getDetail());
+        String id = hasText(inv.getIdAttr()) ? inv.getIdAttr() : UUID.randomUUID().toString().replace("-", "").toUpperCase();
+        String sellerName = firstText(info.get("sellerName"), info.get("seller_name"), company == null ? "" : company.getName());
+        String sellerTax = firstText(info.get("sellerTaxCode"), info.get("sellerTaxcode"), info.get("seller_taxcode"), company == null ? "" : company.getTaxcode());
+        String sellerAddress = firstText(info.get("sellerAddress"), info.get("seller_address"), company == null ? "" : company.getAddress());
+        String buyerName = firstText(info.get("buyerName"), info.get("buyer_name"), customer.get("name"), customer.get("buyer"));
+        String buyerTax = firstText(info.get("buyerTaxCode"), info.get("buyerTaxcode"), customer.get("taxcode"), customer.get("taxCode"));
+        String buyerAddress = firstText(info.get("buyerAddress"), info.get("buyer_address"), customer.get("address"));
+        String receiver = firstText(info.get("receiverName"), info.get("receiver_name"), customer.get("buyer"));
+        String sender = firstText(info.get("senderName"), info.get("sender_name"), info.get("warehouseKeeper"), info.get("warehouse_keeper"));
+        String transport = firstText(info.get("transportName"), info.get("transport_name"));
+        String vehicle = firstText(info.get("vehicle"), info.get("vehicleNumber"), info.get("vehicle_number"));
+        String contractNo = form.getStockIssueType() != null && form.getStockIssueType() == 2
+                ? firstText(info.get("economicContractNo"), info.get("economic_contract_no"))
+                : firstText(info.get("contractNo"), info.get("contract_no"));
+        String contractDate = firstText(info.get("economicContractDate"), info.get("economic_contract_date"));
+        String dispatchNo = firstText(info.get("dispatchOrderNo"), info.get("dispatch_order_no"), info.get("lddnbo"));
+        String transportContract = firstText(info.get("transportContractNo"), info.get("transport_contract_no"));
+        String tieuDe = invoiceTitle(inv, form);
+        RelatedInvoiceXml relatedXml = buildRelatedInvoiceXml(inv, relatedInvoice, relatedForm);
+        StringBuilder sb = new StringBuilder("<HDon><DLHDon Id=\"").append(escapeXml(id)).append("\"><TTChung>");
+        sb.append(tag("PBan", "2.1.1")).append(tag("THDon", tieuDe)).append(tag("KHMSHDon", "6"))
+                .append(tag("KHHDon", nullToEmpty(form.getSerial()))).append(tag("SHDon", inv.getNo() == null ? "0" : String.valueOf(inv.getNo())))
+                .append(tag("NLap", inv.getDateExport() == null ? "" : inv.getDateExport().toString()))
+                .append(tag("HDDCKPTQuan", "0"))
+                .append(tag("DVTTe", nullToEmpty(inv.getCurrency()))).append(tag("TGia", inv.getExchangeRate() == null ? "" : trimZeros(inv.getExchangeRate())))
+                .append(tag("HTTToan", paymentTypeLabel(inv.getPaymentType())))
+                .append(tag("MSTTCGP", company == null ? "" : nullToEmpty(company.getTaxcode()))).append(tag("TTKhac", ""))
+                .append(relatedXml.toXml());
+        sb.append("</TTChung><NDHDon><NBan>").append(tag("Ten", sellerName)).append(tag("MST", sellerTax)).append(tag("DChi", sellerAddress));
+        if (form.getStockIssueType() != null && form.getStockIssueType() == 1) {
+            sb.append(tag("LDDNBo", dispatchNo));
+        } else {
+            sb.append(tag("HDKTSo", contractNo)).append(tag("HDKTNgay", contractDate));
+        }
+        sb.append(tag("PTVChuyen", hasText(vehicle) ? vehicle : transport)).append(tag("TNVChuyen", transport)).append(tag("HVTNXHang", sender)).append(tag("HDSo", transportContract)).append(tag("TTKhac", ""));
+        sb.append("</NBan><NMua>").append(tag("Ten", buyerName)).append(tag("MST", buyerTax)).append(tag("DChi", buyerAddress)).append(tag("HVTNNHang", receiver)).append(tag("TTKhac", ""));
+        sb.append("</NMua><DSHHDVu>");
+        int idx = 0;
+        for (Map<String, Object> d : details) {
+            idx++;
+            String qty = firstText(d.get("quantity"), d.get("qty"));
+            String amount = firstText(d.get("total"), d.get("amount"), d.get("thanhTien"));
+            sb.append("<HHDVu>").append(tag("TChat", firstText(d.get("feature"), d.get("tchat"))))
+                    .append(tag("STT", firstText(d.get("num"), idx))).append(tag("MHHDVu", firstText(d.get("code"), d.get("itemCode"))))
+                    .append(tag("THHDVu", firstText(d.get("name"), d.get("itemName")))).append(tag("DVTinh", firstText(d.get("unit"), d.get("unitName"))))
+                    .append(tag("SLuong", qty)).append(tag("DGia", firstText(d.get("price"), d.get("unitPrice")))).append(tag("ThTien", amount)).append("</HHDVu>");
+        }
+        sb.append("</DSHHDVu><TToan>").append(tag("TgTTTBSo", trimZeros(inv.getAmount() == null ? inv.getTotal() : inv.getAmount())))
+                .append(tag("TgTTTBChu", nullToEmpty(inv.getAmountInWords()))).append(tag("TTKhac", ""))
+                .append("</TToan></NDHDon>").append(additionalInformation(inv)).append("</DLHDon>")
+                .append(tag("MCCQT", nullToEmpty(inv.getCodeCqt()))).append("<DLQRCode/><DSCKS><NBan/><NMua/><CCKSKhac/></DSCKS></HDon>");
+        return sb.toString();
+    }
+
     private static RelatedInvoiceXml buildRelatedInvoiceXml(InvoiceEntity inv, InvoiceEntity relatedInvoice, FormInvoiceEntity relatedForm) {
         RelatedInvoiceXml xml = new RelatedInvoiceXml();
         short invoiceType = inv != null && inv.getInvoiceType() != null ? inv.getInvoiceType() : 0;
@@ -242,7 +304,7 @@ public final class InvoiceXmlBuilder {
         xml.khhdcLQuan = relatedForm != null ? nullToEmpty(relatedForm.getSerial()) : "";
         xml.shdcLQuan = relatedInvoice.getNo() != null ? String.valueOf(relatedInvoice.getNo()) : "";
         xml.nlhdcLQuan = relatedInvoice.getDateExport() != null
-                ? relatedInvoice.getDateExport().atStartOfDay().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                ? relatedInvoice.getDateExport().toString()
                 : "";
         // Lý do điều chỉnh/thay thế theo Phụ lục XVII.
         xml.lddcTThe = relatedReason(inv.getRelated());

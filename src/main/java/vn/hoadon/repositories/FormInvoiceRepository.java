@@ -24,8 +24,13 @@ public interface FormInvoiceRepository extends JpaRepository<FormInvoiceEntity, 
     @Query("update FormInvoiceEntity f set f.status = 0 where f.companyId = :companyId and f.system = 0 and f.category = :category and f.id <> :id and f.status = 1")
     int deactivateOthers(@Param("companyId") Long companyId, @Param("category") Integer category, @Param("id") Long id);
 
+    @Modifying(flushAutomatically = true)
+    @Query("update FormInvoiceEntity f set f.status = 0 where f.companyId = :companyId and f.system = 0 and f.category = :category and f.stockIssueType = :stockIssueType and f.id <> :id and f.status = 1")
+    int deactivateOthersByStockIssueType(@Param("companyId") Long companyId, @Param("category") Integer category, @Param("stockIssueType") Integer stockIssueType, @Param("id") Long id);
+
     FormInvoiceEntity findTopByCompanyIdAndSystemAndStatusAndCategoryOrderByUpdatedAtDesc(Long companyId, Integer system, Integer status, Integer category);
     java.util.List<FormInvoiceEntity> findByCompanyIdAndSystemAndCategoryAndStatus(Long companyId, Integer system, Integer category, Integer status);
+    java.util.List<FormInvoiceEntity> findByCompanyIdAndSystemAndCategoryAndStockIssueTypeAndStatus(Long companyId, Integer system, Integer category, Integer stockIssueType, Integer status);
     Page<FormInvoiceEntity> findByCompanyId(Long companyId, Pageable pageable);
     Page<FormInvoiceEntity> findByCompanyIdAndSystem(Long companyId, Integer system, Pageable pageable);
     

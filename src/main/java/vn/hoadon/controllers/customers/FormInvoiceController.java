@@ -123,6 +123,7 @@ public class FormInvoiceController extends BaseController {
             item.put("photo", form.getPhoto());
             item.put("type", form.getType());
             item.put("category", form.getCategory());
+            item.put("stockIssueType", form.getStockIssueType());
             return item;
         }).toList();
         return Map.of("items", items, "total", result.getTotalElements(), "per_page", result.getSize(),
@@ -155,6 +156,7 @@ public class FormInvoiceController extends BaseController {
         item.put("photo", e.getPhoto());
         item.put("type", e.getType());
         item.put("category", e.getCategory());
+        item.put("stockIssueType", e.getStockIssueType());
         return ResponseEntity.ok(item);
     }
 
@@ -200,6 +202,7 @@ public class FormInvoiceController extends BaseController {
         Integer status = Optional.ofNullable(body.get("status")).map(v -> Integer.valueOf(v.toString())).orElse(0);
         Long templateId = Optional.ofNullable(body.get("templateId")).map(v -> Long.valueOf(v.toString())).orElse(null);
         Integer haveCode = Optional.ofNullable(body.get("have_code")).map(v -> Integer.valueOf(v.toString())).orElse(0);
+        Integer stockIssueType = Optional.ofNullable(body.get("stockIssueType")).map(v -> Integer.valueOf(v.toString())).orElse(null);
 
         if (name == null || name.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Tên mẫu không được để trống"));
@@ -223,6 +226,10 @@ public class FormInvoiceController extends BaseController {
             if (!Objects.equals(tpl.getCategory(), category) || !Objects.equals(tpl.getType(), type) || !Objects.equals(tpl.getStatus(), 1)) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Mẫu nguồn không phù hợp cấu hình hoặc đã ngừng sử dụng"));
             }
+            if (stockIssueType == null) stockIssueType = tpl.getStockIssueType();
+            if (Objects.equals(category, 6) && !Objects.equals(stockIssueType, tpl.getStockIssueType())) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Mẫu nguồn không phù hợp loại phiếu xuất kho"));
+            }
         }
 
         FormInvoiceEntity e = new FormInvoiceEntity();
@@ -240,6 +247,7 @@ public class FormInvoiceController extends BaseController {
         e.setStatus(0);
         e.setSystem(0);
         e.setHaveCode(haveCode);
+        e.setStockIssueType(stockIssueType);
         e.setCreatedAt(LocalDateTime.now());
         e.setUpdatedAt(LocalDateTime.now());
 
@@ -296,6 +304,7 @@ public class FormInvoiceController extends BaseController {
         patch.setSystem(0);
 
         patch.setHaveCode(Optional.ofNullable(body.get("have_code")).map(v -> Integer.valueOf(v.toString())).orElse(null));
+        patch.setStockIssueType(Optional.ofNullable(body.get("stockIssueType")).map(v -> Integer.valueOf(v.toString())).orElse(null));
 
         if (Objects.equals(patch.getStatus(), 1) && !hasAcceptedRegisterInvoice(user.getCompanyId())) {
             return ResponseEntity.badRequest().body(Map.of("message", "Chưa có tờ khai hóa đơn được chấp nhận nên không thể kích hoạt mẫu hóa đơn"));
@@ -364,6 +373,7 @@ public class FormInvoiceController extends BaseController {
             String combinedSerial = (it.getFormCode() != null ? it.getFormCode() : "") + (it.getSerial() != null ? it.getSerial() : "");
             d.setSerial(combinedSerial);
             d.setCategory(it.getCategory());
+            d.setStockIssueType(it.getStockIssueType());
             d.setCategoryLabel(categoryLabel(it.getCategory()));
             d.setType(it.getType());
             d.setTypeLabel(typeLabel(it.getType()));
@@ -380,13 +390,15 @@ public class FormInvoiceController extends BaseController {
         return switch (v) {
             case 1 -> "Hóa đơn giá trị gia tăng";
             case 2 -> "Hóa đơn bán hàng";
+            case 6 -> "Phiếu xuất kho";
             default -> "";
         };
     }
     private String typeLabel(Integer v) {
         if (v == null) return "";
         return switch (v) {
-            case 0 -> "Đã bao gồm thuế";
+            case -1 -> "Đã bao gồm thuế";
+            case 0 -> "Không sử dụng thuế suất";
             case 1 -> "Một thuế suất";
             case 2 -> "Nhiều thuế suất";
             default -> "";

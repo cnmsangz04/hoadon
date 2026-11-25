@@ -77,7 +77,7 @@
             <p class="template-name">{{ item.name }}</p>
             <div class="mb-2">
               <b-badge :variant="categoryVariant(item.category)" class="mr-1">{{ categoryLabel(item.category) }}</b-badge>
-              <b-badge :variant="typeVariant(item.type)">{{ typeLabel(item.type) }}</b-badge>
+              <b-badge :variant="typeVariant(item.type)">{{ typeLabel(item.type, item.category) }}</b-badge>
             </div>
             <b-button @click="copyTemplate(item.id)" size="sm" variant="primary">
               Chọn mẫu
@@ -108,9 +108,11 @@ export default {
         categories: [
           { code: 1, label: 'Hóa đơn giá trị gia tăng' },
           { code: 2, label: 'Hóa đơn bán hàng' },
+          { code: 6, label: 'Phiếu xuất kho' },
         ],
         types: [
-          { code: 0, label: 'Đã bao gồm thuế' },
+          { code: -1, label: 'Đã bao gồm thuế' },
+          { code: 0, label: 'Không sử dụng thuế suất' },
           { code: 1, label: 'Một thuế suất' },
           { code: 2, label: 'Nhiều thuế suất' },
         ],
@@ -147,10 +149,10 @@ export default {
         this.notify = 'Không tải được danh sách mẫu. Vui lòng thử lại.'
       }
     },
-    categoryLabel(v) { return Number(v) === 1 ? 'Hóa đơn giá trị gia tăng' : Number(v) === 2 ? 'Hóa đơn bán hàng' : '—' },
-    categoryVariant(v) { return Number(v) === 1 ? 'info' : Number(v) === 2 ? 'secondary' : 'light' },
-    typeLabel(v) { return Number(v) === 0 ? 'Đã bao gồm thuế' : Number(v) === 1 ? 'Một thuế suất' : Number(v) === 2 ? 'Nhiều thuế suất' : '—' },
-    typeVariant(v) { return Number(v) === 1 ? 'success' : Number(v) === 2 ? 'warning' : 'light' },
+    categoryLabel(v) { return Number(v) === 1 ? 'Hóa đơn giá trị gia tăng' : Number(v) === 2 ? 'Hóa đơn bán hàng' : Number(v) === 6 ? 'Phiếu xuất kho' : '—' },
+    categoryVariant(v) { return Number(v) === 1 ? 'info' : Number(v) === 2 ? 'secondary' : Number(v) === 6 ? 'warning' : 'light' },
+    typeLabel(v, category) { return Number(v) === -1 ? 'Đã bao gồm thuế' : Number(v) === 0 ? (Number(category) === 6 ? 'Không sử dụng thuế suất' : '—') : Number(v) === 1 ? 'Một thuế suất' : Number(v) === 2 ? 'Nhiều thuế suất' : '—' },
+    typeVariant(v) { return Number(v) === -1 ? 'info' : Number(v) === 1 ? 'success' : Number(v) === 2 ? 'warning' : 'light' },
     copyTemplate(templateId) {
       this.$router.push({
         name: 'CustomerFormInvoiceCreate',

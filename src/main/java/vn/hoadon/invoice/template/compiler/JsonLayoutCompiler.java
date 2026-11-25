@@ -26,11 +26,16 @@ public class JsonLayoutCompiler {
     public InvoiceCatalogSnapshot catalogSnapshot(JsonNode layout) { return catalog.snapshot(layout.path("fieldCatalogVersion").asText()); }
 
     public Set<String> validate(JsonNode layout, boolean publishing) {
+        return validate(layout, publishing, null, null);
+    }
+
+    public Set<String> validate(JsonNode layout, boolean publishing, Integer category, Integer stockIssueType) {
         properties(layout, Set.of("schemaVersion", "fieldCatalogVersion", "page", "theme", "fontFamilies", "assets", "body"));
         if (!SCHEMA_VERSION.equals(layout.path("schemaVersion").asText()) || layout.path("fieldCatalogVersion").asText().isBlank()) {
             fail("Phiên bản layout hoặc danh mục trường không được hỗ trợ");
         }
         var definitions = catalogSnapshot(layout);
+        if (category != null) definitions = definitions.forInvoiceType(category, stockIssueType);
         JsonNode page = layout.path("page");
         properties(page, Set.of("format", "orientation", "marginMm"));
         choice(page, "format", Set.of("A4", "A5"), "A4");

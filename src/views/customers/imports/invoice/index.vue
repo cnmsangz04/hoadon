@@ -2,12 +2,22 @@
   <div class="container-fluid py-3 import-page">
     <div class="page-head">
       <div>
-        <h4>Import {{ invoiceCategory === 2 ? 'hóa đơn bán hàng' : 'hóa đơn GTGT' }}</h4>
+        <h4>Import {{ pageTitle }}</h4>
+      </div>
+      <div class="page-filter">
+        <label for="invoice-import-kind" class="sr-only">Loại dữ liệu import</label>
+        <b-form-select
+          id="invoice-import-kind"
+          v-model="importKind"
+          :options="importKindOptions"
+          size="sm"
+          @change="changeImportKind"
+        />
       </div>
       <div class="page-actions">
         <b-button size="sm" variant="outline-secondary" :to="invoiceListRoute">
           <i class="fas fa-file-invoice mr-1"></i>
-          Danh sách hóa đơn
+          {{ invoiceListLabel }}
         </b-button>
         <b-button size="sm" variant="outline-primary" :disabled="downloadingTemplate" @click="downloadTemplate">
           <i class="fas fa-download mr-1"></i>
@@ -72,6 +82,10 @@
           <div class="font-weight-bold text-wrap-anywhere">{{ item.originalFilename || '—' }}</div>
         </template>
 
+        <template #cell(stockIssueType)="{ item }">
+          {{ Number(item.stockIssueType) === 1 ? 'Vận chuyển nội bộ' : Number(item.stockIssueType) === 2 ? 'Gửi bán đại lý' : '—' }}
+        </template>
+
         <template #cell(status)="{ item }">
           <b-badge :variant="statusVariant(item.status)">{{ statusText(item.status) }}</b-badge>
           <div v-if="item.sourceImportId" class="small text-muted mt-1">
@@ -132,6 +146,8 @@ export default {
   data () {
     return {
       selectedFile: null,
+      selectedCategory: null,
+      selectedStockIssueType: null,
       uploading: false,
       downloadingTemplate: false,
       loading: false,
@@ -147,6 +163,7 @@ export default {
       fields: [
         { key: 'index', label: '#', class: 'text-center', thStyle: { width: '5%' } },
         { key: 'originalFilename', label: 'File import', thStyle: { width: '30%' } },
+        { key: 'stockIssueType', label: 'Loại phiếu', thStyle: { width: '18%' } },
         { key: 'status', label: 'Trạng thái', class: 'text-center', thStyle: { width: '14%' } },
         { key: 'summary', label: 'Kết quả', class: 'text-center', thStyle: { width: '14%' } },
         { key: 'importedInvoiceIds', label: 'Mã tra cứu', thStyle: { width: '20%' } },
@@ -156,32 +173,89 @@ export default {
     }
   },
   mounted () {
+    this.initializeImportKind()
     this.loadHistory()
   },
   computed: {
     invoiceCategory () {
-      return Number(this.$route?.query?.category || 1) === 2 ? 2 : 1
+      const category = Number(this.$route?.query?.category || 1)
+      return this.selectedCategory || (category === 2 || category === 6 ? category : 1)
+    },
+    stockIssueType () {
+      return this.selectedStockIssueType || (Number(this.$route?.query?.stockIssueType || 1) === 2 ? 2 : 1)
+    },
+    importKind: {
+      get () {
+        if (this.invoiceCategory === 6) return `6:${this.stockIssueType}`
+        return String(this.invoiceCategory)
+      },
+      set () {}
+    },
+    importKindOptions () {
+      if (this.invoiceCategory === 6) {
+        return [
+          { value: '6:1', text: 'Phiếu xuất kho kiêm vận chuyển nội bộ' },
+          { value: '6:2', text: 'Phiếu xuất kho hàng gửi bán đại lý' }
+        ]
+      }
+      return [
+        { value: '1', text: 'Hóa đơn GTGT' },
+        { value: '2', text: 'Hóa đơn bán hàng' }
+      ]
+    },
+    pageTitle () {
+      return this.invoiceCategory === 6 ? 'phiếu xuất kho' : 'hóa đơn'
+    },
+    templateFilename () {
+      if (this.invoiceCategory === 2) return 'mau-import-hoa-don-ban-hang.xlsx'
+      if (this.invoiceCategory === 6) return this.stockIssueType === 2 ? 'mau-import-phieu-xuat-kho-hang-gui-ban-dai-ly.xlsx' : 'mau-import-phieu-xuat-kho-van-chuyen-noi-bo.xlsx'
+      return 'mau-import-hoa-don-gtgt.xlsx'
     },
     invoiceListRoute () {
-      return this.invoiceCategory === 2 ? '/invoice/sales-invoice/list' : '/invoice/vat-invoice/list'
+      if (this.invoiceCategory === 2) return '/invoice/sales-invoice/list'
+      if (this.invoiceCategory === 6) return this.stockIssueType === 2 ? '/stock-issue/consignment/list' : '/stock-issue/internal-transport/list'
+      return '/invoice/vat-invoice/list'
+    },
+    invoiceListLabel () {
+      return this.invoiceCategory === 6 ? 'Danh sách phiếu xuất kho' : 'Danh sách hóa đơn'
     }
   },
   watch: {
-    '$route.query.category' () {
-      this.list.current_page = 1
-      this.loadHistory()
+    '$route.query': {
+      deep: true,
+      handler () {
+        this.initializeImportKind()
+        this.selectedFile = null
+        this.lastResult = null
+        this.list.current_page = 1
+        this.loadHistory()
+      }
     }
   },
   methods: {
+    initializeImportKind () {
+      const category = Number(this.$route?.query?.category || 1)
+      this.selectedCategory = category === 2 || category === 6 ? category : 1
+      const stockIssueType = Number(this.$route?.query?.stockIssueType || 1)
+      this.selectedStockIssueType = stockIssueType === 2 ? 2 : 1
+    },
+    changeImportKind (value) {
+      const [category, stockIssueType] = String(value).split(':')
+      this.selectedCategory = Number(category) === 2 ? 2 : Number(category) === 6 ? 6 : 1
+      this.selectedStockIssueType = Number(category) === 6 && Number(stockIssueType) === 2 ? 2 : 1
+      this.selectedFile = null
+      this.list.current_page = 1
+      this.loadHistory()
+    },
     async downloadTemplate () {
       this.downloadingTemplate = true
       try {
-        const res = await axios.get('/invoice-imports/template', { params: { category: this.invoiceCategory }, responseType: 'blob' })
+        const res = await axios.get('/invoice-imports/template', { params: { category: this.invoiceCategory, stockIssueType: this.invoiceCategory === 6 ? this.stockIssueType : undefined }, responseType: 'blob' })
         const blob = new Blob([res.data], { type: res.headers['content-type'] || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        link.download = this.invoiceCategory === 2 ? 'mau-import-hoa-don-ban-hang.xlsx' : 'mau-import-hoa-don-gtgt.xlsx'
+        link.download = this.templateFilename
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
@@ -203,7 +277,7 @@ export default {
         const form = new FormData()
         form.append('file', this.selectedFile)
         const { data } = await axios.post('/invoice-imports/upload', form, {
-          params: { category: this.invoiceCategory },
+          params: { category: this.invoiceCategory, stockIssueType: this.invoiceCategory === 6 ? this.stockIssueType : undefined },
           meta: { suppressGlobalErrorToast: true }
         })
         this.lastResult = data
@@ -224,7 +298,7 @@ export default {
       this.lastResult = null
       try {
         const { data } = await axios.post(`/invoice-imports/${item.id}/reimport`, null, {
-          params: { category: this.invoiceCategory },
+          params: { category: this.invoiceCategory, stockIssueType: this.invoiceCategory === 6 ? this.stockIssueType : undefined },
           meta: { suppressGlobalErrorToast: true }
         })
         this.lastResult = data
@@ -243,7 +317,8 @@ export default {
           params: {
             page: this.list.current_page,
             size: this.list.per_page,
-            category: this.invoiceCategory
+            category: this.invoiceCategory,
+            stockIssueType: this.invoiceCategory === 6 ? this.stockIssueType : undefined
           },
           meta: { suppressGlobalErrorToast: true }
         })
@@ -322,6 +397,11 @@ export default {
 
 .page-head {
   margin-bottom: 16px;
+}
+
+.page-filter {
+  margin-left: auto;
+  min-width: 260px;
 }
 
 .page-actions {
@@ -430,6 +510,11 @@ export default {
   .upload-row {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .page-filter {
+    margin-left: 0;
+    width: 100%;
   }
 
   .upload-actions {

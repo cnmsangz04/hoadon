@@ -88,11 +88,19 @@ export default {
           ],
         },
         {
+          title: 'Phiếu xuất kho',
+          icon: 'fas fa-warehouse',
+          children: [
+            { title: 'Vận chuyển nội bộ', icon: 'fas fa-truck-loading', to: '/stock-issue/internal-transport/list' },
+            { title: 'Hàng gửi bán đại lý', icon: 'fas fa-dolly', to: '/stock-issue/consignment/list' },
+          ],
+        },
+        {
           title: 'Import dữ liệu',
           icon: 'fas fa-file-import',
           children: [
-            { title: 'Import hóa đơn GTGT', icon: 'fas fa-file-excel', to: '/imports/invoice?category=1' },
-            { title: 'Import hóa đơn bán hàng', icon: 'fas fa-file-excel', to: '/imports/invoice?category=2' },
+            { title: 'Import hóa đơn', icon: 'fas fa-file-excel', to: '/imports/invoice?category=1', menuKey: 'invoice-import' },
+            { title: 'Import phiếu xuất kho', icon: 'fas fa-file-excel', to: '/imports/invoice?category=6&stockIssueType=1', menuKey: 'stock-import' },
             { title: 'Import khách hàng', icon: 'fas fa-users', to: '/imports/customer' },
             { title: 'Import sản phẩm', icon: 'fas fa-box', to: '/imports/product' },
           ],
@@ -101,11 +109,18 @@ export default {
           title: 'Xử lý hóa đơn',
           icon: 'fas fa-tasks',
           children: [
-            { title: 'Thông báo hóa đơn sai sót', icon: 'fas fa-exclamation-triangle', to: '/error-message/list' },
+            { title: 'Thông báo hóa đơn sai sót', icon: 'fas fa-exclamation-triangle', to: '/error-message/list', menuKey: 'invoice-error-message' },
             { title: 'Hóa đơn thay thế', icon: 'fas fa-exchange-alt', to: '/invoice/replace' },
             { title: 'Hóa đơn điều chỉnh', icon: 'fas fa-sliders-h', to: '/invoice/adjust' },
-            { title: 'Hóa đơn bán hàng thay thế', icon: 'fas fa-exchange-alt', to: '/invoice/sales-invoice/replace' },
-            { title: 'Hóa đơn bán hàng điều chỉnh', icon: 'fas fa-sliders-h', to: '/invoice/sales-invoice/adjust' },
+          ],
+        },
+        {
+          title: 'Xử lý phiếu xuất kho',
+          icon: 'fas fa-tools',
+          children: [
+            { title: 'Thông báo phiếu xuất kho sai sót', icon: 'fas fa-exclamation-triangle', to: '/error-message/list?category=6', menuKey: 'stock-error-message' },
+            { title: 'Phiếu xuất kho thay thế', icon: 'fas fa-exchange-alt', to: '/stock-issue/replace' },
+            { title: 'Phiếu xuất kho điều chỉnh', icon: 'fas fa-sliders-h', to: '/stock-issue/adjust' },
           ],
         },
         {
@@ -114,6 +129,8 @@ export default {
           children: [
             { title: 'Báo cáo hóa đơn', icon: 'fas fa-chart-bar', to: '/reports/invoice/list' },
             { title: 'Báo cáo bán hàng', icon: 'fas fa-chart-line', to: '/reports/invoice/list?category=2' },
+            { title: 'Báo cáo vận chuyển nội bộ', icon: 'fas fa-chart-line', to: '/reports/invoice/list?category=6&stockIssueType=1' },
+            { title: 'Báo cáo hàng gửi bán đại lý', icon: 'fas fa-chart-line', to: '/reports/invoice/list?category=6&stockIssueType=2' },
           ],
         },
         {
@@ -184,11 +201,25 @@ export default {
       if (!item) return false;
 
       // Item không có con
-      if (item.to) return this.$route.path === item.to;
+      if (item.to) {
+        if (item.menuKey === 'invoice-import') {
+          return this.$route.path === '/imports/invoice' && Number(this.$route.query.category || 1) !== 6
+        }
+        if (item.menuKey === 'stock-import') {
+          return this.$route.path === '/imports/invoice' && Number(this.$route.query.category) === 6
+        }
+        if (item.menuKey === 'invoice-error-message') {
+          return this.$route.path.indexOf('/error-message/') === 0 && Number(this.$route.query.category || 0) !== 6
+        }
+        if (item.menuKey === 'stock-error-message') {
+          return this.$route.path.indexOf('/error-message/') === 0 && Number(this.$route.query.category) === 6
+        }
+        return this.$route.path === item.to.split('?')[0]
+      }
 
       // Item có children => active nếu child match chính xác
       if (item.children) {
-        return item.children.some(c => this.$route.path === c.to);
+        return item.children.some(c => this.isActive(c));
       }
       return false;
     }

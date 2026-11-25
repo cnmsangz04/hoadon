@@ -111,6 +111,7 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         validateSystemScope(form);
         if (Integer.valueOf(1).equals(form.getSystem())) form.setCompanyId(null);
         if (form.getStatus() == null) form.setStatus(0);
+        if (!Integer.valueOf(6).equals(form.getCategory())) form.setStockIssueType(null);
         lockCompany(form);
         validate(form);
         form.setCreatedAt(LocalDateTime.now());
@@ -120,6 +121,11 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         formTemplates.editable(saved.getId(), "form-" + saved.getId(), access, initialLayout);
         synchronizeActivation(saved, false);
         return saved;
+    }
+
+    @Transactional
+    public FormInvoiceEntity create(FormInvoiceEntity form) {
+        return create(form, null);
     }
 
     @Override
@@ -135,7 +141,7 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         validateSystemScope(current);
         if (Integer.valueOf(1).equals(current.getSystem())) current.setCompanyId(null);
         boolean fiscalChanged = changed(patch.getFormCode(), current.getFormCode()) || changed(patch.getSerial(), current.getSerial())
-                || changed(patch.getCategory(), current.getCategory()) || changed(patch.getType(), current.getType()) || changed(patch.getHaveCode(), current.getHaveCode());
+                || changed(patch.getCategory(), current.getCategory()) || changed(patch.getType(), current.getType()) || changed(patch.getHaveCode(), current.getHaveCode()) || changed(patch.getStockIssueType(), current.getStockIssueType());
         if (fiscalChanged && invoices.existsByFormId(Math.toIntExact(id))) throw new IllegalArgumentException("Mẫu đã được sử dụng; không được sửa ký hiệu hoặc cấu hình phát hành");
         if (patch.getName() != null) current.setName(patch.getName());
         if (patch.getFormCode() != null) current.setFormCode(patch.getFormCode());
@@ -144,6 +150,8 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         if (patch.getCategory() != null) current.setCategory(patch.getCategory());
         if (patch.getStatus() != null) current.setStatus(patch.getStatus());
         if (patch.getHaveCode() != null) current.setHaveCode(patch.getHaveCode());
+        if (patch.getStockIssueType() != null) current.setStockIssueType(patch.getStockIssueType());
+        if (!Integer.valueOf(6).equals(current.getCategory())) current.setStockIssueType(null);
         current.setUpdatedAt(LocalDateTime.now());
         boolean deactivating = !fiscalChanged && Integer.valueOf(0).equals(patch.getStatus());
         if (!deactivating) validate(current);
@@ -168,19 +176,29 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
         if (!java.util.Set.of(0, 1).contains(form.getStatus())) throw new IllegalArgumentException("Trạng thái mẫu không hợp lệ");
         boolean validTaxType = form.getCategory() != null && form.getType() != null
                 && (form.getCategory() == 2
-                    ? form.getType() == 0
+                    ? form.getType() == -1
+                    : form.getCategory() == 6 ? form.getType() == 0 && java.util.Set.of(1, 2).contains(form.getStockIssueType())
                     : form.getCategory() == 1 && java.util.Set.of(1, 2).contains(form.getType()));
-        if (form.getCategory() == null || !java.util.Set.of(1, 2).contains(form.getCategory()) || !validTaxType) throw new IllegalArgumentException("Loại hóa đơn hoặc loại thuế suất không hợp lệ");
+        if (form.getCategory() == null || !java.util.Set.of(1, 2, 6).contains(form.getCategory()) || !validTaxType) throw new IllegalArgumentException("Loại hóa đơn hoặc loại thuế suất không hợp lệ");
         if (form.getHaveCode() == null || !java.util.Set.of(0, 1).contains(form.getHaveCode())) throw new IllegalArgumentException("Hình thức có mã/không mã không hợp lệ");
         if (Integer.valueOf(1).equals(form.getStatus()) && form.getTemplateVersionId() == null) throw new IllegalArgumentException("Mẫu chưa có phiên bản thiết kế hợp lệ");
         if (!Integer.valueOf(0).equals(form.getSystem())) return;
-        if (!String.valueOf(form.getCategory()).equals(form.getFormCode()) || form.getSerial() == null || !form.getSerial().matches("[CK][0-9]{2}T[\\p{IsLatin}&&\\p{Lu}]{2}")) throw new IllegalArgumentException("Ký hiệu hóa đơn không hợp lệ");
+        if (!String.valueOf(form.getCategory()).equals(form.getFormCode()) || form.getSerial() == null || (form.getCategory() == 6
+                ? !form.getSerial().matches("[CK][0-9]{2}[NB][\\p{IsLatin}&&\\p{Lu}]{2}")
+                : !form.getSerial().matches("[CK][0-9]{2}T[\\p{IsLatin}&&\\p{Lu}]{2}"))) throw new IllegalArgumentException("Ký hiệu hóa đơn không hợp lệ");
         if ((form.getSerial().startsWith("C") ? 1 : 0) != form.getHaveCode()) throw new IllegalArgumentException("Ký hiệu C/K không khớp hình thức hóa đơn");
+        if (form.getCategory() == 6) {
+            char stockKind = form.getSerial().charAt(3);
+            boolean internalTransport = Integer.valueOf(1).equals(form.getStockIssueType());
+            if ((internalTransport && stockKind != 'N') || (!internalTransport && stockKind != 'B')) {
+                throw new IllegalArgumentException("Ký hiệu không khớp loại phiếu xuất kho");
+            }
+        }
         if (Integer.valueOf(1).equals(form.getStatus())) {
             var accepted = declarations.findLatestAccepted(form.getCompanyId(), org.springframework.data.domain.PageRequest.of(0, 1));
             if (accepted.isEmpty()) throw new IllegalArgumentException("Chưa có tờ khai hóa đơn được chấp nhận");
             var declaration = accepted.getFirst();
-            String kind = form.getCategory() == 1 ? "HDGTGT" : "HDBHang";
+            String kind = form.getCategory() == 1 ? "HDGTGT" : form.getCategory() == 2 ? "HDBHang" : "CTu";
             if (!contains(declaration.getInvoiceTypes(), kind) || !contains(declaration.getInvoiceForms(), form.getHaveCode() == 1 ? "CMa" : "KCMa")) throw new IllegalArgumentException("Tờ khai không phù hợp loại hoặc hình thức hóa đơn");
         }
     }
@@ -190,7 +208,11 @@ public class FormInvoiceServiceImpl implements FormInvoiceService {
     private void synchronizeActivation(FormInvoiceEntity form, boolean wasActive) {
         if (!Integer.valueOf(0).equals(form.getSystem())) return;
         boolean active = Integer.valueOf(1).equals(form.getStatus());
-        if (active) repo.deactivateOthers(form.getCompanyId(), form.getCategory(), form.getId());
+        if (active) {
+            if (form.getCategory() == 6) repo.deactivateOthersByStockIssueType(form.getCompanyId(), form.getCategory(), form.getStockIssueType(), form.getId());
+            else repo.deactivateOthers(form.getCompanyId(), form.getCategory(), form.getId());
+        }
+        if (form.getCategory() == 6) return;
         var selection = defaults.findByCompanyIdAndCategory(form.getCompanyId(), form.getCategory()).orElse(null);
         if (selection == null) {
             if (!active) return;

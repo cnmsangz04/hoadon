@@ -67,6 +67,9 @@ public final class InvoiceCatalogValidator {
             } else fail("Nguồn dữ liệu không hợp lệ");
             if (!field.active() && field.requiredDisplay())
                 fail("Phần tử bắt buộc hiển thị phải được bật");
+            if (field.applicableInvoiceTypes() == null
+                    || !field.applicableInvoiceTypes().matches("(?:1|2|6|6:1|6:2)(?:,(?:1|2|6|6:1|6:2))*"))
+                fail("Loại hóa đơn áp dụng không hợp lệ");
         }
     }
 

@@ -14,6 +14,7 @@ public class ErrorMessageDto {
     private String formPattern;
     private String messageType;
     private Integer notificationType;
+    private Integer category;
     private String taxAuthorityCode;
     private String taxAuthorityName;
     private String taxCode;
@@ -46,6 +47,8 @@ public class ErrorMessageDto {
     public void setMessageType(String messageType) { this.messageType = messageType; }
     public Integer getNotificationType() { return notificationType; }
     public void setNotificationType(Integer notificationType) { this.notificationType = notificationType; }
+    public Integer getCategory() { return category; }
+    public void setCategory(Integer category) { this.category = category; }
     public String getTaxAuthorityCode() { return taxAuthorityCode; }
     public void setTaxAuthorityCode(String taxAuthorityCode) { this.taxAuthorityCode = taxAuthorityCode; }
     public String getTaxAuthorityName() { return taxAuthorityName; }

@@ -1,6 +1,7 @@
 package vn.hoadon.invoice.template.render;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +37,7 @@ public class TemplateRenderService {
                                  DocumentStorage storage, JsonLayoutCompiler compiler,
                                  InvoiceViewModelMapper viewModels, InvoiceTemplateProperties properties, ObjectMapper mapper,
                                  InvoiceTemplateRepository templates, InvoiceTemplateDraftRepository drafts, InvoiceTemplateVersionRepository versions,
-                                 InvoicePdfRenderer pdfRenderer, InvoiceTemplateStorageCleanupService storageCleanup) {
+                                 InvoicePdfRenderer pdfRenderer, ObjectProvider<InvoiceTemplateStorageCleanupService> storageCleanup) {
         this.jobs = jobs;
         this.artifacts = artifacts;
         this.assets = assets;
@@ -49,7 +50,7 @@ public class TemplateRenderService {
         this.drafts = drafts;
         this.versions = versions;
         this.pdfRenderer = pdfRenderer;
-        this.storageCleanup = storageCleanup;
+        this.storageCleanup = storageCleanup.getIfAvailable();
         var fonts = ChromiumInvoicePdfRenderer.bundledFonts();
         StringBuilder inlineFonts = new StringBuilder();
         for (String rule : fonts.css().split("}")) {
@@ -85,14 +86,15 @@ public class TemplateRenderService {
             html = compileLayout(layout, xml, parameters);
         } catch (TemplateException ex) { throw ex; }
         catch (Exception ex) { throw TemplateException.invalid("INVALID_LAYOUT", "Không biên dịch được bố cục mẫu"); }
+        manifest = assets.effectiveManifest(manifest, source, scope, companyId);
         assets.resources(manifest, scope, companyId);
         String parameterJson = assets.json(new TreeMap<>(parameters));
         String inputHash = DocumentStorage.sha256(assets.json(List.of(source, manifest, xml, parameterJson, properties.getProfileVersion(), JsonLayoutCompiler.COMPILER_VERSION, "dataset-resolver/2")));
         String requestKey = DocumentStorage.sha256(assets.json(Arrays.asList(scope, companyId, purpose, versionId, draftId, draftLockVersion, snapshotId, inputHash)));
         var existing = jobs.findByRequestKey(requestKey);
         if (existing.isPresent()) return existing.get();
-        if ("DRAFT_PREVIEW".equals(purpose) && draftId != null) storageCleanup.deleteDraftPreviewJobs(draftId);
-        if ("TEMPLATE_SAMPLE".equals(purpose) && versionId != null) {
+        if (storageCleanup != null && "DRAFT_PREVIEW".equals(purpose) && draftId != null) storageCleanup.deleteDraftPreviewJobs(draftId);
+        if (storageCleanup != null && "TEMPLATE_SAMPLE".equals(purpose) && versionId != null) {
             storageCleanup.deleteCompletedTemplateSamples(scope, companyId, versionId);
         }
         InvoiceRenderJobEntity job = new InvoiceRenderJobEntity();
@@ -148,10 +150,20 @@ public class TemplateRenderService {
                     .replace("'" + url + "'", "'" + data + "'");
         }
         String[] margins = previewMargins(job, html);
-        html = html.replace("</head>", "<style id=\"invoice-preview-style\">html{background:#fff}body{box-sizing:border-box;margin:0;padding:" +
+        String printableWidth = metaValue(html, "invoice-printable-width-mm", "210");
+        String printableHeight = metaValue(html, "invoice-printable-height-mm", "297");
+        html = html.replace("</head>", "<style id=\"invoice-preview-style\">html{background:#fff}body{box-sizing:border-box;width:calc(" +
+                printableWidth + "mm + " + margins[1] + " + " + margins[3] + ");min-height:calc(" + printableHeight +
+                "mm + " + margins[0] + " + " + margins[2] + ");margin:0;padding:" +
                 margins[0] + " " + margins[1] + " " + margins[2] + " " + margins[3] +
                 "}</style></head>");
         return html;
+    }
+
+    private String metaValue(String html, String name, String fallback) {
+        var meta = java.util.regex.Pattern.compile("<meta\\s+name=\\\"" + java.util.regex.Pattern.quote(name) +
+                "\\\"\\s+content=\\\"([^\\\"]+)\\\"", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(html);
+        return meta.find() ? meta.group(1).trim() : fallback;
     }
 
     private String[] previewMargins(InvoiceRenderJobEntity job, String html) {

@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.jdbc.core.ConnectionCallback;
 
 /**
  * Migrates the old group tree to the single-table catalog model.
@@ -33,7 +34,10 @@ public class InvoiceTemplateFieldGroupSchemaInitializer {
     @PostConstruct
     public void migrate() {
         try {
+            if (!isSqlServer()) return;
             if (!tableExists("invoice_template_field_groups")) return;
+
+            boolean initializeInvoiceTypeScopes = ensureApplicableInvoiceTypesColumn();
 
             jdbc.update("update invoice_template_field_groups set root_path = case code "
                     + "when 'common' then '/HDon/DLHDon/TTChung' "
@@ -62,6 +66,10 @@ public class InvoiceTemplateFieldGroupSchemaInitializer {
             migrateFieldKeysBySourcePath();
             migrateSignatureBlocks();
             ensureInvoiceFields();
+            ensureSalesInvoiceFields();
+            ensureStockIssueFields();
+            if (initializeInvoiceTypeScopes) applyInvoiceTypeScopes();
+            correctInvoiceTypeScopes();
 
             if (columnExists("invoice_template_field_groups", "parent_id")) {
                 var constraints = jdbc.queryForList(
@@ -123,8 +131,99 @@ public class InvoiceTemplateFieldGroupSchemaInitializer {
                 "DSCKS/NBan/Signature/SignedAt",
                 "Ngày ký số trong HDon/DSCKS/NBan/Signature; được Java định dạng trước khi hiển thị");
         ensureInvoiceField(otherGroupId, "invoice.other.TTinMTCuu.DLieu", "Mã tra cứu hóa đơn",
-                "DLHDon/TTKhac/TTin[TTruong='MTCuu']/DLieu",
+                "TTin[TTruong='MTCuu']/DLieu",
                 "Mã tra cứu trong HDon/DLHDon/TTKhac");
+    }
+
+    private void ensureStockIssueFields() {
+        ensureGroupField("seller", "seller.LDDNBo", "Lệnh điều động nội bộ", "LDDNBo", "STRING", 255, "plainText", "6:1", "Chỉ tiêu phiếu xuất kho kiêm vận chuyển nội bộ");
+        ensureGroupField("seller", "seller.HDKTSo", "Số hợp đồng kinh tế", "HDKTSo", "STRING", 255, "plainText", "6:2", "Chỉ tiêu phiếu xuất kho hàng gửi bán đại lý");
+        ensureGroupField("seller", "seller.HDKTNgay", "Ngày hợp đồng kinh tế", "HDKTNgay", "DATE", 10, "date", "6:2", "Chỉ tiêu phiếu xuất kho hàng gửi bán đại lý");
+        ensureGroupField("seller", "seller.HVTNXHang", "Họ tên người xuất hàng", "HVTNXHang", "STRING", 100, "plainText", "6", "Chỉ tiêu phiếu xuất kho");
+        ensureGroupField("seller", "seller.TNVChuyen", "Tên người vận chuyển", "TNVChuyen", "STRING", 100, "plainText", "6", "Chỉ tiêu phiếu xuất kho");
+        ensureGroupField("seller", "seller.PTVChuyen", "Phương tiện vận chuyển", "PTVChuyen", "STRING", 50, "plainText", "6", "Chỉ tiêu phiếu xuất kho");
+        ensureGroupField("seller", "seller.HDSo", "Số hợp đồng vận chuyển", "HDSo", "STRING", 255, "plainText", "6", "Chỉ tiêu phiếu xuất kho");
+        ensureGroupField("buyer", "buyer.HVTNNHang", "Họ tên người nhận hàng", "HVTNNHang", "STRING", 100, "plainText", "6", "Chỉ tiêu phiếu xuất kho");
+    }
+
+    private void ensureSalesInvoiceFields() {
+        ensureGroupField("common", "common.HDDCKPTQuan", "Hóa đơn dành cho khu phi thuế quan", "HDDCKPTQuan", "INTEGER", 1, "plainText", "2", "Chỉ tiêu hóa đơn bán hàng");
+        ensureGroupField("items", "items.MNNNghe", "Mã nhóm ngành nghề", "MNNNghe", "STRING", 4, "plainText", "2", "Chỉ tiêu hóa đơn bán hàng");
+    }
+
+    private void ensureGroupField(String groupCode, String key, String label, String sourcePath,
+                                  String valueType, Integer maxLength, String formatter,
+                                  String applicableInvoiceTypes, String description) {
+        Integer count = jdbc.queryForObject(
+                "select count(*) from invoice_template_fields where field_key = ?", Integer.class, key);
+        if (count != null && count > 0) return;
+        Long groupId = jdbc.query(
+                "select id from invoice_template_field_groups where code = ?",
+                rs -> rs.next() ? rs.getLong(1) : null,
+                groupCode);
+        if (groupId == null) throw new IllegalStateException("Không tìm thấy nhóm phần tử " + groupCode);
+        Integer sortOrder = jdbc.queryForObject(
+                "select coalesce(max(sort_order), 0) + 10 from invoice_template_fields",
+                Integer.class);
+        jdbc.update(
+                "insert into invoice_template_fields "
+                        + "(field_key, label, group_id, source_type, source_path, value_type, max_length, "
+                        + "default_formatter, applicable_invoice_types, description, required_display, active, sort_order, lock_version, "
+                        + "created_at, updated_at) "
+                        + "values (?, ?, ?, 'XML', ?, ?, ?, ?, ?, ?, 0, 1, ?, 0, SYSUTCDATETIME(), SYSUTCDATETIME())",
+                key, label, groupId, sourcePath, valueType, maxLength, formatter,
+                applicableInvoiceTypes, description, sortOrder == null ? 10 : sortOrder);
+    }
+
+    private boolean ensureApplicableInvoiceTypesColumn() {
+        boolean initialize = false;
+        if (!columnExists("invoice_template_fields", "applicable_invoice_types")) {
+            jdbc.execute("alter table invoice_template_fields add applicable_invoice_types varchar(32) null");
+            initialize = true;
+        }
+        Integer missing = jdbc.queryForObject(
+                "select count(*) from invoice_template_fields where applicable_invoice_types is null "
+                        + "or ltrim(rtrim(applicable_invoice_types)) = ''",
+                Integer.class);
+        return initialize || missing != null && missing > 0;
+    }
+
+    private void applyInvoiceTypeScopes() {
+        setInvoiceTypes("1,2,6",
+                "common.PBan", "common.THDon", "common.KHMSHDon", "common.KHHDon", "common.SHDon",
+                "common.NLap", "common.DVTTe", "common.TGia", "common.MSTTCGP",
+                "related.TCHDon", "related.MSTCLQuan", "related.LHDCLQuan", "related.KHMSHDCLQuan",
+                "related.KHHDCLQuan", "related.SHDCLQuan", "related.NLHDCLQuan", "related.LDDCTThe",
+                "related.GChu", "seller.Ten", "seller.MST", "seller.DChi", "seller.MDDKDoanh",
+                "seller.TDDKDoanh", "seller.DCDDKDoanh", "buyer.Ten", "buyer.MST", "buyer.DChi",
+                "items.TChat", "items.STT", "items.MHHDVu", "items.THHDVu", "items.DVTinh",
+                "items.SLuong", "items.DGia", "items.ThTien",
+                "invoice.MCCQT", "invoice.DSCKS.NBan.Signature.SignedAt", "invoice.other.TTinMTCuu.DLieu");
+
+        setInvoiceTypes("1", "common.HDCTTChinh", "items.TSuat", "taxGroups.TSuat",
+                "taxGroups.ThTien", "taxGroups.TThue", "totals.TgTCThue", "totals.TGTKCThue",
+                "totals.TgTThue");
+        setInvoiceTypes("2", "common.HDDCKPTQuan", "items.MNNNghe");
+        setInvoiceTypes("6:1", "seller.LDDNBo");
+        setInvoiceTypes("6:2", "seller.HDKTSo", "seller.HDKTNgay");
+        setInvoiceTypes("6", "seller.HVTNXHang", "seller.TNVChuyen", "seller.PTVChuyen",
+                "seller.HDSo", "buyer.HVTNNHang");
+        jdbc.update("update invoice_template_fields set applicable_invoice_types = '1,2' "
+                + "where applicable_invoice_types is null or ltrim(rtrim(applicable_invoice_types)) = ''");
+    }
+
+    private void setInvoiceTypes(String invoiceTypes, String... keys) {
+        for (String key : keys) {
+            jdbc.update("update invoice_template_fields set applicable_invoice_types = ? where field_key = ? "
+                            + "and (applicable_invoice_types is null or ltrim(rtrim(applicable_invoice_types)) = '')",
+                    invoiceTypes, key);
+        }
+    }
+
+    private void correctInvoiceTypeScopes() {
+        jdbc.update("update invoice_template_fields set applicable_invoice_types = '1,2' "
+                + "where field_key in ('common.HTTToan', 'totals.TgTTTBSo', 'totals.TgTTTBChu') "
+                + "and applicable_invoice_types = '1,2,6'");
     }
 
     private void removeLegacySignatureDateField() {
@@ -229,9 +328,9 @@ public class InvoiceTemplateFieldGroupSchemaInitializer {
         jdbc.update(
                 "insert into invoice_template_fields "
                         + "(field_key, label, group_id, source_type, source_path, value_type, max_length, "
-                        + "default_formatter, description, required_display, active, sort_order, lock_version, "
+                        + "default_formatter, applicable_invoice_types, description, required_display, active, sort_order, lock_version, "
                         + "created_at, updated_at) "
-                        + "values (?, ?, ?, 'XML', ?, 'STRING', 255, 'plainText', ?, 0, 1, ?, 0, SYSUTCDATETIME(), SYSUTCDATETIME())",
+                        + "values (?, ?, ?, 'XML', ?, 'STRING', 255, 'plainText', '1,2,6', ?, 0, 1, ?, 0, SYSUTCDATETIME(), SYSUTCDATETIME())",
                 key, label, groupId, sourcePath, description, sortOrder == null ? 10 : sortOrder);
     }
 
@@ -351,6 +450,11 @@ public class InvoiceTemplateFieldGroupSchemaInitializer {
         return Boolean.TRUE.equals(jdbc.queryForObject(
                 "select cast(case when object_id(?) is null then 0 else 1 end as bit)",
                 Boolean.class, table));
+    }
+
+    private boolean isSqlServer() {
+        return Boolean.TRUE.equals(jdbc.execute((ConnectionCallback<Boolean>) connection ->
+                connection.getMetaData().getDatabaseProductName().toLowerCase().contains("sql server")));
     }
 
     private boolean columnExists(String table, String column) {

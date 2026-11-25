@@ -7,6 +7,9 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "invoices")
 public class InvoiceEntity {
+    @Transient
+    private Long templateVersionId;
+
     @Column(name = "issue_profile_snapshot_json", columnDefinition = "NVARCHAR(MAX)")
     private String issueProfileSnapshotJson;
 
@@ -22,6 +25,9 @@ public class InvoiceEntity {
 
     @Column(name = "form_id", nullable = false)
     private Integer formId;
+
+    @Column(name = "stock_issue_type")
+    private Integer stockIssueType;
 
     @Column(name = "invoice_number_id", nullable = false)
     private Integer invoiceNumberId;
@@ -161,6 +167,8 @@ public class InvoiceEntity {
 
     public Integer getFormId() { return formId; }
     public void setFormId(Integer formId) { this.formId = formId; }
+    public Integer getStockIssueType() { return stockIssueType; }
+    public void setStockIssueType(Integer stockIssueType) { this.stockIssueType = stockIssueType; }
 
     public Integer getInvoiceNumberId() { return invoiceNumberId; }
     public void setInvoiceNumberId(Integer invoiceNumberId) { this.invoiceNumberId = invoiceNumberId; }
@@ -289,4 +297,6 @@ public class InvoiceEntity {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public String getIssueProfileSnapshotJson() { return issueProfileSnapshotJson; }
     public void setIssueProfileSnapshotJson(String issueProfileSnapshotJson) { this.issueProfileSnapshotJson = issueProfileSnapshotJson; }
+    public Long getTemplateVersionId() { return templateVersionId; }
+    public void setTemplateVersionId(Long templateVersionId) { this.templateVersionId = templateVersionId; }
 }

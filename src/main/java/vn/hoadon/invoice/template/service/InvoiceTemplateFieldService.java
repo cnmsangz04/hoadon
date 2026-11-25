@@ -27,6 +27,7 @@ public class InvoiceTemplateFieldService {
             String valueType,
             Integer maxLength,
             String defaultFormatter,
+            String applicableInvoiceTypes,
             String description,
             boolean requiredDisplay,
             boolean active,
@@ -265,6 +266,7 @@ public class InvoiceTemplateFieldService {
         entity.setValueType(input.valueType());
         entity.setMaxLength(input.maxLength());
         entity.setDefaultFormatter(input.defaultFormatter());
+        entity.setApplicableInvoiceTypes(normalizeInvoiceTypes(input.applicableInvoiceTypes()));
         entity.setDescription(input.description());
         entity.setRequiredDisplay(input.requiredDisplay());
         entity.setActive(input.active());
@@ -275,6 +277,19 @@ public class InvoiceTemplateFieldService {
         entity.setUpdatedBy(access.actorId());
         entity.setUpdatedAt(now());
         return fields.saveAndFlush(entity);
+    }
+
+    private String normalizeInvoiceTypes(String value) {
+        if (value == null || value.isBlank()) invalid("Phải chọn ít nhất một loại hóa đơn");
+        var allowed = List.of("1", "2", "6", "6:1", "6:2");
+        var selected = Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(item -> !item.isBlank())
+                .distinct()
+                .toList();
+        if (selected.isEmpty() || selected.stream().anyMatch(item -> !allowed.contains(item)))
+            invalid("Loại hóa đơn áp dụng không hợp lệ");
+        return allowed.stream().filter(selected::contains).collect(java.util.stream.Collectors.joining(","));
     }
 
     public Object saveGroup(Long id, GroupInput input, TemplateAccess access) {

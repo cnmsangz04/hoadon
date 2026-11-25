@@ -60,6 +60,12 @@ public class InvoiceServiceImpl implements InvoiceService {
         return mapToDto(page);
     }
 
+    @Override
+    public Page<InvoiceDTO> search(Long companyId, Integer category, Integer stockIssueType, String q, Short status, java.time.LocalDate date, Pageable pageable) {
+        Page<InvoiceEntity> page = invoiceRepository.searchByCategoryAndStockIssueType(companyId, category, stockIssueType, q, status, date, pageable);
+        return mapToDto(page);
+    }
+
     private Page<InvoiceDTO> mapToDto(Page<InvoiceEntity> page) {
         // Preload related forms and users to avoid N+1 lookups
         Map<Long, FormInvoiceEntity> formCache = new HashMap<>();
@@ -78,6 +84,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             dto.referenceId = inv.getReferenceId();
             dto.invoiceType = inv.getInvoiceType();
             dto.invoiceTypeAdjust = inv.getInvoiceTypeAdjust();
+            dto.stockIssueType = inv.getStockIssueType();
             Long formId = inv.getFormId() != null ? inv.getFormId().longValue() : null;
             if (formId != null) {
                 FormInvoiceEntity form = formCache.computeIfAbsent(formId, id -> formInvoiceRepository.findById(id).orElse(null));
@@ -137,7 +144,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     @Transactional
     public InvoiceEntity create(InvoicePayload payload, Long companyId, Long userId) {
-        validateFormForCompany(payload != null ? payload.formId : null, companyId);
+        validateFormForCompany(payload != null ? payload.formId : null, companyId, payload != null ? payload.stockIssueType : null);
         InvoiceEntity original = validateRelatedInvoiceForCreate(payload, companyId);
         InvoiceEntity e = new InvoiceEntity();
         applyPayload(e, payload, companyId, userId, true);
@@ -164,7 +171,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
         if (e.getStatus() != null && e.getStatus() != 0) throw new IllegalArgumentException("Chỉ được chỉnh sửa hóa đơn nháp");
         Integer previousFormId = e.getFormId();
-        validateFormForCompany(payload != null ? payload.formId : null, companyId);
+        validateFormForCompany(payload != null ? payload.formId : null, companyId, payload != null ? payload.stockIssueType : null);
         validateRelatedInvoiceForCreate(payload, companyId);
         applyPayload(e, payload, companyId, userId, false);
         if (!Objects.equals(previousFormId, e.getFormId())) {
@@ -195,6 +202,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setCompanyId(companyId != null ? companyId.intValue() : src.getCompanyId());
         e.setUserId(userId != null ? userId.intValue() : src.getUserId());
         e.setFormId(src.getFormId());
+        e.setStockIssueType(src.getStockIssueType());
         FormInvoiceEntity sourceForm = src.getFormId() == null
                 ? null
                 : formInvoiceRepository.findById(src.getFormId().longValue()).orElse(null);
@@ -210,9 +218,11 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setVatAmount(src.getVatAmount());
         e.setAmount(src.getAmount());
         e.setAmountInWords(src.getAmountInWords());
-        boolean salesInvoice = sourceForm != null && Integer.valueOf(0).equals(sourceForm.getType());
-        e.setVatRate(salesInvoice ? null : src.getVatRate());
-        e.setVatRateOther(salesInvoice ? 0 : src.getVatRateOther());
+        boolean noTax = sourceForm != null && (Integer.valueOf(2).equals(sourceForm.getCategory()) || Integer.valueOf(6).equals(sourceForm.getCategory()));
+        e.setVatAmount(noTax ? 0d : src.getVatAmount());
+        e.setAmount(noTax ? src.getTotal() : src.getAmount());
+        e.setVatRate(noTax ? null : src.getVatRate());
+        e.setVatRateOther(noTax ? 0 : src.getVatRateOther());
         e.setBill(src.getBill());
         e.setOthers(src.getOthers());
         e.setRelated(src.getRelated());
@@ -232,7 +242,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setLookupCode(generateUniqueLookupCode());
         e.setIdAttr(generateUniqueIdAttr());
         // Assign invoice number id based on form/company
-        assignInvoiceNumberId(e, companyId != null ? companyId : (src.getCompanyId() != null ? src.getCompanyId().longValue() : null), new InvoicePayload(){ { this.formId = src.getFormId() != null ? src.getFormId().longValue() : null; } });
+        assignInvoiceNumberId(e, companyId != null ? companyId : (src.getCompanyId() != null ? src.getCompanyId().longValue() : null), new InvoicePayload(){ { this.formId = src.getFormId() != null ? src.getFormId().longValue() : null; this.stockIssueType = src.getStockIssueType(); } });
         e.setCreatedAt(LocalDateTime.now());
         e.setUpdatedAt(LocalDateTime.now());
         templateBindings.pin(e);
@@ -268,7 +278,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
     }
 
-    private void validateFormForCompany(Long formId, Long companyId) {
+    private void validateFormForCompany(Long formId, Long companyId, Integer stockIssueType) {
         if (formId == null) return;
         FormInvoiceEntity form = formInvoiceRepository.findById(formId).orElse(null);
         if (form == null) {
@@ -277,14 +287,19 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (!Integer.valueOf(0).equals(form.getSystem()) || companyId == null || !companyId.equals(form.getCompanyId())) {
             throw new IllegalArgumentException("Mẫu hóa đơn không thuộc công ty hiện tại");
         }
-        if (form.getCategory() == null || (form.getCategory() != 1 && form.getCategory() != 2)) {
+        if (form.getCategory() == null || (form.getCategory() != 1 && form.getCategory() != 2 && form.getCategory() != 6)) {
             throw new IllegalArgumentException("Loại mẫu hóa đơn không hợp lệ");
         }
         boolean validTaxType = Integer.valueOf(2).equals(form.getCategory())
+                ? Integer.valueOf(-1).equals(form.getType())
+                : Integer.valueOf(6).equals(form.getCategory())
                 ? Integer.valueOf(0).equals(form.getType())
                 : form.getType() != null && (Integer.valueOf(1).equals(form.getType()) || Integer.valueOf(2).equals(form.getType()));
         if (!validTaxType) {
             throw new IllegalArgumentException("Loại thuế suất của mẫu hóa đơn không hợp lệ");
+        }
+        if (Integer.valueOf(6).equals(form.getCategory()) && (stockIssueType == null || !java.util.Objects.equals(stockIssueType, form.getStockIssueType()))) {
+            throw new IllegalArgumentException("Loại phiếu xuất kho không khớp mẫu");
         }
     }
 
@@ -338,7 +353,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         FormInvoiceEntity selectedForm = selectedFormId == null
                 ? null
                 : formInvoiceRepository.findById(selectedFormId).orElse(null);
-        boolean salesInvoice = selectedForm != null && Integer.valueOf(0).equals(selectedForm.getType());
+        boolean salesInvoice = selectedForm != null && Integer.valueOf(2).equals(selectedForm.getCategory());
+        boolean stockIssue = selectedForm != null && Integer.valueOf(6).equals(selectedForm.getCategory());
+        if (stockIssue) validateStockIssuePayload(p.stockInfo, selectedForm.getStockIssueType());
+        e.setStockIssueType(stockIssue ? selectedForm.getStockIssueType() : null);
         e.setName(invoiceTitle(selectedForm, e.getName()));
         e.setNo(p.no);
         e.setDateExport(p.dateExport);
@@ -350,16 +368,16 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setExchangeRate(p.exchangeRate != null ? p.exchangeRate : 1d);
         // Totals
         e.setTotal(p.total != null ? p.total : 0d);
-        e.setVatAmount(salesInvoice ? 0d : (p.vatAmount != null ? p.vatAmount : 0d));
-        e.setAmount(salesInvoice ? (p.total != null ? p.total : 0d) : (p.amount != null ? p.amount : 0d));
+        e.setVatAmount(salesInvoice || stockIssue ? 0d : (p.vatAmount != null ? p.vatAmount : 0d));
+        e.setAmount(salesInvoice || stockIssue ? (p.total != null ? p.total : 0d) : (p.amount != null ? p.amount : 0d));
         e.setAmountInWords(p.amountInWords);
-        e.setVatRate(salesInvoice ? null : (p.vatRate != null ? p.vatRate : (short)-1));
-        e.setVatRateOther(salesInvoice ? 0 : (p.vatRateOther != null ? p.vatRateOther : 0));
+        e.setVatRate(salesInvoice || stockIssue ? null : (p.vatRate != null ? p.vatRate : (short)-1));
+        e.setVatRateOther(salesInvoice || stockIssue ? 0 : (p.vatRateOther != null ? p.vatRateOther : 0));
         // JSON blobs
         e.setBill(null);
-        e.setOthers(null);
+        e.setOthers(stockIssue ? serializeSafely(p.stockInfo) : null);
         e.setRelated(normalizeRelatedReason(p.relatedReason));
-        e.setCustomer(serializeSafely(p.customer));
+        e.setCustomer(serializeSafely(stockIssue ? customerFromStockInfo(p.customer, p.stockInfo) : p.customer));
         e.setDetail(serializeSafely(p.detail));
         applyInvoiceRelationFields(e, p, isCreate);
         if (isCreate) {
@@ -377,6 +395,8 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (currentName != null && !currentName.isBlank()) return currentName;
         return form != null && Integer.valueOf(2).equals(form.getCategory())
                 ? "Hóa đơn bán hàng"
+                : form != null && Integer.valueOf(6).equals(form.getCategory())
+                ? (Integer.valueOf(1).equals(form.getStockIssueType()) ? "Phiếu xuất kho kiêm vận chuyển nội bộ" : "Phiếu xuất kho hàng gửi bán đại lý")
                 : "Hóa đơn giá trị gia tăng";
     }
 
@@ -463,5 +483,48 @@ public class InvoiceServiceImpl implements InvoiceService {
         } catch (Exception ex) {
             return String.valueOf(o);
         }
+    }
+
+    private Object customerFromStockInfo(Object customer, Object stockInfo) {
+        if (customer != null || !(stockInfo instanceof Map<?, ?> info)) return customer;
+        Map<String, Object> result = new HashMap<>();
+        result.put("name", firstNonBlank(info, "buyerName", "buyer_name", "name"));
+        result.put("buyer", firstNonBlank(info, "receiverName", "receiver_name", "buyer"));
+        result.put("taxcode", firstNonBlank(info, "buyerTaxCode", "buyer_tax_code", "taxcode"));
+        result.put("address", firstNonBlank(info, "buyerAddress", "buyer_address", "address"));
+        return result;
+    }
+
+    private void validateStockIssuePayload(Object stockInfo, Integer stockIssueType) {
+        if (!(stockInfo instanceof Map<?, ?> info)) throw new IllegalArgumentException("Thiếu thông tin phiếu xuất kho");
+        if (isBlank(firstNonBlank(info, "buyerAddress", "buyer_address", "address"))) {
+            throw new IllegalArgumentException("Vui lòng nhập địa chỉ kho nhận hàng");
+        }
+        if (isBlank(firstNonBlank(info, "vehicle", "vehicleNumber", "vehicle_number"))) {
+            throw new IllegalArgumentException("Vui lòng nhập phương tiện vận chuyển");
+        }
+        if (Integer.valueOf(1).equals(stockIssueType)) {
+            if (isBlank(firstNonBlank(info, "dispatchOrderNo", "dispatch_order_no", "lddnbo"))) {
+                throw new IllegalArgumentException("Vui lòng nhập lệnh điều động nội bộ");
+            }
+        } else if (Integer.valueOf(2).equals(stockIssueType)) {
+            if (isBlank(firstNonBlank(info, "transportName", "transport_name"))) {
+                throw new IllegalArgumentException("Vui lòng nhập người vận chuyển");
+            }
+            if (isBlank(firstNonBlank(info, "economicContractNo", "economic_contract_no"))
+                    || isBlank(firstNonBlank(info, "economicContractDate", "economic_contract_date"))) {
+                throw new IllegalArgumentException("Vui lòng nhập số và ngày hợp đồng kinh tế");
+            }
+        }
+    }
+
+    private boolean isBlank(String value) { return value == null || value.isBlank(); }
+
+    private String firstNonBlank(Map<?, ?> values, String... keys) {
+        for (String key : keys) {
+            Object value = values.get(key);
+            if (value != null && !String.valueOf(value).trim().isEmpty()) return String.valueOf(value).trim();
+        }
+        return "";
     }
 }

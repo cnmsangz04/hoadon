@@ -213,7 +213,8 @@ public class InvoiceFieldCatalog {
                             field.isRequiredDisplay(),
                             field.isActive(),
                             field.getSortOrder(),
-                            field.getLockVersion()));
+                            field.getLockVersion(),
+                            field.getApplicableInvoiceTypes()));
         }
         return new InvoiceCatalogSnapshot(
                 structure.code(), groupDefinitions, datasetDefinitions, definitions);

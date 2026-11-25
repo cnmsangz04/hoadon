@@ -17,10 +17,12 @@ public interface InvoiceService {
     // Lọc theo ngày lập (dateExport). Nếu date=null thì bỏ qua lọc.
     Page<InvoiceDTO> search(Long companyId, String q, Short status, java.time.LocalDate date, Pageable pageable);
     Page<InvoiceDTO> search(Long companyId, Integer category, String q, Short status, java.time.LocalDate date, Pageable pageable);
+    Page<InvoiceDTO> search(Long companyId, Integer category, Integer stockIssueType, String q, Short status, java.time.LocalDate date, Pageable pageable);
 
     // Minimal payload contract matching Vue form
     class InvoicePayload {
         public Long formId;
+        public Integer stockIssueType;
         public Integer no;
         public java.time.LocalDate dateExport;
         public Short paymentType;
@@ -28,6 +30,7 @@ public interface InvoiceService {
         public String orderCode;
         public Object customer; // will be serialized to JSON text
         public Object detail;   // will be serialized to JSON text
+        public Object stockInfo;
         public Double total;
         public Double vatAmount;
         public Double amount;

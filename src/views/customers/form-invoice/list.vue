@@ -83,6 +83,10 @@
           <b-badge :variant="categoryVariant(item.category)">{{ item.categoryLabel || categoryLabel(item.category) }}</b-badge>
         </template>
 
+        <template #cell(stockIssueType)="{ item }">
+          {{ Number(item.stockIssueType) === 1 ? 'Vận chuyển nội bộ' : Number(item.stockIssueType) === 2 ? 'Gửi bán đại lý' : '—' }}
+        </template>
+
         <template #cell(type)="{ item }">
           <b-badge :variant="typeVariant(item.type)">{{ item.typeLabel || typeLabel(item.type) }}</b-badge>
         </template>
@@ -201,6 +205,7 @@ export default {
         { key: 'name', label: 'Tên mẫu', thStyle: { width: '18%' } },
         { key: 'serial', label: 'Ký hiệu', thStyle: { width: '11%' } },
         { key: 'category', label: 'Loại hóa đơn', thStyle: { width: '14%' } },
+        { key: 'stockIssueType', label: 'Loại phiếu xuất kho', thStyle: { width: '14%' } },
         { key: 'type', label: 'Loại thuế suất', thStyle: { width: '13%' } },
         { key: 'status', label: 'Trạng thái', thStyle: { width: '10%' } },
         { key: 'username', label: 'Người tạo', thStyle: { width: '13%' } },
@@ -210,9 +215,11 @@ export default {
       categoryOptions: [
         { value: 1, text: 'Hóa đơn giá trị gia tăng' },
         { value: 2, text: 'Hóa đơn bán hàng' }
+        , { value: 6, text: 'Phiếu xuất kho' }
       ],
       typeOptions: [
-        { value: 0, text: 'Đã bao gồm thuế' },
+        { value: -1, text: 'Đã bao gồm thuế' },
+        { value: 0, text: 'Không sử dụng thuế suất' },
         { value: 1, text: 'Một thuế suất' },
         { value: 2, text: 'Nhiều thuế suất' }
       ],
@@ -282,7 +289,7 @@ export default {
           size: this.list.per_page,
           q: this.filters.keyword || undefined,
           category: this.filters.category || undefined,
-          type: this.filters.type || undefined,
+          type: this.filters.type == null ? undefined : this.filters.type,
           status: this.filters.status == null ? undefined : this.filters.status,
         }
         const { data } = await axios.get('/form-invoices', { params })
@@ -358,10 +365,10 @@ export default {
     applyFilters() { this.list.current_page = 1; this.fetchList() },
     resetFilters() { this.filters = { keyword: '', category: null, type: null, status: null }; this.applyFilters() },
 
-    categoryLabel(v) { return v === 1 ? 'Giá trị gia tăng' : v === 2 ? 'Bán hàng' : '—' },
-    categoryVariant(v) { return v === 1 ? 'primary' : v === 2 ? 'info' : 'secondary' },
-    typeLabel(v) { return v === 0 ? 'Đã bao gồm thuế' : v === 1 ? 'Một thuế suất' : v === 2 ? 'Nhiều thuế suất' : '—' },
-    typeVariant(v) { return v === 0 ? 'info' : v === 1 ? 'success' : v === 2 ? 'warning' : 'secondary' },
+    categoryLabel(v) { return v === 1 ? 'Giá trị gia tăng' : v === 2 ? 'Bán hàng' : v === 6 ? 'Phiếu xuất kho' : '—' },
+    categoryVariant(v) { return v === 1 ? 'primary' : v === 2 ? 'info' : v === 6 ? 'warning' : 'secondary' },
+    typeLabel(v) { return Number(v) === -1 ? 'Đã bao gồm thuế' : Number(v) === 0 ? 'Không sử dụng thuế suất' : Number(v) === 1 ? 'Một thuế suất' : Number(v) === 2 ? 'Nhiều thuế suất' : '—' },
+    typeVariant(v) { return Number(v) === -1 ? 'info' : Number(v) === 1 ? 'success' : Number(v) === 2 ? 'warning' : 'secondary' },
     statusText(v) { return Number(v) === 1 ? 'Kích hoạt' : 'Chưa kích hoạt' },
     statusVariant(v) { return Number(v) === 1 ? 'success' : 'secondary' },
     formatDate(dt) { try { return (dt || '').toString().replace('T', ' ') } catch { return '—' } },

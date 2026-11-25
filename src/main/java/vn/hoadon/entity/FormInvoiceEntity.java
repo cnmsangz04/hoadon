@@ -37,11 +37,14 @@ public class FormInvoiceEntity {
     @Column(name = "system", columnDefinition = "tinyint")
     private Integer system; // 0: company/customer, 1: system
 
-    @Column(name = "type", columnDefinition = "tinyint")
-    private Integer type; // 0: no tax (sales), 1: one rate, 2: multi rate
+    @Column(name = "type", columnDefinition = "smallint")
+    private Integer type; // -1: sales invoice tax included, 0: no tax rate (stock issue), 1: one rate, 2: multi rate
 
     @Column(name = "category", columnDefinition = "tinyint")
-    private Integer category; // 1: VAT, 2: Sales
+    private Integer category; // 1: VAT, 2: Sales, 6: stock issue
+
+    @Column(name = "stock_issue_type", columnDefinition = "tinyint")
+    private Integer stockIssueType; // 1: internal transport, 2: consignment
 
     @Column(name = "status", columnDefinition = "tinyint")
     private Integer status; // generic status
@@ -78,6 +81,8 @@ public class FormInvoiceEntity {
     public void setType(Integer type) { this.type = type; }
     public Integer getCategory() { return category; }
     public void setCategory(Integer category) { this.category = category; }
+    public Integer getStockIssueType() { return stockIssueType; }
+    public void setStockIssueType(Integer stockIssueType) { this.stockIssueType = stockIssueType; }
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
     public Integer getHaveCode() { return haveCode; }

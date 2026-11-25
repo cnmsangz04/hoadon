@@ -3,7 +3,7 @@
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 font-weight-bold">{{ pageTitle }}</h4>
       <b-button size="sm" variant="outline-secondary" @click="$router.push({ name: listRouteName })">
-        <i class="fas fa-list mr-1"></i> Danh sách hóa đơn
+        <i class="fas fa-list mr-1"></i> Danh sách {{ invoiceCategory === 6 ? 'phiếu' : 'hóa đơn' }}
       </b-button>
     </div>
 
@@ -11,7 +11,17 @@
       <b-form @submit.prevent="confirmInvoice">
         <b-row>
           <b-col lg="4" md="6">
-            <b-form-group label="Số hóa đơn cần xử lý" label-class="form-label">
+            <b-form-group label="Loại chứng từ" label-class="form-label">
+              <b-form-select
+                v-model="processingKind"
+                :options="processingKindOptions"
+                :disabled="isBusy"
+              />
+            </b-form-group>
+          </b-col>
+
+          <b-col lg="4" md="6">
+              <b-form-group :label="`Số ${invoiceCategory === 6 ? 'phiếu' : 'hóa đơn'} cần xử lý`" label-class="form-label">
               <b-form-input
                 v-model.trim="invoiceNo"
                 type="number"
@@ -54,10 +64,10 @@
     </b-card>
 
     <b-card v-if="foundInvoice" class="shadow-sm mt-3">
-      <h6 class="font-weight-bold mb-3">Hóa đơn đã chọn</h6>
+      <h6 class="font-weight-bold mb-3">{{ invoiceCategory === 6 ? 'Phiếu xuất kho đã chọn' : 'Hóa đơn đã chọn' }}</h6>
       <b-row>
         <b-col md="3" class="mb-2">
-          <div class="text-muted small">Số hóa đơn</div>
+          <div class="text-muted small">{{ invoiceCategory === 6 ? 'Số phiếu' : 'Số hóa đơn' }}</div>
           <div class="font-weight-bold">{{ foundInvoice.no || '—' }}</div>
         </b-col>
         <b-col md="3" class="mb-2">
@@ -101,6 +111,8 @@ export default {
       relatedReason: null,
       foundInvoice: null,
       isBusy: false,
+      selectedCategory: null,
+      selectedStockIssueType: null,
       relatedReasonOptions: [
         { value: null, text: '-- Chọn lý do điều chỉnh/thay thế --' },
         { value: '1', text: 'Điều chỉnh giá trị quyết toán dự án đầu tư hoặc điều chỉnh giá bán theo quy định chuyên ngành' },
@@ -125,6 +137,9 @@ export default {
       ]
     }
   },
+  mounted () {
+    this.initializeProcessingKind()
+  },
   computed: {
     isAdjust () {
       return this.mode === 'adjust'
@@ -132,37 +147,103 @@ export default {
     mode () {
       return this.$route?.meta?.processingMode === 'adjust' ? 'adjust' : 'replace'
     },
+    processingScope () {
+      if (this.$route?.meta?.processingScope) return this.$route.meta.processingScope
+      return Number(this.$route?.meta?.invoiceCategory || 1) === 6 ? 'stock' : 'invoice'
+    },
+    processingKind: {
+      get () {
+        return this.processingScope === 'stock' ? `6:${this.stockIssueType}` : String(this.invoiceCategory)
+      },
+      set (value) {
+        this.setProcessingKind(value)
+      }
+    },
+    processingKindOptions () {
+      if (this.processingScope === 'stock') {
+        return [
+          { value: '6:1', text: 'Phiếu xuất kho kiêm vận chuyển nội bộ' },
+          { value: '6:2', text: 'Phiếu xuất kho hàng gửi bán đại lý' }
+        ]
+      }
+      return [
+        { value: '1', text: 'Hóa đơn GTGT' },
+        { value: '2', text: 'Hóa đơn bán hàng' }
+      ]
+    },
     invoiceType () {
       return this.isAdjust ? 2 : 1
     },
     invoiceCategory () {
-      return Number(this.$route?.meta?.invoiceCategory || 1) === 2 ? 2 : 1
+      if (this.processingScope === 'stock') return 6
+      const queryCategory = Number(this.$route?.query?.category)
+      const category = this.selectedCategory || queryCategory || Number(this.$route?.meta?.invoiceCategory || 1)
+      return [1, 2, 6].includes(category) ? category : 1
+    },
+    stockIssueType () {
+      const queryType = Number(this.$route?.query?.stockIssueType)
+      const routeType = this.selectedStockIssueType || queryType || Number(this.$route?.meta?.stockIssueType || 1)
+      return routeType === 2 ? 2 : 1
     },
     listRouteName () {
+      if (this.invoiceCategory === 6) return this.stockIssueType === 2 ? 'CustomerStockIssueConsignmentList' : 'CustomerStockIssueInternalTransportList'
       return this.invoiceCategory === 2 ? 'CustomerSalesInvoiceList' : 'CustomerVatInvoiceList'
     },
     createRouteName () {
+      if (this.invoiceCategory === 6) return this.stockIssueType === 2 ? 'CustomerStockIssueConsignmentCreate' : 'CustomerStockIssueInternalTransportCreate'
       return this.invoiceCategory === 2 ? 'CustomerSalesInvoiceCreate' : 'CustomerVatInvoiceCreate'
     },
     isProcessing () {
       return this.invoiceType === 1 || this.invoiceType === 2
     },
     pageTitle () {
-      const prefix = this.invoiceCategory === 2 ? 'Hóa đơn bán hàng ' : 'Hóa đơn '
+      if (this.invoiceCategory === 6) return 'Phiếu xuất kho ' + (this.isAdjust ? 'điều chỉnh' : 'thay thế')
+      const prefix = 'Hóa đơn '
       return prefix + (this.isAdjust ? 'điều chỉnh' : 'thay thế')
     },
     ruleText () {
+      const subject = this.invoiceCategory === 6 ? 'phiếu xuất kho' : 'hóa đơn'
       if (this.isAdjust) {
-        return 'Chỉ điều chỉnh hóa đơn gốc đã phát hành hoặc đã bị điều chỉnh.'
+        return `Chỉ điều chỉnh ${subject} gốc đã phát hành hoặc đã bị điều chỉnh.`
       }
-      return 'Chỉ thay thế hóa đơn đã phát hành và là hóa đơn gốc hoặc hóa đơn thay thế.'
+      return `Chỉ thay thế ${subject} đã phát hành và là bản gốc hoặc bản thay thế.`
+    }
+  },
+  watch: {
+    '$route.query': {
+      deep: true,
+      handler () {
+        this.initializeProcessingKind()
+        this.invoiceNo = ''
+        this.relatedReason = null
+        this.foundInvoice = null
+      }
     }
   },
   methods: {
+    initializeProcessingKind () {
+      if (this.processingScope === 'stock') {
+        this.selectedCategory = 6
+        const value = Number(this.$route?.query?.stockIssueType || this.$route?.meta?.stockIssueType || 1)
+        this.selectedStockIssueType = value === 2 ? 2 : 1
+        return
+      }
+      const value = Number(this.$route?.query?.category || this.$route?.meta?.invoiceCategory || 1)
+      this.selectedCategory = value === 2 ? 2 : 1
+      this.selectedStockIssueType = null
+    },
+    setProcessingKind (value) {
+      const [category, stockIssueType] = String(value).split(':')
+      this.selectedCategory = Number(category) === 6 ? 6 : Number(category) === 2 ? 2 : 1
+      this.selectedStockIssueType = Number(category) === 6 && Number(stockIssueType) === 2 ? 2 : 1
+      this.invoiceNo = ''
+      this.relatedReason = null
+      this.foundInvoice = null
+    },
     async confirmInvoice () {
       const no = Number(this.invoiceNo)
       if (!Number.isFinite(no) || no <= 0) {
-        this.notifyError('Vui lòng nhập số hóa đơn hợp lệ')
+        this.notifyError(`Vui lòng nhập số ${this.invoiceCategory === 6 ? 'phiếu' : 'hóa đơn'} hợp lệ`)
         return
       }
       if (!this.relatedReason) {
@@ -175,7 +256,8 @@ export default {
           params: {
             no,
             invoiceType: this.invoiceType,
-            category: this.invoiceCategory
+            category: this.invoiceCategory,
+            stockIssueType: this.invoiceCategory === 6 ? this.stockIssueType : undefined
           },
           meta: { suppressGlobalErrorToast: true }
         })

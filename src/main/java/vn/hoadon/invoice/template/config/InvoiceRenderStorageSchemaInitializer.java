@@ -20,6 +20,7 @@ public class InvoiceRenderStorageSchemaInitializer {
             try (var connection = jdbc.getDataSource().getConnection()) {
                 if (!"Microsoft SQL Server".equalsIgnoreCase(connection.getMetaData().getDatabaseProductName())) return;
             }
+            ensureInvoiceTemplateStateConstraint();
             replaceConstraint("invoice_render_jobs", "CK_invoice_render_jobs_state",
                     "(([state]='CANCELLED' OR [state]='FAILED' OR [state]='SUCCEEDED' OR [state]='RUNNING' OR [state]='QUEUED') AND [attempt_count]>=(0) AND isjson([manifest_json])=(1) AND isjson([parameters_json])=(1) AND ([scope]='SYSTEM' OR [scope]='COMPANY' AND [company_id] IS NOT NULL))");
             replaceConstraint("invoice_render_artifacts", "CK_invoice_render_artifacts_state",
@@ -28,6 +29,21 @@ public class InvoiceRenderStorageSchemaInitializer {
             allowAssetDeletion();
         } catch (Exception ignored) {
         }
+    }
+
+    private void ensureInvoiceTemplateStateConstraint() {
+        Integer exists = jdbc.queryForObject(
+                "select case when object_id('dbo.invoice_templates', 'U') is null then 0 else 1 end",
+                Integer.class);
+        if (!Integer.valueOf(1).equals(exists)) return;
+
+        String current = jdbc.query("select definition from sys.check_constraints where name = ?",
+                rs -> rs.next() ? rs.getString(1) : null, "CK_invoice_templates_state");
+        String expected = "([state] IN ('ACTIVE','ARCHIVED'))";
+        if (current != null && current.replace(" ", "").toUpperCase(java.util.Locale.ROOT)
+                .contains("[STATE]IN('ACTIVE','ARCHIVED')")) return;
+        if (current != null) jdbc.execute("alter table dbo.invoice_templates drop constraint CK_invoice_templates_state");
+        jdbc.execute("alter table dbo.invoice_templates add constraint CK_invoice_templates_state check " + expected);
     }
 
     private void allowRenderArtifactDeletion() {

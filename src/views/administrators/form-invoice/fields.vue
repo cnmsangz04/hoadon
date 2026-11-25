@@ -67,6 +67,17 @@
           ><code class="d-block">{{ fieldXmlPath(item) }}</code></template
         >
         <template #cell(valueType)="{ item }">{{ typeLabel(item.valueType) }}</template>
+        <template #cell(invoiceTypes)="{ item }">
+          <div class="invoice-type-badges">
+            <span
+              v-for="option in invoiceTypeItems(item.applicableInvoiceTypes)"
+              :key="option.value"
+              class="invoice-type-badge"
+              :class="`invoice-type-badge--${option.tone}`"
+            >{{ option.shortText }}</span>
+            <span v-if="!invoiceTypeItems(item.applicableInvoiceTypes).length" class="text-muted">Chưa thiết lập</span>
+          </div>
+        </template>
         <template #cell(active)="{ item }"
           ><b-badge :variant="fieldAvailable(item) ? 'success' : 'secondary'">{{
             fieldAvailable(item) ? 'Đang dùng' : 'Đã ẩn'
@@ -105,7 +116,7 @@
       <b-form @submit.prevent="saveField">
         <b-row>
           <b-col md="6"
-            ><b-form-group :label="form.id ? 'Tên hiển thị (không đổi)' : 'Tên hiển thị'"
+            ><b-form-group :label="form.id ? 'Tên hiển thị' : 'Tên hiển thị'"
               ><b-form-input
                 v-model.trim="form.label"
                 required
@@ -114,7 +125,7 @@
                 placeholder="Ví dụ: Mã tra cứu" /></b-form-group
           ></b-col>
           <b-col md="6"
-            ><b-form-group :label="form.id ? 'Mã phần tử (không đổi)' : 'Mã phần tử'"
+            ><b-form-group :label="form.id ? 'Mã phần tử' : 'Mã phần tử'"
               ><b-form-input
                 v-model.trim="form.key"
                 required
@@ -127,11 +138,11 @@
               ><div class="static-source">Thẻ XML hóa đơn</div></b-form-group
           ></b-col>
           <b-col md="6"
-            ><b-form-group :label="form.id ? 'Nhóm dữ liệu (không đổi)' : 'Nhóm dữ liệu'" label-for="field-group"
+            ><b-form-group :label="form.id ? 'Nhóm dữ liệu' : 'Nhóm dữ liệu'" label-for="field-group"
               ><b-form-select id="field-group" v-model="form.group" :options="fieldGroupOptions" :disabled="!!form.id" required @change="syncGeneratedKey" /></b-form-group
           ></b-col>
           <b-col md="6"
-            ><b-form-group :label="form.id ? 'Đường dẫn XML tương đối (không đổi)' : 'Đường dẫn XML tương đối'" label-for="field-xml-path"
+            ><b-form-group :label="form.id ? 'Đường dẫn XML tương đối' : 'Đường dẫn XML tương đối'" label-for="field-xml-path"
               ><b-form-input
                 id="field-xml-path"
                 v-model.trim="form.sourcePath"
@@ -145,6 +156,30 @@
         <b-form-group label="Đường dẫn XML đầy đủ" label-for="field-full-path">
           <b-form-input id="field-full-path" :value="fieldXmlPath(form)" readonly />
         </b-form-group>
+        <b-form-group label="Loại hóa đơn, chứng từ áp dụng">
+          <v-select
+            v-model="form.invoiceTypeSelections"
+            class="invoice-type-select"
+            :options="invoiceTypeOptions"
+            :reduce="(option) => option.value"
+            label="shortText"
+            multiple
+            :close-on-select="false"
+            :clearable="false"
+            :searchable="false"
+            placeholder="Chọn loại hóa đơn, chứng từ"
+          >
+            <template #option="option">{{ option.text }}</template>
+            <template #no-options>Không có loại phù hợp</template>
+          </v-select>
+        </b-form-group>
+        <div class="d-flex flex-wrap field-flags mb-3">
+          <b-form-checkbox v-model="form.requiredDisplay" @change="requiredChanged"
+            >Bắt buộc hiển thị trên mẫu</b-form-checkbox
+          ><b-form-checkbox v-model="form.active" :disabled="form.requiredDisplay"
+            >Cho phép sử dụng</b-form-checkbox
+          >
+        </div>
         <details class="field-options mb-3">
           <summary>Thông tin bổ sung</summary>
           <b-row class="mt-3">
@@ -172,13 +207,6 @@
             ><b-form-textarea v-model.trim="form.description" rows="2" maxlength="2000"
           /></b-form-group>
         </details>
-        <div class="d-flex flex-wrap field-flags mb-3">
-          <b-form-checkbox v-model="form.requiredDisplay" @change="requiredChanged"
-            >Bắt buộc hiển thị trên mẫu</b-form-checkbox
-          ><b-form-checkbox v-model="form.active" :disabled="form.requiredDisplay"
-            >Cho phép sử dụng</b-form-checkbox
-          >
-        </div>
         <b-alert v-if="error" show variant="danger">{{ error }}</b-alert>
         <div class="modal-actions">
           <b-button variant="light" class="mr-2" :disabled="saving" @click="$refs.fieldModal.hide()"
@@ -265,16 +293,17 @@ export default {
       form: this.emptyForm(),
       groupForm: {},
       columns: [
-        { key: 'index', label: 'STT', thStyle: { width: '5%' }, class: 'text-center' },
-        { key: 'field', label: 'Phần tử', thStyle: { width: '22%' } },
-        { key: 'group', label: 'Nhóm dữ liệu', thStyle: { width: '20%' } },
-        { key: 'sourcePath', label: 'Dữ liệu', thStyle: { width: '26%' } },
-        { key: 'valueType', label: 'Kiểu', thStyle: { width: '12%' } },
-        { key: 'active', label: 'Trạng thái', thStyle: { width: '12%' }, class: 'text-center' },
+        { key: 'index', label: 'STT', thStyle: { width: '4%' }, class: 'text-center' },
+        { key: 'field', label: 'Phần tử', thStyle: { width: '15%' } },
+        { key: 'group', label: 'Nhóm dữ liệu', thStyle: { width: '10%' } },
+        { key: 'sourcePath', label: 'Dữ liệu', thStyle: { width: '20%' } },
+        { key: 'valueType', label: 'Kiểu', thStyle: { width: '10%' } },
+        { key: 'invoiceTypes', label: 'Áp dụng', thStyle: { width: '12%' } },
+        { key: 'active', label: 'Trạng thái', thStyle: { width: '9%' }, class: 'text-center' },
         {
           key: 'actions',
           label: '',
-          thStyle: { width: '5%' },
+          thStyle: { width: '4%' },
           class: 'text-center table-action-cell'
         }
       ]
@@ -299,6 +328,14 @@ export default {
     },
     typeOptions() {
       return Object.entries(types).map(([value, text]) => ({ value, text }))
+    },
+    invoiceTypeOptions() {
+      return [
+        { value: '1', text: 'Hóa đơn giá trị gia tăng', shortText: 'GTGT', tone: 'vat' },
+        { value: '2', text: 'Hóa đơn bán hàng', shortText: 'Bán hàng', tone: 'sales' },
+        { value: '6:1', text: 'Phiếu xuất kho kiêm vận chuyển nội bộ', shortText: 'VC nội bộ', tone: 'internal' },
+        { value: '6:2', text: 'Phiếu xuất kho hàng gửi bán đại lý', shortText: 'Gửi bán ĐL', tone: 'consignment' }
+      ]
     }
   },
   mounted() {
@@ -316,6 +353,8 @@ export default {
         valueType: 'STRING',
         maxLength: null,
         defaultFormatter: 'plainText',
+        applicableInvoiceTypes: '1,2',
+        invoiceTypeSelections: ['1', '2'],
         description: '',
         requiredDisplay: false,
         active: true,
@@ -371,9 +410,23 @@ export default {
     typeLabel(code) {
       return types[code] || code
     },
+    invoiceTypeSelections(value) {
+      return (value || '1,2,6').split(',').flatMap((item) => {
+        const code = item.trim()
+        return code === '6' ? ['6:1', '6:2'] : [code]
+      }).filter((item, index, values) => item && values.indexOf(item) === index)
+    },
+    invoiceTypeLabel(value) {
+      return this.invoiceTypeItems(value).map((option) => option.text).join(', ')
+    },
+    invoiceTypeItems(value) {
+      const selected = this.invoiceTypeSelections(value)
+      return this.invoiceTypeOptions.filter((option) => selected.includes(option.value))
+    },
     openField(item) {
       this.error = ''
       this.form = item ? { ...item, expectedLockVersion: item.lockVersion } : this.emptyForm()
+      this.form.invoiceTypeSelections = this.invoiceTypeSelections(this.form.applicableInvoiceTypes)
       delete this.form.dataset
       if (!item) {
         this.form.sortOrder = this.metadata.nextSortOrder
@@ -413,6 +466,8 @@ export default {
     async saveField() {
       await this.perform(async () => {
         const body = { ...this.form, maxLength: this.form.maxLength || null }
+        body.applicableInvoiceTypes = body.invoiceTypeSelections.join(',')
+        delete body.invoiceTypeSelections
         if (body.id) await axios.put(`${endpoint}/${body.id}`, body)
         else await axios.post(endpoint, body)
         this.$refs.fieldModal.hide()
@@ -548,6 +603,70 @@ export default {
   background: #f8fafc;
   color: #475569;
   font-size: 0.875rem;
+}
+.invoice-type-select :deep(.vs__dropdown-toggle) {
+  min-height: 38px;
+  padding: 0 4px 3px;
+  border-color: #ced4da;
+  border-radius: 6px;
+  background: #fff;
+}
+.invoice-type-select :deep(.vs__selected) {
+  margin: 4px 2px 0;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: #eef2f7;
+  color: #344054;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+.invoice-type-select :deep(.vs__search) {
+  margin-top: 4px;
+  font-size: 0.875rem;
+}
+.invoice-type-select :deep(.vs__actions) {
+  padding-top: 4px;
+}
+.invoice-type-select :deep(.vs__dropdown-option) {
+  padding: 8px 12px;
+  white-space: normal;
+}
+.invoice-type-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.invoice-type-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.invoice-type-badge--vat {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+.invoice-type-badge--sales {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+.invoice-type-badge--internal {
+  border-color: #c4b5fd;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+.invoice-type-badge--consignment {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #c2410c;
 }
 .fields-table :deep(.badge) {
   white-space: normal;

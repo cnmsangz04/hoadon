@@ -66,7 +66,7 @@ public class DailyInvoiceReportServiceImpl implements DailyInvoiceReportService 
         if (counts != null) {
             for (InvoiceRepository.InvoiceStatusCount row : counts) {
                 if (row.getCompanyId() == null || row.getStatus() == null) continue;
-                int category = row.getCategory() != null && row.getCategory() == 2 ? 2 : 1;
+                int category = row.getCategory() != null && (row.getCategory() == 2 || row.getCategory() == 6) ? row.getCategory() : 1;
                 byCompany.computeIfAbsent(row.getCompanyId(), key -> new LinkedHashMap<>())
                         .computeIfAbsent(category, key -> new LinkedHashMap<>())
                         .put(row.getStatus(), row.getTotal() != null ? row.getTotal() : 0L);
@@ -101,6 +101,7 @@ public class DailyInvoiceReportServiceImpl implements DailyInvoiceReportService 
             lines.add("<b>" + escape(companyName) + "</b>");
             appendCategoryReport(lines, "Hóa đơn GTGT", entry.getValue().getOrDefault(1, Map.of()));
             appendCategoryReport(lines, "Hóa đơn bán hàng", entry.getValue().getOrDefault(2, Map.of()));
+            appendCategoryReport(lines, "Phiếu xuất kho", entry.getValue().getOrDefault(6, Map.of()));
         }
         return String.join("\n", lines);
     }
@@ -172,10 +173,11 @@ public class DailyInvoiceReportServiceImpl implements DailyInvoiceReportService 
             String companyName = resolveCompanyName(company, entry.getKey());
             ReportNumbers vatNumbers = resolveNumbers(entry.getValue().getOrDefault(1, Map.of()));
             ReportNumbers salesNumbers = resolveNumbers(entry.getValue().getOrDefault(2, Map.of()));
+            ReportNumbers stockNumbers = resolveNumbers(entry.getValue().getOrDefault(6, Map.of()));
             ReportNumbers numbers = new ReportNumbers(
-                    vatNumbers.signed() + salesNumbers.signed(),
-                    vatNumbers.taxSent() + salesNumbers.taxSent(),
-                    vatNumbers.notEligible() + salesNumbers.notEligible());
+                    vatNumbers.signed() + salesNumbers.signed() + stockNumbers.signed(),
+                    vatNumbers.taxSent() + salesNumbers.taxSent() + stockNumbers.taxSent(),
+                    vatNumbers.notEligible() + salesNumbers.notEligible() + stockNumbers.notEligible());
             Map<String, String> vars = new HashMap<>();
             vars.put("SUBJECT", "Báo cáo hóa đơn ngày " + data.reportDate().format(MAIL_DATE_FORMAT));
             vars.put("REPORT_DATE", data.reportDate().format(MAIL_DATE_FORMAT));
@@ -192,6 +194,10 @@ public class DailyInvoiceReportServiceImpl implements DailyInvoiceReportService 
             vars.put("SALES_TAX_SENT_COUNT", String.valueOf(salesNumbers.taxSent()));
             vars.put("SALES_NOT_ELIGIBLE_COUNT", String.valueOf(salesNumbers.notEligible()));
             vars.put("SALES_TOTAL_COUNT", String.valueOf(salesNumbers.total()));
+            vars.put("STOCK_SIGNED_COUNT", String.valueOf(stockNumbers.signed()));
+            vars.put("STOCK_TAX_SENT_COUNT", String.valueOf(stockNumbers.taxSent()));
+            vars.put("STOCK_NOT_ELIGIBLE_COUNT", String.valueOf(stockNumbers.notEligible()));
+            vars.put("STOCK_TOTAL_COUNT", String.valueOf(stockNumbers.total()));
 
             MailJobMessage message = new MailJobMessage();
             message.setTemplateKey(DAILY_REPORT_MAIL_TEMPLATE);

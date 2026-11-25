@@ -24,6 +24,7 @@ public interface ErrorMessageRepository extends JpaRepository<ErrorMessageEntity
             WHERE e.companyId = :companyId
               AND (:status IS NULL OR e.status = :status)
               AND (:notificationType IS NULL OR e.notificationType = :notificationType)
+              AND (:category IS NULL OR (:category = 0 AND e.category IN (0, 1, 2)) OR e.category = :category)
               AND (:dateFrom IS NULL OR e.noticeDate >= :dateFrom)
               AND (:dateTo IS NULL OR e.noticeDate <= :dateTo)
               AND (:keyword IS NULL OR :keyword = ''
@@ -36,6 +37,7 @@ public interface ErrorMessageRepository extends JpaRepository<ErrorMessageEntity
                                     @Param("keyword") String keyword,
                                     @Param("status") Integer status,
                                     @Param("notificationType") Integer notificationType,
+                                    @Param("category") Integer category,
                                     @Param("dateFrom") LocalDate dateFrom,
                                     @Param("dateTo") LocalDate dateTo,
                                     Pageable pageable);

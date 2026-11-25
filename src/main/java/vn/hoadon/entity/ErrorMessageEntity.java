@@ -46,6 +46,9 @@ public class ErrorMessageEntity {
     @Column(name = "notification_type", nullable = false)
     private Integer notificationType = 1;
 
+    @Column(name = "category")
+    private Integer category = 1;
+
     @Column(name = "tax_authority_code", length = 20)
     private String taxAuthorityCode;
 
@@ -131,6 +134,8 @@ public class ErrorMessageEntity {
     public void setMessageType(String messageType) { this.messageType = messageType; }
     public Integer getNotificationType() { return notificationType; }
     public void setNotificationType(Integer notificationType) { this.notificationType = notificationType; }
+    public Integer getCategory() { return category; }
+    public void setCategory(Integer category) { this.category = category; }
     public String getTaxAuthorityCode() { return taxAuthorityCode; }
     public void setTaxAuthorityCode(String taxAuthorityCode) { this.taxAuthorityCode = taxAuthorityCode; }
     public String getTaxAuthorityName() { return taxAuthorityName; }

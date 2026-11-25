@@ -1,7 +1,7 @@
 <template>
   <div class="container-fluid py-3 error-message-create">
     <div class="d-flex align-items-center justify-content-between mb-3">
-      <h4 class="mb-0 font-weight-bold">Thông báo hóa đơn điện tử có sai sót</h4>
+      <h4 class="mb-0 font-weight-bold">{{ pageTitle }}</h4>
       <b-badge variant="light">{{ isEdit ? 'Cập nhật' : 'Lập mới' }}</b-badge>
     </div>
 
@@ -64,7 +64,7 @@
 
       <b-card no-body class="mb-3">
         <b-card-header class="bg-light font-weight-bold d-flex justify-content-between align-items-center">
-          <span>Danh sách hóa đơn sai sót</span>
+          <span>{{ subjectTitle }}</span>
           <div>
             <b-button size="sm" variant="outline-secondary" class="mr-2" @click="addBlankLine"><i class="fas fa-plus"></i> Thêm dòng</b-button>
             <b-button size="sm" variant="outline-primary" @click="$refs.invoiceModal.show()"><i class="fas fa-search"></i> Chọn hóa đơn</b-button>
@@ -168,7 +168,7 @@
       <div class="action-bar mt-3 pt-3">
         <div class="d-flex align-items-center justify-content-between">
           <div>
-            <b-button size="sm" variant="outline-secondary" @click="$router.push({ name: 'CustomerErrorMessageList' })">
+            <b-button size="sm" variant="outline-secondary" @click="goBack">
               <i class="fas fa-arrow-left"></i> Quay lại
             </b-button>
           </div>
@@ -184,7 +184,7 @@
       </div>
     </b-card>
 
-    <b-modal ref="invoiceModal" size="xl" title="Chọn hóa đơn sai sót">
+    <b-modal ref="invoiceModal" size="xl" :title="`Chọn ${subjectTitle.toLowerCase()}`">
       <b-row class="mb-2">
         <b-col md="3"><manual-date-picker v-model="invoiceSearch.dateFrom" placeholder="Từ ngày" size="sm" /></b-col>
         <b-col md="3"><manual-date-picker v-model="invoiceSearch.dateTo" placeholder="Đến ngày" size="sm" /></b-col>
@@ -227,6 +227,7 @@ function defaultForm() {
     createPlace: '',
     noticeDate: today,
     documentType: 'INVOICE',
+    category: 1,
     invoices: [],
     status: 0,
     signDate: null
@@ -282,6 +283,21 @@ export default {
   },
   computed: {
     isEdit() { return !!this.$route.params.id },
+    noticeCategory() {
+      const routeCategory = Number(this.$route.query.category)
+      if (routeCategory === 6) return 6
+      if (routeCategory === 2) return 2
+      if (routeCategory === 1) return 1
+      if (this.isEdit && Number(this.frm.category) === 6) return 6
+      if (this.isEdit && Number(this.frm.category) === 2) return 2
+      return 0
+    },
+    pageTitle() {
+      return this.noticeCategory === 6 ? 'Thông báo phiếu xuất kho điện tử có sai sót' : 'Thông báo hóa đơn điện tử có sai sót'
+    },
+    subjectTitle() {
+      return this.noticeCategory === 6 ? 'Danh sách phiếu xuất kho sai sót' : 'Danh sách hóa đơn sai sót'
+    },
     formErrorList() { return Object.values(this.errors || {}).filter(Boolean) },
     canSend() { return this.isEdit && [1, 3, 4].includes(Number(this.frm.status)) },
     selectedPlaceName() {
@@ -357,7 +373,7 @@ export default {
         createPlace: required(this.frm.createPlace, 'Vui lòng chọn nơi lập'),
         taxNoticeNumber: Number(this.frm.notificationType) === 2 ? required(this.frm.taxNoticeNumber, 'Vui lòng nhập số thông báo CQT') : null,
         taxNoticeDate: Number(this.frm.notificationType) === 2 ? required(this.frm.taxNoticeDate, 'Vui lòng chọn ngày thông báo CQT') : null,
-        invoices: this.frm.invoices.length ? null : 'Vui lòng chọn ít nhất một hóa đơn sai sót'
+        invoices: this.frm.invoices.length ? null : `Vui lòng chọn ít nhất một ${this.noticeCategory === 6 ? 'phiếu xuất kho' : 'hóa đơn'} sai sót`
       }
       Object.keys(this.errors).forEach(k => { if (!this.errors[k]) delete this.errors[k] })
       return !hasErrors(this.errors)
@@ -371,6 +387,7 @@ export default {
         createPlace: this.frm.createPlace,
         noticeDate: this.frm.noticeDate,
         documentType: this.frm.documentType,
+        category: this.noticeCategory,
         invoices: this.frm.invoices
       }
     },
@@ -386,24 +403,22 @@ export default {
           await this.loadDetail(this.$route.params.id)
         } else {
           const { data } = await axios.post('/error-messages', this.payload(), { successMessage: 'Đã lập thông báo' })
-          this.$router.push({ name: 'CustomerErrorMessageEdit', params: { id: data.id } })
+          const query = this.noticeCategory === 6 || this.noticeCategory === 2 ? { category: String(this.noticeCategory) } : {}
+          this.$router.push({ name: 'CustomerErrorMessageEdit', params: { id: data.id }, query })
         }
       } finally { this.btnLoading = false }
     },
     async searchInvoices() {
       this.invoiceBusy = true
       try {
-        const category = Number(this.$route.query.category)
         const params = { ...this.invoiceSearch, size: 50 }
-        if (category === 1 || category === 2) params.category = category
+        params.category = this.noticeCategory
         const { data } = await axios.get('/error-messages/invoices/search', { params })
         this.invoiceList = Array.isArray(data.data) ? data.data : []
       } finally { this.invoiceBusy = false }
     },
     async loadInvoicesByIds(ids) {
-      const category = Number(this.$route.query.category)
-      const body = { ids }
-      if (category === 1 || category === 2) body.category = category
+      const body = { ids, category: this.noticeCategory }
       const { data } = await axios.post('/error-messages/invoices/by-ids', body)
       const rows = Array.isArray(data) ? data : []
       const exists = new Set(this.frm.invoices.map(x => Number(x.invoiceId)))
@@ -439,6 +454,10 @@ export default {
     },
     removeLine(index) { this.frm.invoices.splice(index, 1) },
     addBlankLine() { this.frm.invoices.push(this.normalizeLine({})) },
+    goBack() {
+      const query = this.noticeCategory === 6 ? { category: '6' } : {}
+      this.$router.push({ name: 'CustomerErrorMessageList', query })
+    },
     async signData() {
       try {
         const ok = await confirmUsbTokenSignature(`Bạn có chắc chắn muốn ký số thông báo sai sót #${this.$route.params.id} bằng USB token?`)

@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 public interface ErrorMessageService {
-    Page<ErrorMessageEntity> search(Long companyId, String keyword, Integer status, Integer notificationType, LocalDate dateFrom, LocalDate dateTo, Pageable pageable);
+    Page<ErrorMessageEntity> search(Long companyId, String keyword, Integer status, Integer notificationType, Integer category, LocalDate dateFrom, LocalDate dateTo, Pageable pageable);
     Optional<ErrorMessageEntity> findById(Long id);
     Optional<ErrorMessageEntity> findByIdAndCompany(Long id, Long companyId);
     ErrorMessageEntity create(Long companyId, Long userId, ErrorMessageUpsertRequest req);

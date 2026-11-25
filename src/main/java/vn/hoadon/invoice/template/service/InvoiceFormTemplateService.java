@@ -11,6 +11,8 @@ import java.util.Objects;
 
 @Service
 public class InvoiceFormTemplateService {
+    public record InvoiceType(Integer category, Integer stockIssueType) {}
+
     private final FormInvoiceRepository forms;
     private final InvoiceTemplateVersionRepository versions;
     private final InvoiceTemplateService templates;
@@ -34,7 +36,8 @@ public class InvoiceFormTemplateService {
             return details;
         }
         var details = form.getTemplateVersionId() == null
-                ? templates.create(form.getName(), form.getCategory(), null, access.systemManager(), key, access, initialLayout)
+                ? templates.create(form.getName(), form.getCategory(), form.getStockIssueType(), null,
+                access.systemManager(), key, access, initialLayout)
                 : templates.clonePublished(form.getName(), form.getCategory(), form.getTemplateVersionId(), access.systemManager(), key, access);
         form.setTemplateId(details.template().getId());
         if (!details.versions().isEmpty()) form.setTemplateVersionId(details.versions().getFirst().getId());
@@ -42,6 +45,21 @@ public class InvoiceFormTemplateService {
         validateBinding(form, access);
         templates.refreshThumbnail(details);
         return details;
+    }
+
+    @Transactional
+    public InvoiceTemplateService.Details editable(Long formId, String key, TemplateAccess access) {
+        return editable(formId, key, access, null);
+    }
+
+    @Transactional(readOnly = true)
+    public InvoiceType invoiceType(Long formId, TemplateAccess access) {
+        var form = forms.findById(formId).orElseThrow(TemplateException::missing);
+        if (access.systemManager() ? !Objects.equals(form.getSystem(), 1)
+                : !Objects.equals(form.getSystem(), 0) || !Objects.equals(form.getCompanyId(), access.companyId())) {
+            throw TemplateException.missing();
+        }
+        return new InvoiceType(form.getCategory(), form.getStockIssueType());
     }
 
     @Transactional
@@ -79,6 +97,11 @@ public class InvoiceFormTemplateService {
         if (!"ACTIVE".equals(template.getState()))
             throw TemplateException.invalid("TEMPLATE_ARCHIVED", "Mẫu thiết kế đã ngừng sử dụng. Vui lòng chọn mẫu khác.");
         return versions.findTopByTemplateIdOrderByVersionNoDesc(form.getTemplateId()).orElseThrow(TemplateException::missing);
+    }
+
+    @Transactional(readOnly = true)
+    public InvoiceTemplateVersionEntity published(Long formId) {
+        return latestPublished(formId);
     }
 
     @Transactional

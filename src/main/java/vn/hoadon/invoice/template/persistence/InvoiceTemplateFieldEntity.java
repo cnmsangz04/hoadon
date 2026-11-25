@@ -47,6 +47,9 @@ public class InvoiceTemplateFieldEntity {
     @Column(name = "default_formatter", nullable = false, length = 40)
     private String defaultFormatter;
 
+    @Column(name = "applicable_invoice_types", length = 32)
+    private String applicableInvoiceTypes;
+
     @Column(name = "required_display", nullable = false)
     private boolean requiredDisplay;
 
@@ -154,6 +157,14 @@ public class InvoiceTemplateFieldEntity {
 
     public void setDefaultFormatter(String value) {
         this.defaultFormatter = value;
+    }
+
+    public String getApplicableInvoiceTypes() {
+        return applicableInvoiceTypes;
+    }
+
+    public void setApplicableInvoiceTypes(String value) {
+        this.applicableInvoiceTypes = value;
     }
 
     public boolean isRequiredDisplay() {

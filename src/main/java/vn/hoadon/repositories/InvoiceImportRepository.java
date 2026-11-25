@@ -20,4 +20,10 @@ public interface InvoiceImportRepository extends JpaRepository<InvoiceImportEnti
 
     @Query("select e from InvoiceImportEntity e where e.id = :id and e.companyId = :companyId and (e.importType = 'INVOICE' or e.importType is null) and (e.category = :category or (:category = 1 and e.category is null))")
     Optional<InvoiceImportEntity> findInvoiceImportByIdAndCompanyIdAndCategory(@Param("id") Long id, @Param("companyId") Long companyId, @Param("category") Integer category);
+
+    @Query("select e from InvoiceImportEntity e where e.companyId = :companyId and (e.importType = 'INVOICE' or e.importType is null) and e.category = :category and (:stockIssueType is null or e.stockIssueType = :stockIssueType) order by e.id desc")
+    Page<InvoiceImportEntity> findInvoiceImportsByCompanyIdAndCategoryAndStockIssueType(@Param("companyId") Long companyId, @Param("category") Integer category, @Param("stockIssueType") Integer stockIssueType, Pageable pageable);
+
+    @Query("select e from InvoiceImportEntity e where e.id = :id and e.companyId = :companyId and (e.importType = 'INVOICE' or e.importType is null) and e.category = :category and (:stockIssueType is null or e.stockIssueType = :stockIssueType)")
+    Optional<InvoiceImportEntity> findInvoiceImportByIdAndCompanyIdAndCategoryAndStockIssueType(@Param("id") Long id, @Param("companyId") Long companyId, @Param("category") Integer category, @Param("stockIssueType") Integer stockIssueType);
 }

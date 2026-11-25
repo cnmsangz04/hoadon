@@ -7,6 +7,7 @@ public class FormInvoiceListItemDto {
     private String name;
     private String serial;
     private Integer category;
+    private Integer stockIssueType;
     private String categoryLabel;
     private Integer type;
     private String typeLabel;
@@ -23,6 +24,8 @@ public class FormInvoiceListItemDto {
     public void setSerial(String serial) { this.serial = serial; }
     public Integer getCategory() { return category; }
     public void setCategory(Integer category) { this.category = category; }
+    public Integer getStockIssueType() { return stockIssueType; }
+    public void setStockIssueType(Integer stockIssueType) { this.stockIssueType = stockIssueType; }
     public String getCategoryLabel() { return categoryLabel; }
     public void setCategoryLabel(String categoryLabel) { this.categoryLabel = categoryLabel; }
     public Integer getType() { return type; }

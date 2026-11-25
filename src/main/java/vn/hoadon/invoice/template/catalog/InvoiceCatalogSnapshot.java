@@ -48,7 +48,30 @@ public record InvoiceCatalogSnapshot(
             boolean requiredDisplay,
             boolean active,
             int sortOrder,
-            Long lockVersion) {
+            Long lockVersion,
+            String applicableInvoiceTypes) {
+        public Field(
+                Long id,
+                String key,
+                String label,
+                String group,
+                String dataset,
+                boolean repeated,
+                String sourceType,
+                String sourcePath,
+                String valueType,
+                Integer maxLength,
+                String defaultFormatter,
+                String description,
+                boolean requiredDisplay,
+                boolean active,
+                int sortOrder,
+                Long lockVersion) {
+            this(id, key, label, group, dataset, repeated, sourceType, sourcePath, valueType,
+                    maxLength, defaultFormatter, description, requiredDisplay, active, sortOrder,
+                    lockVersion, "1,2,6");
+        }
+
         public Field withRepeated(boolean value) {
             return repeated == value
                     ? this
@@ -68,8 +91,29 @@ public record InvoiceCatalogSnapshot(
                             requiredDisplay,
                             active,
                             sortOrder,
-                            lockVersion);
+                            lockVersion,
+                            applicableInvoiceTypes);
         }
+
+        public boolean supportsInvoiceType(int category, Integer stockIssueType) {
+            if (applicableInvoiceTypes == null || applicableInvoiceTypes.isBlank()) return true;
+            String categoryCode = String.valueOf(category);
+            String stockIssueCode = stockIssueType == null ? null : categoryCode + ":" + stockIssueType;
+            return Arrays.stream(applicableInvoiceTypes.split(","))
+                    .map(String::trim)
+                    .anyMatch(value -> value.equals(categoryCode)
+                            || stockIssueCode != null && value.equals(stockIssueCode));
+        }
+    }
+
+    public InvoiceCatalogSnapshot forInvoiceType(int category, Integer stockIssueType) {
+        return new InvoiceCatalogSnapshot(
+                code,
+                groups,
+                datasets,
+                fields.stream()
+                        .filter(field -> field.supportsInvoiceType(category, stockIssueType))
+                        .toList());
     }
 
     public String rowScope(String datasetCode) {

@@ -56,6 +56,7 @@ public class ReportController extends BaseController {
     public ResponseEntity<?> listInvoices(
             @AuthenticationPrincipal UserEntity user,
             @RequestParam(name = "category", required = false) Integer category,
+            @RequestParam(name = "stockIssueType", required = false) Integer stockIssueType,
             @RequestParam(name = "status", required = false) Short status,
             @RequestParam(name = "periodType", defaultValue = "month") String periodType,
             @RequestParam(name = "month", required = false) Integer month,
@@ -76,7 +77,8 @@ public class ReportController extends BaseController {
 
         DateRange range = buildDateRange(periodType, month, quarter, year, fromDate, toDate);
 
-        Page<InvoiceEntity> pageData = invoiceRepository.searchReportInvoices(
+        Page<InvoiceEntity> pageData = category != null && category == 6 ? invoiceRepository.searchReportInvoicesByStockIssueType(
+                companyId, category, stockIssueType, status, range.from, range.to, pageable) : invoiceRepository.searchReportInvoices(
                 companyId,
                 category,
                 status,
@@ -84,7 +86,8 @@ public class ReportController extends BaseController {
                 range.to,
                 pageable
         );
-        InvoiceRepository.InvoiceReportSummary reportSummary = invoiceRepository.summarizeReportInvoices(
+        InvoiceRepository.InvoiceReportSummary reportSummary = category != null && category == 6 ? invoiceRepository.summarizeReportInvoicesByStockIssueType(
+                companyId, category, stockIssueType, status, range.from, range.to) : invoiceRepository.summarizeReportInvoices(
                 companyId,
                 category,
                 status,
@@ -103,6 +106,7 @@ public class ReportController extends BaseController {
             row.put("paymentType", inv.getPaymentType());
             row.put("status", inv.getStatus());
             row.put("amount", inv.getAmount());
+            row.put("stockIssueType", inv.getStockIssueType());
             row.put("orderCode", inv.getLookupCode());
             // Mã hóa đơn nếu có cột bill.code trong JSON others hoặc bill; ở đây dùng lookupCode làm mã đơn hàng
 
@@ -137,6 +141,7 @@ public class ReportController extends BaseController {
     public ResponseEntity<?> exportInvoices(
             @AuthenticationPrincipal UserEntity user,
             @RequestParam(name = "category", required = false) Integer category,
+            @RequestParam(name = "stockIssueType", required = false) Integer stockIssueType,
             @RequestParam(name = "status", required = false) Short status,
             @RequestParam(name = "periodType", defaultValue = "month") String periodType,
             @RequestParam(name = "month", required = false) Integer month,
@@ -155,7 +160,8 @@ public class ReportController extends BaseController {
 
         // Lấy toàn bộ dữ liệu trong phạm vi (limit an toàn 20k bản ghi)
         Pageable pageable = PageRequest.of(0, 20000, Sort.by(Sort.Direction.DESC, "id"));
-        Page<InvoiceEntity> pageData = invoiceRepository.searchReportInvoices(
+        Page<InvoiceEntity> pageData = category != null && category == 6 ? invoiceRepository.searchReportInvoicesByStockIssueType(
+                companyId, category, stockIssueType, status, range.from, range.to, pageable) : invoiceRepository.searchReportInvoices(
                 companyId,
                 category,
                 status,
@@ -163,7 +169,8 @@ public class ReportController extends BaseController {
                 range.to,
                 pageable
         );
-        InvoiceRepository.InvoiceReportSummary reportSummary = invoiceRepository.summarizeReportInvoices(
+        InvoiceRepository.InvoiceReportSummary reportSummary = category != null && category == 6 ? invoiceRepository.summarizeReportInvoicesByStockIssueType(
+                companyId, category, stockIssueType, status, range.from, range.to) : invoiceRepository.summarizeReportInvoices(
                 companyId,
                 category,
                 status,
@@ -172,8 +179,9 @@ public class ReportController extends BaseController {
         );
 
         try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            boolean salesInvoice = Integer.valueOf(2).equals(category);
-            Sheet sheet = wb.createSheet(salesInvoice ? "Bao_cao_ban_hang" : "Bao_cao_hoa_don");
+            boolean stockIssue = Integer.valueOf(6).equals(category);
+            boolean salesInvoice = Integer.valueOf(2).equals(category) || stockIssue;
+            Sheet sheet = stockIssue ? wb.createSheet("Bao_cao_phieu_xuat_kho") : wb.createSheet(salesInvoice ? "Bao_cao_ban_hang" : "Bao_cao_hoa_don");
             int rowIdx = 0;
 
             // Kiểu tiêu đề
@@ -188,7 +196,7 @@ public class ReportController extends BaseController {
                     "STT",
                     "Mã đơn hàng",
                     "Ký hiệu",
-                    "Số hóa đơn",
+                    Integer.valueOf(6).equals(category) ? "Số phiếu" : "Số hóa đơn",
                     "Ngày lập",
                     "Hình thức thanh toán",
                     "Trạng thái",
@@ -199,7 +207,9 @@ public class ReportController extends BaseController {
                     "Địa chỉ",
                     "Tổng tiền hàng"
             };
-            String[] cols = salesInvoice
+            String[] cols = stockIssue
+                    ? java.util.stream.Stream.concat(java.util.Arrays.stream(commonCols), java.util.stream.Stream.of("Loại phiếu", "Số lệnh/HĐKT", "Ngày lệnh/HĐKT", "Người nhận hàng", "Người vận chuyển", "Phương tiện", "Tổng tiền thanh toán")).toArray(String[]::new)
+                    : salesInvoice
                     ? java.util.stream.Stream.concat(java.util.Arrays.stream(commonCols), java.util.stream.Stream.of("Tổng tiền thanh toán")).toArray(String[]::new)
                     : java.util.stream.Stream.concat(java.util.Arrays.stream(commonCols), java.util.stream.Stream.of("Tổng tiền thuế", "Tổng tiền thanh toán")).toArray(String[]::new);
             for (int i = 0; i < cols.length; i++) {
@@ -264,6 +274,18 @@ public class ReportController extends BaseController {
 
                 // Tổng tiền hàng
                 if (inv.getTotal() != null) row.createCell(col++).setCellValue(inv.getTotal()); else col++;
+                if (stockIssue) {
+                    Map<String, Object> stock = extractObject(inv.getOthers());
+                    Integer type = inv.getStockIssueType();
+                    row.createCell(col++).setCellValue(type != null && type == 2 ? "Hàng gửi bán đại lý" : "Vận chuyển nội bộ");
+                    row.createCell(col++).setCellValue(type != null && type == 2
+                            ? text(stock, "economicContractNo", "economic_contract_no")
+                            : text(stock, "dispatchOrderNo", "dispatch_order_no", "lddnbo"));
+                    row.createCell(col++).setCellValue(text(stock, "economicContractDate", "economic_contract_date"));
+                    row.createCell(col++).setCellValue(text(stock, "receiverName", "receiver_name"));
+                    row.createCell(col++).setCellValue(text(stock, "transportName", "transport_name"));
+                    row.createCell(col++).setCellValue(text(stock, "vehicle", "vehicleNumber", "vehicle_number"));
+                }
                 if (!salesInvoice) {
                     // Tổng tiền thuế
                     if (inv.getVatAmount() != null) row.createCell(col++).setCellValue(inv.getVatAmount()); else col++;
@@ -275,7 +297,7 @@ public class ReportController extends BaseController {
             rowIdx++;
             Row summaryRow = sheet.createRow(rowIdx++);
             Cell countLabel = summaryRow.createCell(0);
-            countLabel.setCellValue("Tổng số hóa đơn");
+            countLabel.setCellValue(stockIssue ? "Tổng số phiếu" : "Tổng số hóa đơn");
             countLabel.setCellStyle(headerStyle);
             summaryRow.createCell(1).setCellValue(reportSummary != null && reportSummary.getInvoiceCount() != null ? reportSummary.getInvoiceCount() : 0L);
             Cell totalLabel = summaryRow.createCell(11);
@@ -284,9 +306,9 @@ public class ReportController extends BaseController {
             summaryRow.createCell(12).setCellValue(reportSummary != null && reportSummary.getTotalBeforeTax() != null ? reportSummary.getTotalBeforeTax() : 0.0);
             if (!salesInvoice) {
                 summaryRow.createCell(13).setCellValue(reportSummary != null && reportSummary.getTotalVat() != null ? reportSummary.getTotalVat() : 0.0);
-                summaryRow.createCell(14).setCellValue(reportSummary != null && reportSummary.getTotalAmount() != null ? reportSummary.getTotalAmount() : 0.0);
+                summaryRow.createCell(cols.length - 1).setCellValue(reportSummary != null && reportSummary.getTotalAmount() != null ? reportSummary.getTotalAmount() : 0.0);
             } else {
-                summaryRow.createCell(13).setCellValue(reportSummary != null && reportSummary.getTotalAmount() != null ? reportSummary.getTotalAmount() : 0.0);
+                summaryRow.createCell(cols.length - 1).setCellValue(reportSummary != null && reportSummary.getTotalAmount() != null ? reportSummary.getTotalAmount() : 0.0);
             }
 
             for (int i = 0; i < cols.length; i++) {
@@ -297,7 +319,7 @@ public class ReportController extends BaseController {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-            String filename = (salesInvoice ? "bao-cao-hoa-don-ban-hang-" : "bao-cao-hoa-don-") + LocalDateTime.now().toString().replace(":", "-") + ".xlsx";
+            String filename = (Integer.valueOf(6).equals(category) ? "bao-cao-phieu-xuat-kho-" : salesInvoice ? "bao-cao-hoa-don-ban-hang-" : "bao-cao-hoa-don-") + LocalDateTime.now().toString().replace(":", "-") + ".xlsx";
             headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename);
             return ResponseEntity.ok().headers(headers).body(out.toByteArray());
         } catch (Exception e) {
@@ -381,6 +403,23 @@ public class ReportController extends BaseController {
             }
         } catch (Exception ignore) {}
         return info;
+    }
+
+    private Map<String, Object> extractObject(String json) {
+        if (json == null || json.trim().isEmpty()) return new HashMap<>();
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, Map.class);
+        } catch (Exception ignored) {
+            return new HashMap<>();
+        }
+    }
+
+    private String text(Map<String, Object> values, String... keys) {
+        for (String key : keys) {
+            Object value = values.get(key);
+            if (value != null && !String.valueOf(value).isBlank()) return String.valueOf(value);
+        }
+        return "";
     }
 
     private static class CustomerInfo {

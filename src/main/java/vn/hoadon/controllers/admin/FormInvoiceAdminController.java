@@ -115,16 +115,17 @@ private Integer getInt(Map<String, Object> body, String key) {
             @RequestParam(value = "name") String name,
             @RequestParam(value = "category", required = false) Integer category,
             @RequestParam(value = "type", required = false) Integer type,
+            @RequestParam(value = "stockIssueType", required = false) Integer stockIssueType,
             @RequestParam(value = "status", required = false) Integer status,
             @RequestParam(value = "have_code", required = false) Integer haveCode,
             @RequestParam(value = "layoutJson", required = false) MultipartFile layoutJson
     ) {
         permission("form-invoice-manage");
-        log.debug("saveOrUpdate called: id={}, name={}, category={}, type={}, status={}, haveCode={}", id, name, category, type, status, haveCode);
+        log.debug("saveOrUpdate called: id={}, name={}, category={}, type={}, stockIssueType={}, status={}, haveCode={}", id, name, category, type, stockIssueType, status, haveCode);
 
         try {
             JsonNode layout = layoutJson == null ? null : parseLayoutJson(layoutJson);
-            return transactionTemplate.execute(txStatus -> saveOrUpdateInTransaction(id, name, category, type, status, haveCode, layout));
+            return transactionTemplate.execute(txStatus -> saveOrUpdateInTransaction(id, name, category, type, stockIssueType, status, haveCode, layout));
         } catch (TemplateException ex) {
             log.warn("Invalid invoice template JSON: {}", ex.getMessage());
             return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage(), "code", ex.getCode()));
@@ -138,7 +139,7 @@ private Integer getInt(Map<String, Object> body, String key) {
     }
 
     private ResponseEntity<?> saveOrUpdateInTransaction(Long id, String name, Integer category, Integer type,
-                                                         Integer status, Integer haveCode, JsonNode layout) {
+                                                         Integer stockIssueType, Integer status, Integer haveCode, JsonNode layout) {
         FormInvoiceEntity e;
         boolean creating = (id == null);
         var user = currentUser();
@@ -159,7 +160,8 @@ private Integer getInt(Map<String, Object> body, String key) {
         if (!StringUtils.hasText(name)) return ResponseEntity.badRequest().body(Map.of("message", "Name required"));
         e.setName(name);
         e.setCategory(category != null ? category : 1);
-        e.setType(type != null ? type : (category != null && category == 2 ? 0 : 1));
+        e.setType(type != null ? type : (category == null ? 1 : category == 2 ? -1 : category == 6 ? 0 : 1));
+        e.setStockIssueType(stockIssueType);
         boolean activateAfterCreate = creating && Integer.valueOf(1).equals(status);
         e.setStatus(creating ? 0 : (status != null ? status : 0));
         e.setHaveCode(haveCode != null ? haveCode : 1);

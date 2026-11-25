@@ -1,12 +1,12 @@
 <template>
   <div class="container-fluid py-3 error-messages">
     <div class="d-flex align-items-center justify-content-between mb-3">
-      <h4 class="mb-0 font-weight-bold">Danh sách thông báo hóa đơn sai sót</h4>
+      <h4 class="mb-0 font-weight-bold">{{ pageTitle }}</h4>
       <div>
         <b-button size="sm" variant="outline-primary" class="mr-2" @click="fetchList">
           <i class="fas fa-sync-alt"></i> Làm mới
         </b-button>
-        <b-button size="sm" variant="success" @click="$router.push({ name: 'CustomerErrorMessageCreate' })">
+        <b-button size="sm" variant="success" @click="createNotice">
           <i class="fas fa-plus"></i> Lập thông báo
         </b-button>
       </div>
@@ -145,7 +145,7 @@ export default {
         { key: 'noticeDate', label: 'Ngày lập', thStyle: { width: '10%' } },
         { key: 'notificationType', label: 'Loại thông báo', thStyle: { width: '18%' } },
         { key: 'taxResponseNumber', label: 'Số TB CQT', thStyle: { width: '13%' } },
-        { key: 'invoiceSummary', label: 'Hóa đơn sai sót', thStyle: { width: '26%' } },
+        { key: 'invoiceSummary', label: 'Đối tượng sai sót', thStyle: { width: '26%' } },
         { key: 'status', label: 'Trạng thái', thStyle: { width: '9%' } },
         { key: 'option', label: 'Chức năng', thStyle: { width: '9%' } }
       ],
@@ -163,7 +163,24 @@ export default {
       ]
     }
   },
+  computed: {
+    noticeCategory() {
+      return Number(this.$route.query.category) === 6 ? 6 : 0
+    },
+    pageTitle() {
+      return this.noticeCategory === 6 ? 'Danh sách thông báo phiếu xuất kho sai sót' : 'Danh sách thông báo hóa đơn sai sót'
+    }
+  },
   created() { this.fetchList() },
+  watch: {
+    '$route.query': {
+      deep: true,
+      handler() {
+        this.list.current_page = 1
+        this.fetchList()
+      }
+    }
+  },
   beforeDestroy() {
     if (this.signaturePollCancel) this.signaturePollCancel()
   },
@@ -176,7 +193,7 @@ export default {
       } finally { this.isBusy = false }
     },
     query() {
-      const q = { page: this.list.current_page, size: this.list.per_page }
+      const q = { page: this.list.current_page, size: this.list.per_page, category: this.noticeCategory }
       if (this.filters.keyword) q.keyword = this.filters.keyword
       if (this.filters.status !== null) q.status = this.filters.status
       if (this.filters.notificationType !== null) q.notificationType = this.filters.notificationType
@@ -186,6 +203,10 @@ export default {
     },
     applyFilters() { this.list.current_page = 1; this.fetchList() },
     resetFilters() { this.filters = { keyword: '', status: null, notificationType: null, dateFrom: null, dateTo: null }; this.applyFilters() },
+    createNotice() {
+      const query = this.noticeCategory === 6 ? { category: '6' } : {}
+      this.$router.push({ name: 'CustomerErrorMessageCreate', query })
+    },
     onPageChange(page) { this.list.current_page = Number(page) || 1; this.fetchList() },
     onPageSizeChange(size) { this.list.per_page = Number(size) || 10; this.list.current_page = 1; this.fetchList() },
     formatDate(v) { return v ? new Date(v).toLocaleDateString('vi-VN') : '—' },
@@ -206,7 +227,11 @@ export default {
       return rows.map(r => `${r.serial || ''}${r.invoiceNo ? ' #' + r.invoiceNo : ''}`).join(', ')
     },
     canSend(item) { return [1, 3, 4].includes(Number(item?.status)) },
-    openEdit(item) { this.$router.push({ name: 'CustomerErrorMessageEdit', params: { id: item.id } }) },
+    openEdit(item) {
+      const category = Number(item?.category)
+      const query = category === 6 || category === 2 ? { category: String(category) } : {}
+      this.$router.push({ name: 'CustomerErrorMessageEdit', params: { id: item.id }, query })
+    },
     async viewItem(item) {
       try {
         this.previewId = item.id

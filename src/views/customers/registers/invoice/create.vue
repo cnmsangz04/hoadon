@@ -196,6 +196,7 @@
                 <b-form-checkbox class="mb-2" value="HDGTGT">Hóa đơn GTGT</b-form-checkbox>
                 <b-form-checkbox class="mb-2" value="HDGTGTTHBLai">Hóa đơn GTGT tích hợp biên lai thu thuế, phí, lệ phí</b-form-checkbox>
                 <b-form-checkbox class="mb-2" value="HDBHang">Hóa đơn bán hàng</b-form-checkbox>
+                <b-form-checkbox class="mb-2" value="CTu">Phiếu xuất kho</b-form-checkbox>
                 <b-form-checkbox class="mb-2" value="HDBHTHBLai">Hóa đơn bán hàng tích hợp biên lai thu thuế, phí, lệ phí</b-form-checkbox>
               </b-col>
               <b-col cols="12" md="6">

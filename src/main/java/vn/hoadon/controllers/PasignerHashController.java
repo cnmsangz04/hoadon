@@ -88,15 +88,19 @@ public class PasignerHashController {
                         valueOrDefault(item.getSignBy(), "NNT")
                 ));
             }
-        } else if ("HDGTGT".equals(item.getType()) || "HDBHang".equals(item.getType())) {
+        } else if ("HDGTGT".equals(item.getType()) || "HDBHang".equals(item.getType()) || "CTu".equals(item.getType())) {
             CompanyBankEntity bank = resolveCompanyBank(company);
             for (Long id : item.getIds()) {
                 InvoiceEntity invoice = invoiceRepository.findById(id).orElse(null);
                 if (invoice == null || invoice.getCompanyId() == null || !Objects.equals(invoice.getCompanyId().longValue(), item.getCompanyId())) continue;
                 FormInvoiceEntity form = invoice.getFormId() != null ? formInvoiceRepository.findById(invoice.getFormId().longValue()).orElse(null) : null;
+                InvoiceEntity related = invoice.getReferenceId() == null ? null : invoiceRepository.findById(invoice.getReferenceId().longValue()).orElse(null);
+                FormInvoiceEntity relatedForm = related == null || related.getFormId() == null
+                        ? null
+                        : formInvoiceRepository.findById(related.getFormId().longValue()).orElse(null);
                 data.add(hashInvoiceRow(
                         invoice.getId(),
-                        normalizeInvoiceXml(InvoiceXmlBuilder.build(invoice, form, company, bank)),
+                        normalizeInvoiceXml(InvoiceXmlBuilder.build(invoice, form, company, bank, related, relatedForm)),
                         invoice.getIdAttr() != null ? invoice.getIdAttr() : String.valueOf(invoice.getId()),
                         valueOrDefault(item.getSignBy(), "NBan")
                 ));
@@ -150,7 +154,7 @@ public class PasignerHashController {
                 if (!isSignedErrorMessageXml(signedXml)) continue;
                 String cert = req.has("certificate") ? req.get("certificate").toString() : resolveCompanyName(item.getCompanyId());
                 if (errorMessageService.attachSignedXml(id, signedXml, cert).isPresent()) signed++;
-            } else if ("HDGTGT".equals(item.getType()) || "HDBHang".equals(item.getType())) {
+            } else if ("HDGTGT".equals(item.getType()) || "HDBHang".equals(item.getType()) || "CTu".equals(item.getType())) {
                 InvoiceEntity invoice = invoiceRepository.findById(id).orElse(null);
                 if (invoice == null || invoice.getCompanyId() == null || !Objects.equals(invoice.getCompanyId().longValue(), item.getCompanyId())) continue;
                 if (invoice.getStatus() != null && invoice.getStatus() != 0) continue;

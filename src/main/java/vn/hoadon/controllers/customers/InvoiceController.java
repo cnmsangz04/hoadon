@@ -100,6 +100,7 @@ public class InvoiceController extends BaseController {
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "status", required = false) Short status,
             @RequestParam(name = "category", defaultValue = "1") Integer category,
+            @RequestParam(name = "stockIssueType", required = false) Integer stockIssueType,
             // Lọc theo ngày lập (dateExport). Frontend gửi yyyy-MM-dd.
             @RequestParam(name = "date", required = false)
             @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
@@ -122,34 +123,43 @@ public class InvoiceController extends BaseController {
         
         int pageIndex = Math.max(page - 1, 0);
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "id"));
-        if (category == null || (category != 1 && category != 2)) {
+        if (!validCategory(category) || (category == 6 && !validStockIssueType(stockIssueType))) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Loại hóa đơn không hợp lệ"));
         }
-        Page<InvoiceDTO> result = invoiceService.search(companyId, category, q, status, date, pageable);
+        Page<InvoiceDTO> result = invoiceService.search(companyId, category, stockIssueType, q, status, date, pageable);
         return ResponseEntity.ok(new PageDTO<>(result.getContent(), result.getNumber() + 1, result.getSize(), result.getTotalElements(), result.getTotalPages()));
     }
 
     @GetMapping("/prepare")
     public ResponseEntity<?> prepare(
             @AuthenticationPrincipal UserEntity user,
-            @RequestParam(name = "category", defaultValue = "1") Integer category) {
+            @RequestParam(name = "category", defaultValue = "1") Integer category,
+            @RequestParam(name = "stockIssueType", required = false) Integer stockIssueType) {
         permission("invoice-save");
 
         if (user == null || user.getCompanyId() == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Không xác định được công ty/người dùng"));
         }
         Long companyId = user.getCompanyId();
-        if (category == null || (category != 1 && category != 2)) {
+        if (!validCategory(category)) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Loại hóa đơn không hợp lệ"));
         }
+        if (category == 6 && !validStockIssueType(stockIssueType)) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu loại phiếu xuất kho"));
+        }
         // 1) Active form for the requested invoice category
-        FormInvoiceEntity activeVatForm = templateBindings.activeForm(companyId, category);
+        FormInvoiceEntity activeVatForm = category == 6
+                ? templateBindings.activeStockIssueForm(companyId, stockIssueType)
+                : templateBindings.activeForm(companyId, category);
         if (activeVatForm == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO(
-                    category == 2 ? "Chưa có mẫu hóa đơn bán hàng được kích hoạt" : "Chưa có mẫu hóa đơn GTGT được kích hoạt"));
+                    category == 2 ? "Chưa có mẫu hóa đơn bán hàng được kích hoạt" : category == 6 ? "Chưa có mẫu phiếu xuất kho được kích hoạt" : "Chưa có mẫu hóa đơn GTGT được kích hoạt"));
         }
-        if (category == 2 && !Integer.valueOf(0).equals(activeVatForm.getType())) {
-            return ResponseEntity.badRequest().body(new ErrorDTO("Mẫu hóa đơn bán hàng phải có form_invoices.type = 0 (đã bao gồm thuế)"));
+        if (category == 2 && !Integer.valueOf(-1).equals(activeVatForm.getType())) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Mẫu hóa đơn bán hàng phải có form_invoices.type = -1 (đã bao gồm thuế)"));
+        }
+        if (category == 6 && !Integer.valueOf(0).equals(activeVatForm.getType())) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Mẫu phiếu xuất kho phải có form_invoices.type = 0 (không sử dụng thuế suất)"));
         }
         // 2) Accepted register invoice (status=6), pick latest by effective_date (deterministic, limit 1)
         java.util.List<RegisterInvoiceEntity> acceptedList = registerInvoiceRepository.findLatestAccepted(companyId, org.springframework.data.domain.PageRequest.of(0, 1));
@@ -159,11 +169,11 @@ public class InvoiceController extends BaseController {
         }
         // 3) The accepted declaration must contain the requested invoice category.
         java.util.List<String> invoiceTypes = safeList(latestAccepted.getInvoiceTypes());
-        String requiredType = category == 2 ? "HDBHang" : "HDGTGT";
+        String requiredType = category == 2 ? "HDBHang" : category == 6 ? "CTu" : "HDGTGT";
         if (!containsToken(invoiceTypes, requiredType)) {
             return ResponseEntity.badRequest().body(new ErrorDTO(category == 2
                     ? "Tờ khai không đăng ký loại hóa đơn bán hàng"
-                    : "Tờ khai không đăng ký loại hóa đơn GTGT"));
+                    : category == 6 ? "Tờ khai không đăng ký phiếu xuất kho" : "Tờ khai không đăng ký loại hóa đơn GTGT"));
         }
         // 4) Check invoice_forms CMa/KCMa depending on haveCode (array of strings)
         java.util.List<String> invoiceForms = safeList(latestAccepted.getInvoiceForms());
@@ -182,6 +192,7 @@ public class InvoiceController extends BaseController {
         dto.haveCode = activeVatForm.getHaveCode();
         dto.formType = activeVatForm.getType();
         dto.category = activeVatForm.getCategory();
+        dto.stockIssueType = activeVatForm.getStockIssueType();
         dto.registerId = latestAccepted.getId();
         dto.registerEffectiveDate = latestAccepted.getEffectiveDate() != null ? latestAccepted.getEffectiveDate().toString() : null;
         dto.companyId = user.getCompanyId();
@@ -322,7 +333,8 @@ public class InvoiceController extends BaseController {
             @AuthenticationPrincipal UserEntity user,
             @RequestParam(name = "no") Integer no,
             @RequestParam(name = "invoiceType") Short invoiceType,
-            @RequestParam(name = "category", defaultValue = "1") Integer category
+            @RequestParam(name = "category", defaultValue = "1") Integer category,
+            @RequestParam(name = "stockIssueType", required = false) Integer stockIssueType
     ) {
         permission("invoice-list");
 
@@ -335,13 +347,16 @@ public class InvoiceController extends BaseController {
         if (invoiceType == null || (invoiceType != 1 && invoiceType != 2)) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Loại xử lý hóa đơn không hợp lệ"));
         }
-        if (category == null || (category != 1 && category != 2)) {
+        if (category == null || (category != 1 && category != 2 && category != 6)) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Loại hóa đơn không hợp lệ"));
         }
+        if (category == 6 && !validStockIssueType(stockIssueType)) {
+            return ResponseEntity.badRequest().body(new ErrorDTO("Thiếu loại phiếu xuất kho"));
+        }
 
-        InvoiceEntity inv = invoiceRepository
-                .findFirstByCompanyIdAndNoAndCategoryOrderByIdDesc(user.getCompanyId().intValue(), no, category)
-                .orElse(null);
+        InvoiceEntity inv = category == 6
+                ? invoiceRepository.findFirstByCompanyIdAndNoAndCategoryAndStockIssueTypeOrderByIdDesc(user.getCompanyId().intValue(), no, category, stockIssueType).orElse(null)
+                : invoiceRepository.findFirstByCompanyIdAndNoAndCategoryOrderByIdDesc(user.getCompanyId().intValue(), no, category).orElse(null);
         if (inv == null) {
             return ResponseEntity.badRequest().body(new ErrorDTO("Không tìm thấy hóa đơn theo số đã nhập"));
         }
@@ -388,6 +403,7 @@ public class InvoiceController extends BaseController {
         resp.put("exchangeRate", inv.getExchangeRate());
         resp.put("vatRate", inv.getVatRate());
         resp.put("vatRateOther", inv.getVatRateOther());
+        resp.put("stockIssueType", inv.getStockIssueType());
         if (inv.getFormId() != null) {
             FormInvoiceEntity form = formInvoiceRepository.findById(inv.getFormId().longValue()).orElse(null);
             if (form != null && form.getCompanyId() != null && form.getCompanyId().equals(user.getCompanyId())) {
@@ -402,6 +418,7 @@ public class InvoiceController extends BaseController {
         // Parse JSON fields
         resp.put("customer", parseJson(inv.getCustomer()));
         resp.put("detail", parseJson(inv.getDetail()));
+        resp.put("others", parseJson(inv.getOthers()));
         return ResponseEntity.ok(resp);
     }
 
@@ -440,6 +457,8 @@ public class InvoiceController extends BaseController {
         p.invoiceType = r.invoiceType;
         p.invoiceTypeAdjust = r.invoiceTypeAdjust;
         p.relatedReason = r.relatedReason;
+        p.stockIssueType = r.stockIssueType;
+        p.stockInfo = r.stockInfo;
         return p;
     }
 
@@ -473,6 +492,7 @@ public class InvoiceController extends BaseController {
         dto.put("invoiceTypeText", invoiceTypeLabel(inv.getInvoiceType()));
         dto.put("amount", inv.getAmount());
         dto.put("lookupCode", inv.getLookupCode());
+        dto.put("stockIssueType", inv.getStockIssueType());
         dto.put("customerName", extractCustomerName(inv.getCustomer()));
         if (inv.getFormId() != null) {
             FormInvoiceEntity form = formInvoiceRepository.findById(inv.getFormId().longValue()).orElse(null);
@@ -597,7 +617,7 @@ public class InvoiceController extends BaseController {
         }
     }
     public static class ErrorDTO { public String message; public ErrorDTO(String m){ this.message = m; } }
-    public static class PrepareDTO { public Long formId; public String formName; public String formCode; public String serial; public Integer haveCode; public Integer formType; public Integer category; public Long registerId; public String registerEffectiveDate; public Long companyId; }
+    public static class PrepareDTO { public Long formId; public String formName; public String formCode; public String serial; public Integer haveCode; public Integer formType; public Integer category; public Integer stockIssueType; public Long registerId; public String registerEffectiveDate; public Long companyId; }
 
     // Incoming request from Vue create form
     public static class CreateRequest {
@@ -621,6 +641,16 @@ public class InvoiceController extends BaseController {
         public Short invoiceType;
         public Short invoiceTypeAdjust;
         public String relatedReason;
+        public Integer stockIssueType;
+        public Object stockInfo;
+    }
+
+    private boolean validCategory(Integer category) {
+        return category != null && (category == 1 || category == 2 || category == 6);
+    }
+
+    private boolean validStockIssueType(Integer type) {
+        return type != null && (type == 1 || type == 2);
     }
 
     public static class CreateResponse { public Long id; public CreateResponse(Long id){ this.id = id; } }
@@ -829,7 +859,8 @@ public class InvoiceController extends BaseController {
             hash.setSignBy("NBan");
             boolean salesInvoice = forms.values().stream().anyMatch(form -> form != null && Integer.valueOf(2).equals(form.getCategory()));
             boolean vatInvoice = forms.values().stream().anyMatch(form -> form != null && Integer.valueOf(1).equals(form.getCategory()));
-            hash.setType(salesInvoice && !vatInvoice ? "HDBHang" : "HDGTGT");
+            boolean stockIssue = forms.values().stream().anyMatch(form -> form != null && Integer.valueOf(6).equals(form.getCategory()));
+            hash.setType(stockIssue && !salesInvoice && !vatInvoice ? "CTu" : salesInvoice && !vatInvoice ? "HDBHang" : "HDGTGT");
             hashInvoiceRepository.save(hash);
 
             java.util.Map<String,Object> resp = new java.util.LinkedHashMap<>();
@@ -1026,7 +1057,8 @@ public class InvoiceController extends BaseController {
         h.setTableName("invoices");
         h.setTableId(inv.getId().longValue());
         boolean salesInvoice = form != null && Integer.valueOf(2).equals(form.getCategory());
-        h.setTitle(salesInvoice ? "Gửi hóa đơn bán hàng lên cơ quan thuế" : "Gửi hóa đơn giá trị gia tăng lên cơ quan thuế");
+        boolean stockIssue = form != null && Integer.valueOf(6).equals(form.getCategory());
+        h.setTitle(stockIssue ? "Gửi phiếu xuất kho lên cơ quan thuế" : salesInvoice ? "Gửi hóa đơn bán hàng lên cơ quan thuế" : "Gửi hóa đơn giá trị gia tăng lên cơ quan thuế");
         h.setDescription(description);
         h.setShowNotify(1);
         h.setStatus(1);

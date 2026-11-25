@@ -72,7 +72,7 @@
                         <div class="serial-top">
                           <span class="step-badge">4</span>
                         </div>
-                        <b-form-input value="T" readonly />
+                        <b-form-input :value="serialKind" readonly />
                       </div>
                       <div class="serial-item serial-suffix">
                         <div class="serial-top">
@@ -105,6 +105,12 @@
               <div class="form-row-item">
                 <b-form-group label="Loại thuế suất" label-for="fi-type" label-cols-sm="3">
                   <b-form-input id="fi-type" :value="typeLabel(form.type)" readonly />
+                </b-form-group>
+              </div>
+
+              <div class="form-row-item" v-if="Number(form.category) === 6">
+                <b-form-group label="Loại phiếu xuất kho" label-cols-sm="3">
+                  <b-form-select v-model.number="form.stockIssueType" :options="[{ value: 1, text: 'Kiêm vận chuyển nội bộ' }, { value: 2, text: 'Hàng gửi bán đại lý' }]" />
                 </b-form-group>
               </div>
 
@@ -174,6 +180,7 @@ export default {
         category: null,
         status: 0,
         have_code: 0,
+        stockIssueType: null,
       },
       serialCK: 'C',
       serialCKOptions: [
@@ -201,7 +208,11 @@ export default {
     },
     categoryChar() {
       const c = Number(this.form.category)
-      return c === 1 || c === 2 ? String(c) : ''
+      return c === 1 || c === 2 || c === 6 ? String(c) : ''
+    },
+    serialKind () {
+      if (Number(this.form.category) !== 6) return 'T'
+      return Number(this.form.stockIssueType) === 2 ? 'B' : 'N'
     },
     suffixValidState() {
       const suf = (this.serialSuffix || '').trim()
@@ -218,7 +229,8 @@ export default {
     categoryChar() { this.composeSerial() },
     serialCK() { this.form.have_code = this.serialCK === 'C' ? 1 : 0; this.composeSerial() },
     serialYear() { this.composeSerial() },
-    serialSuffix() { this.composeSerial() }
+    serialSuffix() { this.composeSerial() },
+    'form.stockIssueType'() { this.composeSerial() }
   },
   created() {
     const tid = this.$route.query.templateId
@@ -229,13 +241,13 @@ export default {
     this.composeSerial()
   },
   methods: {
-    categoryLabel(v) { return Number(v) === 1 ? 'Hóa đơn giá trị gia tăng' : Number(v) === 2 ? 'Hóa đơn bán hàng' : '' },
-    typeLabel(v) { return Number(v) === 0 ? 'Đã bao gồm thuế' : Number(v) === 1 ? 'Một thuế suất' : Number(v) === 2 ? 'Nhiều thuế suất' : '' },
+    categoryLabel(v) { return Number(v) === 1 ? 'Hóa đơn giá trị gia tăng' : Number(v) === 2 ? 'Hóa đơn bán hàng' : Number(v) === 6 ? 'Phiếu xuất kho' : '' },
+    typeLabel(v) { return Number(v) === -1 ? 'Đã bao gồm thuế' : Number(v) === 0 ? (Number(this.form.category) === 6 ? 'Không sử dụng thuế suất' : '') : Number(v) === 1 ? 'Một thuế suất' : Number(v) === 2 ? 'Nhiều thuế suất' : '' },
     composeSerial() {
       const c1 = this.categoryChar
       const c2 = this.serialCK || 'C'
       const c34 = this.serialYear || ''
-      const c5 = 'T'
+      const c5 = this.serialKind
       const suf = normalizeSerialSuffix(this.serialSuffix)
       const serial = `${c1}${c2}${c34}${c5}${suf}`
       this.form.serial = serial
@@ -258,6 +270,7 @@ export default {
           this.form.photo = it.photo || this.form.photo
           this.form.type = it.type != null ? Number(it.type) : this.form.type
           this.form.category = it.category != null ? Number(it.category) : this.form.category
+          this.form.stockIssueType = it.stockIssueType != null ? Number(it.stockIssueType) : this.form.stockIssueType
           const sFull = `${(it.formCode || it.form_code || '')}${(it.serial || '')}`
           const serialStr = (typeof it.serial === 'string' && it.serial.length >= 7) ? it.serial : (sFull.length >= 7 ? sFull : '')
           if (serialStr) {
@@ -281,6 +294,7 @@ export default {
           this.form.photo = it.photo || ''
           this.form.type = it.type != null ? Number(it.type) : null
           this.form.category = it.category != null ? Number(it.category) : null
+          this.form.stockIssueType = it.stockIssueType != null ? Number(it.stockIssueType) : this.form.stockIssueType
           const sFull = `${(it.formCode || it.form_code || '')}${(it.serial || '')}`
           const serialStr = sFull.length >= 7 ? sFull : (typeof it.serial === 'string' ? it.serial : '')
           if (serialStr && serialStr.length >= 7) {

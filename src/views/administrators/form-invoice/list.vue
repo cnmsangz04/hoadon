@@ -84,7 +84,7 @@
 
                 <template #cell(category)="{ item }">
                     <b-badge :variant="item.category === 1 ? 'primary' : 'info'">
-                        {{ getCategoryText(item.category) }}
+                        {{ getCategoryText(item.category, item.stockIssueType) }}
                     </b-badge>
                 </template>
 
@@ -210,10 +210,12 @@ export default {
             ],
             categoryOptions: [
                 { value: 1, text: 'Hóa đơn giá trị gia tăng' },
-                { value: 2, text: 'Hóa đơn bán hàng' }
+                { value: 2, text: 'Hóa đơn bán hàng' },
+                { value: 6, text: 'Phiếu xuất kho' }
             ],
             typeOptions: [
-                { value: 0, text: 'Đã bao gồm thuế' },
+                { value: -1, text: 'Đã bao gồm thuế' },
+                { value: 0, text: 'Không sử dụng thuế suất' },
                 { value: 1, text: 'Một thuế suất' },
                 { value: 2, text: 'Nhiều thuế suất' }
             ],
@@ -236,6 +238,7 @@ export default {
                     name: it.name,
                     serial: (it.formCode || '') + (it.serial || ''),
                     category: it.category,
+                    stockIssueType: it.stockIssueType,
                     type: it.type,
                     status: it.status,
                     photo: it.photo,
@@ -245,7 +248,10 @@ export default {
                 this.$bvToast && this.$bvToast.toast('Không thể tải danh sách mẫu hóa đơn', { title: 'Lỗi', variant: 'danger', solid: true, autoHideDelay: 3000 })
             } finally { this.isBusy = false }
         },
-        getCategoryText(val) {
+        getCategoryText(val, stockIssueType) {
+            if (Number(val) === 6) {
+                return Number(stockIssueType) === 2 ? 'PXK hàng gửi bán đại lý' : 'PXK vận chuyển nội bộ'
+            }
             const opt = this.categoryOptions.find(o => o.value === Number(val))
             return opt ? opt.text : (val || '—')
         },

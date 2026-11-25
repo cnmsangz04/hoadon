@@ -9,6 +9,7 @@ public class InvoiceImportDTO {
     public Long sourceImportId;
     public String importType;
     public Integer category;
+    public Integer stockIssueType;
     public String originalFilename;
     public String storedFilename;
     public String filePath;

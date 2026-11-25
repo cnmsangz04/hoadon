@@ -67,6 +67,7 @@ public class ErrorMessageController extends BaseController {
     public Map<String, Object> list(@RequestParam(required = false) String keyword,
                                     @RequestParam(required = false) Integer status,
                                     @RequestParam(required = false) Integer notificationType,
+                                    @RequestParam(required = false) Integer category,
                                     @RequestParam(required = false) String dateFrom,
                                     @RequestParam(required = false) String dateTo,
                                     @RequestParam(defaultValue = "1") int page,
@@ -74,7 +75,7 @@ public class ErrorMessageController extends BaseController {
         permission("invoice-list");
         Long companyId = requireCompanyId();
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<ErrorMessageEntity> p = service.search(companyId, keyword, status, notificationType, parseDate(dateFrom), parseDate(dateTo), pageable);
+        Page<ErrorMessageEntity> p = service.search(companyId, keyword, status, notificationType, category, parseDate(dateFrom), parseDate(dateTo), pageable);
         Page<ErrorMessageDto> dtoPage = p.map(service::toDto);
         return toPage(dtoPage);
     }
@@ -253,7 +254,10 @@ public class ErrorMessageController extends BaseController {
             if (invoice.getStatus() == null || invoice.getStatus() <= 2) continue;
             if (category != null) {
                 FormInvoiceEntity form = invoice.getFormId() != null ? formInvoiceRepository.findById(invoice.getFormId().longValue()).orElse(null) : null;
-                if (form == null || !category.equals(form.getCategory())) continue;
+                boolean categoryMatches = form != null && (category == 0
+                        ? (Objects.equals(form.getCategory(), 1) || Objects.equals(form.getCategory(), 2))
+                        : category.equals(form.getCategory()));
+                if (!categoryMatches) continue;
             }
             rows.add(invoiceRow(invoice));
         }

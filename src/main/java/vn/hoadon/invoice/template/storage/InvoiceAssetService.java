@@ -123,6 +123,39 @@ public class InvoiceAssetService {
         catch (Exception ex) { throw new IllegalStateException("Manifest tài nguyên không hợp lệ", ex); }
     }
 
+    public String effectiveManifest(String manifestJson, String sourceContent, String scope, Long companyId) {
+        Map<String, AssetRef> current = manifest(manifestJson);
+        try {
+            var layout = mapper.readTree(sourceContent);
+            var layoutAssets = layout.path("assets");
+            if (!layoutAssets.isObject() || layoutAssets.isEmpty()) return manifestJson;
+            boolean complete = true;
+            var names = layoutAssets.fieldNames();
+            while (names.hasNext()) {
+                if (!current.containsKey(names.next())) {
+                    complete = false;
+                    break;
+                }
+            }
+            if (complete) return manifestJson;
+            Map<String, AssetRef> rebuilt = new LinkedHashMap<>();
+            var entries = layoutAssets.fields();
+            while (entries.hasNext()) {
+                var entry = entries.next();
+                long assetId = entry.getValue().path("assetId").asLong(0);
+                if (assetId < 1) throw TemplateException.invalid("INVALID_ASSET", "Asset ID không hợp lệ");
+                rebuilt.put(entry.getKey(), reference(require(assetId, scope, companyId)));
+            }
+            String rebuiltJson = json(rebuilt);
+            resources(rebuiltJson, scope, companyId);
+            return rebuiltJson;
+        } catch (TemplateException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw TemplateException.invalid("INVALID_LAYOUT", "Không đọc được tài nguyên của mẫu");
+        }
+    }
+
     public Map<Long, InvoicePdfRenderer.Resource> resources(String manifest, String scope, Long companyId) {
         Map<Long, InvoicePdfRenderer.Resource> result = new LinkedHashMap<>();
         long totalBytes = 0;

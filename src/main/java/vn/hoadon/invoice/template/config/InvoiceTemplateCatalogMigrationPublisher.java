@@ -6,6 +6,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import vn.hoadon.invoice.template.catalog.InvoiceFieldCatalog;
+import vn.hoadon.invoice.template.catalog.InvoiceCatalogSnapshot;
+import vn.hoadon.invoice.template.service.TemplateException;
 
 /** Publishes one catalog release after the group-tree migration. */
 @Component
@@ -20,7 +22,13 @@ public class InvoiceTemplateCatalogMigrationPublisher {
 
     @EventListener(ApplicationReadyEvent.class)
     public void publishMigratedCatalog() {
-        var latest = catalog.latest();
+        final InvoiceCatalogSnapshot latest;
+        try {
+            latest = catalog.latest();
+        } catch (TemplateException ex) {
+            if ("CATALOG_MISSING".equals(ex.getCode())) return;
+            throw ex;
+        }
         boolean oldGroupPaths = latest.groups().stream()
                 .filter(group -> !"document".equals(group.code()))
                 .anyMatch(group -> group.rootPath() == null || !group.rootPath().startsWith("/HDon/"));
@@ -44,8 +52,30 @@ public class InvoiceTemplateCatalogMigrationPublisher {
                 .anyMatch(field -> "invoice.codeCqt".equals(field.key())
                         || "invoice.lookupCode".equals(field.key())
                         || "invoice.other.maTraCuu".equals(field.key()));
+        var stockIssueKeys = java.util.Set.of(
+                "seller.LDDNBo", "seller.HDKTSo", "seller.HDKTNgay", "seller.HVTNXHang",
+                "seller.TNVChuyen", "seller.PTVChuyen", "seller.HDSo", "buyer.HVTNNHang");
+        boolean missingStockIssueFields = !latest.fields().stream()
+                .map(InvoiceCatalogSnapshot.Field::key)
+                .collect(java.util.stream.Collectors.toSet())
+                .containsAll(stockIssueKeys);
+        var salesInvoiceKeys = java.util.Set.of("common.HDDCKPTQuan", "items.MNNNghe");
+        boolean missingSalesInvoiceFields = !latest.fields().stream()
+                .map(InvoiceCatalogSnapshot.Field::key)
+                .collect(java.util.stream.Collectors.toSet())
+                .containsAll(salesInvoiceKeys);
+        boolean missingInvoiceTypeScopes = latest.fields().stream()
+                .anyMatch(field -> field.applicableInvoiceTypes() == null
+                        || field.applicableInvoiceTypes().isBlank());
+        var invoicePaymentKeys = java.util.Set.of(
+                "common.HTTToan", "totals.TgTTTBSo", "totals.TgTTTBChu");
+        boolean stockIssuePaymentFields = latest.fields().stream()
+                .filter(field -> invoicePaymentKeys.contains(field.key()))
+                .anyMatch(field -> field.supportsInvoiceType(6, 1)
+                        || field.supportsInvoiceType(6, 2));
         if (oldGroupPaths || retiredSystemFields || missingCompatibilityFields || missingSignatureDate || legacySignatureDate || missingInvoiceOtherGroup
-                || lookupCodeInWrongGroup || legacyFieldKeys) {
+                || lookupCodeInWrongGroup || legacyFieldKeys || missingStockIssueFields
+                || missingSalesInvoiceFields || missingInvoiceTypeScopes || stockIssuePaymentFields) {
             catalog.checkpoint(null);
             jdbc.update("update invoice_template_drafts set field_catalog_version = ?", catalog.version());
         }

@@ -72,6 +72,14 @@ public class InvoiceTemplateBindingService {
     }
 
     @Transactional
+    public FormInvoiceEntity activeStockIssueForm(Long companyId, int stockIssueType) {
+        companies.lockById(companyId).orElseThrow(TemplateException::missing);
+        var candidates = forms.findByCompanyIdAndSystemAndCategoryAndStockIssueTypeAndStatus(companyId, 0, 6, stockIssueType, 1);
+        if (candidates.size() > 1) throw TemplateException.invalid("DEFAULT_FORM_CONFLICT", "Có nhiều mẫu phiếu xuất kho cùng kích hoạt; cần đối chiếu trước khi chọn mặc định");
+        return candidates.isEmpty() ? null : candidates.getFirst();
+    }
+
+    @Transactional
     public void bindForm(Long formId, Long versionId, TemplateAccess access) {
         var form = forms.lockById(formId).orElseThrow(TemplateException::missing);
         if (access.systemManager()) {
@@ -110,7 +118,9 @@ public class InvoiceTemplateBindingService {
         var form = forms.findById(invoice.getFormId().longValue()).orElseThrow(TemplateException::missing);
         Long companyId = invoice.getCompanyId().longValue();
         if (!Objects.equals(form.getSystem(), 0) || !Objects.equals(form.getCompanyId(), companyId)) throw TemplateException.missing();
-        requireTaxMode(formTemplates.latestPublished(form.getId()), form);
+        var publishedVersion = formTemplates.latestPublished(form.getId());
+        requireTaxMode(publishedVersion, form);
+        invoice.setTemplateVersionId(publishedVersion.getId());
         if (invoice.getIssueProfileSnapshotJson() == null) {
             Map<String, Object> profile = new LinkedHashMap<>();
             profile.put("formCode", form.getFormCode());
@@ -118,6 +128,7 @@ public class InvoiceTemplateBindingService {
             profile.put("category", form.getCategory());
             profile.put("type", form.getType());
             profile.put("haveCode", form.getHaveCode());
+            profile.put("stockIssueType", form.getStockIssueType());
             invoice.setIssueProfileSnapshotJson(assets.json(profile));
         }
     }
@@ -140,6 +151,14 @@ public class InvoiceTemplateBindingService {
             result.setCategory(profile.path("category").asInt());
             result.setType(profile.path("type").asInt());
             result.setHaveCode(profile.path("haveCode").asInt());
+            Integer stockIssueType = null;
+            var stockIssueTypeNode = profile.get("stockIssueType");
+            if (stockIssueTypeNode != null && !stockIssueTypeNode.isNull()) {
+                stockIssueType = stockIssueTypeNode.asInt();
+            } else if (current != null) {
+                stockIssueType = current.getStockIssueType();
+            }
+            result.setStockIssueType(stockIssueType);
             return result;
         } catch (Exception ex) { throw new IllegalStateException("Cấu hình phát hành đã chốt không hợp lệ", ex); }
     }

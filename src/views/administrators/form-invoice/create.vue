@@ -25,12 +25,22 @@
           <b-row>
             <b-col cols="12" md="6">
               <b-form-group label="Loại hóa đơn" label-class="font-weight-bold">
-                <b-form-select v-model.number="form.category" :options="categoryOptions" required />
+                <b-form-select
+                  v-model.number="form.category"
+                  :options="categoryOptions"
+                  required
+                  @change="onCategoryChange"
+                />
               </b-form-group>
             </b-col>
             <b-col cols="12" md="6">
               <b-form-group label="Loại thuế suất" label-class="font-weight-bold">
-                <b-form-select v-model.number="form.type" :options="typeOptions" required />
+                <b-form-select v-model.number="form.type" :options="typeOptionsForCategory" required />
+              </b-form-group>
+            </b-col>
+            <b-col v-if="Number(form.category) === 6" cols="12" md="6">
+              <b-form-group label="Loại phiếu xuất kho" label-class="font-weight-bold">
+                <b-form-select v-model.number="form.stockIssueType" :options="stockIssueTypeOptions" required />
               </b-form-group>
             </b-col>
             <b-col cols="12" md="6">
@@ -51,9 +61,10 @@
           <b-form-group label="Bố cục mẫu JSON" label-class="font-weight-bold" class="mb-0" :required="!id">
             <b-form-file
               v-model="layoutJsonFile"
+              class="layout-json-file"
               accept=".json,application/json"
               browse-text="Chọn file JSON"
-              placeholder="Chưa chọn file bố cục"
+              placeholder="Kéo thả file JSON vào đây hoặc chọn file"
               drop-placeholder="Thả file JSON vào đây"
             />
           </b-form-group>
@@ -80,18 +91,24 @@ export default {
   name: 'AdminFormInvoiceCreate',
   data: () => ({
     id: null,
-    form: { name: '', category: 1, type: 1, status: 0, have_code: 1 },
+    form: { name: '', category: 1, type: 1, stockIssueType: null, status: 0, have_code: 1 },
     layoutJsonFile: null,
     isSaving: false,
     error: '',
     categoryOptions: [
       { value: 1, text: 'Hóa đơn giá trị gia tăng' },
-      { value: 2, text: 'Hóa đơn bán hàng' }
+      { value: 2, text: 'Hóa đơn bán hàng' },
+      { value: 6, text: 'Phiếu xuất kho' }
     ],
     typeOptions: [
-      { value: 0, text: 'Đã bao gồm thuế' },
+      { value: -1, text: 'Đã bao gồm thuế' },
+      { value: 0, text: 'Không sử dụng thuế suất' },
       { value: 1, text: 'Một thuế suất' },
       { value: 2, text: 'Nhiều thuế suất' }
+    ],
+    stockIssueTypeOptions: [
+      { value: 1, text: 'Phiếu xuất kho kiêm vận chuyển nội bộ' },
+      { value: 2, text: 'Phiếu xuất kho hàng gửi bán đại lý' }
     ],
     haveCodeOptions: [
       { value: 1, text: 'Có mã' },
@@ -102,6 +119,14 @@ export default {
       { value: 0, text: 'Chưa kích hoạt' }
     ]
   }),
+  computed: {
+    typeOptionsForCategory() {
+      const category = Number(this.form.category)
+      if (category === 2) return this.typeOptions.filter((option) => option.value === -1)
+      if (category === 6) return this.typeOptions.filter((option) => option.value === 0)
+      return this.typeOptions.filter((option) => option.value === 1 || option.value === 2)
+    }
+  },
   created() {
     if (this.$route.params.id) this.load(this.$route.params.id)
   },
@@ -114,11 +139,23 @@ export default {
           name: data.name,
           category: data.category,
           type: data.type,
+          stockIssueType: data.stockIssueType,
           status: data.status,
           have_code: data.haveCode
         }
       } catch (e) {
         this.error = e.response?.data?.message || 'Không tải được mẫu hóa đơn'
+      }
+    },
+    onCategoryChange(category) {
+      const value = Number(category)
+      if (value === 2) this.form.type = -1
+      else if (value === 6) {
+        this.form.type = 0
+        this.form.stockIssueType = this.form.stockIssueType || 1
+      } else {
+        this.form.type = 1
+        this.form.stockIssueType = null
       }
     },
     async onSubmit() {
@@ -152,7 +189,9 @@ export default {
       this.error = ''
       const body = new FormData()
       if (this.id) body.append('id', this.id)
-      Object.entries(this.form).forEach(([key, value]) => body.append(key, value))
+      Object.entries(this.form).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) body.append(key, value)
+      })
       if (this.layoutJsonFile) body.append('layoutJson', this.layoutJsonFile)
       try {
         const { data } = await axios.post('/administrator/form-invoices/saveOrUpdate', body)
@@ -171,4 +210,44 @@ export default {
 .form-invoice-create .card-header { padding: .75rem 1.25rem; }
 .form-invoice-create .card-body { padding: 1.25rem; }
 .form-actions { display: flex; justify-content: flex-end; }
+::v-deep .layout-json-file .custom-file-label {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 132px 0 16px;
+  border: 1px dashed #a9b8cc;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+}
+::v-deep .layout-json-file .custom-file-label::after {
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 16px;
+  border-left: 1px solid #dbe3ee;
+  border-radius: 0 7px 7px 0;
+  background: #fff;
+  color: #475467;
+  font-weight: 600;
+}
+::v-deep .layout-json-file .custom-file-input:hover ~ .custom-file-label {
+  border-color: #6b8fc5;
+  background: #f5f9ff;
+}
+::v-deep .layout-json-file .custom-file-input:focus ~ .custom-file-label {
+  border-color: #4f86e8;
+  box-shadow: 0 0 0 3px rgba(79, 134, 232, .15);
+}
+@media (max-width: 576px) {
+  ::v-deep .layout-json-file .custom-file-label {
+    padding-right: 112px;
+  }
+  ::v-deep .layout-json-file .custom-file-label::after {
+    padding: 0 10px;
+  }
+}
 </style>

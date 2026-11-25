@@ -3,7 +3,7 @@
     <!-- Tiêu đề và thao tác -->
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="d-flex align-items-center">
-        <h4 class="mb-0 font-weight-bold">Báo cáo hóa đơn</h4>
+        <h4 class="mb-0 font-weight-bold">{{ reportTitle }}</h4>
       </div>
       <div>
         <b-button size="sm" variant="outline-primary" class="mr-2" @click="reload">
@@ -26,6 +26,7 @@
               <b-form-select-option :value="null">-- Tất cả --</b-form-select-option>
               <b-form-select-option :value="1">Hóa đơn giá trị gia tăng</b-form-select-option>
               <b-form-select-option :value="2">Hóa đơn bán hàng</b-form-select-option>
+              <b-form-select-option :value="6">Phiếu xuất kho</b-form-select-option>
             </b-form-select>
           </b-form-group>
         </b-col>
@@ -112,7 +113,7 @@
           <div class="summary-value">{{ formatNumber(summary.totalBeforeTax) }}</div>
         </div>
       </b-col>
-      <b-col v-if="filters.category !== 2" md="3" sm="6" class="mb-2">
+      <b-col v-if="filters.category !== 2 && filters.category !== 6" md="3" sm="6" class="mb-2">
         <div class="summary-tile summary-tax">
           <div class="summary-label">Tổng tiền thuế</div>
           <div class="summary-value">{{ formatNumber(summary.totalVat) }}</div>
@@ -136,7 +137,7 @@
         small
         show-empty
         :items="list.items"
-        :fields="fields"
+        :fields="tableFields"
         :busy="isBusy"
         empty-text="Không có dữ liệu"
       >
@@ -162,6 +163,10 @@
 
         <template #cell(customerName)="{ item }">
           <span class="text-wrap-anywhere">{{ item.customerName || '—' }}</span>
+        </template>
+
+        <template #cell(stockIssueType)="{ item }">
+          {{ Number(item.stockIssueType) === 1 ? 'Vận chuyển nội bộ' : Number(item.stockIssueType) === 2 ? 'Gửi bán đại lý' : '—' }}
         </template>
 
         <template #cell(paymentType)="{ item }">
@@ -227,6 +232,7 @@ export default {
       pageSizes: [10, 20, 50, 100],
       filters: {
         category: null,
+        stockIssueType: null,
         periodType: 'month',
         month: new Date().getMonth() + 1,
         quarter: 1,
@@ -253,6 +259,7 @@ export default {
         { key: 'no', label: 'Số hóa đơn', thStyle: { width: '8%' } },
         { key: 'dateExport', label: 'Ngày lập', thStyle: { width: '10%' } },
         { key: 'customerName', label: 'Tên đơn vị / khách hàng', thStyle: { width: '19%' } },
+        { key: 'stockIssueType', label: 'Loại phiếu', thStyle: { width: '13%' } },
         { key: 'paymentType', label: 'Hình thức thanh toán', thStyle: { width: '13%' } },
         { key: 'status', label: 'Trạng thái', thStyle: { width: '11%' } },
         { key: 'amount', label: 'Tổng tiền', thStyle: { width: '12%' }, tdClass: 'text-right' }
@@ -260,8 +267,21 @@ export default {
     }
   },
   computed: {
+    reportTitle () {
+      if (this.filters.category === 6) return this.filters.stockIssueType === 2 ? 'Báo cáo phiếu xuất kho hàng gửi bán đại lý' : 'Báo cáo phiếu xuất kho kiêm vận chuyển nội bộ'
+      if (this.filters.category === 2) return 'Báo cáo hóa đơn bán hàng'
+      if (this.filters.category === 1) return 'Báo cáo hóa đơn GTGT'
+      return 'Báo cáo hóa đơn'
+    },
     hasData () {
       return (this.list.items || []).length > 0
+    },
+    tableFields () {
+      return this.fields
+        .filter(field => this.filters.category === 6 || field.key !== 'stockIssueType')
+        .map(field => field.key === 'no'
+          ? { ...field, label: this.filters.category === 6 ? 'Số phiếu' : 'Số hóa đơn' }
+          : field)
     }
   },
   watch: {
@@ -280,7 +300,8 @@ export default {
   },
   created () {
     const category = Number(this.$route?.query?.category || 0)
-    if (category === 1 || category === 2) this.filters.category = category
+    if (category === 1 || category === 2 || category === 6) this.filters.category = category
+    if (this.filters.category === 6) this.filters.stockIssueType = Number(this.$route?.query?.stockIssueType || 1)
     this.syncDateRangeFromPeriod()
     this.fetchList()
   },
@@ -317,6 +338,7 @@ export default {
       const currentYear = new Date().getFullYear()
       this.filters = {
         category: null,
+        stockIssueType: null,
         periodType: 'month',
         month: new Date().getMonth() + 1,
         quarter: 1,
@@ -334,6 +356,7 @@ export default {
         size: this.list.per_page
       }
       if (this.filters.category != null) params.category = this.filters.category
+      if (this.filters.category === 6 && this.filters.stockIssueType) params.stockIssueType = this.filters.stockIssueType
       if (this.filters.status != null) params.status = this.filters.status
       if (this.filters.periodType === 'month') {
         params.periodType = 'month'
@@ -479,7 +502,10 @@ export default {
         const a = document.createElement('a')
         a.href = url
         const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
-        a.download = `bao-cao-hoa-don-${ts}.xlsx`
+        const prefix = this.filters.category === 6
+          ? (this.filters.stockIssueType === 2 ? 'bao-cao-phieu-xuat-kho-hang-gui-ban-dai-ly' : 'bao-cao-phieu-xuat-kho-van-chuyen-noi-bo')
+          : this.filters.category === 2 ? 'bao-cao-hoa-don-ban-hang' : 'bao-cao-hoa-don-gtgt'
+        a.download = `${prefix}-${ts}.xlsx`
         document.body.appendChild(a)
         a.click()
         a.remove()

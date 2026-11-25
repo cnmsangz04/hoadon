@@ -25,6 +25,9 @@ public class InvoiceImportEntity {
     @Column(name = "category")
     private Integer category;
 
+    @Column(name = "stock_issue_type")
+    private Integer stockIssueType;
+
     @Column(name = "original_filename", columnDefinition = "NVARCHAR(255)")
     private String originalFilename;
 
@@ -94,6 +97,8 @@ public class InvoiceImportEntity {
     public void setImportType(String importType) { this.importType = importType; }
     public Integer getCategory() { return category; }
     public void setCategory(Integer category) { this.category = category; }
+    public Integer getStockIssueType() { return stockIssueType; }
+    public void setStockIssueType(Integer stockIssueType) { this.stockIssueType = stockIssueType; }
     public String getOriginalFilename() { return originalFilename; }
     public void setOriginalFilename(String originalFilename) { this.originalFilename = originalFilename; }
     public String getStoredFilename() { return storedFilename; }

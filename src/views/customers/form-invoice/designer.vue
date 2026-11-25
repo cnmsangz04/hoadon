@@ -1220,9 +1220,6 @@ export default {
   async created() {
     window.addEventListener("keydown", this.handleShortcut);
     try {
-      const { data } = await axios.get(`${this.base}/catalog`);
-      this.fields = data.fields;
-      this.fieldGroups = data.groups || [];
       if (this.formId) {
         const response = await axios.post(
           `${this.base}/from-form/${this.formId}`,
@@ -1660,12 +1657,19 @@ export default {
         .filter((f) => f.active !== false || f.key === currentKey)
         .map((f) => ({ value: f.key, text: this.xmlFieldLabel(f) }));
     },
+    catalogParams() {
+      return this.formId
+        ? { formId: this.formId }
+        : { templateId: this.selectedTemplateId };
+    },
     tableFieldGroup(field) {
       const scope = this.fieldScope(field);
       return scope === "document" ? field.group : scope;
     },
     async syncCatalog() {
-      const { data: catalog } = await axios.get(`${this.base}/catalog`);
+      const { data: catalog } = await axios.get(`${this.base}/catalog`, {
+        params: this.catalogParams(),
+      });
       if (catalog.version === this.layout.fieldCatalogVersion) return;
       const { data: draft } = await axios.post(
         `${this.base}/${this.selectedTemplateId}/upgrade-catalog`,
@@ -1707,7 +1711,9 @@ export default {
         (block.children || []).forEach(normalize);
       };
       if (this.layout) {
-        const response = await axios.get(`${this.base}/catalog`);
+        const response = await axios.get(`${this.base}/catalog`, {
+          params: this.catalogParams(),
+        });
         if (response.data.version !== this.layout.fieldCatalogVersion) {
           const { data: draft } = await axios.post(
             `${this.base}/${this.selectedTemplateId}/upgrade-catalog`,

@@ -22,9 +22,11 @@ public class InvoiceImportController extends BaseController {
     private InvoiceImportService service;
 
     @GetMapping("/template")
-    public ResponseEntity<byte[]> template(@RequestParam(name = "category", defaultValue = "1") Integer category) {
+    public ResponseEntity<byte[]> template(@RequestParam(name = "category", defaultValue = "1") Integer category, @RequestParam(name = "stockIssueType", required = false) Integer stockIssueType) {
         permission("invoice-save");
-        return service.template(normalizeCategory(category));
+        Integer normalizedCategory = normalizeCategory(category);
+        if (normalizedCategory == 6 && !validStockIssueType(stockIssueType)) return ResponseEntity.badRequest().build();
+        return service.template(normalizedCategory, stockIssueType);
     }
 
     @GetMapping
@@ -33,11 +35,13 @@ public class InvoiceImportController extends BaseController {
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "size", defaultValue = "10") int size,
             @RequestParam(name = "category", defaultValue = "1") Integer category
+            , @RequestParam(name = "stockIssueType", required = false) Integer stockIssueType
     ) {
         permission("invoice-list|invoice-save");
+        if (normalizeCategory(category) == 6 && !validStockIssueType(stockIssueType)) return ResponseEntity.badRequest().build();
         int pageIndex = Math.max(page - 1, 0);
         Pageable pageable = PageRequest.of(pageIndex, Math.max(size, 1));
-        Page<InvoiceImportDTO> result = service.list(normalizeCategory(category), user, pageable);
+        Page<InvoiceImportDTO> result = service.list(normalizeCategory(category), stockIssueType, user, pageable);
         return ResponseEntity.ok(new PageDTO<>(result.getContent(), result.getNumber() + 1, result.getSize(), result.getTotalElements(), result.getTotalPages()));
     }
 
@@ -46,9 +50,11 @@ public class InvoiceImportController extends BaseController {
             @AuthenticationPrincipal UserEntity user,
             @RequestParam("file") MultipartFile file,
             @RequestParam(name = "category", defaultValue = "1") Integer category
+            , @RequestParam(name = "stockIssueType", required = false) Integer stockIssueType
     ) {
         permission("invoice-save");
-        return ResponseEntity.ok(service.importFile(file, normalizeCategory(category), user));
+        if (normalizeCategory(category) == 6 && !validStockIssueType(stockIssueType)) return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(service.importFile(file, normalizeCategory(category), stockIssueType, user));
     }
 
     @PostMapping("/{id}/reimport")
@@ -56,13 +62,19 @@ public class InvoiceImportController extends BaseController {
             @AuthenticationPrincipal UserEntity user,
             @PathVariable("id") Long id,
             @RequestParam(name = "category", defaultValue = "1") Integer category
+            , @RequestParam(name = "stockIssueType", required = false) Integer stockIssueType
     ) {
         permission("invoice-save");
-        return ResponseEntity.ok(service.reimport(id, normalizeCategory(category), user));
+        if (normalizeCategory(category) == 6 && !validStockIssueType(stockIssueType)) return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(service.reimport(id, normalizeCategory(category), stockIssueType, user));
     }
 
     private Integer normalizeCategory(Integer category) {
-        return category != null && category == 2 ? 2 : 1;
+        return category != null && (category == 2 || category == 6) ? category : 1;
+    }
+
+    private boolean validStockIssueType(Integer type) {
+        return type != null && (type == 1 || type == 2);
     }
 
     public static class PageDTO<T> {

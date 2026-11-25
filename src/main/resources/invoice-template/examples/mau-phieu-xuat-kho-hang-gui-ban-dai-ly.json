@@ -1,0 +1,497 @@
+{
+  "schemaVersion": "invoice-layout/1",
+  "fieldCatalogVersion": "CURRENT",
+  "page": {
+    "format": "A4",
+    "orientation": "portrait",
+    "marginMm": { "top": 10, "right": 12, "bottom": 10, "left": 12 }
+  },
+  "theme": {
+    "fontAssetFamily": "body",
+    "fontSizePt": 10,
+    "lineHeight": 1.25,
+    "color": "#000000"
+  },
+  "fontFamilies": {},
+  "assets": {},
+  "body": {
+    "id": "consignmentBody",
+    "type": "stack",
+    "gapMm": 1.3,
+    "style": {},
+    "children": [
+      {
+        "id": "consignmentSellerIdentity",
+        "type": "columns",
+        "gapMm": 6,
+        "style": {},
+        "children": [
+          {
+            "id": "consignmentSellerInfo",
+            "type": "stack",
+            "gapMm": 1,
+            "style": {},
+            "children": [
+              {
+                "id": "consignmentSellerName",
+                "type": "field",
+                "fieldKey": "seller.Ten",
+                "formatter": "plainText",
+                "label": "Tên tổ chức, cá nhân",
+                "style": {}
+              },
+              {
+                "id": "consignmentSellerAddress",
+                "type": "field",
+                "fieldKey": "seller.DChi",
+                "formatter": "plainText",
+                "label": "Địa chỉ",
+                "style": {}
+              },
+              {
+                "id": "consignmentSellerTax",
+                "type": "field",
+                "fieldKey": "seller.MST",
+                "formatter": "plainText",
+                "label": "Mã số thuế",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "id": "consignmentIdentity",
+            "type": "stack",
+            "gapMm": 0.8,
+            "widthMm": 58,
+            "style": {},
+            "children": [
+              {
+                "id": "consignmentPattern",
+                "type": "field",
+                "fieldKey": "common.KHMSHDon",
+                "formatter": "plainText",
+                "label": "Ký hiệu mẫu số",
+                "style": {}
+              },
+              {
+                "id": "consignmentSerial",
+                "type": "field",
+                "fieldKey": "common.KHHDon",
+                "formatter": "plainText",
+                "label": "Ký hiệu",
+                "style": {}
+              },
+              {
+                "id": "consignmentNumber",
+                "type": "field",
+                "fieldKey": "common.SHDon",
+                "formatter": "invoiceNumber",
+                "label": "Số",
+                "style": { "fontWeight": 700 }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "consignmentTitle",
+        "type": "field",
+        "fieldKey": "common.THDon",
+        "formatter": "plainText",
+        "label": "",
+        "style": {
+          "fontSizePt": 16,
+          "fontWeight": 700,
+          "textAlign": "center",
+          "textTransform": "uppercase"
+        }
+      },
+      {
+        "id": "consignmentDate",
+        "type": "field",
+        "fieldKey": "common.NLap",
+        "formatter": "date",
+        "label": "Ngày lập",
+        "style": { "fontStyle": "italic", "textAlign": "center" }
+      },
+      {
+        "id": "consignmentContractInfo",
+        "type": "stack",
+        "gapMm": 0.7,
+        "style": {},
+        "children": [
+          {
+            "id": "consignmentEconomicContractRow",
+            "type": "columns",
+            "gapMm": 5,
+            "style": {},
+            "children": [
+              {
+                "id": "consignmentEconomicContract",
+                "type": "field",
+                "fieldKey": "seller.HDKTSo",
+                "formatter": "plainText",
+                "label": "Căn cứ hợp đồng kinh tế số",
+                "style": {}
+              },
+              {
+                "id": "consignmentEconomicContractDate",
+                "type": "field",
+                "fieldKey": "seller.HDKTNgay",
+                "formatter": "date",
+                "label": "Ngày hợp đồng",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "id": "consignmentAgentRow",
+            "type": "columns",
+            "gapMm": 5,
+            "style": {},
+            "children": [
+              {
+                "id": "consignmentReceiverCompany",
+                "type": "field",
+                "fieldKey": "buyer.Ten",
+                "formatter": "plainText",
+                "label": "Gửi bán tại đại lý",
+                "style": {}
+              },
+              {
+                "id": "consignmentReceiverTax",
+                "type": "field",
+                "fieldKey": "buyer.MST",
+                "formatter": "plainText",
+                "label": "Mã số thuế",
+                "style": {},
+                "condition": { "op": "hasValue", "fieldKey": "buyer.MST" }
+              }
+            ]
+          },
+          {
+            "id": "consignmentCarrierRow",
+            "type": "columns",
+            "gapMm": 5,
+            "style": {},
+            "children": [
+              {
+                "id": "consignmentCarrier",
+                "type": "field",
+                "fieldKey": "seller.TNVChuyen",
+                "formatter": "plainText",
+                "label": "Họ tên người vận chuyển",
+                "style": {}
+              },
+              {
+                "id": "consignmentTransportContract",
+                "type": "field",
+                "fieldKey": "seller.HDSo",
+                "formatter": "plainText",
+                "label": "Hợp đồng vận chuyển số",
+                "style": {},
+                "condition": { "op": "hasValue", "fieldKey": "seller.HDSo" }
+              }
+            ]
+          },
+          {
+            "id": "consignmentVehicle",
+            "type": "field",
+            "fieldKey": "seller.PTVChuyen",
+            "formatter": "plainText",
+            "label": "Phương tiện vận chuyển",
+            "style": {}
+          },
+          {
+            "id": "consignmentWarehouseOut",
+            "type": "field",
+            "fieldKey": "seller.DChi",
+            "formatter": "plainText",
+            "label": "Xuất tại kho",
+            "style": {}
+          },
+          {
+            "id": "consignmentWarehouseIn",
+            "type": "field",
+            "fieldKey": "buyer.DChi",
+            "formatter": "plainText",
+            "label": "Nhập tại kho",
+            "style": {}
+          }
+        ]
+      },
+      {
+        "id": "consignmentItems",
+        "type": "itemsTable",
+        "dataSource": "items",
+        "repeatHeader": true,
+        "rowSplitPolicy": "splitIfOversized",
+        "columns": [
+          {
+            "id": "consignmentItemNo",
+            "label": "STT",
+            "fieldKey": "items.STT",
+            "widthPercent": 6,
+            "formatter": "plainText",
+            "style": { "textAlign": "center" }
+          },
+          {
+            "id": "consignmentItemName",
+            "label": "Tên nhãn hiệu, quy cách, phẩm chất vật tư (sản phẩm, hàng hóa)",
+            "fieldKey": "items.THHDVu",
+            "widthPercent": 36,
+            "formatter": "plainText",
+            "style": { "textAlign": "left" }
+          },
+          {
+            "id": "consignmentItemCode",
+            "label": "Mã số",
+            "fieldKey": "items.MHHDVu",
+            "widthPercent": 12,
+            "formatter": "plainText",
+            "style": { "textAlign": "center" }
+          },
+          {
+            "id": "consignmentItemUnit",
+            "label": "Đơn vị tính",
+            "fieldKey": "items.DVTinh",
+            "widthPercent": 10,
+            "formatter": "plainText",
+            "style": { "textAlign": "center" }
+          },
+          {
+            "id": "consignmentItemQuantity",
+            "label": "Số lượng",
+            "fieldKey": "items.SLuong",
+            "widthPercent": 12,
+            "formatter": "decimal",
+            "style": { "textAlign": "right" }
+          },
+          {
+            "id": "consignmentItemPrice",
+            "label": "Đơn giá",
+            "fieldKey": "items.DGia",
+            "widthPercent": 11,
+            "formatter": "moneyByCurrency",
+            "style": { "textAlign": "right" }
+          },
+          {
+            "id": "consignmentItemAmount",
+            "label": "Thành tiền",
+            "fieldKey": "items.ThTien",
+            "widthPercent": 13,
+            "formatter": "moneyByCurrency",
+            "style": { "textAlign": "right" }
+          }
+        ],
+        "headerStyle": {
+          "fontWeight": 700,
+          "textAlign": "center",
+          "paddingMm": 1.2,
+          "borderColor": "#000000",
+          "borderWidthMm": 0.2
+        },
+        "cellStyle": {
+          "paddingMm": 1.2,
+          "borderColor": "#000000",
+          "borderWidthMm": 0.2
+        },
+        "style": {}
+      },
+      {
+        "id": "consignmentTotal",
+        "type": "text",
+        "text": "Tổng cộng:",
+        "style": {
+          "fontWeight": 700,
+          "textAlign": "center",
+          "borderWidthMm": 0.2,
+          "borderColor": "#000000",
+          "paddingMm": 1
+        }
+      },
+      {
+        "id": "consignmentSignatures",
+        "type": "columns",
+        "gapMm": 2,
+        "style": {},
+        "children": [
+          {
+            "id": "consignmentReceiverSignature",
+            "type": "stack",
+            "gapMm": 1,
+            "heightMm": 34,
+            "style": {},
+            "children": [
+              {
+                "id": "consignmentReceiverSignatureTitle",
+                "type": "text",
+                "text": "NGƯỜI NHẬN HÀNG",
+                "style": { "fontWeight": 700, "textAlign": "center" }
+              },
+              {
+                "id": "consignmentReceiverSignatureNote",
+                "type": "text",
+                "text": "(Ký, ghi rõ họ tên)",
+                "style": { "fontStyle": "italic", "textAlign": "center" }
+              }
+            ]
+          },
+          {
+            "id": "consignmentCreatorSignature",
+            "type": "stack",
+            "gapMm": 1,
+            "heightMm": 34,
+            "style": {},
+            "children": [
+              {
+                "id": "consignmentCreatorSignatureTitle",
+                "type": "text",
+                "text": "NGƯỜI LẬP",
+                "style": { "fontWeight": 700, "textAlign": "center" }
+              },
+              {
+                "id": "consignmentCreatorSignatureNote",
+                "type": "text",
+                "text": "(Ký, ghi rõ họ tên)",
+                "style": { "fontStyle": "italic", "textAlign": "center" }
+              },
+              {
+                "id": "consignmentDigitalSignature",
+                "type": "signatureSummary",
+                "widthMm": 32,
+                "heightMm": 20,
+                "style": { "borderWidthMm": 0.25, "borderColor": "#174a8b", "paddingMm": 1 },
+                "children": [
+                  {
+                    "id": "consignmentDigitalSignatureLabel",
+                    "type": "text",
+                    "text": "Signature",
+                    "style": { "color": "#ff0000", "fontWeight": 700, "fontSizePt": 7 }
+                  },
+                  {
+                    "id": "consignmentDigitalSignatureBy",
+                    "type": "field",
+                    "fieldKey": "seller.Ten",
+                    "formatter": "plainText",
+                    "label": "Ký bởi",
+                    "style": { "color": "#ff0000", "fontSizePt": 7 }
+                  },
+                  {
+                    "id": "consignmentDigitalSignatureDate",
+                    "type": "field",
+                    "fieldKey": "invoice.DSCKS.NBan.Signature.SignedAt",
+                    "formatter": "plainText",
+                    "label": "Ký ngày",
+                    "style": { "color": "#ff0000", "fontSizePt": 7 }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "consignmentWarehouseOutSignature",
+            "type": "stack",
+            "gapMm": 1,
+            "heightMm": 34,
+            "style": {},
+            "children": [
+              {
+                "id": "consignmentWarehouseOutSignatureTitle",
+                "type": "text",
+                "text": "THỦ KHO XUẤT",
+                "style": { "fontWeight": 700, "textAlign": "center" }
+              },
+              {
+                "id": "consignmentWarehouseOutSignatureNote",
+                "type": "text",
+                "text": "(Ký, ghi rõ họ tên)",
+                "style": { "fontStyle": "italic", "textAlign": "center" }
+              }
+            ]
+          },
+          {
+            "id": "consignmentCarrierSignature",
+            "type": "stack",
+            "gapMm": 1,
+            "heightMm": 34,
+            "style": {},
+            "children": [
+              {
+                "id": "consignmentCarrierSignatureTitle",
+                "type": "text",
+                "text": "NGƯỜI VẬN CHUYỂN",
+                "style": { "fontWeight": 700, "textAlign": "center" }
+              },
+              {
+                "id": "consignmentCarrierSignatureNote",
+                "type": "text",
+                "text": "(Ký, ghi rõ họ tên)",
+                "style": { "fontStyle": "italic", "textAlign": "center" }
+              }
+            ]
+          },
+          {
+            "id": "consignmentWarehouseInSignature",
+            "type": "stack",
+            "gapMm": 1,
+            "heightMm": 34,
+            "style": {},
+            "children": [
+              {
+                "id": "consignmentWarehouseInSignatureTitle",
+                "type": "text",
+                "text": "THỦ KHO NHẬP",
+                "style": { "fontWeight": 700, "textAlign": "center" }
+              },
+              {
+                "id": "consignmentWarehouseInSignatureNote",
+                "type": "text",
+                "text": "(Ký, ghi rõ họ tên)",
+                "style": { "fontStyle": "italic", "textAlign": "center" }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "consignmentCheckNote",
+        "type": "text",
+        "text": "(Cần kiểm tra, đối chiếu khi lập, giao, nhận hóa đơn)",
+        "style": { "fontStyle": "italic", "textAlign": "center" }
+      },
+      {
+        "id": "consignmentFooter",
+        "type": "stack",
+        "gapMm": 0.8,
+        "style": {},
+        "children": [
+          {
+            "id": "consignmentAuthorityCode",
+            "type": "field",
+            "fieldKey": "invoice.MCCQT",
+            "formatter": "plainText",
+            "label": "Mã cơ quan thuế",
+            "style": { "textAlign": "center" },
+            "condition": { "op": "hasValue", "fieldKey": "invoice.MCCQT" }
+          },
+          {
+            "id": "consignmentLookupCode",
+            "type": "field",
+            "fieldKey": "invoice.other.TTinMTCuu.DLieu",
+            "formatter": "plainText",
+            "label": "Mã tra cứu",
+            "style": { "textAlign": "center" },
+            "condition": { "op": "hasValue", "fieldKey": "invoice.other.TTinMTCuu.DLieu" }
+          },
+          {
+            "id": "consignmentFooterNote",
+            "type": "text",
+            "text": "Phiếu xuất kho hàng gửi bán đại lý điện tử",
+            "style": { "fontStyle": "italic", "textAlign": "center" }
+          }
+        ]
+      }
+    ]
+  }
+}

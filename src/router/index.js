@@ -109,6 +109,62 @@ const router = new VueRouter({
 					meta: { requiresUser: true, title: 'Danh sách hóa đơn bán hàng' }
 				},
 				{
+					path: '/stock-issue/internal-transport/list',
+					name: 'CustomerStockIssueInternalTransportList',
+					component: () => import('@/views/customers/stock-issue/internal-transport/list.vue'),
+					meta: { requiresUser: true, title: 'Phiếu xuất kho kiêm vận chuyển nội bộ' }
+				},
+				{
+					path: '/stock-issue/internal-transport/create',
+					name: 'CustomerStockIssueInternalTransportCreate',
+					component: () => import('@/views/customers/stock-issue/internal-transport/create.vue'),
+					meta: { requiresUser: true, title: 'Lập phiếu xuất kho kiêm vận chuyển nội bộ' }
+				},
+				{
+					path: '/stock-issue/internal-transport/:id/edit',
+					name: 'CustomerStockIssueInternalTransportEdit',
+					component: () => import('@/views/customers/stock-issue/internal-transport/create.vue'),
+					meta: { requiresUser: true, title: 'Cập nhật phiếu xuất kho kiêm vận chuyển nội bộ' }
+				},
+				{
+					path: '/stock-issue/internal-transport/replace',
+					name: 'CustomerStockIssueInternalTransportReplace',
+					redirect: { path: '/stock-issue/replace', query: { category: '6', stockIssueType: '1' } }
+				},
+				{
+					path: '/stock-issue/internal-transport/adjust',
+					name: 'CustomerStockIssueInternalTransportAdjust',
+					redirect: { path: '/stock-issue/adjust', query: { category: '6', stockIssueType: '1' } }
+				},
+				{
+					path: '/stock-issue/consignment/list',
+					name: 'CustomerStockIssueConsignmentList',
+					component: () => import('@/views/customers/stock-issue/consignment/list.vue'),
+					meta: { requiresUser: true, title: 'Phiếu xuất kho hàng gửi bán đại lý' }
+				},
+				{
+					path: '/stock-issue/consignment/create',
+					name: 'CustomerStockIssueConsignmentCreate',
+					component: () => import('@/views/customers/stock-issue/consignment/create.vue'),
+					meta: { requiresUser: true, title: 'Lập phiếu xuất kho hàng gửi bán đại lý' }
+				},
+				{
+					path: '/stock-issue/consignment/:id/edit',
+					name: 'CustomerStockIssueConsignmentEdit',
+					component: () => import('@/views/customers/stock-issue/consignment/create.vue'),
+					meta: { requiresUser: true, title: 'Cập nhật phiếu xuất kho hàng gửi bán đại lý' }
+				},
+				{
+					path: '/stock-issue/consignment/replace',
+					name: 'CustomerStockIssueConsignmentReplace',
+					redirect: { path: '/stock-issue/replace', query: { category: '6', stockIssueType: '2' } }
+				},
+				{
+					path: '/stock-issue/consignment/adjust',
+					name: 'CustomerStockIssueConsignmentAdjust',
+					redirect: { path: '/stock-issue/adjust', query: { category: '6', stockIssueType: '2' } }
+				},
+				{
 					path: '/invoice-packages',
 					name: 'CustomerInvoicePackages',
 					component: () => import('@/views/customers/invoice-packages/index.vue'),
@@ -130,25 +186,35 @@ const router = new VueRouter({
 					path: '/invoice/replace',
 					name: 'CustomerVatInvoiceReplace',
 					component: () => import('@/views/customers/invoices/vat-invoice/process.vue'),
-					meta: { requiresUser: true, title: 'Hóa đơn thay thế', processingMode: 'replace' }
+					meta: { requiresUser: true, title: 'Hóa đơn thay thế', processingMode: 'replace', processingScope: 'invoice' }
 				},
 				{
 					path: '/invoice/adjust',
 					name: 'CustomerVatInvoiceAdjust',
 					component: () => import('@/views/customers/invoices/vat-invoice/process.vue'),
-					meta: { requiresUser: true, title: 'Hóa đơn điều chỉnh', processingMode: 'adjust' }
+					meta: { requiresUser: true, title: 'Hóa đơn điều chỉnh', processingMode: 'adjust', processingScope: 'invoice' }
+				},
+				{
+					path: '/stock-issue/replace',
+					name: 'CustomerStockIssueReplace',
+					component: () => import('@/views/customers/invoices/vat-invoice/process.vue'),
+					meta: { requiresUser: true, title: 'Phiếu xuất kho thay thế', processingMode: 'replace', processingScope: 'stock' }
+				},
+				{
+					path: '/stock-issue/adjust',
+					name: 'CustomerStockIssueAdjust',
+					component: () => import('@/views/customers/invoices/vat-invoice/process.vue'),
+					meta: { requiresUser: true, title: 'Phiếu xuất kho điều chỉnh', processingMode: 'adjust', processingScope: 'stock' }
 				},
 				{
 					path: '/invoice/sales-invoice/replace',
 					name: 'CustomerSalesInvoiceReplace',
-					component: () => import('@/views/customers/invoices/vat-invoice/process.vue'),
-					meta: { requiresUser: true, title: 'Hóa đơn bán hàng thay thế', processingMode: 'replace', invoiceCategory: 2 }
+					redirect: { path: '/invoice/replace', query: { category: '2' } }
 				},
 				{
 					path: '/invoice/sales-invoice/adjust',
 					name: 'CustomerSalesInvoiceAdjust',
-					component: () => import('@/views/customers/invoices/vat-invoice/process.vue'),
-					meta: { requiresUser: true, title: 'Hóa đơn bán hàng điều chỉnh', processingMode: 'adjust', invoiceCategory: 2 }
+					redirect: { path: '/invoice/adjust', query: { category: '2' } }
 				},
 				{
 					path: '/error-message/list',

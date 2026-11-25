@@ -39,7 +39,22 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
 
     @Query("SELECT i FROM InvoiceEntity i JOIN FormInvoiceEntity f ON i.formId = f.id " +
             "WHERE (:companyId IS NULL OR i.companyId = :companyId) " +
-            "AND (:category IS NULL OR f.category = :category) " +
+            "AND f.category = :category " +
+            "AND (:stockIssueType IS NULL OR i.stockIssueType = :stockIssueType) " +
+            "AND (:q IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.code) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.lookupCode) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+            "AND (:status IS NULL OR i.status = :status) " +
+            "AND (:date IS NULL OR i.dateExport = :date)")
+    Page<InvoiceEntity> searchByCategoryAndStockIssueType(@Param("companyId") Long companyId,
+                                                           @Param("category") Integer category,
+                                                           @Param("stockIssueType") Integer stockIssueType,
+                                                           @Param("q") String q,
+                                                           @Param("status") Short status,
+                                                           @Param("date") java.time.LocalDate date,
+                                                           Pageable pageable);
+
+    @Query("SELECT i FROM InvoiceEntity i JOIN FormInvoiceEntity f ON i.formId = f.id " +
+            "WHERE (:companyId IS NULL OR i.companyId = :companyId) " +
+            "AND (:category IS NULL OR (:category = 0 AND f.category IN (1, 2)) OR f.category = :category) " +
             "AND i.status > 2 " +
             "AND (:q IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.codeCqt) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(i.lookupCode) LIKE LOWER(CONCAT('%', :q, '%'))) " +
             "AND (:fromDate IS NULL OR i.dateExport >= :fromDate) " +
@@ -69,6 +84,15 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
             @Param("no") Integer no,
             @Param("category") Integer category);
 
+    @Query("SELECT i FROM InvoiceEntity i JOIN FormInvoiceEntity f ON i.formId = f.id "
+            + "WHERE i.companyId = :companyId AND i.no = :no AND f.category = :category "
+            + "AND i.stockIssueType = :stockIssueType ORDER BY i.id DESC")
+    java.util.Optional<InvoiceEntity> findFirstByCompanyIdAndNoAndCategoryAndStockIssueTypeOrderByIdDesc(
+            @Param("companyId") Integer companyId,
+            @Param("no") Integer no,
+            @Param("category") Integer category,
+            @Param("stockIssueType") Integer stockIssueType);
+
     List<InvoiceEntity> findByCode(String code);
 
     Optional<InvoiceEntity> findFirstByCodeAndCompanyIdOrderByIdDesc(String code, Integer companyId);
@@ -87,6 +111,9 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
             @Param("toDate") java.time.LocalDate toDate,
             Pageable pageable
     );
+
+    @Query("SELECT i FROM InvoiceEntity i JOIN FormInvoiceEntity f ON i.formId = f.id WHERE (:companyId IS NULL OR i.companyId = :companyId) AND f.category = :category AND (:stockIssueType IS NULL OR i.stockIssueType = :stockIssueType) AND (:status IS NULL OR i.status = :status) AND (:fromDate IS NULL OR i.dateExport >= :fromDate) AND (:toDate IS NULL OR i.dateExport <= :toDate)")
+    Page<InvoiceEntity> searchReportInvoicesByStockIssueType(@Param("companyId") Long companyId, @Param("category") Integer category, @Param("stockIssueType") Integer stockIssueType, @Param("status") Short status, @Param("fromDate") java.time.LocalDate fromDate, @Param("toDate") java.time.LocalDate toDate, Pageable pageable);
 
     interface InvoiceReportSummary {
         Long getInvoiceCount();
@@ -112,6 +139,9 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, Long> {
             @Param("fromDate") java.time.LocalDate fromDate,
             @Param("toDate") java.time.LocalDate toDate
     );
+
+    @Query("SELECT COUNT(i) AS invoiceCount, COALESCE(SUM(i.total), 0.0) AS totalBeforeTax, COALESCE(SUM(i.vatAmount), 0.0) AS totalVat, COALESCE(SUM(i.amount), 0.0) AS totalAmount FROM InvoiceEntity i JOIN FormInvoiceEntity f ON i.formId = f.id WHERE (:companyId IS NULL OR i.companyId = :companyId) AND f.category = :category AND (:stockIssueType IS NULL OR i.stockIssueType = :stockIssueType) AND (:status IS NULL OR i.status = :status) AND (:fromDate IS NULL OR i.dateExport >= :fromDate) AND (:toDate IS NULL OR i.dateExport <= :toDate)")
+    InvoiceReportSummary summarizeReportInvoicesByStockIssueType(@Param("companyId") Long companyId, @Param("category") Integer category, @Param("stockIssueType") Integer stockIssueType, @Param("status") Short status, @Param("fromDate") java.time.LocalDate fromDate, @Param("toDate") java.time.LocalDate toDate);
 
     // Dashboard statistics queries
     @Query("SELECT COUNT(i) FROM InvoiceEntity i WHERE i.companyId = :companyId " +

@@ -7,6 +7,7 @@ public class InvoiceDTO {
     public String formCode;
     public String serial;
     public Integer category;
+    public Integer stockIssueType;
     public Integer no;
     public LocalDate dateExport;
     public String lookupCode;

@@ -27,6 +27,7 @@ import java.util.*;
 @Service
 public class InvoiceTemplateService {
     public record Details(InvoiceTemplateEntity template, InvoiceTemplateDraftEntity draft, List<InvoiceTemplateVersionEntity> versions) { }
+    public record InvoiceType(Integer category, Integer stockIssueType) { }
     private final InvoiceTemplateRepository templates;
     private final InvoiceTemplateDraftRepository drafts;
     private final InvoiceTemplateVersionRepository versions;
@@ -58,7 +59,7 @@ public class InvoiceTemplateService {
                                    FormInvoiceRepository forms, CompanyRepository companies, CompanyBankRepository banks,
                                    InvoiceTemplateHistoryService history,
                                    InvoiceAssetPinRepository pins,
-                                   InvoiceTemplateStorageCleanupService storageCleanup) {
+                                   ObjectProvider<InvoiceTemplateStorageCleanupService> storageCleanup) {
         this.templates = templates;
         this.drafts = drafts;
         this.versions = versions;
@@ -78,7 +79,7 @@ public class InvoiceTemplateService {
         this.banks = banks;
         this.history = history;
         this.pins = pins;
-        this.storageCleanup = storageCleanup;
+        this.storageCleanup = storageCleanup.getIfAvailable();
     }
 
     public Page<InvoiceTemplateEntity> list(TemplateAccess access, String scope, String q, Integer category, int page, int size) {
@@ -104,6 +105,17 @@ public class InvoiceTemplateService {
             return predicate;
         };
         return templates.findAll(filter, PageRequest.of(Math.max(0, page - 1), Math.clamp(size, 1, 100), Sort.by(Sort.Direction.DESC, "updatedAt", "id")));
+    }
+
+    @Transactional(readOnly = true)
+    public InvoiceType invoiceType(Long id, TemplateAccess access) {
+        var template = require(id, access, false);
+        Integer stockIssueType = forms.findByTemplateId(id).stream()
+                .map(FormInvoiceEntity::getStockIssueType)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+        return new InvoiceType(template.getCategory(), stockIssueType);
     }
 
     private jakarta.persistence.criteria.Predicate activeFormLink(
@@ -184,7 +196,7 @@ public class InvoiceTemplateService {
         }
         var form = links.getFirst();
         var draft = drafts.findByTemplateId(id).orElse(null);
-        var storageSnapshot = storageCleanup.snapshot(id, draft == null ? null : draft.getId());
+        var storageSnapshot = storageCleanup == null ? null : storageCleanup.snapshot(id, draft == null ? null : draft.getId());
         form.setTemplateVersionId(null);
         form.setTemplateId(null);
         forms.saveAndFlush(form);
@@ -195,10 +207,10 @@ public class InvoiceTemplateService {
             drafts.delete(draft);
         }
         audit.deleteByTemplateId(id);
-        storageCleanup.removeDatabaseRows(storageSnapshot);
+        if (storageCleanup != null) storageCleanup.removeDatabaseRows(storageSnapshot);
         templates.delete(template);
         templates.flush();
-        storageCleanup.deleteFiles(storageSnapshot);
+        if (storageCleanup != null) storageCleanup.deleteFiles(storageSnapshot);
     }
 
     @Transactional
@@ -219,10 +231,16 @@ public class InvoiceTemplateService {
 
     @Transactional
     public Details create(String name, int category, Long sourceVersionId, boolean system, String key, TemplateAccess access, JsonNode initialLayout) {
+        return create(name, category, null, sourceVersionId, system, key, access, initialLayout);
+    }
+
+    @Transactional
+    public Details create(String name, int category, Integer stockIssueType, Long sourceVersionId,
+                          boolean system, String key, TemplateAccess access, JsonNode initialLayout) {
         if (system) access.requireSystemManager(); else access.requireCompany();
         validateName(name, category);
         String requestKey = commandKey(access, "CREATE", key);
-        String requestHash = DocumentStorage.sha256(assets.json(Arrays.asList(name, category, sourceVersionId, system, initialLayout)));
+        String requestHash = DocumentStorage.sha256(assets.json(Arrays.asList(name, category, stockIssueType, sourceVersionId, system, initialLayout)));
         var previous = audit.findByRequestKey(requestKey);
         if (previous.isPresent()) {
             verifyRequest(previous.get(), requestHash);
@@ -236,7 +254,7 @@ public class InvoiceTemplateService {
             throw TemplateException.invalid("LAYOUT_REQUIRED", "Phải tải file JSON bố cục trước khi tạo mẫu");
         } else {
             initialLayout = normalizeCatalogVersion(initialLayout);
-            compiler.validate(initialLayout, false);
+            compiler.validate(initialLayout, false, category, stockIssueType);
         }
         var template = new InvoiceTemplateEntity();
         template.setScope(system ? "SYSTEM" : "COMPANY");
@@ -256,7 +274,9 @@ public class InvoiceTemplateService {
         } else {
             sourceContent = assets.json(initialLayout);
         }
-        String manifestJson = source == null ? "{}" : source.getManifestJson();
+        String manifestJson = source == null
+                ? assets.json(layoutManifest(initialLayout, template))
+                : source.getManifestJson();
         var draft = new InvoiceTemplateDraftEntity();
         draft.setTemplateId(template.getId());
         draft.setSourceContent(sourceContent);
@@ -272,6 +292,11 @@ public class InvoiceTemplateService {
         assets.pin(draft.getManifestJson(), "DRAFT", draft.getId());
         event(template, access, "CREATE", requestKey, requestHash, template.getId(), "{}");
         return new Details(template, draft, List.of());
+    }
+
+    @Transactional
+    public Details create(String name, int category, Long sourceVersionId, boolean system, String key, TemplateAccess access) {
+        return create(name, category, sourceVersionId, system, key, access, null);
     }
 
     @Transactional
@@ -313,8 +338,17 @@ public class InvoiceTemplateService {
         return normalized;
     }
 
+    private void validateLayout(JsonNode layout, boolean publishing, InvoiceTemplateEntity template) {
+        Integer stockIssueType = forms.findByTemplateId(template.getId()).stream()
+                .map(FormInvoiceEntity::getStockIssueType)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+        compiler.validate(layout, publishing, template.getCategory(), stockIssueType);
+    }
+
     private InvoiceTemplateDraftEntity saveDraft(InvoiceTemplateEntity template, InvoiceTemplateDraftEntity draft, JsonNode layout, TemplateAccess access) {
-        compiler.validate(layout, false);
+        validateLayout(layout, false, template);
         Map<String, InvoiceAssetService.AssetRef> manifest = layoutManifest(layout, template);
         draft.setFieldCatalogVersion(layout.path("fieldCatalogVersion").asText());
         draft.setSchemaVersion(JsonLayoutCompiler.SCHEMA_VERSION);
@@ -340,7 +374,7 @@ public class InvoiceTemplateService {
         ensureEditableState(template);
         var draft = draft(id);
         var layout = tree(draft.getSourceContent());
-        compiler.validate(layout, true);
+        validateLayout(layout, true, template);
         layoutManifest(layout, template);
 
         var version = freeze(template, draft, access.actorId(), assets.json(Map.of("mode", "INITIAL")));
@@ -373,7 +407,7 @@ public class InvoiceTemplateService {
         FormInvoiceEntity form = forms.findByTemplateId(template.getId()).stream().findFirst().orElseGet(() -> {
             FormInvoiceEntity fallback = new FormInvoiceEntity();
             fallback.setCategory(template.getCategory());
-            fallback.setType(template.getCategory() == 2 ? 0 : 1);
+            fallback.setType(template.getCategory() == 2 ? -1 : template.getCategory() == 6 ? 0 : 1);
             fallback.setFormCode(String.valueOf(template.getCategory()));
             fallback.setSerial("C26TAA");
             return fallback;
@@ -394,7 +428,7 @@ public class InvoiceTemplateService {
         if (rows < 0 || rows > 60) throw TemplateException.invalid("INVALID_ROWS", "Số dòng minh họa phải từ 0 đến 60");
         if (assets.json(layout).getBytes(java.nio.charset.StandardCharsets.UTF_8).length > properties.getMaxInputBytes())
             throw TemplateException.invalid("RENDER_INPUT_LIMIT", "Nội dung bố cục vượt giới hạn");
-        compiler.validate(layout, false);
+        validateLayout(layout, false, template);
         var manifest = layoutManifest(layout, template);
         return renders.designerPreview(layout, sampleXml(template, rows), assets.json(manifest), template.getScope(), template.getCompanyId());
     }
@@ -418,10 +452,10 @@ public class InvoiceTemplateService {
         var template = lock(id, access);
         var draft = draft(id);
         checkRevision(draft, expectedVersion);
-        compiler.validate(tree(draft.getSourceContent()), true);
+        validateLayout(tree(draft.getSourceContent()), true, template);
         for (var previous : validations.findByDraftIdOrderByIdDesc(draft.getId())) {
             if (!"RUNNING".equals(previous.getState())) {
-                storageCleanup.deleteRenderJobs(jobIds(previous.getJobIdsJson()));
+                if (storageCleanup != null) storageCleanup.deleteRenderJobs(jobIds(previous.getJobIdsJson()));
                 validations.delete(previous);
             }
         }
@@ -483,7 +517,7 @@ public class InvoiceTemplateService {
         template.setUpdatedAt(now());
         event(template, access, "PUBLISH", requestKey, requestHash, version.getId(), run.getReportJson());
         history.trim(id);
-        storageCleanup.deleteRenderJobs(jobIds(run.getJobIdsJson()));
+        if (storageCleanup != null) storageCleanup.deleteRenderJobs(jobIds(run.getJobIdsJson()));
         validations.delete(run);
         return version;
     }
@@ -531,7 +565,7 @@ public class InvoiceTemplateService {
     }
 
     private void discardDraft(InvoiceTemplateDraftEntity draft) {
-        storageCleanup.deleteDraftPreviewJobs(draft.getId());
+        if (storageCleanup != null) storageCleanup.deleteDraftPreviewJobs(draft.getId());
         validations.deleteByDraftId(draft.getId());
         pins.deleteByOwnerTypeAndOwnerId("DRAFT", draft.getId());
         drafts.delete(draft);
@@ -657,7 +691,7 @@ public class InvoiceTemplateService {
     public static String hash(String source, String manifest) { return DocumentStorage.sha256(source + "\n" + manifest); }
     private static LocalDateTime now() { return LocalDateTime.now(ZoneOffset.UTC); }
     private static void checkRevision(InvoiceTemplateDraftEntity draft, long expected) { if (!Objects.equals(draft.getLockVersion(), expected)) throw TemplateException.conflict("Bản nháp đã được người khác cập nhật; vui lòng tải lại"); }
-    private static void validateName(String name, int category) { if (name == null || name.isBlank() || name.length() > 255 || !Set.of(1, 2).contains(category)) throw TemplateException.invalid("INVALID_TEMPLATE", "Tên mẫu hoặc loại hóa đơn không hợp lệ"); }
+    private static void validateName(String name, int category) { if (name == null || name.isBlank() || name.length() > 255 || !Set.of(1, 2, 6).contains(category)) throw TemplateException.invalid("INVALID_TEMPLATE", "Tên mẫu hoặc loại hóa đơn không hợp lệ"); }
     private static String commandKey(TemplateAccess access, String action, String key) {
         if (key == null || key.isBlank() || key.length() > 128) throw TemplateException.invalid("IDEMPOTENCY_KEY_REQUIRED", "Thiếu Idempotency-Key hợp lệ");
         return DocumentStorage.sha256(access.companyId() + ":" + access.actorId() + ":" + action + ":" + key);
