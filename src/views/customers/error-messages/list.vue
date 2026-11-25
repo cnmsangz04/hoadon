@@ -165,6 +165,7 @@ export default {
   },
   computed: {
     noticeCategory() {
+      if (Number(this.$route.meta?.errorMessageCategory) === 6 || this.$route.path.indexOf('/error-message/stock-issue/') === 0) return 6
       return Number(this.$route.query.category) === 6 ? 6 : 0
     },
     pageTitle() {
@@ -173,7 +174,7 @@ export default {
   },
   created() { this.fetchList() },
   watch: {
-    '$route.query': {
+    '$route': {
       deep: true,
       handler() {
         this.list.current_page = 1
@@ -204,8 +205,11 @@ export default {
     applyFilters() { this.list.current_page = 1; this.fetchList() },
     resetFilters() { this.filters = { keyword: '', status: null, notificationType: null, dateFrom: null, dateTo: null }; this.applyFilters() },
     createNotice() {
-      const query = this.noticeCategory === 6 ? { category: '6' } : {}
-      this.$router.push({ name: 'CustomerErrorMessageCreate', query })
+      if (this.noticeCategory === 6) {
+        this.$router.push({ name: 'CustomerStockErrorMessageCreate' })
+      } else {
+        this.$router.push({ name: 'CustomerInvoiceErrorMessageCreate' })
+      }
     },
     onPageChange(page) { this.list.current_page = Number(page) || 1; this.fetchList() },
     onPageSizeChange(size) { this.list.per_page = Number(size) || 10; this.list.current_page = 1; this.fetchList() },
@@ -229,8 +233,11 @@ export default {
     canSend(item) { return [1, 3, 4].includes(Number(item?.status)) },
     openEdit(item) {
       const category = Number(item?.category)
-      const query = category === 6 || category === 2 ? { category: String(category) } : {}
-      this.$router.push({ name: 'CustomerErrorMessageEdit', params: { id: item.id }, query })
+      if (category === 6) {
+        this.$router.push({ name: 'CustomerStockErrorMessageEdit', params: { id: item.id } })
+      } else {
+        this.$router.push({ name: 'CustomerInvoiceErrorMessageEdit', params: { id: item.id } })
+      }
     },
     async viewItem(item) {
       try {

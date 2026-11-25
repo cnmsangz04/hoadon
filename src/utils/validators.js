@@ -18,7 +18,7 @@ export function phone(value, message = 'Số điện thoại không đúng đị
 export function taxCode(value, message = 'Mã số thuế không đúng định dạng') {
   const text = String(value || '').trim()
   if (!text) return null
-  return /^\d{10}(-?\d{3})?$/.test(text) ? null : message
+  return /^(?:\d{10}(?:-?\d{3})?|\d{12})$/.test(text) ? null : message
 }
 
 export function minLength(value, min, message) {

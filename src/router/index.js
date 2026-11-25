@@ -223,16 +223,52 @@ const router = new VueRouter({
 					meta: { requiresUser: true, title: 'Danh sách thông báo hóa đơn sai sót' }
 				},
 				{
+					path: '/error-message/invoice/list',
+					name: 'CustomerInvoiceErrorMessageList',
+					component: () => import('@/views/customers/error-messages/list.vue'),
+					meta: { requiresUser: true, title: 'Danh sách thông báo hóa đơn sai sót', errorMessageCategory: 0 }
+				},
+				{
+					path: '/error-message/stock-issue/list',
+					name: 'CustomerStockErrorMessageList',
+					component: () => import('@/views/customers/error-messages/list.vue'),
+					meta: { requiresUser: true, title: 'Danh sách thông báo phiếu xuất kho sai sót', errorMessageCategory: 6 }
+				},
+				{
 					path: '/error-message/create',
 					name: 'CustomerErrorMessageCreate',
 					component: () => import('@/views/customers/error-messages/create.vue'),
 					meta: { requiresUser: true, title: 'Lập thông báo hóa đơn sai sót' }
 				},
 				{
+					path: '/error-message/invoice/create',
+					name: 'CustomerInvoiceErrorMessageCreate',
+					component: () => import('@/views/customers/error-messages/create.vue'),
+					meta: { requiresUser: true, title: 'Lập thông báo hóa đơn sai sót', errorMessageCategory: 0 }
+				},
+				{
+					path: '/error-message/stock-issue/create',
+					name: 'CustomerStockErrorMessageCreate',
+					component: () => import('@/views/customers/error-messages/create.vue'),
+					meta: { requiresUser: true, title: 'Lập thông báo phiếu xuất kho sai sót', errorMessageCategory: 6 }
+				},
+				{
 					path: '/error-message/:id/edit',
 					name: 'CustomerErrorMessageEdit',
 					component: () => import('@/views/customers/error-messages/create.vue'),
 					meta: { requiresUser: true, title: 'Cập nhật thông báo hóa đơn sai sót' }
+				},
+				{
+					path: '/error-message/invoice/:id/edit',
+					name: 'CustomerInvoiceErrorMessageEdit',
+					component: () => import('@/views/customers/error-messages/create.vue'),
+					meta: { requiresUser: true, title: 'Cập nhật thông báo hóa đơn sai sót', errorMessageCategory: 0 }
+				},
+				{
+					path: '/error-message/stock-issue/:id/edit',
+					name: 'CustomerStockErrorMessageEdit',
+					component: () => import('@/views/customers/error-messages/create.vue'),
+					meta: { requiresUser: true, title: 'Cập nhật thông báo phiếu xuất kho sai sót', errorMessageCategory: 6 }
 				},
 				{
 					path: '/invoice/:id/edit',
@@ -250,7 +286,13 @@ const router = new VueRouter({
 					path: '/imports/invoice',
 					name: 'CustomerInvoiceImport',
 					component: () => import('@/views/customers/imports/invoice/index.vue'),
-					meta: { requiresUser: true, title: 'Import hóa đơn' }
+					meta: { requiresUser: true, title: 'Import hóa đơn', importCategory: 1 }
+				},
+				{
+					path: '/imports/stock-issue',
+					name: 'CustomerStockIssueImport',
+					component: () => import('@/views/customers/imports/invoice/index.vue'),
+					meta: { requiresUser: true, title: 'Import phiếu xuất kho', importCategory: 6 }
 				},
 				{
 					path: '/imports/customer',
@@ -280,7 +322,33 @@ const router = new VueRouter({
 					path: '/reports/invoice/list',
 					name: 'CustomerReportInvoiceList',
 					component: () => import('@/views/customers/reports/invoice/list.vue'),
-					meta: { requiresUser: true, title: 'Báo cáo hóa đơn' }
+					meta: { requiresUser: true, title: 'Báo cáo hóa đơn GTGT', reportCategory: 1 },
+					beforeEnter: (to, from, next) => {
+						const category = Number(to.query.category || 0)
+						const stockIssueType = Number(to.query.stockIssueType || 0)
+						if (category === 2) return next({ name: 'CustomerReportSalesInvoiceList', replace: true })
+						if (category === 6 && stockIssueType === 2) return next({ name: 'CustomerReportStockIssueConsignmentList', replace: true })
+						if (category === 6) return next({ name: 'CustomerReportStockIssueInternalTransportList', replace: true })
+						next()
+					}
+				},
+				{
+					path: '/reports/sales-invoice/list',
+					name: 'CustomerReportSalesInvoiceList',
+					component: () => import('@/views/customers/reports/invoice/list.vue'),
+					meta: { requiresUser: true, title: 'Báo cáo hóa đơn bán hàng', reportCategory: 2 }
+				},
+				{
+					path: '/reports/stock-issue/internal-transport/list',
+					name: 'CustomerReportStockIssueInternalTransportList',
+					component: () => import('@/views/customers/reports/invoice/list.vue'),
+					meta: { requiresUser: true, title: 'Báo cáo phiếu xuất kho kiêm vận chuyển nội bộ', reportCategory: 6, stockIssueType: 1 }
+				},
+				{
+					path: '/reports/stock-issue/consignment/list',
+					name: 'CustomerReportStockIssueConsignmentList',
+					component: () => import('@/views/customers/reports/invoice/list.vue'),
+					meta: { requiresUser: true, title: 'Báo cáo phiếu xuất kho hàng gửi bán đại lý', reportCategory: 6, stockIssueType: 2 }
 				},
 				{
 					path: '/email/mail-server',

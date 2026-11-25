@@ -99,8 +99,8 @@ export default {
           title: 'Import dữ liệu',
           icon: 'fas fa-file-import',
           children: [
-            { title: 'Import hóa đơn', icon: 'fas fa-file-excel', to: '/imports/invoice?category=1', menuKey: 'invoice-import' },
-            { title: 'Import phiếu xuất kho', icon: 'fas fa-file-excel', to: '/imports/invoice?category=6&stockIssueType=1', menuKey: 'stock-import' },
+            { title: 'Import hóa đơn', icon: 'fas fa-file-excel', to: '/imports/invoice', menuKey: 'invoice-import' },
+            { title: 'Import phiếu xuất kho', icon: 'fas fa-file-excel', to: '/imports/stock-issue', menuKey: 'stock-import' },
             { title: 'Import khách hàng', icon: 'fas fa-users', to: '/imports/customer' },
             { title: 'Import sản phẩm', icon: 'fas fa-box', to: '/imports/product' },
           ],
@@ -109,7 +109,7 @@ export default {
           title: 'Xử lý hóa đơn',
           icon: 'fas fa-tasks',
           children: [
-            { title: 'Thông báo hóa đơn sai sót', icon: 'fas fa-exclamation-triangle', to: '/error-message/list', menuKey: 'invoice-error-message' },
+            { title: 'Thông báo hóa đơn sai sót', icon: 'fas fa-exclamation-triangle', to: '/error-message/invoice/list', menuKey: 'invoice-error-message' },
             { title: 'Hóa đơn thay thế', icon: 'fas fa-exchange-alt', to: '/invoice/replace' },
             { title: 'Hóa đơn điều chỉnh', icon: 'fas fa-sliders-h', to: '/invoice/adjust' },
           ],
@@ -118,7 +118,7 @@ export default {
           title: 'Xử lý phiếu xuất kho',
           icon: 'fas fa-tools',
           children: [
-            { title: 'Thông báo phiếu xuất kho sai sót', icon: 'fas fa-exclamation-triangle', to: '/error-message/list?category=6', menuKey: 'stock-error-message' },
+            { title: 'Thông báo phiếu xuất kho sai sót', icon: 'fas fa-exclamation-triangle', to: '/error-message/stock-issue/list', menuKey: 'stock-error-message' },
             { title: 'Phiếu xuất kho thay thế', icon: 'fas fa-exchange-alt', to: '/stock-issue/replace' },
             { title: 'Phiếu xuất kho điều chỉnh', icon: 'fas fa-sliders-h', to: '/stock-issue/adjust' },
           ],
@@ -127,10 +127,10 @@ export default {
           title: 'Báo cáo',
           icon: 'fas fa-chart-bar',
           children: [
-            { title: 'Báo cáo hóa đơn', icon: 'fas fa-chart-bar', to: '/reports/invoice/list' },
-            { title: 'Báo cáo bán hàng', icon: 'fas fa-chart-line', to: '/reports/invoice/list?category=2' },
-            { title: 'Báo cáo vận chuyển nội bộ', icon: 'fas fa-chart-line', to: '/reports/invoice/list?category=6&stockIssueType=1' },
-            { title: 'Báo cáo hàng gửi bán đại lý', icon: 'fas fa-chart-line', to: '/reports/invoice/list?category=6&stockIssueType=2' },
+            { title: 'Báo cáo hóa đơn GTGT', icon: 'fas fa-chart-bar', to: '/reports/invoice/list' },
+            { title: 'Báo cáo bán hàng', icon: 'fas fa-chart-line', to: '/reports/sales-invoice/list' },
+            { title: 'Báo cáo vận chuyển nội bộ', icon: 'fas fa-chart-line', to: '/reports/stock-issue/internal-transport/list' },
+            { title: 'Báo cáo hàng gửi bán đại lý', icon: 'fas fa-chart-line', to: '/reports/stock-issue/consignment/list' },
           ],
         },
         {
@@ -200,24 +200,24 @@ export default {
     isActive(item) {
       if (!item) return false;
 
-      // Item không có con
+      // Mục không có menu con
       if (item.to) {
         if (item.menuKey === 'invoice-import') {
-          return this.$route.path === '/imports/invoice' && Number(this.$route.query.category || 1) !== 6
+          return this.$route.path === '/imports/invoice'
         }
         if (item.menuKey === 'stock-import') {
-          return this.$route.path === '/imports/invoice' && Number(this.$route.query.category) === 6
+          return this.$route.path === '/imports/stock-issue'
         }
         if (item.menuKey === 'invoice-error-message') {
-          return this.$route.path.indexOf('/error-message/') === 0 && Number(this.$route.query.category || 0) !== 6
+          return this.$route.path === '/error-message/invoice/list' || this.$route.path === '/error-message/invoice/create' || this.$route.path.indexOf('/error-message/invoice/') === 0
         }
         if (item.menuKey === 'stock-error-message') {
-          return this.$route.path.indexOf('/error-message/') === 0 && Number(this.$route.query.category) === 6
+          return this.$route.path === '/error-message/stock-issue/list' || this.$route.path === '/error-message/stock-issue/create' || this.$route.path.indexOf('/error-message/stock-issue/') === 0
         }
         return this.$route.path === item.to.split('?')[0]
       }
 
-      // Item có children => active nếu child match chính xác
+      // Menu cha được chọn khi đường dẫn trùng với menu con
       if (item.children) {
         return item.children.some(c => this.isActive(c));
       }
@@ -289,7 +289,7 @@ export default {
 /* Hiệu ứng nhẹ cho submenu */
 .slide-enter-active, .slide-leave-active { transition: all 240ms ease; }
 .slide-enter, .slide-leave-to { opacity: 0; transform: translateY(-6px); height: 0; }
-/* Responsive: thu gọn chiều rộng trên màn hình nhỏ */
+/* Thu gọn chiều rộng trên màn hình nhỏ */
 @media (max-width: 768px) {
   .sidebar { width: 100%; flex-basis: auto; height: auto; position: relative; }
 }

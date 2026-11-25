@@ -178,6 +178,8 @@ export default {
   },
   computed: {
     invoiceCategory () {
+      const routeCategory = Number(this.$route?.meta?.importCategory)
+      if (routeCategory === 6) return 6
       const category = Number(this.$route?.query?.category || 1)
       return this.selectedCategory || (category === 2 || category === 6 ? category : 1)
     },
@@ -221,7 +223,7 @@ export default {
     }
   },
   watch: {
-    '$route.query': {
+    '$route': {
       deep: true,
       handler () {
         this.initializeImportKind()
@@ -234,6 +236,12 @@ export default {
   },
   methods: {
     initializeImportKind () {
+      const routeCategory = Number(this.$route?.meta?.importCategory)
+      if (routeCategory === 6) {
+        this.selectedCategory = 6
+        this.selectedStockIssueType = 1
+        return
+      }
       const category = Number(this.$route?.query?.category || 1)
       this.selectedCategory = category === 2 || category === 6 ? category : 1
       const stockIssueType = Number(this.$route?.query?.stockIssueType || 1)

@@ -284,6 +284,7 @@ export default {
   computed: {
     isEdit() { return !!this.$route.params.id },
     noticeCategory() {
+      if (Number(this.$route.meta?.errorMessageCategory) === 6 || this.$route.path.indexOf('/error-message/stock-issue/') === 0) return 6
       const routeCategory = Number(this.$route.query.category)
       if (routeCategory === 6) return 6
       if (routeCategory === 2) return 2
@@ -403,8 +404,11 @@ export default {
           await this.loadDetail(this.$route.params.id)
         } else {
           const { data } = await axios.post('/error-messages', this.payload(), { successMessage: 'Đã lập thông báo' })
-          const query = this.noticeCategory === 6 || this.noticeCategory === 2 ? { category: String(this.noticeCategory) } : {}
-          this.$router.push({ name: 'CustomerErrorMessageEdit', params: { id: data.id }, query })
+          if (this.noticeCategory === 6) {
+            this.$router.push({ name: 'CustomerStockErrorMessageEdit', params: { id: data.id } })
+          } else {
+            this.$router.push({ name: 'CustomerInvoiceErrorMessageEdit', params: { id: data.id } })
+          }
         }
       } finally { this.btnLoading = false }
     },
@@ -455,8 +459,11 @@ export default {
     removeLine(index) { this.frm.invoices.splice(index, 1) },
     addBlankLine() { this.frm.invoices.push(this.normalizeLine({})) },
     goBack() {
-      const query = this.noticeCategory === 6 ? { category: '6' } : {}
-      this.$router.push({ name: 'CustomerErrorMessageList', query })
+      if (this.noticeCategory === 6) {
+        this.$router.push({ name: 'CustomerStockErrorMessageList' })
+      } else {
+        this.$router.push({ name: 'CustomerInvoiceErrorMessageList' })
+      }
     },
     async signData() {
       try {

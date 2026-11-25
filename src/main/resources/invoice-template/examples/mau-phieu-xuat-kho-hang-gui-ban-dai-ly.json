@@ -13,7 +13,11 @@
     "color": "#000000"
   },
   "fontFamilies": {},
-  "assets": {},
+  "assets": {
+    "image7": {
+      "assetId": 7
+    }
+  },
   "body": {
     "id": "consignmentBody",
     "type": "stack",
@@ -21,7 +25,7 @@
     "style": {},
     "children": [
       {
-        "id": "consignmentSellerIdentity",
+        "id": "consignmentSellerHeader",
         "type": "columns",
         "gapMm": 6,
         "style": {},
@@ -59,10 +63,52 @@
             ]
           },
           {
+            "id": "consignmentLogo",
+            "type": "image",
+            "asset": "image7",
+            "widthMm": 42,
+            "heightMm": 28,
+            "style": { "textAlign": "center" }
+          }
+        ]
+      },
+      {
+        "id": "consignmentTitle",
+        "type": "field",
+        "fieldKey": "common.THDon",
+        "formatter": "plainText",
+        "label": "",
+        "style": {
+          "fontSizePt": 16,
+          "fontWeight": 700,
+          "textAlign": "center",
+          "textTransform": "uppercase"
+        }
+      },
+      {
+        "id": "consignmentDateIdentity",
+        "type": "columns",
+        "gapMm": 6,
+        "style": {},
+        "children": [
+          {
+            "id": "consignmentHeaderSpacer",
+            "type": "spacer",
+            "heightMm": 1,
+            "style": {}
+          },
+          {
+            "id": "consignmentDate",
+            "type": "field",
+            "fieldKey": "common.NLap",
+            "formatter": "date",
+            "label": "Ngày lập",
+            "style": { "fontStyle": "italic", "textAlign": "center" }
+          },
+          {
             "id": "consignmentIdentity",
             "type": "stack",
             "gapMm": 0.8,
-            "widthMm": 58,
             "style": {},
             "children": [
               {
@@ -92,27 +138,6 @@
             ]
           }
         ]
-      },
-      {
-        "id": "consignmentTitle",
-        "type": "field",
-        "fieldKey": "common.THDon",
-        "formatter": "plainText",
-        "label": "",
-        "style": {
-          "fontSizePt": 16,
-          "fontWeight": 700,
-          "textAlign": "center",
-          "textTransform": "uppercase"
-        }
-      },
-      {
-        "id": "consignmentDate",
-        "type": "field",
-        "fieldKey": "common.NLap",
-        "formatter": "date",
-        "label": "Ngày lập",
-        "style": { "fontStyle": "italic", "textAlign": "center" }
       },
       {
         "id": "consignmentContractInfo",
@@ -188,7 +213,7 @@
                 "type": "field",
                 "fieldKey": "seller.HDSo",
                 "formatter": "plainText",
-                "label": "Hợp đồng vận chuyển số",
+                "label": "Hợp đồng số",
                 "style": {},
                 "condition": { "op": "hasValue", "fieldKey": "seller.HDSo" }
               }

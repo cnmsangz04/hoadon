@@ -13,7 +13,11 @@
     "color": "#000000"
   },
   "fontFamilies": {},
-  "assets": {},
+  "assets": {
+    "image7": {
+      "assetId": 7
+    }
+  },
   "body": {
     "id": "internalBody",
     "type": "stack",
@@ -21,58 +25,92 @@
     "style": {},
     "children": [
       {
-        "id": "internalSellerInfo",
-        "type": "stack",
-        "gapMm": 1,
+        "id": "internalSellerHeader",
+        "type": "columns",
+        "gapMm": 6,
         "style": {},
         "children": [
           {
-            "id": "internalSellerName",
-            "type": "field",
-            "fieldKey": "seller.Ten",
-            "formatter": "plainText",
-            "label": "Tên người xuất hàng",
-            "style": {}
+            "id": "internalSellerInfo",
+            "type": "stack",
+            "gapMm": 1,
+            "style": {},
+            "children": [
+              {
+                "id": "internalSellerName",
+                "type": "field",
+                "fieldKey": "seller.Ten",
+                "formatter": "plainText",
+                "label": "Tên người xuất hàng",
+                "style": {}
+              },
+              {
+                "id": "internalDispatchOrder",
+                "type": "field",
+                "fieldKey": "seller.LDDNBo",
+                "formatter": "plainText",
+                "label": "Theo lệnh điều động nội bộ",
+                "style": {}
+              },
+              {
+                "id": "internalSellerAddress",
+                "type": "field",
+                "fieldKey": "seller.DChi",
+                "formatter": "plainText",
+                "label": "Địa chỉ kho xuất hàng",
+                "style": {}
+              },
+              {
+                "id": "internalCarrier",
+                "type": "field",
+                "fieldKey": "seller.TNVChuyen",
+                "formatter": "plainText",
+                "label": "Tên người vận chuyển",
+                "style": {}
+              },
+              {
+                "id": "internalTransportContract",
+                "type": "field",
+                "fieldKey": "seller.HDSo",
+                "formatter": "plainText",
+                "label": "Hợp đồng số",
+                "style": {},
+                "condition": { "op": "hasValue", "fieldKey": "seller.HDSo" }
+              },
+              {
+                "id": "internalVehicle",
+                "type": "field",
+                "fieldKey": "seller.PTVChuyen",
+                "formatter": "plainText",
+                "label": "Phương tiện vận chuyển",
+                "style": {}
+              },
+              {
+                "id": "internalSellerTax",
+                "type": "field",
+                "fieldKey": "seller.MST",
+                "formatter": "plainText",
+                "label": "Mã số thuế người xuất hàng",
+                "style": {}
+              }
+            ]
           },
           {
-            "id": "internalDispatchOrder",
-            "type": "field",
-            "fieldKey": "seller.LDDNBo",
-            "formatter": "plainText",
-            "label": "Theo lệnh điều động nội bộ",
-            "style": {}
-          },
-          {
-            "id": "internalSellerAddress",
-            "type": "field",
-            "fieldKey": "seller.DChi",
-            "formatter": "plainText",
-            "label": "Địa chỉ kho xuất hàng",
-            "style": {}
-          },
-          {
-            "id": "internalCarrier",
-            "type": "field",
-            "fieldKey": "seller.TNVChuyen",
-            "formatter": "plainText",
-            "label": "Tên người vận chuyển",
-            "style": {}
-          },
-          {
-            "id": "internalVehicle",
-            "type": "field",
-            "fieldKey": "seller.PTVChuyen",
-            "formatter": "plainText",
-            "label": "Phương tiện vận chuyển",
-            "style": {}
-          },
-          {
-            "id": "internalSellerTax",
-            "type": "field",
-            "fieldKey": "seller.MST",
-            "formatter": "plainText",
-            "label": "Mã số thuế người xuất hàng",
-            "style": {}
+            "id": "internalLogoPanel",
+            "type": "stack",
+            "gapMm": 0,
+            "widthMm": 55,
+            "style": { "textAlign": "center" },
+            "children": [
+              {
+                "id": "internalLogo",
+                "type": "image",
+                "asset": "image7",
+                "widthMm": 42,
+                "heightMm": 28,
+                "style": { "textAlign": "center" }
+              }
+            ]
           }
         ]
       },
@@ -96,6 +134,12 @@
         "style": {},
         "children": [
           {
+            "id": "internalHeaderSpacer",
+            "type": "spacer",
+            "heightMm": 1,
+            "style": {}
+          },
+          {
             "id": "internalDate",
             "type": "field",
             "fieldKey": "common.NLap",
@@ -107,7 +151,6 @@
             "id": "internalIdentity",
             "type": "stack",
             "gapMm": 0.8,
-            "widthMm": 58,
             "style": {},
             "children": [
               {
@@ -199,7 +242,7 @@
             "id": "internalItemName",
             "label": "Tên nhãn hiệu, quy cách, phẩm chất vật tư (sản phẩm, hàng hóa)",
             "fieldKey": "items.THHDVu",
-            "widthPercent": 34,
+            "widthPercent": 28,
             "formatter": "plainText",
             "style": { "textAlign": "left" }
           },
@@ -207,7 +250,7 @@
             "id": "internalItemCode",
             "label": "Mã số",
             "fieldKey": "items.MHHDVu",
-            "widthPercent": 12,
+            "widthPercent": 10,
             "formatter": "plainText",
             "style": { "textAlign": "center" }
           },
@@ -215,15 +258,25 @@
             "id": "internalItemUnit",
             "label": "Đơn vị tính",
             "fieldKey": "items.DVTinh",
-            "widthPercent": 10,
+            "widthPercent": 9,
             "formatter": "plainText",
             "style": { "textAlign": "center" }
           },
           {
-            "id": "internalItemQuantity",
-            "label": "Số lượng thực xuất",
+            "id": "internalItemQuantityExport",
+            "label": "Thực xuất",
+            "headerGroup": "Số lượng",
             "fieldKey": "items.SLuong",
-            "widthPercent": 12,
+            "widthPercent": 10,
+            "formatter": "decimal",
+            "style": { "textAlign": "right" }
+          },
+          {
+            "id": "internalItemQuantityImport",
+            "label": "Thực nhập",
+            "headerGroup": "Số lượng",
+            "fieldKey": "items.SLuongThucNhap",
+            "widthPercent": 10,
             "formatter": "decimal",
             "style": { "textAlign": "right" }
           },
@@ -239,7 +292,7 @@
             "id": "internalItemAmount",
             "label": "Thành tiền",
             "fieldKey": "items.ThTien",
-            "widthPercent": 14,
+            "widthPercent": 15,
             "formatter": "moneyByCurrency",
             "style": { "textAlign": "right" }
           }

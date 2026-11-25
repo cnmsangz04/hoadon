@@ -22,7 +22,7 @@
       <b-row>
         <b-col md="3" class="mb-2">
           <b-form-group label="Danh mục" label-cols="4" label-size="sm" label-align="right">
-            <b-form-select v-model="filters.category" size="sm">
+            <b-form-select v-model="filters.category" size="sm" :disabled="fixedReportScope">
               <b-form-select-option :value="null">-- Tất cả --</b-form-select-option>
               <b-form-select-option :value="1">Hóa đơn giá trị gia tăng</b-form-select-option>
               <b-form-select-option :value="2">Hóa đơn bán hàng</b-form-select-option>
@@ -267,6 +267,9 @@ export default {
     }
   },
   computed: {
+    fixedReportScope () {
+      return [1, 2, 6].includes(Number(this.$route?.meta?.reportCategory))
+    },
     reportTitle () {
       if (this.filters.category === 6) return this.filters.stockIssueType === 2 ? 'Báo cáo phiếu xuất kho hàng gửi bán đại lý' : 'Báo cáo phiếu xuất kho kiêm vận chuyển nội bộ'
       if (this.filters.category === 2) return 'Báo cáo hóa đơn bán hàng'
@@ -299,9 +302,9 @@ export default {
     }
   },
   created () {
-    const category = Number(this.$route?.query?.category || 0)
+    const category = Number(this.$route?.meta?.reportCategory || this.$route?.query?.category || 0)
     if (category === 1 || category === 2 || category === 6) this.filters.category = category
-    if (this.filters.category === 6) this.filters.stockIssueType = Number(this.$route?.query?.stockIssueType || 1)
+    if (this.filters.category === 6) this.filters.stockIssueType = Number(this.$route?.meta?.stockIssueType || this.$route?.query?.stockIssueType || 1)
     this.syncDateRangeFromPeriod()
     this.fetchList()
   },
@@ -329,16 +332,17 @@ export default {
         this.filters.fromDate = from
         this.filters.toDate = to
       } else {
-        // Không theo kỳ: cho phép backend dùng fromDate/toDate nếu cần, mặc định để null
         this.filters.fromDate = null
         this.filters.toDate = null
       }
     },
     resetFilters () {
       const currentYear = new Date().getFullYear()
+      const routeCategory = Number(this.$route?.meta?.reportCategory || 0)
+      const routeStockIssueType = Number(this.$route?.meta?.stockIssueType || 0)
       this.filters = {
-        category: null,
-        stockIssueType: null,
+        category: [1, 2, 6].includes(routeCategory) ? routeCategory : null,
+        stockIssueType: routeCategory === 6 ? (routeStockIssueType === 2 ? 2 : 1) : null,
         periodType: 'month',
         month: new Date().getMonth() + 1,
         quarter: 1,
@@ -478,14 +482,14 @@ export default {
       const n = Number(s)
 
       switch (n) {
-        case 0: return 'secondary' // Mới khởi tạo - xám
-        case 1: return 'info'      // Ký số - xanh dương
-        case 2: return 'warning'   // Gửi cơ quan thuế - vàng
-        case 3: return 'success'   // Đã phát hành - xanh lá
-        case 4: return 'primary'   // Bị thay thế - tím/xanh đậm
-        case 5: return 'dark'      // Bị điều chỉnh - đen/xám đậm
-        case 6: return 'danger'    // Đã hủy - đỏ
-        case 7: return 'light'     // Không đủ điều kiện cấp mã - trắng/xám nhạt
+        case 0: return 'secondary'
+        case 1: return 'info'
+        case 2: return 'warning'
+        case 3: return 'success'
+        case 4: return 'primary'
+        case 5: return 'dark'
+        case 6: return 'danger'
+        case 7: return 'light'
         default: return 'secondary'
       }
     },

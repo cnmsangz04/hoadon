@@ -46,7 +46,7 @@ public class RegisterInvoiceEntity {
     @Column(name = "effective_date", nullable = true)
     private LocalDateTime effectiveDate;
 
-    // Dữ liệu nghiệp vụ (JSON as NVARCHAR(MAX))
+    // Dữ liệu nghiệp vụ
     @Convert(converter = JsonListConverter.class)
     @Column(name = "invoice_forms", columnDefinition = "NVARCHAR(MAX)", nullable = false)
     private List<String> invoiceForms;
@@ -91,7 +91,7 @@ public class RegisterInvoiceEntity {
     @Column(name = "integrated_documents", columnDefinition = "NVARCHAR(MAX)")
     private List<String> integratedDocuments;
 
-    // XML & chữ ký
+    // XML và chữ ký
     @Column(name = "signed_xml", columnDefinition = "NVARCHAR(MAX)")
     private String signedXml;
 
@@ -101,8 +101,8 @@ public class RegisterInvoiceEntity {
     @Column(name = "sign_date")
     private LocalDateTime signDate;
 
-    // Trạng thái xử lý
-    @Column(name = "status", nullable = false)
+    // Trạng thái
+    @Column(name = "status", nullable = false, columnDefinition = "TINYINT")
     private Integer status = 0;
 
     @Column(name = "response_receive_file", columnDefinition = "NVARCHAR(MAX)")
@@ -111,14 +111,13 @@ public class RegisterInvoiceEntity {
     @Column(name = "response_accept_file", columnDefinition = "NVARCHAR(MAX)")
     private String responseAcceptFile;
 
-    // Audit
+    // Thông tin cập nhật
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Getters and setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getCompanyId() { return companyId; }

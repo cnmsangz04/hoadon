@@ -211,7 +211,14 @@ private Integer getInt(Map<String, Object> body, String key) {
         var user = currentUser();
         var access = new TemplateAccess(user.getCompanyId(), user.getId(), true);
         var details = formTemplates.editable(form.getId(), "admin-layout-upload-" + UUID.randomUUID(), access, null);
-        templates.save(details.template().getId(), details.draft().getLockVersion(), layout, access);
+        var draft = details.draft();
+        String uploadedCatalogVersion = layout.path("fieldCatalogVersion").asText();
+        if (!java.util.Objects.equals(draft.getFieldCatalogVersion(), uploadedCatalogVersion)) {
+            draft = templates.upgradeCatalog(details.template().getId(), draft.getLockVersion(), access);
+        }
+        var normalized = (com.fasterxml.jackson.databind.node.ObjectNode) layout.deepCopy();
+        normalized.put("fieldCatalogVersion", "CURRENT");
+        templates.save(details.template().getId(), draft.getLockVersion(), normalized, access);
     }
 
     @PostMapping("/{id}/status")

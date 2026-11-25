@@ -122,8 +122,11 @@ public class JsonLayoutCompiler {
             double total = 0;
             Set<String> columnIds = new HashSet<>();
             for (JsonNode column : columns) {
-                properties(column, Set.of("id", "label", "fieldKey", "widthPercent", "formatter", "style"));
+                properties(column, Set.of("id", "label", "headerGroup", "fieldKey", "widthPercent", "formatter", "style"));
                 validateStyle(column.path("style"));
+                if (column.has("headerGroup") && (!column.path("headerGroup").isTextual() || column.path("headerGroup").asText().length() > 120)) {
+                    fail("Nhóm tiêu đề cột không hợp lệ");
+                }
                 String columnId = column.path("id").asText();
                 if (!columnId.matches("[a-zA-Z][a-zA-Z0-9_-]{0,63}") || !columnIds.add(columnId)) fail("ID cột không hợp lệ");
                 validateField(column.path("fieldKey").asText(), expected, definitions);
@@ -265,8 +268,38 @@ public class JsonLayoutCompiler {
         String group = block.path("type").asText().equals("table") ? block.path("dataSource").asText() : switch (block.path("type").asText()) { case "itemsTable" -> "items"; case "feesTable" -> "fees"; default -> "taxGroups"; };
         out.append("<table><colgroup>");
         for (JsonNode column : block.path("columns")) out.append("<col style=\"width:").append(column.path("widthPercent").asText()).append("%\">");
+        List<JsonNode> columns = new ArrayList<>();
+        block.path("columns").forEach(columns::add);
+        Map<String, Integer> headerGroups = new LinkedHashMap<>();
+        for (JsonNode column : columns) {
+            String groupLabel = column.path("headerGroup").asText("").trim();
+            if (!groupLabel.isBlank()) headerGroups.merge(groupLabel, 1, Integer::sum);
+        }
+        boolean groupedHeader = !headerGroups.isEmpty();
         out.append("</colgroup><thead><tr>");
-        for (JsonNode column : block.path("columns")) out.append("<th style=\"").append(style(block.path("headerStyle"))).append("\">").append(escape(column.path("label").asText())).append("</th>");
+        Set<String> emittedGroups = new HashSet<>();
+        for (JsonNode column : columns) {
+            String groupLabel = column.path("headerGroup").asText("").trim();
+            if (groupLabel.isBlank()) {
+                out.append("<th").append(groupedHeader ? " rowspan=\"2\"" : "").append(" style=\"")
+                        .append(style(block.path("headerStyle"))).append("\">")
+                        .append(escape(column.path("label").asText())).append("</th>");
+            } else if (emittedGroups.add(groupLabel)) {
+                out.append("<th colspan=\"").append(headerGroups.get(groupLabel)).append("\" style=\"")
+                        .append(style(block.path("headerStyle"))).append("\">")
+                        .append(escape(groupLabel)).append("</th>");
+            }
+        }
+        if (groupedHeader) {
+            out.append("</tr><tr>");
+            for (JsonNode column : columns) {
+                String groupLabel = column.path("headerGroup").asText("").trim();
+                if (!groupLabel.isBlank()) {
+                    out.append("<th style=\"").append(style(block.path("headerStyle"))).append("\">")
+                            .append(escape(column.path("label").asText())).append("</th>");
+                }
+            }
+        }
         out.append("</tr></thead><tbody>");
         Object value = data.get(group);
         List<Map<String, Object>> rows = new ArrayList<>();
@@ -275,12 +308,11 @@ public class JsonLayoutCompiler {
         } else if (value instanceof Map<?, ?> map) {
             rows.add((Map<String, Object>) map);
         } else if (data.keySet().stream().anyMatch(key -> key.startsWith(group + "."))) {
-            // Scalar groups are stored flat for backwards-compatible field bindings.
             rows.add(data);
         }
         for (Map<String, Object> values : rows) {
                 out.append("<tr>");
-                for (JsonNode column : block.path("columns")) out.append("<td style=\"").append(style(block.path("cellStyle"))).append(style(column.path("style"))).append("\">").append(escape(format(values.get(column.path("fieldKey").asText()), column.path("formatter").asText("plainText")))).append("</td>");
+                for (JsonNode column : columns) out.append("<td style=\"").append(style(block.path("cellStyle"))).append(style(column.path("style"))).append("\">").append(escape(format(values.get(column.path("fieldKey").asText()), column.path("formatter").asText("plainText")))).append("</td>");
                 out.append("</tr>");
         }
         out.append("</tbody></table>");

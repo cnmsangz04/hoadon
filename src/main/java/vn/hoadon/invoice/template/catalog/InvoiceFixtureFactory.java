@@ -38,6 +38,7 @@ public class InvoiceFixtureFactory {
             stockInfo.put("receiverName", "Nguyễn Văn An");
             stockInfo.put("senderName", "Trần Văn Cường");
             stockInfo.put("transportName", "Nguyễn Văn Bình");
+            stockInfo.put("transportContractNo", "HĐVC-MINH-HỌA");
             stockInfo.put("vehicle", "29C-123.45");
             if (Objects.equals(form.getStockIssueType(), 2)) {
                 stockInfo.put("economicContractNo", "HĐKT-MINH-HỌA");
@@ -58,7 +59,22 @@ public class InvoiceFixtureFactory {
             double lineVat = salesInvoice ? 0d : lineTotal * vatRate / 100d;
             total += lineTotal;
             vatAmount += lineVat;
-            details.add(Map.of("name", i == 2 ? "Dịch vụ có nội dung mô tả dài để kiểm tra tự xuống dòng, giữ nguyên tiếng Việt và không mất dữ liệu khi phân trang hóa đơn" : "Hàng hóa, dịch vụ minh họa " + i, "unit", "Lần", "num", i, "quantity", 1, "feature", 1, "price", lineTotal, "total", lineTotal, "vatAmount", lineVat, "amount", lineTotal + lineVat, "vatRate", vatRate));
+            Map<String, Object> detail = new LinkedHashMap<>();
+            detail.put("name", i == 2 ? "Dịch vụ có nội dung mô tả dài để kiểm tra tự xuống dòng, giữ nguyên tiếng Việt và không mất dữ liệu khi phân trang hóa đơn" : "Hàng hóa, dịch vụ minh họa " + i);
+            detail.put("unit", "Lần");
+            detail.put("num", i);
+            detail.put("quantity", 1);
+            if (Objects.equals(form.getCategory(), 6) && Objects.equals(form.getStockIssueType(), 1)) {
+                detail.put("quantityExport", 1);
+                detail.put("quantityImport", 1);
+            }
+            detail.put("feature", 1);
+            detail.put("price", lineTotal);
+            detail.put("total", lineTotal);
+            detail.put("vatAmount", lineVat);
+            detail.put("amount", lineTotal + lineVat);
+            detail.put("vatRate", vatRate);
+            details.add(detail);
         }
         invoice.setTotal(total);
         invoice.setVatAmount(salesInvoice ? 0d : vatAmount);

@@ -15,12 +15,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.jdbc.core.ConnectionCallback;
 
-/**
- * Migrates the old group tree to the single-table catalog model.
- *
- * A group is now identified by its own absolute XML root.  There is no
- * database relationship between groups and no separate dataset table.
- */
 @Component
 public class InvoiceTemplateFieldGroupSchemaInitializer {
     private final JdbcTemplate jdbc;
@@ -59,15 +53,17 @@ public class InvoiceTemplateFieldGroupSchemaInitializer {
             replacePrefix("buyer", "DLHDon/NDHDon/NMua/");
             replacePrefix("totals", "DLHDon/NDHDon/TToan/");
 
-            // Remove the retired non-XML field type from the catalog.
             jdbc.update("delete from invoice_template_fields where source_type = 'CONTEXT'");
             ensureInvoiceOtherGroup();
             removeLegacySignatureDateField();
-            migrateFieldKeysBySourcePath();
             migrateSignatureBlocks();
             ensureInvoiceFields();
+            ensureLineAmountField();
+            removeLegacyLineAmountField();
+            migrateFieldKeysBySourcePath();
             ensureSalesInvoiceFields();
             ensureStockIssueFields();
+            removeLegacyStockQuantityFields();
             if (initializeInvoiceTypeScopes) applyInvoiceTypeScopes();
             correctInvoiceTypeScopes();
 
@@ -144,11 +140,18 @@ public class InvoiceTemplateFieldGroupSchemaInitializer {
         ensureGroupField("seller", "seller.PTVChuyen", "Phương tiện vận chuyển", "PTVChuyen", "STRING", 50, "plainText", "6", "Chỉ tiêu phiếu xuất kho");
         ensureGroupField("seller", "seller.HDSo", "Số hợp đồng vận chuyển", "HDSo", "STRING", 255, "plainText", "6", "Chỉ tiêu phiếu xuất kho");
         ensureGroupField("buyer", "buyer.HVTNNHang", "Họ tên người nhận hàng", "HVTNNHang", "STRING", 100, "plainText", "6", "Chỉ tiêu phiếu xuất kho");
+        ensureGroupField("items", "items.SLuongThucXuat", "Số lượng thực xuất", "TTKhac/TTin[TTruong='SLuongThucXuat']/DLieu", "DECIMAL", 21, "decimal", "6:1", "Số lượng thực xuất của phiếu xuất kho kiêm vận chuyển nội bộ");
+        ensureGroupField("items", "items.SLuongThucNhap", "Số lượng thực nhập", "TTKhac/TTin[TTruong='SLuongThucNhap']/DLieu", "DECIMAL", 21, "decimal", "6:1", "Số lượng thực nhập của phiếu xuất kho kiêm vận chuyển nội bộ");
     }
 
     private void ensureSalesInvoiceFields() {
         ensureGroupField("common", "common.HDDCKPTQuan", "Hóa đơn dành cho khu phi thuế quan", "HDDCKPTQuan", "INTEGER", 1, "plainText", "2", "Chỉ tiêu hóa đơn bán hàng");
         ensureGroupField("items", "items.MNNNghe", "Mã nhóm ngành nghề", "MNNNghe", "STRING", 4, "plainText", "2", "Chỉ tiêu hóa đơn bán hàng");
+    }
+
+    private void ensureLineAmountField() {
+        ensureGroupField("items", "items.TCong", "Tổng", "TTKhac/TTin[TTruong='TCong']/DLieu",
+                "DECIMAL", 21, "decimal", "1,2,6", "Tổng tiền của dòng hàng hóa, dịch vụ");
     }
 
     private void ensureGroupField(String groupCode, String key, String label, String sourcePath,
@@ -197,7 +200,7 @@ public class InvoiceTemplateFieldGroupSchemaInitializer {
                 "related.GChu", "seller.Ten", "seller.MST", "seller.DChi", "seller.MDDKDoanh",
                 "seller.TDDKDoanh", "seller.DCDDKDoanh", "buyer.Ten", "buyer.MST", "buyer.DChi",
                 "items.TChat", "items.STT", "items.MHHDVu", "items.THHDVu", "items.DVTinh",
-                "items.SLuong", "items.DGia", "items.ThTien",
+                "items.SLuong", "items.DGia", "items.ThTien", "items.TCong",
                 "invoice.MCCQT", "invoice.DSCKS.NBan.Signature.SignedAt", "invoice.other.TTinMTCuu.DLieu");
 
         setInvoiceTypes("1", "common.HDCTTChinh", "items.TSuat", "taxGroups.TSuat",
@@ -205,6 +208,7 @@ public class InvoiceTemplateFieldGroupSchemaInitializer {
                 "totals.TgTThue");
         setInvoiceTypes("2", "common.HDDCKPTQuan", "items.MNNNghe");
         setInvoiceTypes("6:1", "seller.LDDNBo");
+        setInvoiceTypes("6:1", "items.SLuongThucXuat", "items.SLuongThucNhap");
         setInvoiceTypes("6:2", "seller.HDKTSo", "seller.HDKTNgay");
         setInvoiceTypes("6", "seller.HVTNXHang", "seller.TNVChuyen", "seller.PTVChuyen",
                 "seller.HDSo", "buyer.HVTNNHang");
@@ -373,6 +377,7 @@ public class InvoiceTemplateFieldGroupSchemaInitializer {
                         rs.getString("code"), rs.getString("source_path")));
 
         for (FieldRow field : fields) {
+            if (isCanonicalStockQuantityField(field.key())) continue;
             String expectedKey = fieldKey(field.group(), field.sourcePath());
             if (expectedKey.equals(field.key())) continue;
             Integer duplicate = jdbc.queryForObject(
@@ -385,6 +390,27 @@ public class InvoiceTemplateFieldGroupSchemaInitializer {
             jdbc.update("update invoice_template_fields set field_key = ? where id = ?",
                     expectedKey, field.id());
         }
+    }
+
+    private void removeLegacyStockQuantityFields() {
+        removeLegacyFieldKey("items.TTKhac.TTinSLuongThucXuat.DLieu", "items.SLuongThucXuat");
+        removeLegacyFieldKey("items.TTKhac.TTinSLuongThucNhap.DLieu", "items.SLuongThucNhap");
+    }
+
+    private void removeLegacyLineAmountField() {
+        removeLegacyFieldKey("items.TTKhac.TTinTCong.DLieu", "items.TCong");
+    }
+
+    private void removeLegacyFieldKey(String legacyKey, String canonicalKey) {
+        Integer canonicalCount = jdbc.queryForObject(
+                "select count(*) from invoice_template_fields where field_key = ?", Integer.class, canonicalKey);
+        if (canonicalCount == null || canonicalCount == 0) return;
+        replaceDraftFieldKey(legacyKey, canonicalKey);
+        jdbc.update("delete from invoice_template_fields where field_key = ?", legacyKey);
+    }
+
+    private boolean isCanonicalStockQuantityField(String key) {
+        return "items.SLuongThucXuat".equals(key) || "items.SLuongThucNhap".equals(key);
     }
 
     private void replaceDraftFieldKey(String oldKey, String newKey) {

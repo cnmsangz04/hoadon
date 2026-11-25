@@ -21,11 +21,11 @@
           <i class="fas fa-sync-alt"></i>
           Làm mới
         </b-button>
-        <b-button size="sm" variant="outline-success" class="mr-2" to="/imports/invoice?category=2">
+        <b-button size="sm" variant="outline-success" class="mr-2" to="/imports/invoice">
           <i class="fas fa-file-invoice"></i>
           Import hóa đơn
         </b-button>
-        <b-button size="sm" variant="outline-info" class="mr-2" to="/reports/invoice/list?category=2">
+        <b-button size="sm" variant="outline-info" class="mr-2" to="/reports/sales-invoice/list">
           <i class="fas fa-file-excel"></i>
           Báo cáo Excel
         </b-button>
@@ -332,7 +332,7 @@
 <script>
 import axios from '@/plugins/axios'
 import PaginationBar from '@/views/components/pagination_bar.vue'
-import { toastSuccess, toastWarning } from '@/utils/toast'
+import { toastError, toastSuccess, toastWarning } from '@/utils/toast'
 import { confirmUsbTokenSignature } from '@/utils/pasigner'
 
 export default {
@@ -345,13 +345,11 @@ export default {
       refreshKey: 0,
       selectedIds: [],
       sellerTaxcode: '',
-      // iframe state for viewing invoice
       iframe: {
         src: null,
         lookup_code: null,
         status: null,
       },
-      // Trạng thái hộp thoại gửi email
       mail: {
         id: null,
         invoice: { formSerial: '', no: null, dateExport: null, amount: 0 },
@@ -377,7 +375,6 @@ export default {
         status: null,
         date: null,
       },
-      // Hiển thị dd/mm/YYYY trong datepicker
       dateFormatOptions: { year: 'numeric', month: '2-digit', day: '2-digit' },
       fields: [
         { key: 'select', label: '', thStyle: { width: '3%' }, tdClass: 'text-center' },
@@ -403,10 +400,8 @@ export default {
         { value: 6, text: 'Đã hủy' },
         { value: 7, text: 'Không đủ điều kiện' },
       ],
-      // Poll trackers to cancel on component destroy
       pollTimers: {},
       pollAttempts: {},
-      // Trạng thái hộp thoại lịch sử
       historyBusy: false,
       historyRows: [],
       historyForId: null,
@@ -417,7 +412,6 @@ export default {
     this.fetchList()
   },
   beforeDestroy () {
-    // Clear all pending poll timers
     try {
       Object.values(this.pollTimers || {}).forEach(t => clearTimeout(t))
       this.pollTimers = {}
@@ -467,7 +461,9 @@ export default {
         const { data } = await axios.get('/auth/info', { meta: { suppressGlobalErrorToast: true } })
         const company = data?.company || {}
         this.sellerTaxcode = (company.taxcode || company.taxCode || '').toString().trim()
-      } catch (e) {}
+      } catch (error) {
+        toastError(error?.response?.data?.message || 'Không xác định được mã số thuế đơn vị bán')
+      }
       return this.sellerTaxcode
     },
 
@@ -483,13 +479,10 @@ export default {
       return `${base}${this.invoicePublicPath(lookupCode, action)}`
     },
 
-    // Chuyển datepicker value về yyyy-MM-dd để backend parse LocalDate ổn định
     formatDateParam (d) {
       if (!d) return null
       try {
-        // bootstrap-vue datepicker thường trả về 'YYYY-MM-DD' (string) hoặc Date
         if (typeof d === 'string') {
-          // Nếu đã đúng format thì trả luôn
           if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d
           const dt = new Date(d)
           if (!isNaN(dt.getTime())) {
@@ -506,7 +499,6 @@ export default {
           const dd = String(d.getDate()).padStart(2, '0')
           return `${yyyy}-${mm}-${dd}`
         }
-        // fallback: attempt to new Date
         const dt = new Date(d)
         if (isNaN(dt.getTime())) return null
         const yyyy = dt.getFullYear()
@@ -526,7 +518,6 @@ export default {
           size: this.list.per_page,
           q: this.filters.keyword || undefined,
           status: this.filters.status != null ? Number(this.filters.status) : undefined,
-          // gửi về YYYY-MM-DD để backend parse ổn định
           date: this.formatDateParam(this.filters.date) || undefined,
           category: this.invoiceCategory,
         }
@@ -561,10 +552,9 @@ export default {
         const to = from + (items.length ? (items.length - 1) : 0)
         this.list.from = from
         this.list.to = to
-        // Đổi key để bảng render lại
         this.refreshKey++
-      } catch (e) {
-        // Giữ danh sách hiện tại nếu tải dữ liệu mới thất bại
+      } catch (error) {
+        toastError(error?.response?.data?.message || 'Không tải được danh sách hóa đơn')
       } finally {
         this.isBusy = false
       }
@@ -607,14 +597,14 @@ export default {
     statusVariant (s) {
       const v = Number(s)
       switch (v) {
-        case 0: return 'secondary' // Mới khởi tạo - xám
-        case 1: return 'info'      // Ký số - xanh dương
-        case 2: return 'warning'   // Gửi cơ quan thuế - vàng
-        case 3: return 'success'   // Đã phát hành - xanh lá
-        case 4: return 'primary'   // Bị thay thế - tím/xanh đậm
-        case 5: return 'dark'      // Bị điều chỉnh - đen/xám đậm
-        case 6: return 'danger'    // Đã hủy - đỏ
-        case 7: return 'light'     // Không đủ điều kiện cấp mã - trắng/xám nhạt
+        case 0: return 'secondary'
+        case 1: return 'info'
+        case 2: return 'warning'
+        case 3: return 'success'
+        case 4: return 'primary'
+        case 5: return 'dark'
+        case 6: return 'danger'
+        case 7: return 'light'
         default: return 'secondary'
       }
     },
@@ -749,7 +739,6 @@ export default {
           if (iframe.contentWindow.printInvoice) iframe.contentWindow.printInvoice()
           else iframe.contentWindow.print()
         } else {
-          // Dự phòng: open print dialog for current window
           window.print()
         }
       } catch (e) {
@@ -807,7 +796,7 @@ export default {
       const key = `signature:${hash}`
       const intervalMs = 1200
       const maxAttempts = 100
-      try { clearTimeout(this.pollTimers[key]) } catch {}
+      clearTimeout(this.pollTimers[key])
       this.pollAttempts[key] = 0
 
       const check = async () => {
@@ -831,8 +820,12 @@ export default {
             toastWarning('Ứng dụng ký số không trả về dữ liệu hợp lệ. Vui lòng ký lại.')
             return
           }
-        } catch (e) {
-          // Lỗi mạng ngắn hạn không làm mất phiên ký; tiếp tục kiểm tra đến khi hết thời gian.
+        } catch (error) {
+          const status = Number(error?.response?.status || 0)
+          if (status === 401 || status === 403) {
+            toastError(error?.response?.data?.message || 'Không thể kiểm tra trạng thái ký số')
+            return
+          }
         }
 
         const attempts = (this.pollAttempts[key] || 0) + 1
@@ -891,21 +884,18 @@ export default {
         this.isBusy = true
         await axios.post(`/invoices/${id}/send-to-cqt`, null, { successMessage: isResend ? 'Đã gửi lại hóa đơn lên Cơ quan thuế' : 'Đã gửi hóa đơn lên Cơ quan thuế' })
         await this.fetchList()
-        // Theo dõi lịch sử để thông báo kết quả xử lý bất đồng bộ từ CQT
         this.pollHistoryAndNotify(id)
-      } catch (e) {
-        // Lỗi đã được interceptor axios xử lý
+      } catch (error) {
+        toastError(error?.response?.data?.message || 'Không thể gửi hóa đơn lên Cơ quan thuế')
       } finally {
         this.isBusy = false
       }
     },
 
-    // Gửi email: mở hộp thoại và điền sẵn tên/email từ khách hàng của hóa đơn
     async sendMail (item) {
       try {
         const id = item && (item.id || item.ID || item.Id)
         if (!id) return
-        // Prefill invoice info from list item
         const formSerial = `${item.formCode || ''}${item.serial || ''}`
         this.mail = {
           id,
@@ -915,7 +905,6 @@ export default {
           errors: { name: null, email: null },
           loading: false,
         }
-        // Tải chi tiết khách hàng từ API chi tiết hóa đơn
         try {
           const { data } = await axios.get(`/invoices/${id}`, { meta: { suppressGlobalErrorToast: true } })
           const c = data && data.customer ? data.customer : null
@@ -927,16 +916,15 @@ export default {
           }
           this.mail.name = (recvName || '').toString()
           this.mail.email = (recvEmail || '').toString()
-        } catch (e) {
-          // b? qua, keep defaults
+        } catch (error) {
+          toastWarning(error?.response?.data?.message || 'Không tải được thông tin người nhận')
         }
         this.$root.$emit('bv::show::modal', 'modalSendEmail')
-      } catch (e) {
-        // noop
+      } catch (error) {
+        toastError(error?.response?.data?.message || 'Không thể mở thông tin gửi email')
       }
     },
     async confirmSendEmail () {
-      // Validate
       this.mail.errors = { name: null, email: null }
       const name = (this.mail.name || '').trim()
       const email = (this.mail.email || '').trim()
@@ -947,44 +935,36 @@ export default {
         toastWarning('Vui lòng nhập đầy đủ thông tin hợp lệ')
         return
       }
-      // Submit
       try {
         this.mail.loading = true
         await axios.post(`/invoices/${this.mail.id}/send-email`, { name, email }, { successMessage: 'Đã gửi email thông báo phát hành hóa đơn' })
         this.mail.loading = false
         this.closeModal('modalSendEmail')
-      } catch (e) {
+      } catch (error) {
         this.mail.loading = false
-        // Lỗi đã được toast toàn cục hiển thị
+        toastError(error?.response?.data?.message || 'Không thể gửi email')
       }
     },
     isValidEmail (email) {
-      try { return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(String(email || '').trim()) } catch { return false }
+      return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(String(email || '').trim())
     },
 
-    // Cập nhật local list item status by invoiceId
     _updateLocalStatus (invoiceId, status, extras = {}) {
-      try {
-        const id = Number(invoiceId)
-        const idx = this.list.data.findIndex(x => Number(x.id) === id)
-        if (idx >= 0) {
-          const current = this.list.data[idx]
-          // Giữ các trường hiện có, cập nhật trạng thái và dữ liệu bổ sung nếu có
-          const updated = { ...current, status: Number(status), ...extras }
-          this.$set(this.list.data, idx, updated)
-          // Đổi key để bảng render lại
-          this.refreshKey++
-        }
-      } catch {}
+      const id = Number(invoiceId)
+      const idx = this.list.data.findIndex(x => Number(x.id) === id)
+      if (idx < 0) return
+      const current = this.list.data[idx]
+      const updated = { ...current, status: Number(status), ...extras }
+      this.$set(this.list.data, idx, updated)
+      this.refreshKey++
     },
 
-    // Theo dõi lịch sử để thông báo sau khi backend lưu kết quả
     async pollHistoryAndNotify (invoiceId) {
       if (!invoiceId && invoiceId !== 0) return
       if (!this.pollTimers || typeof this.pollTimers !== 'object') this.pollTimers = {}
       if (!this.pollAttempts || typeof this.pollAttempts !== 'object') this.pollAttempts = {}
       const key = String(invoiceId)
-      try { clearTimeout(this.pollTimers[key]) } catch {}
+      clearTimeout(this.pollTimers[key])
       this.pollAttempts[key] = 0
       const maxAttempts = 30
       const intervalMs = 1500
@@ -1000,7 +980,6 @@ export default {
             const title = outcome.title || 'Kết quả từ CQT'
             const desc = outcome.description || ''
             if (type === 202) {
-              // CQT cấp mã thành công, có thể kèm mã trả về
               toastSuccess(desc ? `${title}: ${desc}` : title)
               const code = desc || null
               this._updateLocalStatus(invoiceId, 3, code ? { codeCqt: code } : {})
@@ -1009,23 +988,26 @@ export default {
               const m = xml.match(/<LTBao>\s*(\d+)\s*<\/LTBao>/i)
               const lt = m ? m[1] : null
               if (lt === '2') {
-                // CQT chấp nhận sau thông điệp 203
                 toastSuccess(title)
                 this._updateLocalStatus(invoiceId, 3)
               } else {
-                // CQT từ chối
                 toastWarning(title)
                 this._updateLocalStatus(invoiceId, 7)
               }
             }
-            // Đồng bộ lại dữ liệu mới nhất từ backend
             await this.fetchList()
-            try { clearTimeout(this.pollTimers[key]) } catch {}
+            clearTimeout(this.pollTimers[key])
             delete this.pollTimers[key]
             delete this.pollAttempts[key]
             return
           }
-        } catch (e) {}
+        } catch (error) {
+          const status = Number(error?.response?.status || 0)
+          if (status === 401 || status === 403) {
+            toastError(error?.response?.data?.message || 'Không thể kiểm tra kết quả từ Cơ quan thuế')
+            return
+          }
+        }
         const attempts = (this.pollAttempts[key] || 0) + 1
         this.pollAttempts[key] = attempts
         if (attempts >= maxAttempts) {
@@ -1059,7 +1041,6 @@ export default {
         const id = item.id || item.ID || item.Id
         if (!id) return
         
-        // Check if invoice has a number - prevent deletion
         if (item.no && Number(item.no) > 0) {
           this.$bvToast && this.$bvToast.toast('Không thể xóa hóa đơn đã có số', {
             title: 'Thông báo',
@@ -1070,7 +1051,6 @@ export default {
           return
         }
         
-        // Check status - only allow delete if status = 0
         if (Number(item.status) !== 0) {
           this.$bvToast && this.$bvToast.toast('Chỉ có thể xóa hóa đơn ở trạng thái "Mới khởi tạo"', {
             title: 'Thông báo',
@@ -1103,7 +1083,6 @@ export default {
           solid: true,
           autoHideDelay: 3000
         })
-        // Tải lại danh sách sau khi xóa
         this.fetchList()
       } catch (e) {
         const code = e?.response?.status
@@ -1132,7 +1111,6 @@ export default {
         this.historyRows = []
         this.historyForId = id
         const { data } = await axios.get(`/invoices/${id}/history`)
-        // Chuẩn hóa key sang snake_case cho phần hiển thị
         this.historyRows = Array.isArray(data) ? data.map(r => ({
           id: r.id,
           title: r.title,

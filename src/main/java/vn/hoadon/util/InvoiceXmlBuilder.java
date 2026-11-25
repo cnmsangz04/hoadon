@@ -64,7 +64,6 @@ public final class InvoiceXmlBuilder {
         String sellerBankName = bank != null ? (nullToEmpty(bank.getBankName()) + (hasText(bank.getBankBrand()) ? (" " + bank.getBankBrand()) : "")) : "";
         RelatedInvoiceXml relatedXml = buildRelatedInvoiceXml(inv, relatedInvoice, relatedForm);
 
-        // Parse customer JSON
         Map<String,Object> customer = parseJsonObject(inv.getCustomer());
         String buyerName = deriveBuyerName(customer);
         String buyerFullName = str(customer.get("buyer"));
@@ -76,7 +75,6 @@ public final class InvoiceXmlBuilder {
         String buyerBankNo = str(customer.get("bank_no"));
         String buyerBankName = str(customer.get("bank_name"));
 
-        // Parse detail JSON array
         java.util.List<Map<String,Object>> details = parseJsonArray(inv.getDetail());
         boolean oneVatRateForm = form != null && form.getType() != null && form.getType() == 1;
         String invoiceVatRate = formatInvoiceVatRate(inv, details);
@@ -156,7 +154,7 @@ public final class InvoiceXmlBuilder {
           String total = toStringOrDefault(d.get("total"), "");
           String vatRate = oneVatRateForm ? invoiceVatRate : formatVatRate(d.get("vatRate"), d.get("vatRateOther"));
           String vatAmount = toStringOrDefault(d.get("vatAmount"), "");
-          String amount = toStringOrDefault(d.get("amount"), "");
+          String amount = toStringOrDefault(d.get("amount"), total);
           sb.append("<HHDVu>")
             .append(tag("TChat", tchat))
             .append(tag("STT", stt))
@@ -176,6 +174,14 @@ public final class InvoiceXmlBuilder {
                 .append(tag("KDLieu", "numeric"))
                 .append(tag("DLieu", vatAmount))
                 .append("</TTin>")
+                .append("<TTin>")
+                .append(tag("TTruong", "TCong"))
+                .append(tag("KDLieu", "numeric"))
+                .append(tag("DLieu", amount))
+                .append("</TTin>")
+                .append("</TTKhac>");
+          } else {
+              sb.append("<TTKhac>")
                 .append("<TTin>")
                 .append(tag("TTruong", "TCong"))
                 .append(tag("KDLieu", "numeric"))
@@ -278,18 +284,37 @@ public final class InvoiceXmlBuilder {
         int idx = 0;
         for (Map<String, Object> d : details) {
             idx++;
-            String qty = firstText(d.get("quantity"), d.get("qty"));
-            String amount = firstText(d.get("total"), d.get("amount"), d.get("thanhTien"));
+            String quantityExport = firstText(d.get("quantityExport"), d.get("quantity"), d.get("qty"));
+            String quantityImport = firstText(d.get("quantityImport"), d.get("quantityIn"), d.get("actualImport"), 0);
+            String lineTotal = firstText(d.get("total"), d.get("thanhTien"), d.get("amount"));
+            String amount = firstText(d.get("amount"), d.get("total"), d.get("thanhTien"));
             sb.append("<HHDVu>").append(tag("TChat", firstText(d.get("feature"), d.get("tchat"))))
                     .append(tag("STT", firstText(d.get("num"), idx))).append(tag("MHHDVu", firstText(d.get("code"), d.get("itemCode"))))
                     .append(tag("THHDVu", firstText(d.get("name"), d.get("itemName")))).append(tag("DVTinh", firstText(d.get("unit"), d.get("unitName"))))
-                    .append(tag("SLuong", qty)).append(tag("DGia", firstText(d.get("price"), d.get("unitPrice")))).append(tag("ThTien", amount)).append("</HHDVu>");
+                    .append(tag("SLuong", quantityExport)).append(tag("DGia", firstText(d.get("price"), d.get("unitPrice")))).append(tag("ThTien", lineTotal))
+                    .append(stockOtherXml(amount, quantityExport, quantityImport,
+                            Integer.valueOf(1).equals(form.getStockIssueType())));
+            sb.append("</HHDVu>");
         }
         sb.append("</DSHHDVu><TToan>").append(tag("TgTTTBSo", trimZeros(inv.getAmount() == null ? inv.getTotal() : inv.getAmount())))
                 .append(tag("TgTTTBChu", nullToEmpty(inv.getAmountInWords()))).append(tag("TTKhac", ""))
                 .append("</TToan></NDHDon>").append(additionalInformation(inv)).append("</DLHDon>")
                 .append(tag("MCCQT", nullToEmpty(inv.getCodeCqt()))).append("<DLQRCode/><DSCKS><NBan/><NMua/><CCKSKhac/></DSCKS></HDon>");
         return sb.toString();
+    }
+
+    private static String stockOtherXml(String amount, String quantityExport, String quantityImport,
+                                        boolean includeActualQuantities) {
+        StringBuilder xml = new StringBuilder("<TTKhac>")
+                .append("<TTin>").append(tag("TTruong", "TCong")).append(tag("KDLieu", "numeric"))
+                .append(tag("DLieu", amount)).append("</TTin>");
+        if (includeActualQuantities) {
+            xml.append("<TTin>").append(tag("TTruong", "SLuongThucXuat")).append(tag("KDLieu", "numeric"))
+                    .append(tag("DLieu", quantityExport)).append("</TTin>")
+                    .append("<TTin>").append(tag("TTruong", "SLuongThucNhap")).append(tag("KDLieu", "numeric"))
+                    .append(tag("DLieu", quantityImport)).append("</TTin>");
+        }
+        return xml.append("</TTKhac>").toString();
     }
 
     private static RelatedInvoiceXml buildRelatedInvoiceXml(InvoiceEntity inv, InvoiceEntity relatedInvoice, FormInvoiceEntity relatedForm) {

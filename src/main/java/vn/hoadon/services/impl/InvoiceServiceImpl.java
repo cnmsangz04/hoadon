@@ -67,7 +67,6 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private Page<InvoiceDTO> mapToDto(Page<InvoiceEntity> page) {
-        // Preload related forms and users to avoid N+1 lookups
         Map<Long, FormInvoiceEntity> formCache = new HashMap<>();
         Map<Long, UserEntity> userCache = new HashMap<>();
         Map<Long, InvoiceEntity> invoiceCache = new HashMap<>();
@@ -95,7 +94,6 @@ public class InvoiceServiceImpl implements InvoiceService {
                     dto.category = form.getCategory();
                 }
             }
-            // Populate customerName from invoices.customer JSON
             dto.customerName = extractCustomerName(inv.getCustomer());
             Long userId = inv.getUserId() != null ? inv.getUserId().longValue() : null;
             dto.userId = userId;
@@ -137,7 +135,9 @@ public class InvoiceServiceImpl implements InvoiceService {
                 if (!sBuyer.isEmpty()) return sBuyer;
                 return "";
             }
-        } catch (Exception ignore) {}
+        } catch (com.fasterxml.jackson.core.JsonProcessingException ignored) {
+            return "";
+        }
         return "";
     }
 
@@ -148,9 +148,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         InvoiceEntity original = validateRelatedInvoiceForCreate(payload, companyId);
         InvoiceEntity e = new InvoiceEntity();
         applyPayload(e, payload, companyId, userId, true);
-        // Ensure invoice_number_id from formId
         assignInvoiceNumberId(e, companyId, payload);
-        // Generate unique id_attr (32 uppercase hex) and lookup_code (10 uppercase alphanumeric)
         e.setIdAttr(generateUniqueIdAttr());
         e.setLookupCode(generateUniqueLookupCode());
         e.setCreatedAt(java.time.LocalDateTime.now());
@@ -178,9 +176,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             e.setIssueProfileSnapshotJson(null);
         }
         templateBindings.pin(e);
-        // Re-assign invoice_number_id if formId changed or missing
         assignInvoiceNumberId(e, companyId, payload);
-        // Keep existing id_attr/lookup_code; generate if missing
         if (e.getIdAttr() == null || e.getIdAttr().isEmpty()) {
             e.setIdAttr(generateUniqueIdAttr());
         }
@@ -198,7 +194,6 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (src == null) return null;
         if (!sameCompany(src.getCompanyId(), companyId)) return null;
         InvoiceEntity e = new InvoiceEntity();
-        // Copy fields from source but reset identifiers and status/number
         e.setCompanyId(companyId != null ? companyId.intValue() : src.getCompanyId());
         e.setUserId(userId != null ? userId.intValue() : src.getUserId());
         e.setFormId(src.getFormId());
@@ -207,11 +202,11 @@ public class InvoiceServiceImpl implements InvoiceService {
                 ? null
                 : formInvoiceRepository.findById(src.getFormId().longValue()).orElse(null);
         e.setName(invoiceTitle(sourceForm, src.getName()));
-        e.setNo(null); // new invoice should not reuse number
+        e.setNo(null);
         e.setDateExport(src.getDateExport());
         e.setPaymentType(src.getPaymentType());
         e.setPayment(src.getPayment());
-        e.setStatus((short)0); // reset to draft
+        e.setStatus((short)0);
         e.setCurrency(src.getCurrency());
         e.setExchangeRate(src.getExchangeRate());
         e.setTotal(src.getTotal());
@@ -220,7 +215,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setAmountInWords(src.getAmountInWords());
         boolean noTax = sourceForm != null && (Integer.valueOf(2).equals(sourceForm.getCategory()) || Integer.valueOf(6).equals(sourceForm.getCategory()));
         e.setVatAmount(noTax ? 0d : src.getVatAmount());
-        e.setAmount(noTax ? src.getTotal() : src.getAmount());
+        e.setAmount(noTax ? (src.getAmount() != null ? src.getAmount() : src.getTotal()) : src.getAmount());
         e.setVatRate(noTax ? null : src.getVatRate());
         e.setVatRateOther(noTax ? 0 : src.getVatRateOther());
         e.setBill(src.getBill());
@@ -237,12 +232,16 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setVatAmountDiscount(src.getVatAmountDiscount());
         e.setTypeApi(src.getTypeApi());
         e.setStatusConvert((short)0);
-        // Reset code fields
         e.setCodeCqt(null);
         e.setLookupCode(generateUniqueLookupCode());
         e.setIdAttr(generateUniqueIdAttr());
-        // Assign invoice number id based on form/company
-        assignInvoiceNumberId(e, companyId != null ? companyId : (src.getCompanyId() != null ? src.getCompanyId().longValue() : null), new InvoicePayload(){ { this.formId = src.getFormId() != null ? src.getFormId().longValue() : null; this.stockIssueType = src.getStockIssueType(); } });
+        InvoicePayload numberingPayload = new InvoicePayload();
+        numberingPayload.formId = src.getFormId() != null ? src.getFormId().longValue() : null;
+        numberingPayload.stockIssueType = src.getStockIssueType();
+        Long targetCompanyId = companyId != null
+                ? companyId
+                : src.getCompanyId() != null ? src.getCompanyId().longValue() : null;
+        assignInvoiceNumberId(e, targetCompanyId, numberingPayload);
         e.setCreatedAt(LocalDateTime.now());
         e.setUpdatedAt(LocalDateTime.now());
         templateBindings.pin(e);
@@ -255,7 +254,6 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (companyId == null || formId == null) return;
         java.util.List<vn.hoadon.entity.InvoiceNumberEntity> lst = invoiceNumberRepository.findByCompanyIdAndFormId(companyId, formId);
         if (lst != null && !lst.isEmpty()) {
-            // Strategy: pick the first active (status=1), else first item
             vn.hoadon.entity.InvoiceNumberEntity selected = lst.stream().filter(x -> java.util.Objects.equals(x.getStatus(), 1)).findFirst().orElse(lst.get(0));
             if (selected != null && selected.getId() != null) {
                 e.setInvoiceNumberId(selected.getId().intValue());
@@ -309,26 +307,22 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private String generateUniqueIdAttr() {
-        // 32-character uppercase hex derived from UUID without hyphens
         for (int attempt = 0; attempt < 10; attempt++) {
-            String s = java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase(); // 32 chars
+            String s = java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
             if (!invoiceRepository.existsByIdAttr(s)) return s;
         }
-        // Dự phòng: nanoTime + random, cắt còn 32 ký tự và viết hoa
         String s = (Long.toHexString(System.nanoTime()) + java.util.UUID.randomUUID().toString().replace("-", "")).toUpperCase();
         if (s.length() > 32) s = s.substring(0, 32);
         return s;
     }
 
     private String generateUniqueLookupCode() {
-        // 10-character uppercase alphanumeric
         final String ALPHANUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         java.util.concurrent.ThreadLocalRandom rnd = java.util.concurrent.ThreadLocalRandom.current();
         for (int attempt = 0; attempt < 20; attempt++) {
             String s = randomString(rnd, ALPHANUM, 10);
             if (!invoiceRepository.existsByLookupCode(s)) return s;
         }
-        // Dự phòng với tiền tố timestamp cắt còn 10 ký tự
         String s = ("LK" + Long.toString(System.currentTimeMillis(), 36).toUpperCase() + randomString(rnd, ALPHANUM, 6)).toUpperCase();
         if (s.length() > 10) s = s.substring(0, 10);
         return s;
@@ -344,11 +338,9 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     private void applyPayload(InvoiceEntity e, InvoicePayload p, Long companyId, Long userId, boolean isCreate) {
         if (e == null || p == null) return;
-        // Core identifiers
         if (companyId != null) e.setCompanyId(companyId.intValue());
         if (userId != null) e.setUserId(userId.intValue());
         if (p.formId != null) e.setFormId(p.formId.intValue());
-        // Basic info
         Long selectedFormId = p.formId != null ? p.formId : (e.getFormId() == null ? null : e.getFormId().longValue());
         FormInvoiceEntity selectedForm = selectedFormId == null
                 ? null
@@ -364,16 +356,15 @@ public class InvoiceServiceImpl implements InvoiceService {
         e.setPayment((short)1);
         e.setStatus(p.status != null ? p.status : (short)0);
         e.setCurrency(p.currency != null ? p.currency : "VND");
-        // Default exchange_rate = 1 when not provided
         e.setExchangeRate(p.exchangeRate != null ? p.exchangeRate : 1d);
-        // Totals
         e.setTotal(p.total != null ? p.total : 0d);
         e.setVatAmount(salesInvoice || stockIssue ? 0d : (p.vatAmount != null ? p.vatAmount : 0d));
-        e.setAmount(salesInvoice || stockIssue ? (p.total != null ? p.total : 0d) : (p.amount != null ? p.amount : 0d));
+        e.setAmount(salesInvoice || stockIssue
+                ? (p.amount != null ? p.amount : (p.total != null ? p.total : 0d))
+                : (p.amount != null ? p.amount : 0d));
         e.setAmountInWords(p.amountInWords);
         e.setVatRate(salesInvoice || stockIssue ? null : (p.vatRate != null ? p.vatRate : (short)-1));
         e.setVatRateOther(salesInvoice || stockIssue ? 0 : (p.vatRateOther != null ? p.vatRateOther : 0));
-        // JSON blobs
         e.setBill(null);
         e.setOthers(stockIssue ? serializeSafely(p.stockInfo) : null);
         e.setRelated(normalizeRelatedReason(p.relatedReason));
@@ -415,11 +406,9 @@ public class InvoiceServiceImpl implements InvoiceService {
     private String normalizeRelatedReason(String value) {
         if (value == null || value.trim().isEmpty()) return null;
         String normalized = value.trim();
-        try {
+        if (normalized.matches("\\d{1,2}")) {
             int code = Integer.parseInt(normalized);
             if (code >= 1 && code <= 14) return String.valueOf(code);
-        } catch (NumberFormatException ignored) {
-            // Invalid values are rejected below when the invoice is a related invoice.
         }
         throw new IllegalArgumentException("Lý do điều chỉnh/thay thế không hợp lệ");
     }

@@ -9,7 +9,6 @@ import vn.hoadon.invoice.template.catalog.InvoiceFieldCatalog;
 import vn.hoadon.invoice.template.catalog.InvoiceCatalogSnapshot;
 import vn.hoadon.invoice.template.service.TemplateException;
 
-/** Publishes one catalog release after the group-tree migration. */
 @Component
 public class InvoiceTemplateCatalogMigrationPublisher {
     private final InvoiceFieldCatalog catalog;
@@ -54,12 +53,12 @@ public class InvoiceTemplateCatalogMigrationPublisher {
                         || "invoice.other.maTraCuu".equals(field.key()));
         var stockIssueKeys = java.util.Set.of(
                 "seller.LDDNBo", "seller.HDKTSo", "seller.HDKTNgay", "seller.HVTNXHang",
-                "seller.TNVChuyen", "seller.PTVChuyen", "seller.HDSo", "buyer.HVTNNHang");
+                "seller.TNVChuyen", "seller.PTVChuyen", "seller.HDSo", "buyer.HVTNNHang", "items.TCong");
         boolean missingStockIssueFields = !latest.fields().stream()
                 .map(InvoiceCatalogSnapshot.Field::key)
                 .collect(java.util.stream.Collectors.toSet())
                 .containsAll(stockIssueKeys);
-        var salesInvoiceKeys = java.util.Set.of("common.HDDCKPTQuan", "items.MNNNghe");
+        var salesInvoiceKeys = java.util.Set.of("common.HDDCKPTQuan", "items.MNNNghe", "items.TCong");
         boolean missingSalesInvoiceFields = !latest.fields().stream()
                 .map(InvoiceCatalogSnapshot.Field::key)
                 .collect(java.util.stream.Collectors.toSet())

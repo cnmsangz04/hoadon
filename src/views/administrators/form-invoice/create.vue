@@ -194,7 +194,16 @@ export default {
       })
       if (this.layoutJsonFile) body.append('layoutJson', this.layoutJsonFile)
       try {
-        const { data } = await axios.post('/administrator/form-invoices/saveOrUpdate', body)
+        await axios.post('/administrator/form-invoices/saveOrUpdate', body)
+        const message = this.id ? 'Cập nhật mẫu hóa đơn thành công' : 'Tạo mẫu hóa đơn thành công'
+        if (this.$bvToast) {
+          this.$bvToast.toast(message, {
+            title: 'Thành công',
+            variant: 'success',
+            solid: true,
+            autoHideDelay: 3000
+          })
+        }
         this.$router.push({ name: 'admin-form-invoice-list' })
       } catch (e) {
         this.error = e.response?.data?.message || 'Không lưu được mẫu hóa đơn'

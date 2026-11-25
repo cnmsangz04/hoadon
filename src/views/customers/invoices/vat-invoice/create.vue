@@ -34,8 +34,6 @@
         </b-col>
       </b-row>
 
-      <!-- Đã bỏ cảnh báo inline; dùng toastr để hiển thị lỗi -->
-      
       <!-- Khung tải -->
       <div v-if="isBusy" class="loading-skeleton">
         <b-skeleton width="100%" height="20px" animated class="mb-2" />
@@ -151,7 +149,26 @@
           <b-row>
             <b-col lg="4" md="6">
               <b-form-group label="Mã số thuế" label-class="form-label" :state="state('customerTaxcode')">
-                <b-form-input v-model.trim="frmData.customer.taxcode" :state="state('customerTaxcode')" />
+                <b-input-group>
+                  <b-form-input
+                    v-model.trim="frmData.customer.taxcode"
+                    :state="state('customerTaxcode')"
+                    placeholder="Nhập MST để tra cứu"
+                    :disabled="lookingUpTaxCode"
+                    @keyup.enter="lookupBuyerTaxCode"
+                  />
+                  <b-input-group-append>
+                    <b-button
+                      variant="outline-primary"
+                      :disabled="lookingUpTaxCode || !String(frmData.customer.taxcode || '').trim()"
+                      title="Tra cứu thông tin người nộp thuế"
+                      @click="lookupBuyerTaxCode"
+                    >
+                      <b-spinner v-if="lookingUpTaxCode" small />
+                      <template v-else><i class="fas fa-search mr-1"></i>Tra cứu</template>
+                    </b-button>
+                  </b-input-group-append>
+                </b-input-group>
                 <b-form-invalid-feedback :state="state('customerTaxcode')">{{ invalidFeedback('customerTaxcode') }}</b-form-invalid-feedback>
               </b-form-group>
             </b-col>
@@ -439,14 +456,13 @@ export default {
       isBusyDetail: false,
       error: null,
       errors: {},
-      // Theo dõi key lỗi đã hiển thị để tránh toast trùng
       shownErrorKeys: new Set(),
       prepare: { formId: null, formName: null, formCode: null, serial: null, haveCode: null, formType: null, registerId: null, registerEffectiveDate: null },
       formInvoices: { form_id: null, name: null, form_code: null, serial: null, have_code: null, type: null },
       companies: { name: null, taxcode: null, address: null },
       loadingCustomers: false,
+      lookingUpTaxCode: false,
       customerOptions: [],
-      // keep raw customers for lookup by code
       customersRaw: [],
       loadingProduct: false,
       feature: [
@@ -562,16 +578,13 @@ export default {
       return '—'
     },
     canEdit () {
-      // Cho phép tạo mới (không có editId) hoặc chỉnh sửa khi status = 0
       if (!this.editId) return true
       return Number(this.invoiceStatus) === 0
     }
   },
   async created () { 
-    // set default 'Ngày lập' to today's local date
     this.frmData.date_export = this.formatLocalDateYYYYMMDD(new Date())
     this.applyProcessingQuery()
-    // detect edit mode from route: /invoice/:id/edit or params.id
     const rid = this.$route && (this.$route.params?.id || this.$route.query?.id)
     const id = rid ? Number(rid) : null
     if (Number.isFinite(id) && id > 0) {
@@ -599,23 +612,45 @@ export default {
         this.frmData.related_reason = /^(?:[1-9]|1[0-4])$/.test(relatedReason) ? relatedReason : null
       }
     },
-    // Unified error toast with deduplication by key
     toastError (message, key = null) {
       const k = key || message
       if (this.shownErrorKeys.has(k)) return
       this.shownErrorKeys.add(k)
-      if (this.$toastr && typeof this.$toastr.error === 'function') {
-        this.$toastr.error(message, 'Lỗi')
+      this.$toastr.error(message, 'Lỗi')
+      setTimeout(() => this.shownErrorKeys.delete(k), 3500)
+    },
+    async lookupBuyerTaxCode () {
+      let taxcode = String(this.frmData.customer.taxcode || '').replace(/\s+/g, '')
+      if (/^\d{13}$/.test(taxcode)) taxcode = `${taxcode.slice(0, 10)}-${taxcode.slice(10)}`
+      if (!/^(?:\d{10}(?:-\d{3})?|\d{12})$/.test(taxcode)) {
+        this.toastError('Mã số thuế phải gồm 10 số, 10 số-3 số chi nhánh hoặc 12 số', `tax_lookup_invalid_${taxcode}`)
+        return
+      }
+
+      this.lookingUpTaxCode = true
+      try {
+        const { data } = await axios.get(`/tax-code-lookup/${encodeURIComponent(taxcode)}`, {
+          meta: { suppressGlobalErrorToast: true }
+        })
+        this.frmData.customer.taxcode = data.taxCode || taxcode
+        this.frmData.customer.name = data.name || this.frmData.customer.name
+        this.frmData.customer.address = data.address || this.frmData.customer.address
+        delete this.errors.customerTaxcode
+        const status = data.status ? ` - ${data.status}` : ''
+        this.$toastr.success(`Đã lấy thông tin: ${data.name}${status}`, 'Tra cứu mã số thuế')
+      } catch (e) {
+        const message = e?.response?.data?.message || 'Không tra cứu được mã số thuế lúc này'
+        this.toastError(message, `tax_lookup_${taxcode}`)
+      } finally {
+        this.lookingUpTaxCode = false
       }
     },
-    // Định dạng ngày thành YYYY-MM-DD theo giờ local
     formatLocalDateYYYYMMDD (d = new Date()) {
       const year = d.getFullYear()
       const month = String(d.getMonth() + 1).padStart(2, '0')
       const day = String(d.getDate()).padStart(2, '0')
       return `${year}-${month}-${day}`
     },
-    // Chuẩn hóa thuế suất VAT thành số hoặc null
     normalizeVatRate (v) {
       if (v === null || v === undefined || v === '') return null
       const n = Number(v)
@@ -651,7 +686,6 @@ export default {
       if (this.currentFormType() !== 1 || !Array.isArray(rows) || rows.length === 0) return 0
       return this.normalizedRowVatRate(rows[0]).other
     },
-    // Ánh xạ sản phẩm thô sang các trường chuẩn dùng trong dòng hóa đơn
     normalizeProduct (item) {
       if (!item) return null
       return {
@@ -686,7 +720,6 @@ export default {
       if (!found) found = arr.find(c => String(c?.code || '').trim().toLowerCase() === s)
       return found || null
     },
-    // Tìm sản phẩm theo option đã chọn, sau đó theo mã/tên (không phân biệt hoa thường)
     findProductByNameOrCode (input) {
       const s = String(input || '').trim().toLowerCase()
       if (!s) return null
@@ -697,7 +730,6 @@ export default {
       if (!found) found = arr.find(p => String(p?.name || '').toLowerCase().includes(s))
       return this.normalizeProduct(found)
     },
-    // Áp dữ liệu sản phẩm đã chuẩn hóa vào dòng bảng và tính lại
     applyProductToRow (p, idx) {
       if (!p || idx == null) return
       const r = this.frmData.detail[idx]
@@ -709,7 +741,6 @@ export default {
       if (p.price != null) r.price = p.price
       if (p.vatRate != null) r.vatRate = p.vatRate
       if (p.feature != null) r.feature = p.feature
-      // recalc based on quantity and price
       this.recalcRowFromQuantityPrice(idx)
     },
     async checkPrerequisites () {
@@ -733,13 +764,10 @@ export default {
         this.formInvoices.have_code = this.prepare.haveCode
         this.formInvoices.type = this.prepare.formType
 
-        // Tải khách hàng theo công ty hiện tại từ backend
         await this.refreshCustomers()
 
-        // Tải sản phẩm để gợi ý, thiếu quyền danh mục vẫn cho phép lập hóa đơn
         await this.refreshProducts()
 
-        // Tải thuế suất VAT, lỗi tải dữ liệu phụ không chặn form lập hóa đơn
         await this.refreshVatRates()
       } catch (e) {
         const msg = e && e.response && e.response.data && e.response.data.message
@@ -747,6 +775,8 @@ export default {
           : 'Không đủ điều kiện để lập hóa đơn'
         this.error = msg
         if (e && e.response && e.response.status === 403) {
+          this.toastError(msg, 'checkPrerequisites')
+          this.$router.replace({ name: 'CustomerVatInvoiceList' })
           return false
         }
         this.toastError(msg, 'checkPrerequisites')
@@ -765,9 +795,7 @@ export default {
           meta: { suppressGlobalErrorToast: true }
         })
         const customers = customersPage && customersPage.data ? customersPage.data : []
-        // Lưu dữ liệu khách hàng đầy đủ để tự điền thông tin khi chọn mã
         this.customersRaw = customers
-        // Định dạng cho v-select: mảng đối tượng có giá trị và chữ hiển thị.
         const opts = customers.map(c => ({
           value: c.code,
           text: `${c.code} - ${(c.companyName || c.buyerName || '')}`.trim()
@@ -804,7 +832,6 @@ export default {
         this.app.optionVatRates = []
       }
     },
-    // populate customer fields when selecting a customer code
     onCustomerSelected (code) {
       const s = String(code || '').trim()
       if (!s) return
@@ -820,18 +847,14 @@ export default {
       this.frmData.customer.bank_name = c.bankName || c.bank_name || ''
       this.frmData.customer.bank_no = c.bankAccountNumber || c.bank_no || ''
     },
-    // Xử lý thay đổi mã khách hàng (cho datalist)
     onCustomerCodeChange () {
       const code = String(this.frmData.customer.code || '').trim()
       if (!code) return
-      // Try to find customer by exact code match
       const c = this.findCustomerByInput(code)
       if (c) {
-        // Auto-fill customer fields
         this.onCustomerSelected(code)
       }
     },
-    // ensure there is always an empty row at the end
     ensureTrailingEmptyRow () {
       const rows = this.frmData.detail
       if (!Array.isArray(rows) || rows.length === 0) {
@@ -841,11 +864,9 @@ export default {
       const last = rows[rows.length - 1]
       const isEmpty = !String(last.name || '').trim() && !String(last.code || '').trim()
       if (!isEmpty) {
-        // append a new empty row
         this.frmData.detail.push(this.createEmptyRow(rows.length + 1))
       }
     },
-    // helper to create a new empty row with next num
     createEmptyRow (num) {
       return {
         num: num,
@@ -865,36 +886,28 @@ export default {
         feature: 1
       }
     },
-    // when name changes: try map product, recalc and ensure a trailing empty row exists
     onName (idx) {
       const name = this.frmData.detail[idx]?.name
       const p = this.findProductByNameOrCode(name)
       if (p) {
         this.applyProductToRow(p, idx)
       } else {
-        // even if not matched, if quantity and price filled later, we still need totals
         this.recalcRowFromQuantityPrice(idx)
       }
       this.ensureTrailingEmptyRow()
     },
-    // delete a row and renumber; keep at least one row
     onDelete (idx) {
       const rows = Array.isArray(this.frmData.detail) ? this.frmData.detail : []
       if (rows.length === 0) return
       if (idx < 0 || idx >= rows.length) return
       rows.splice(idx, 1)
-      // if all removed, create one empty
       if (rows.length === 0) {
         rows.push(this.createEmptyRow(1))
       }
-      // renumber
       rows.forEach((r, i) => { r.num = i + 1 })
-      // ensure we keep a trailing empty row
       this.ensureTrailingEmptyRow()
-      // recalc totals
       this.recalcTotals()
     },
-    // Quay lại
     goBack () {
       if (this.$router && typeof this.$router.back === 'function') {
         this.$router.back()
@@ -912,6 +925,7 @@ export default {
       } catch (e) {
         const msg = e?.response?.data?.message || 'Không tải được dữ liệu hóa đơn để chỉnh sửa'
         this.toastError(msg, 'load_invoice')
+        if (this.$router) this.$router.replace({ name: 'CustomerVatInvoiceList' })
       } finally {
         this.isBusy = false
       }
@@ -927,6 +941,7 @@ export default {
       } catch (e) {
         const msg = e?.response?.data?.message || 'Không tải được dữ liệu hóa đơn gốc'
         this.toastError(msg, 'load_reference_invoice')
+        if (this.$router) this.$router.replace({ name: 'CustomerVatInvoiceList' })
       } finally {
         this.isBusy = false
       }
@@ -999,7 +1014,6 @@ export default {
           return
         }
 
-        // Nếu đang ở chế độ chỉnh sửa nhưng hóa đơn không còn trạng thái 0 thì chặn
         if (this.editId && Number(this.invoiceStatus) !== 0) {
           this.toastError('Chỉ được phép cập nhật hóa đơn ở trạng thái nháp (status = 0)', 'invalid_status_update')
           return
@@ -1035,7 +1049,6 @@ export default {
         if (this.editId) {
           res = await axios.put(`/invoices/${this.editId}`, basePayload, { successMessage: 'Đã cập nhật hóa đơn' })
         } else {
-          // Phía backend sẽ tự sinh id_attr (32 ký tự) và lookup_code (10 ký tự)
           res = await axios.post('/invoices', basePayload, { successMessage: 'Đã lưu hóa đơn' })
         }
         const data = res?.data || {}
@@ -1047,10 +1060,12 @@ export default {
           if (this.$router) this.$router.replace({ name: 'CustomerVatInvoiceList' })
         } else {
           this.toastError('Không nhận được ID hóa đơn sau khi lưu/cập nhật', 'missing_id')
+          if (this.$router) this.$router.replace({ name: 'CustomerVatInvoiceList' })
         }
       } catch (e) {
         const msg = e?.response?.data?.message || (this.editId ? 'Không thể cập nhật hóa đơn' : 'Không thể lưu hóa đơn')
         this.toastError(msg, 'submit_error')
+        if (this.$router) this.$router.replace({ name: 'CustomerVatInvoiceList' })
       }
     },
     validateInvoiceData () {
@@ -1150,8 +1165,6 @@ export default {
       this.frmData.amount_in_words = this.numberToWordsVn(amount)
     },
     numberToWordsVn (num) {
-      // Robust Vietnamese number to words
-      // Examples: 0 -> "Không đồng", 220000 -> "Hai trăm hai mươi nghìn đồng"
       const units = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín']
       const scales = ['','nghìn','triệu','tỷ','nghìn tỷ','triệu tỷ','tỷ tỷ']
 
@@ -1201,7 +1214,6 @@ export default {
         for (let i = groups.length - 1; i >= 0; i--) {
           const grp = groups[i]
           if (grp === 0) {
-            // skip empty group but maintain scale progression
             continue
           }
           const tripleWords = readTriple(grp)
@@ -1214,14 +1226,12 @@ export default {
         return words.join(' ').replace(/\s+/g, ' ').trim()
       }
 
-      // Main
       const v = Number(num || 0)
       if (!Number.isFinite(v)) return 'Không đồng'
       if (v === 0) return 'Không đồng'
       const abs = normalize(v)
       const words = readNumber(abs)
       const head = v < 0 ? 'Âm ' : ''
-      // Capitalize first letter
       const cap = words.charAt(0).toUpperCase() + words.slice(1)
       return `${head}${cap} đồng`
     },
@@ -1259,12 +1269,11 @@ export default {
 </script>
 
 <style scoped>
-/* Container & Card */
 .invoice-container {
   padding: 18px;
   background: linear-gradient(180deg, #f6f8fb 0%, #f3f6fa 100%);
   min-height: 100vh;
-  font-size: 13px; /* base font slightly smaller */
+  font-size: 13px;
 }
 
 .invoice-card {
@@ -1290,13 +1299,11 @@ export default {
   font-weight: 700;
   color: #1f2d3d;
   letter-spacing: 0.2px;
-  font-size: 18px; /* smaller title */
+  font-size: 18px;
 }
 
-/* Alert spacing */
 .alert-danger { margin-bottom: 12px; }
 
-/* Sections */
 .form-section {
   background: #fff;
   border: 1px solid #e6ebf2;
@@ -1309,25 +1316,23 @@ export default {
 .section-title {
   display: flex;
   align-items: center;
-  font-size: 14px; /* smaller */
+  font-size: 14px;
   font-weight: 700;
   color: #2b3850;
   margin: 0 0 8px;
 }
 .section-title i { color: #4f7dff; font-size: 14px; }
 
-/* Form label & inputs */
 .form-label {
   font-size: 11.5px;
   color: #6b7280;
   margin-bottom: var(--ui-label-gap) !important;
 }
 
-/* Compact inputs with nicer focus */
 .form-section .form-control,
 .form-section .custom-select {
-  min-height: 30px; /* smaller height */
-  padding: 4px 8px; /* tighter padding */
+  min-height: 30px;
+  padding: 4px 8px;
   font-size: 12.5px;
   border: 1px solid #d7dde5;
   border-radius: 7px;
@@ -1339,7 +1344,6 @@ export default {
   box-shadow: 0 0 0 2px rgba(79, 125, 255, 0.15);
 }
 
-/* Input group text for code */
 .input-group-text.input-code-text {
   background: #eef3ff;
   color: #2b4bb7;
@@ -1349,18 +1353,16 @@ export default {
   font-size: 12px;
   display: inline-flex;
   align-items: center;
-  height: 30px; /* match control height */
-  border-right: 0; /* remove inner seam */
+  height: 30px;
+  border-right: 0;
 }
 
-/* Specific style for the serial input next to code label */
 .serial-input {
   border-radius: 0 7px 7px 0 !important;
-  height: 30px; /* match group */
-  border-left: 0; /* remove inner seam */
+  height: 30px;
+  border-left: 0;
 }
 
-/* Keep legacy badge style if used elsewhere */
 .input-badge {
   display: inline-flex;
   align-items: center;
@@ -1371,10 +1373,9 @@ export default {
   font-size: 12px;
 }
 
-/* Table */
 .table-responsive { border-radius: 8px; overflow: hidden; }
 .invoice-table {
-  font-size: 12.5px; /* smaller table font */
+  font-size: 12.5px;
   margin-bottom: 0;
 }
 .invoice-table thead th {
@@ -1391,12 +1392,11 @@ export default {
 .invoice-table tbody tr:nth-child(even) td { background: #fbfdff; }
 .invoice-table tbody tr:hover td { background: #eef4ff; }
 .invoice-table tbody td {
-  padding: 6px 8px; /* tighter */
+  padding: 6px 8px;
   vertical-align: middle;
   border-top: 1px solid #eef2f7;
 }
 
-/* Table inputs/selects */
 .table-input.form-control {
   min-height: 28px;
   padding: 3px 6px;
@@ -1415,7 +1415,6 @@ export default {
 }
 .table-select:focus { box-shadow: 0 0 0 2px rgba(79, 125, 255, 0.12); border-color: #4f7dff; }
 
-/* VAT other input inline */
 .vat-other-input {
   display: inline-flex;
   align-items: center;
@@ -1424,7 +1423,6 @@ export default {
 }
 .vat-percent { color: #6c757d; font-size: 11.5px; }
 
-/* Summary */
 .summary-section { border: 1px dashed #e0e6ed; }
 .summary-input.form-control {
   background: #f7f9fc;
@@ -1434,7 +1432,6 @@ export default {
 .total-amount.form-control { color: #168a3a; }
 .summary-label { color: #4b5563; font-size: 11.5px; }
 
-/* Action buttons */
 .action-buttons {
   display: flex;
   gap: 8px;
@@ -1443,7 +1440,7 @@ export default {
 }
 .action-buttons .btn {
   border-radius: 7px;
-  padding: 6px 10px; /* smaller */
+  padding: 6px 10px;
   font-weight: 600;
   font-size: 12.5px;
 }
@@ -1453,7 +1450,6 @@ export default {
 /* Khoảng cách container skeleton tải */
 .loading-skeleton .mb-2 { margin-bottom: 8px !important; }
 
-/* Utilities */
 .small { font-size: 11.5px; }
 .mt-2 { margin-top: 6px; }
 

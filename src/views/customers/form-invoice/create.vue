@@ -110,7 +110,12 @@
 
               <div class="form-row-item" v-if="Number(form.category) === 6">
                 <b-form-group label="Loại phiếu xuất kho" label-cols-sm="3">
-                  <b-form-select v-model.number="form.stockIssueType" :options="[{ value: 1, text: 'Kiêm vận chuyển nội bộ' }, { value: 2, text: 'Hàng gửi bán đại lý' }]" />
+                  <b-form-select
+                    v-if="!isTemplateClone"
+                    v-model.number="form.stockIssueType"
+                    :options="stockIssueTypeOptions"
+                  />
+                  <b-form-input v-else :value="stockIssueTypeLabel" readonly />
                 </b-form-group>
               </div>
 
@@ -145,6 +150,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { toastError } from '@/utils/toast'
 
 const isLatinLetter = (value) => /^\p{Script=Latin}$/u.test(value)
 
@@ -201,6 +207,7 @@ export default {
   },
   computed: {
     isView() { return this.$route.name === 'CustomerFormInvoiceView' },
+    isTemplateClone() { return Boolean(this.$route.query.templateId) },
     pageTitle() {
       const id = this.$route.params.id
       if (id) return 'Cập nhật/Xem mẫu hóa đơn'
@@ -223,6 +230,15 @@ export default {
       const v = (this.form.name || '').trim()
       if (!this.nameValidated && !v) return null
       return v.length > 0
+    },
+    stockIssueTypeLabel() {
+      return Number(this.form.stockIssueType) === 2 ? 'Hàng gửi bán đại lý' : 'Kiêm vận chuyển nội bộ'
+    },
+    stockIssueTypeOptions() {
+      return [
+        { value: 1, text: 'Kiêm vận chuyển nội bộ' },
+        { value: 2, text: 'Hàng gửi bán đại lý' }
+      ]
     },
   },
   watch: {
@@ -282,7 +298,8 @@ export default {
           this.form.have_code = (it.haveCode != null || it.have_code != null) ? Number(it.haveCode != null ? it.haveCode : it.have_code) : (this.serialCK === 'C' ? 1 : 0)
           this.composeSerial()
         }
-      } catch (e) {
+      } catch (error) {
+        toastError(error?.response?.data?.message || 'Không tải được mẫu nguồn')
       }
     },
     async loadDetail(id) {
@@ -309,7 +326,8 @@ export default {
           this.form.status = it.status != null ? Number(it.status) : 1
           this.form.have_code = (it.haveCode != null || it.have_code != null) ? Number(it.haveCode != null ? it.haveCode : it.have_code) : (this.serialCK === 'C' ? 1 : 0)
         }
-      } catch (e) {
+      } catch (error) {
+        toastError(error?.response?.data?.message || 'Không tải được thông tin mẫu')
       }
     },
     async onSubmit() {
@@ -364,7 +382,8 @@ export default {
           return
         }
         this.$router.push({ name: 'CustomerFormInvoiceList' })
-      } catch (e) {
+      } catch (error) {
+        toastError(error?.response?.data?.message || 'Không thể lưu mẫu')
       } finally {
         this.submitting = false
       }
