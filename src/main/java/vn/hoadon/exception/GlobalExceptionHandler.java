@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import vn.hoadon.ai.service.AiServiceException;
+import vn.hoadon.ai.document.service.DocumentRecognitionException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -63,6 +64,14 @@ public class GlobalExceptionHandler {
         HttpHeaders headers = new HttpHeaders();
         if (status == HttpStatus.TOO_MANY_REQUESTS) headers.set("Retry-After", "60");
         return new ResponseEntity<>(body, headers, status);
+    }
+
+    @ExceptionHandler(DocumentRecognitionException.class)
+    public ResponseEntity<Map<String, Object>> handleDocumentRecognition(DocumentRecognitionException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("message", ex.getMessage());
+        body.put("error", ex.getCode());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
 
     @ExceptionHandler(Exception.class)

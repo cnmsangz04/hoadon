@@ -241,6 +241,13 @@
       <b-table small bordered responsive show-empty :items="versions" :fields="versionFields" empty-text="Chưa có phiên bản">
         <template #cell(status)="{ item }"><b-badge :variant="statusVariant(item.status)">{{ statusLabel(item.status) }}</b-badge></template>
         <template #cell(fileSize)="{ item }">{{ formatBytes(item.fileSize) }}</template>
+        <template #cell(ocr)="{ item }">
+          <span v-if="item.pageCount">{{ item.pageCount }} trang</span>
+          <b-badge v-if="item.ocrUsed" variant="info" class="ml-1">
+            OCR {{ item.ocrAverageConfidence != null ? `${Math.round(item.ocrAverageConfidence * 100)}%` : '' }}
+          </b-badge>
+          <span v-if="!item.pageCount && !item.ocrUsed">-</span>
+        </template>
         <template #cell(createdAt)="{ item }">{{ formatDateTime(item.createdAt) }}</template>
         <template #cell(promptInjectionDetected)="{ item }">
           <b-badge :variant="item.promptInjectionDetected ? 'warning' : 'success'">
@@ -303,6 +310,7 @@ export default {
       versionFields: [
         { key: 'versionNumber', label: 'Phiên bản' }, { key: 'originalFilename', label: 'File' },
         { key: 'fileSize', label: 'Dung lượng' }, { key: 'status', label: 'Trạng thái' },
+        { key: 'ocr', label: 'Trang/OCR' },
         { key: 'promptInjectionDetected', label: 'Nội dung' }, { key: 'createdAt', label: 'Ngày tạo' },
       ],
       categoryFields: [

@@ -6,6 +6,12 @@
         <h4 class="invoice-title">{{ pageTitle }}</h4>
       </div>
 
+      <DocumentRecognition
+        v-if="canEdit && !isProcessingInvoice"
+        :category="2"
+        @applied="onRecognizedDocumentApplied"
+      />
+
       <AiInvoiceAssistant
         v-if="canEdit && !isProcessingInvoice && (formInvoices.form_id || prepare.formId)"
         :invoice-id="editId"
@@ -419,11 +425,12 @@
 <script>
 import axios from '@/plugins/axios'
 import AiInvoiceAssistant from '@/views/components/ai_invoice_assistant.vue'
+import DocumentRecognition from '@/views/components/document_recognition.vue'
 import { email, firstError, hasErrors, numberRange, phone, required, taxCode } from '@/utils/validators'
 
 export default {
   name: 'SalesInvoiceCreate',
-  components: { AiInvoiceAssistant },
+  components: { AiInvoiceAssistant, DocumentRecognition },
   data () {
     return {
       isBusy: false,
@@ -590,6 +597,19 @@ export default {
     }
   },
   methods: {
+    onRecognizedDocumentApplied (recognized) {
+      if (!recognized) return
+      if (recognized.dateExport) this.frmData.date_export = recognized.dateExport
+      if (recognized.currency) this.frmData.currency = recognized.currency
+      const customer = recognized.customer || {}
+      Object.keys(customer).forEach(key => {
+        if (customer[key] !== null && customer[key] !== '') this.frmData.customer[key] = customer[key]
+      })
+      if (Array.isArray(recognized.detail) && recognized.detail.length) {
+        this.frmData.detail = recognized.detail.map((row, index) => ({ ...row, num: index + 1 }))
+        this.recalcTotals()
+      }
+    },
     onAiInvoiceApplied (result) {
       const id = Number(result?.invoiceId || 0)
       if (id > 0 && this.$router) {

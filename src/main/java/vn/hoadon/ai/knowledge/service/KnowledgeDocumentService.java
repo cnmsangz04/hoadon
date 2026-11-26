@@ -226,6 +226,10 @@ public class KnowledgeDocumentService {
         try {
             ExtractedKnowledge extracted = extractor.extract(document.getDocumentType(), version.getSourceBlob());
             version.setExtractedContent(extracted.content());
+            version.setPageCount(extracted.pageCount());
+            version.setOcrUsed(extracted.ocrUsed());
+            version.setOcrAverageConfidence(extracted.ocrAverageConfidence() == null ? null
+                    : java.math.BigDecimal.valueOf(extracted.ocrAverageConfidence()).setScale(4, java.math.RoundingMode.HALF_UP));
             version.setPromptInjectionDetected(safetyService.hasPromptInjection(extracted.content()));
             if (extracted.requiresOcr()) {
                 version.setStatus(KnowledgeDocumentStatus.OCR_REQUIRED);

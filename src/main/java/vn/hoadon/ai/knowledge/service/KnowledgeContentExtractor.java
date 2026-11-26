@@ -1,7 +1,5 @@
 package vn.hoadon.ai.knowledge.service;
 
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xwpf.usermodel.*;
@@ -12,6 +10,8 @@ import org.xml.sax.SAXException;
 import vn.hoadon.ai.knowledge.config.KnowledgeProperties;
 import vn.hoadon.ai.knowledge.model.ExtractedKnowledge;
 import vn.hoadon.ai.knowledge.model.KnowledgeDocumentType;
+import vn.hoadon.ai.ocr.model.OcrDocument;
+import vn.hoadon.ai.ocr.service.LocalOcrService;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -31,9 +31,11 @@ public class KnowledgeContentExtractor {
     private static final int MAX_CELLS = 250_000;
 
     private final KnowledgeProperties properties;
+    private final LocalOcrService ocrService;
 
-    public KnowledgeContentExtractor(KnowledgeProperties properties) {
+    public KnowledgeContentExtractor(KnowledgeProperties properties, LocalOcrService ocrService) {
         this.properties = properties;
+        this.ocrService = ocrService;
         ZipSecureFile.setMinInflateRatio(0.01d);
         ZipSecureFile.setMaxEntrySize(Math.max(properties.getMaxUploadBytes() * 4, 20_000_000));
         ZipSecureFile.setMaxTextSize(properties.getMaxExtractedCharacters());
@@ -41,15 +43,19 @@ public class KnowledgeContentExtractor {
 
     public ExtractedKnowledge extract(KnowledgeDocumentType type, byte[] source) {
         try {
+            if (type == KnowledgeDocumentType.PDF) {
+                OcrDocument document = ocrService.extractKnowledgePdf(source, properties.getMaxPdfPages());
+                return new ExtractedKnowledge(limit(document.text()), !document.complete(), document.pageCount(),
+                        document.ocrUsed(), document.averageConfidence());
+            }
             String content = switch (type) {
                 case MD, TXT -> text(source);
-                case PDF -> pdf(source);
+                case PDF -> throw new IllegalStateException("PDF phải được xử lý bởi OCR Service");
                 case DOCX -> docx(source);
                 case XLSX -> xlsx(source);
                 case XML, XSD -> xml(source);
             };
-            boolean requiresOcr = type == KnowledgeDocumentType.PDF && content.replaceAll("\\s+", "").length() < 20;
-            return new ExtractedKnowledge(limit(content), requiresOcr);
+            return new ExtractedKnowledge(limit(content), false, null, false, null);
         } catch (IllegalArgumentException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -61,25 +67,6 @@ public class KnowledgeContentExtractor {
         String value = new String(source, StandardCharsets.UTF_8);
         if (value.startsWith("\uFEFF")) value = value.substring(1);
         return value.replace("\r\n", "\n").replace('\r', '\n').trim();
-    }
-
-    private String pdf(byte[] source) throws IOException {
-        try (PDDocument document = PDDocument.load(source)) {
-            if (document.isEncrypted()) throw new IllegalArgumentException("Không hỗ trợ PDF được mã hóa");
-            if (document.getNumberOfPages() > properties.getMaxPdfPages()) {
-                throw new IllegalArgumentException("PDF vượt quá giới hạn số trang");
-            }
-            PDFTextStripper stripper = new PDFTextStripper();
-            StringBuilder result = new StringBuilder();
-            for (int page = 1; page <= document.getNumberOfPages(); page++) {
-                stripper.setStartPage(page);
-                stripper.setEndPage(page);
-                String value = stripper.getText(document).trim();
-                if (!value.isEmpty()) result.append("\n\n## Trang ").append(page).append("\n\n").append(value);
-                ensureWithinLimit(result.length());
-            }
-            return result.toString().trim();
-        }
     }
 
     private String docx(byte[] source) throws IOException {

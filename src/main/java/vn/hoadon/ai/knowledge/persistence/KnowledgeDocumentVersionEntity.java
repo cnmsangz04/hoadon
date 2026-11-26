@@ -41,6 +41,12 @@ public class KnowledgeDocumentVersionEntity {
     private Boolean promptInjectionDetected = false;
     @Column(name = "error_message", length = 1000)
     private String errorMessage;
+    @Column(name = "page_count")
+    private Integer pageCount;
+    @Column(name = "ocr_used", nullable = false)
+    private Boolean ocrUsed = false;
+    @Column(name = "ocr_average_confidence", precision = 5, scale = 4)
+    private java.math.BigDecimal ocrAverageConfidence;
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
     @Column(name = "created_at", nullable = false)
@@ -76,6 +82,12 @@ public class KnowledgeDocumentVersionEntity {
     public void setPromptInjectionDetected(Boolean promptInjectionDetected) { this.promptInjectionDetected = promptInjectionDetected; }
     public String getErrorMessage() { return errorMessage; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+    public Integer getPageCount() { return pageCount; }
+    public void setPageCount(Integer pageCount) { this.pageCount = pageCount; }
+    public Boolean getOcrUsed() { return ocrUsed; }
+    public void setOcrUsed(Boolean ocrUsed) { this.ocrUsed = ocrUsed; }
+    public java.math.BigDecimal getOcrAverageConfidence() { return ocrAverageConfidence; }
+    public void setOcrAverageConfidence(java.math.BigDecimal ocrAverageConfidence) { this.ocrAverageConfidence = ocrAverageConfidence; }
     public Long getCreatedBy() { return createdBy; }
     public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }
     public LocalDateTime getCreatedAt() { return createdAt; }

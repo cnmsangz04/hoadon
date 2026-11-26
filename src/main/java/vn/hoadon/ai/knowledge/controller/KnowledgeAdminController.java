@@ -216,6 +216,8 @@ public class KnowledgeAdminController extends BaseController {
         return new KnowledgeDtos.VersionView(version.getId(), version.getVersionNumber(), version.getOriginalFilename(),
                 version.getMimeType(), version.getFileSize(), version.getChecksum(), version.getStatus(),
                 Boolean.TRUE.equals(version.getPromptInjectionDetected()), version.getErrorMessage(),
+                version.getPageCount(), Boolean.TRUE.equals(version.getOcrUsed()),
+                version.getOcrAverageConfidence() == null ? null : version.getOcrAverageConfidence().doubleValue(),
                 version.getEffectiveFrom(), version.getEffectiveTo(), version.getCreatedAt());
     }
 

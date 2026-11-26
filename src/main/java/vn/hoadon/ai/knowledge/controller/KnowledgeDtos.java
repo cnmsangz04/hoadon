@@ -42,7 +42,8 @@ public final class KnowledgeDtos {
 
     public record VersionView(Long id, Integer versionNumber, String originalFilename, String mimeType,
                               Long fileSize, String checksum, KnowledgeDocumentStatus status,
-                              boolean promptInjectionDetected, String errorMessage,
+                              boolean promptInjectionDetected, String errorMessage, Integer pageCount,
+                              boolean ocrUsed, Double ocrAverageConfidence,
                               LocalDateTime effectiveFrom, LocalDateTime effectiveTo,
                               LocalDateTime createdAt) {
     }
