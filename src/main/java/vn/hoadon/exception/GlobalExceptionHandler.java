@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,6 +12,8 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import vn.hoadon.ai.service.AiServiceException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -42,6 +45,24 @@ public class GlobalExceptionHandler {
         body.put("message", "Không tìm thấy tài nguyên");
         body.put("error", "not_found");
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    @ExceptionHandler(AiServiceException.class)
+    public ResponseEntity<Map<String, Object>> handleAiService(AiServiceException ex) {
+        HttpStatus status = switch (ex.getCode()) {
+            case "RATE_LIMIT_MINUTE", "RATE_LIMIT_TOKENS", "RATE_LIMIT_DAY", "RATE_LIMIT_COMPANY",
+                 "AI_QUOTA_EXHAUSTED" -> HttpStatus.TOO_MANY_REQUESTS;
+            case "AI_INPUT_TOO_LARGE", "AI_INVALID_REQUEST", "INVALID_CONTEXT" -> HttpStatus.BAD_REQUEST;
+            case "AI_SCOPE_DENIED" -> HttpStatus.FORBIDDEN;
+            case "AI_CONTENT_BLOCKED" -> HttpStatus.UNPROCESSABLE_ENTITY;
+            default -> HttpStatus.SERVICE_UNAVAILABLE;
+        };
+        Map<String, Object> body = new HashMap<>();
+        body.put("message", ex.getMessage());
+        body.put("error", ex.getCode().toLowerCase(java.util.Locale.ROOT));
+        HttpHeaders headers = new HttpHeaders();
+        if (status == HttpStatus.TOO_MANY_REQUESTS) headers.set("Retry-After", "60");
+        return new ResponseEntity<>(body, headers, status);
     }
 
     @ExceptionHandler(Exception.class)
