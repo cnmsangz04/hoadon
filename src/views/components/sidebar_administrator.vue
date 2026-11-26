@@ -86,7 +86,15 @@ export default {
         { titleKey: 'emailTemplates', icon: 'fas fa-envelope', to: '/administrator/email-template/list' },
         { titleKey: 'mailHistory', icon: 'fas fa-history', to: '/administrator/email/mail-history' },
         { titleKey: 'systemLogs', icon: 'fas fa-file-alt', to: '/administrator/logs' },
-        { titleKey: 'aiKnowledge', icon: 'fas fa-brain', to: '/administrator/ai/knowledge' },
+        {
+          titleKey: 'aiKnowledge',
+          icon: 'fas fa-brain',
+          children: [
+            { titleKey: 'aiKnowledgeDocuments', icon: 'fas fa-file-alt', to: '/administrator/ai/knowledge' },
+            { titleKey: 'aiKnowledgeTest', icon: 'fas fa-flask', to: '/administrator/ai/knowledge/test' },
+            { titleKey: 'aiKnowledgeCategories', icon: 'fas fa-tags', to: '/administrator/ai/knowledge/categories' },
+          ],
+        },
         { titleKey: 'telegram', icon: 'fas fa-paper-plane', to: '/administrator/telegram/config' },
         { titleKey: 'dailyReport', icon: 'fas fa-calendar-check', to: '/administrator/daily-invoice-report/config' },
         { titleKey: 'sessions', icon: 'fas fa-desktop', to: '/administrator/sessions/list' },

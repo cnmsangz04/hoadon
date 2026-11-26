@@ -76,21 +76,22 @@ public class KnowledgeAdminController extends BaseController {
     @PostMapping("/documents/markdown")
     public ResponseEntity<KnowledgeDtos.DocumentView> createMarkdown(@RequestBody KnowledgeDtos.MarkdownRequest request) {
         UserEntity user = requireAdmin();
-        return ResponseEntity.ok(view(documentService.createMarkdown(request, user.getId()), true));
+        KnowledgeDtos.MarkdownRequest globalRequest = new KnowledgeDtos.MarkdownRequest(
+                request.title(), request.categoryId(), KnowledgeScope.GLOBAL, null,
+                request.externalShareAllowed(), request.content(), request.effectiveFrom(), request.effectiveTo());
+        return ResponseEntity.ok(view(documentService.createMarkdown(globalRequest, user.getId()), true));
     }
 
     @PostMapping(value = "/documents/upload", consumes = "multipart/form-data")
     public ResponseEntity<KnowledgeDtos.DocumentView> upload(
             @RequestParam String title,
             @RequestParam(required = false) Long categoryId,
-            @RequestParam(defaultValue = "GLOBAL") KnowledgeScope scope,
-            @RequestParam(required = false) Long companyId,
             @RequestParam(defaultValue = "false") Boolean externalShareAllowed,
             @RequestParam(required = false) LocalDateTime effectiveFrom,
             @RequestParam(required = false) LocalDateTime effectiveTo,
             @RequestPart("file") MultipartFile file) {
         UserEntity user = requireAdmin();
-        return ResponseEntity.ok(view(documentService.upload(title, categoryId, scope, companyId,
+        return ResponseEntity.ok(view(documentService.upload(title, categoryId, KnowledgeScope.GLOBAL, null,
                 externalShareAllowed, effectiveFrom, effectiveTo, file, user.getId()), true));
     }
 
@@ -98,7 +99,10 @@ public class KnowledgeAdminController extends BaseController {
     public ResponseEntity<KnowledgeDtos.DocumentView> updateMetadata(@PathVariable long id,
                                                                       @RequestBody KnowledgeDtos.MetadataRequest request) {
         requireAdmin();
-        return ResponseEntity.ok(view(documentService.updateMetadata(id, request), true));
+        KnowledgeDtos.MetadataRequest globalRequest = new KnowledgeDtos.MetadataRequest(
+                request.title(), request.categoryId(), KnowledgeScope.GLOBAL, null,
+                request.externalShareAllowed(), request.effectiveFrom(), request.effectiveTo());
+        return ResponseEntity.ok(view(documentService.updateMetadata(id, globalRequest), true));
     }
 
     @PutMapping("/documents/{id}/markdown")

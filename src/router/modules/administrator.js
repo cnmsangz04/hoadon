@@ -88,6 +88,18 @@
       meta: { requiresAdmin: true, title: "Thư viện tài liệu AI" },
     },
     {
+      path: "ai/knowledge/test",
+      name: "admin-ai-knowledge-test",
+      component: () => import("../../views/administrators/ai/knowledge-test.vue"),
+      meta: { requiresAdmin: true, title: "Kiểm thử AI" },
+    },
+    {
+      path: "ai/knowledge/categories",
+      name: "admin-ai-knowledge-categories",
+      component: () => import("../../views/administrators/ai/knowledge-categories.vue"),
+      meta: { requiresAdmin: true, title: "Danh mục kiến thức" },
+    },
+    {
       path: "telegram/config",
       name: "admin-telegram-config",
       component: () =>
