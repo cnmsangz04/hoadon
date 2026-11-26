@@ -115,7 +115,7 @@ export default {
       home: 'Trang chủ', account: 'Tài khoản', profile: 'Hồ sơ', sessions: 'Phiên đăng nhập', members: 'Thành viên', security: 'Bảo mật', ipSecurity: 'Bảo mật bằng IP', loginHistory: 'Lịch sử đăng nhập',
     },
     admin: {
-      dashboard: 'Trang admin', companies: 'Công ty', registrations: 'Duyệt đăng ký', packages: 'Quản lý gói hóa đơn', limits: 'Hạn mức hóa đơn', templates: 'Mẫu hóa đơn', publishedTemplates: 'Mẫu phát hành', templateFields: 'Phần tử mẫu hóa đơn', banks: 'Ngân hàng', taxAuthorities: 'Cơ quan thuế', vatRates: 'Thuế suất', emailTemplates: 'Email template', mailHistory: 'Lịch sử gửi mail', systemLogs: 'Log hệ thống', telegram: 'Telegram', dailyReport: 'Báo cáo hóa đơn ngày', sessions: 'Phiên đăng nhập', database: 'Dữ liệu database', accessControl: 'Phân quyền', permissions: 'Quyền', permissionGroups: 'Nhóm quyền',
+      dashboard: 'Trang admin', companies: 'Công ty', registrations: 'Duyệt đăng ký', packages: 'Quản lý gói hóa đơn', limits: 'Hạn mức hóa đơn', templates: 'Mẫu hóa đơn', publishedTemplates: 'Mẫu phát hành', templateFields: 'Phần tử mẫu hóa đơn', banks: 'Ngân hàng', taxAuthorities: 'Cơ quan thuế', vatRates: 'Thuế suất', emailTemplates: 'Email template', mailHistory: 'Lịch sử gửi mail', systemLogs: 'Log hệ thống', aiKnowledge: 'Thư viện tài liệu AI', telegram: 'Telegram', dailyReport: 'Báo cáo hóa đơn ngày', sessions: 'Phiên đăng nhập', database: 'Dữ liệu database', accessControl: 'Phân quyền', permissions: 'Quyền', permissionGroups: 'Nhóm quyền',
     },
   },
   dashboard: {

@@ -32,7 +32,7 @@ export default {
       home: 'Home', account: 'Account', profile: 'Profile', sessions: 'Login sessions', members: 'Members', security: 'Security', ipSecurity: 'IP security', loginHistory: 'Login history',
     },
     admin: {
-      dashboard: 'Admin dashboard', companies: 'Companies', registrations: 'Registration approval', packages: 'Invoice packages', limits: 'Invoice limits', templates: 'Invoice templates', publishedTemplates: 'Published templates', templateFields: 'Invoice template fields', banks: 'Banks', taxAuthorities: 'Tax authorities', vatRates: 'VAT rates', emailTemplates: 'Email templates', mailHistory: 'Email history', systemLogs: 'System logs', telegram: 'Telegram', dailyReport: 'Daily invoice report', sessions: 'Login sessions', database: 'Database', accessControl: 'Access control', permissions: 'Permissions', permissionGroups: 'Permission groups',
+      dashboard: 'Admin dashboard', companies: 'Companies', registrations: 'Registration approval', packages: 'Invoice packages', limits: 'Invoice limits', templates: 'Invoice templates', publishedTemplates: 'Published templates', templateFields: 'Invoice template fields', banks: 'Banks', taxAuthorities: 'Tax authorities', vatRates: 'VAT rates', emailTemplates: 'Email templates', mailHistory: 'Email history', systemLogs: 'System logs', aiKnowledge: 'AI document library', telegram: 'Telegram', dailyReport: 'Daily invoice report', sessions: 'Login sessions', database: 'Database', accessControl: 'Access control', permissions: 'Permissions', permissionGroups: 'Permission groups',
     },
   },
   dashboard: {

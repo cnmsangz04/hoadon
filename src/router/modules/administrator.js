@@ -82,6 +82,12 @@
       meta: { requiresAdmin: true, title: "Log hệ thống" },
     },
     {
+      path: "ai/knowledge",
+      name: "admin-ai-knowledge",
+      component: () => import("../../views/administrators/ai/knowledge.vue"),
+      meta: { requiresAdmin: true, title: "Thư viện tài liệu AI" },
+    },
+    {
       path: "telegram/config",
       name: "admin-telegram-config",
       component: () =>
