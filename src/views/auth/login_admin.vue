@@ -5,10 +5,10 @@
       <div class="brand-side">
         <div class="brand-inner">
           <img class="logo" :src="require('@/assets/images/logo/logo-hoadon.png')" alt="logo" />
-          <h2>Hóa đơn điện tử</h2>
-          <p class="text-muted">Khu vực Quản trị hệ thống.</p>
+          <h2>{{ $t('brand.title') }}</h2>
+          <p class="text-muted">{{ $t('auth.adminArea') }}</p>
           <router-link class="brand-action" :to="{ name: 'PublicInvoiceLookup' }">
-            Tra cứu hóa đơn
+            {{ $t('auth.invoiceLookup') }}
           </router-link>
         </div>
       </div>
@@ -17,50 +17,50 @@
         <b-card class="auth-card shadow-lg">
 
           <div class="text-center mb-4">
-            <h4 class="mb-1">Đăng nhập</h4>
-            <small class="text-muted">Vào trang quản trị để bắt đầu làm việc</small>
+            <h4 class="mb-1">{{ $t('auth.login') }}</h4>
+            <small class="text-muted">{{ $t('auth.adminLoginHint') }}</small>
           </div>
 
           <b-form @submit.prevent="onSubmit">
-            <b-form-group label="Tài khoản">
+            <b-form-group :label="$t('auth.username')">
               <div class="input-with-icon">
                 <i class="bi bi-person"></i>
-                <b-form-input v-model.trim="username" type="text" required placeholder="Nhập tài khoản"></b-form-input>
+                <b-form-input v-model.trim="username" type="text" required :placeholder="$t('auth.usernamePlaceholder')"></b-form-input>
               </div>
             </b-form-group>
 
-            <b-form-group label="Mật khẩu">
+            <b-form-group :label="$t('auth.password')">
               <div class="input-with-icon">
                 <i class="bi bi-lock"></i>
                 <b-form-input 
                   :type="showPassword ? 'text' : 'password'"
                   v-model="password"
                   required 
-                  placeholder="Nhập mật khẩu"
+                  :placeholder="$t('auth.passwordPlaceholder')"
                 ></b-form-input>
 
                 <b-button variant="outline-secondary" size="sm"
                   class="toggle-btn"
                   @click="showPassword = !showPassword"
-                >{{ showPassword ? 'Ẩn' : 'Hiện' }}</b-button>
+                >{{ showPassword ? $t('common.hide') : $t('common.show') }}</b-button>
               </div>
             </b-form-group>
 
             <div class="d-flex justify-content-between mb-3">
-              <b-form-checkbox v-model="remember">Ghi nhớ đăng nhập</b-form-checkbox>
+              <b-form-checkbox v-model="remember">{{ $t('auth.remember') }}</b-form-checkbox>
             </div>
 
             <div class="text-center mb-3">
               <b-link :to="{ name: 'login' }" @click.prevent="$router.push({ name: 'login' })">
-                Quay về đăng nhập người dùng
+                {{ $t('auth.userLogin') }}
               </b-link>
             </div>
 
             <b-button type="submit" block variant="primary"
               class="submit-btn"
               :disabled="loading || !username || !password">
-              <span v-if="loading"><b-spinner small class="me-2"/>Đang đăng nhập...</span>
-              <span v-else>Đăng nhập</span>
+              <span v-if="loading"><b-spinner small class="me-2"/>{{ $t('auth.loggingIn') }}</span>
+              <span v-else>{{ $t('auth.login') }}</span>
             </b-button>
           </b-form>
 

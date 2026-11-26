@@ -68,10 +68,10 @@ function bvToastVariantToType(variant) {
 function bvToastTitle(type, title) {
   if (title) return title
   switch (type) {
-    case 'success': return 'Thành công'
-    case 'warning': return 'Cảnh báo'
-    case 'info': return 'Thông báo'
-    default: return 'Lỗi'
+    case 'success': return i18n.t('common.success')
+    case 'warning': return i18n.t('common.warning')
+    case 'info': return i18n.t('common.information')
+    default: return i18n.t('common.error')
   }
 }
 

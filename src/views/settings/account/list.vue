@@ -20,7 +20,7 @@
                 <i class="fas fa-camera"></i>
               </div>
             </div>
-            <h1>Xin chào {{ account.name }}</h1>
+            <h1>{{ $t('account.greeting', { name: account.name }) }}</h1>
             <p>{{ $t('account.description') }}</p>
           </div>
 
@@ -36,13 +36,13 @@
 
           <!-- Thông tin -->
           <b-card v-else class="profile-card">
-            <h4 class="section-title">Thông tin cá nhân</h4>
+            <h4 class="section-title">{{ $t('account.personalInfo') }}</h4>
 
             <!-- Tên đăng nhập (chỉ đọc) -->
             <div class="list-info">
               <div class="list-item">
                 <div>
-                  <label>Tài khoản</label>
+                  <label>{{ $t('account.username') }}</label>
                   <p class="font-weight-bold text-primary">{{ account.username || '—' }}</p>
                 </div>
               </div>
@@ -52,22 +52,22 @@
             <div class="list-info">
               <div class="list-item" v-if="!showName">
                 <div>
-                  <label>Tên</label>
+                  <label>{{ $t('account.name') }}</label>
                   <p>{{ account.name }}</p>
                 </div>
-                <b-button size="sm" variant="light" @click="editForm('name')">Cập nhật</b-button>
+                <b-button size="sm" variant="light" @click="editForm('name')">{{ $t('common.update') }}</b-button>
               </div>
               <b-form v-else novalidate @submit.prevent="nameSubmit" class="form-profile">
                 <div class="account-inline-form">
                   <b-form-input
                     v-model.trim="frmInfo.name"
-                    placeholder="Họ và tên"
+                    :placeholder="$t('account.fullName')"
                     required
                     :state="state('name')"
                   />
                   <div class="account-inline-actions">
-                    <b-button type="button" variant="outline-secondary" @click="closeForm('name')">Hủy</b-button>
-                    <b-button type="submit" variant="primary">Lưu</b-button>
+                    <b-button type="button" variant="outline-secondary" @click="closeForm('name')">{{ $t('common.cancel') }}</b-button>
+                    <b-button type="submit" variant="primary">{{ $t('common.save') }}</b-button>
                   </div>
                 </div>
                 <b-form-invalid-feedback :state="state('name')">
@@ -83,7 +83,7 @@
                   <label>Email</label>
                   <p>{{ account.email }}</p>
                 </div>
-                <b-button size="sm" variant="light" @click="editForm('email')">Cập nhật</b-button>
+                <b-button size="sm" variant="light" @click="editForm('email')">{{ $t('common.update') }}</b-button>
               </div>
               <b-form v-else novalidate @submit.prevent="emailSubmit" class="form-profile">
                 <div class="account-inline-form">
@@ -95,8 +95,8 @@
                     :state="state('email')"
                   />
                   <div class="account-inline-actions">
-                    <b-button type="button" variant="outline-secondary" @click="closeForm('email')">Hủy</b-button>
-                    <b-button type="submit" variant="primary">Lưu</b-button>
+                    <b-button type="button" variant="outline-secondary" @click="closeForm('email')">{{ $t('common.cancel') }}</b-button>
+                    <b-button type="submit" variant="primary">{{ $t('common.save') }}</b-button>
                   </div>
                 </div>
                 <b-form-invalid-feedback :state="state('email')">
@@ -109,23 +109,23 @@
             <div class="list-info">
               <div class="list-item" v-if="!showPhone">
                 <div>
-                  <label>Điện thoại</label>
+                  <label>{{ $t('account.phone') }}</label>
                   <p>{{ account.phone }}</p>
                 </div>
-                <b-button size="sm" variant="light" @click="editForm('phone')">Cập nhật</b-button>
+                <b-button size="sm" variant="light" @click="editForm('phone')">{{ $t('common.update') }}</b-button>
               </div>
               <b-form v-else novalidate @submit.prevent="phoneSubmit" class="form-profile">
                 <div class="account-inline-form">
                   <b-form-input
                     v-model.trim="frmInfo.phone"
                     type="tel"
-                    placeholder="Số điện thoại"
+                    :placeholder="$t('account.phonePlaceholder')"
                     required
                     :state="state('phone')"
                   />
                   <div class="account-inline-actions">
-                    <b-button type="button" variant="outline-secondary" @click="closeForm('phone')">Hủy</b-button>
-                    <b-button type="submit" variant="primary">Lưu</b-button>
+                    <b-button type="button" variant="outline-secondary" @click="closeForm('phone')">{{ $t('common.cancel') }}</b-button>
+                    <b-button type="submit" variant="primary">{{ $t('common.save') }}</b-button>
                   </div>
                 </div>
                 <b-form-invalid-feedback :state="state('phone')">
@@ -138,13 +138,13 @@
             <div class="list-info">
               <div class="list-item" v-if="!showPassword">
                 <div>
-                  <label>Đổi mật khẩu</label>
+                  <label>{{ $t('account.changePassword') }}</label>
                   <p class="text-muted">••••••••</p>
                 </div>
-                <b-button size="sm" variant="light" @click="editForm('password')">Cập nhật</b-button>
+                <b-button size="sm" variant="light" @click="editForm('password')">{{ $t('common.update') }}</b-button>
               </div>
               <b-form v-else novalidate @submit.prevent="passwordSubmit" class="form-profile">
-                <b-form-group label="Mật khẩu hiện tại">
+                <b-form-group :label="$t('account.currentPassword')">
                   <b-form-input v-model.trim="frmPassword.current" type="password" required :state="pwdState('current')" />
                   <b-form-invalid-feedback :state="pwdState('current')">
                     {{ passwordFeedback('current') }}
@@ -152,26 +152,26 @@
                 </b-form-group>
                 <b-form-row>
                   <b-col md="6">
-                    <b-form-group label="Mật khẩu mới">
+                    <b-form-group :label="$t('account.newPassword')">
                       <b-form-input v-model="frmPassword.new" type="password" required :state="pwdState('new')" />
-                      <small class="text-muted">Tối thiểu 8 ký tự</small>
+                      <small class="text-muted">{{ $t('account.minimumCharacters') }}</small>
                       <b-form-invalid-feedback :state="pwdState('new')">
-                        {{ passwordFeedback('new') || 'Mật khẩu mới tối thiểu 8 ký tự' }}
+                        {{ passwordFeedback('new') || $t('account.minimumPassword') }}
                       </b-form-invalid-feedback>
                     </b-form-group>
                   </b-col>
                   <b-col md="6">
-                    <b-form-group label="Nhập lại mật khẩu mới">
+                    <b-form-group :label="$t('account.confirmPassword')">
                       <b-form-input v-model="frmPassword.confirm" type="password" required :state="pwdState('confirm')" />
                       <b-form-invalid-feedback :state="pwdState('confirm')">
-                        {{ passwordFeedback('confirm') || 'Mật khẩu không khớp' }}
+                        {{ passwordFeedback('confirm') || $t('account.passwordMismatch') }}
                       </b-form-invalid-feedback>
                     </b-form-group>
                   </b-col>
                 </b-form-row>
                 <div class="account-form-actions">
-                  <b-button type="button" variant="outline-secondary" @click="closeForm('password')">Hủy</b-button>
-                  <b-button type="submit" variant="primary" :disabled="!canSubmitPassword">Đổi mật khẩu</b-button>
+                  <b-button type="button" variant="outline-secondary" @click="closeForm('password')">{{ $t('common.cancel') }}</b-button>
+                  <b-button type="submit" variant="primary" :disabled="!canSubmitPassword">{{ $t('account.changePassword') }}</b-button>
                 </div>
               </b-form>
             </div>
@@ -184,18 +184,18 @@
     <b-modal
       ref="profile-photo"
       centered
-      title="Cập nhật ảnh đại diện"
+      :title="$t('account.avatarTitle')"
       size="lg"
       no-close-on-backdrop
       @hidden="onHiddenMol"
     >
       <p class="text-muted text-center mb-2">
-        Ảnh đại diện sẽ hiển thị trên hồ sơ của bạn
+        {{ $t('account.avatarHint') }}
       </p>
 
       <div v-if="!imgLogo" class="upload-btn-wrapper">
         <i class="fas fa-cloud-upload-alt"></i>
-        <p>Chọn ảnh từ máy tính</p>
+        <p>{{ $t('account.chooseImage') }}</p>
         <input type="file" @change="onFileChange" accept="image/*" />
       </div>
 
@@ -209,8 +209,8 @@
 
       <template #modal-footer>
         <div class="modal-footer-actions">
-          <b-button variant="light" @click="closelModel">Hủy</b-button>
-          <b-button variant="primary" v-if="imgLogo" @click="submitModel">Cập nhật</b-button>
+          <b-button variant="light" @click="closelModel">{{ $t('common.cancel') }}</b-button>
+          <b-button variant="primary" v-if="imgLogo" @click="submitModel">{{ $t('common.update') }}</b-button>
         </div>
       </template>
     </b-modal>
@@ -292,11 +292,11 @@ export default {
     validateField(key, value) {
       let error = null
       if (key === 'name') {
-        error = required(value, 'Vui lòng nhập họ và tên')
+        error = required(value, this.$t('account.nameRequired'))
       } else if (key === 'email') {
-        error = required(value, 'Vui lòng nhập email') || email(value)
+        error = required(value, this.$t('account.emailRequired')) || email(value)
       } else if (key === 'phone') {
-        error = required(value, 'Vui lòng nhập số điện thoại') || phone(value)
+        error = required(value, this.$t('account.phoneRequired')) || phone(value)
       }
       if (error) {
         this.$set(this.errors, key, [error])
@@ -312,10 +312,10 @@ export default {
       axios.post('/setting/account/update', data, { meta: { suppressGlobalErrorToast: true } }).then(() => {
         Object.assign(this.account, data)
         this.closeForm(key)
-        this.$toastr && this.$toastr.success('Đã cập nhật thông tin tài khoản')
+        this.$toastr && this.$toastr.success(this.$t('account.updateSuccess'))
       })
       .catch(err => {
-        const msg = err?.response?.data?.message || err?.response?.data || 'Cập nhật thông tin thất bại'
+        const msg = err?.response?.data?.message || err?.response?.data || this.$t('account.updateFailed')
         if (key) { this.$set(this.errors, key, [msg]) }
         this.$toastr && this.$toastr.error(msg)
       })
@@ -376,7 +376,7 @@ export default {
             }
             
             this.closelModel()
-            this.$toastr && this.$toastr.success('Đã cập nhật ảnh đại diện')
+            this.$toastr && this.$toastr.success(this.$t('account.avatarSuccess'))
           })
       }, 'image/png')
     },
@@ -388,10 +388,10 @@ export default {
         .then(() => {
           this.frmPassword = { current: '', new: '', confirm: '' }
           this.passwordErrors = {}
-          this.$toastr && this.$toastr.success('Đã đổi mật khẩu thành công')
+          this.$toastr && this.$toastr.success(this.$t('account.passwordSuccess'))
         })
         .catch(err => {
-          const msg = err?.response?.data?.message || err?.response?.data || 'Đổi mật khẩu thất bại'
+          const msg = err?.response?.data?.message || err?.response?.data || this.$t('account.passwordFailed')
           this.$toastr && this.$toastr.error(msg)
         })
     },
@@ -399,17 +399,17 @@ export default {
     validatePasswordForm() {
       const errors = {}
       if (!(this.frmPassword.current || '').trim()) {
-        errors.current = ['Vui lòng nhập mật khẩu hiện tại']
+        errors.current = [this.$t('account.currentPasswordRequired')]
       }
       if (!this.frmPassword.new) {
-        errors.new = ['Vui lòng nhập mật khẩu mới']
+        errors.new = [this.$t('account.newPasswordRequired')]
       } else if (this.frmPassword.new.length < 8) {
-        errors.new = ['Mật khẩu mới tối thiểu 8 ký tự']
+        errors.new = [this.$t('account.minimumPassword')]
       }
       if (!this.frmPassword.confirm) {
-        errors.confirm = ['Vui lòng nhập lại mật khẩu mới']
+        errors.confirm = [this.$t('account.confirmPasswordRequired')]
       } else if (this.frmPassword.new !== this.frmPassword.confirm) {
-        errors.confirm = ['Mật khẩu không khớp']
+        errors.confirm = [this.$t('account.passwordMismatch')]
       }
       this.passwordErrors = errors
       return Object.keys(errors).length === 0

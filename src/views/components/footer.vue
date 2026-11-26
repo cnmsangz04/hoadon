@@ -1,7 +1,7 @@
 <template>
   <footer class="footer">
     <div class="container">
-      &copy; {{ new Date().getFullYear() }} Invoice - Hóa đơn điện tử.
+      &copy; {{ new Date().getFullYear() }} {{ $t('footer.copyright') }}
     </div>
   </footer>
 </template>

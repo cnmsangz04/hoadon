@@ -4,45 +4,45 @@
       <div class="brand-side">
         <div class="brand-inner">
           <img class="logo" :src="require('@/assets/images/logo/logo-hoadon.png')" alt="logo" />
-          <h2>Hóa đơn điện tử</h2>
-          <p class="text-muted">Quản lý hóa đơn nhanh chóng, an toàn và hiệu quả.</p>
+          <h2>{{ $t('brand.title') }}</h2>
+          <p class="text-muted">{{ $t('brand.description') }}</p>
         </div>
       </div>
 
       <div class="form-side d-flex justify-content-center align-items-center">
         <b-card class="auth-card shadow-lg">
           <div class="text-center mb-4">
-            <h4 class="mb-1">Đặt lại mật khẩu</h4>
-            <small class="text-muted">Nhập mật khẩu mới cho tài khoản của bạn</small>
+            <h4 class="mb-1">{{ $t('auth.resetTitle') }}</h4>
+            <small class="text-muted">{{ $t('auth.resetHint') }}</small>
           </div>
 
           <b-form @submit.prevent="submit">
-            <b-form-group label="Mật khẩu mới" :state="state('password')">
+            <b-form-group :label="$t('auth.newPassword')" :state="state('password')">
               <div class="input-with-icon">
                 <i class="bi bi-lock"></i>
-                <b-form-input v-model="password" :type="show ? 'text' : 'password'" :state="state('password')" required placeholder="Mật khẩu mới"></b-form-input>
+                <b-form-input v-model="password" :type="show ? 'text' : 'password'" :state="state('password')" required :placeholder="$t('auth.newPassword')"></b-form-input>
                </div>
               <b-form-invalid-feedback :state="state('password')">{{ errors.password }}</b-form-invalid-feedback>
             </b-form-group>
-            <b-form-group label="Nhập lại mật khẩu mới" :state="state('confirm')">
+            <b-form-group :label="$t('auth.confirmPassword')" :state="state('confirm')">
               <div class="input-with-icon">
                 <i class="bi bi-lock"></i>
-                <b-form-input v-model="confirm" :type="show ? 'text' : 'password'" :state="state('confirm')" required placeholder="Nhập lại mật khẩu"></b-form-input>
+                <b-form-input v-model="confirm" :type="show ? 'text' : 'password'" :state="state('confirm')" required :placeholder="$t('auth.confirmPasswordPlaceholder')"></b-form-input>
               </div>
               <b-form-invalid-feedback :state="state('confirm')">{{ errors.confirm }}</b-form-invalid-feedback>
             </b-form-group>
             <div class="d-flex justify-content-between mb-3">
-              <b-form-checkbox v-model="show">Hiển thị mật khẩu</b-form-checkbox>
+              <b-form-checkbox v-model="show">{{ $t('auth.displayPassword') }}</b-form-checkbox>
             </div>
             <b-button type="submit" block variant="primary" class="submit-btn"
                       :disabled="loading || !password || !confirm || password !== confirm">
-              <span v-if="loading"><b-spinner small class="me-2"/>Đang cập nhật...</span>
-              <span v-else>Cập nhật mật khẩu</span>
+              <span v-if="loading"><b-spinner small class="me-2"/>{{ $t('auth.updating') }}</span>
+              <span v-else>{{ $t('auth.updatePassword') }}</span>
             </b-button>
           </b-form>
 
           <div class="text-center mt-3">
-            <b-link @click.prevent="$router.push('/auth/login')">Quay lại đăng nhập</b-link>
+            <b-link @click.prevent="$router.push('/auth/login')">{{ $t('auth.backToLogin') }}</b-link>
           </div>
         </b-card>
       </div>

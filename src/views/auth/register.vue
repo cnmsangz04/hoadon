@@ -4,36 +4,36 @@
       <div class="brand-side">
         <div class="brand-inner">
           <img class="logo" :src="require('@/assets/images/logo/logo-hoadon.png')" alt="logo" />
-          <h2>Hóa đơn điện tử</h2>
-          <p class="text-muted">Gửi thông tin công ty để quản trị viên duyệt đăng ký.</p>
+          <h2>{{ $t('brand.title') }}</h2>
+          <p class="text-muted">{{ $t('auth.registerIntro') }}</p>
         </div>
       </div>
 
       <div class="form-side d-flex justify-content-center align-items-center">
         <b-card class="auth-card shadow-lg">
           <div class="text-center mb-4">
-            <h4 class="mb-1">Đăng ký</h4>
-            <small class="text-muted">Hồ sơ sẽ được lưu lại và chờ quản trị viên duyệt</small>
+            <h4 class="mb-1">{{ $t('auth.register') }}</h4>
+            <small class="text-muted">{{ $t('auth.registerHint') }}</small>
           </div>
 
           <b-form @submit.prevent="submit">
-            <b-form-group label="Tên công ty" :state="state('companyName')">
+            <b-form-group :label="$t('auth.companyName')" :state="state('companyName')">
               <div class="input-with-icon">
-                <b-form-input v-model.trim="form.companyName" :state="state('companyName')" required placeholder="Nhập tên công ty" />
+                <b-form-input v-model.trim="form.companyName" :state="state('companyName')" required :placeholder="$t('auth.companyNamePlaceholder')" />
               </div>
               <b-form-invalid-feedback :state="state('companyName')">{{ errors.companyName }}</b-form-invalid-feedback>
             </b-form-group>
 
-            <b-form-group label="Mã số thuế" :state="state('taxcode')">
+            <b-form-group :label="$t('auth.taxCode')" :state="state('taxcode')">
               <div class="input-with-icon">
-                <b-form-input v-model.trim="form.taxcode" :state="state('taxcode')" required placeholder="Nhập mã số thuế" />
+                <b-form-input v-model.trim="form.taxcode" :state="state('taxcode')" required :placeholder="$t('auth.taxCodePlaceholder')" />
               </div>
               <b-form-invalid-feedback :state="state('taxcode')">{{ errors.taxcode }}</b-form-invalid-feedback>
             </b-form-group>
 
-            <b-form-group label="Địa chỉ" :state="state('address')">
+            <b-form-group :label="$t('auth.address')" :state="state('address')">
               <div class="input-with-icon">
-                <b-form-input v-model.trim="form.address" :state="state('address')" required placeholder="Nhập địa chỉ công ty" />
+                <b-form-input v-model.trim="form.address" :state="state('address')" required :placeholder="$t('auth.addressPlaceholder')" />
               </div>
               <b-form-invalid-feedback :state="state('address')">{{ errors.address }}</b-form-invalid-feedback>
             </b-form-group>
@@ -42,35 +42,35 @@
               <b-col md="6">
                 <b-form-group label="Email" :state="state('email')">
                   <div class="input-with-icon">
-                    <b-form-input v-model.trim="form.email" type="email" :state="state('email')" required placeholder="Email công ty" />
+                    <b-form-input v-model.trim="form.email" type="email" :state="state('email')" required :placeholder="$t('auth.companyEmail')" />
                   </div>
                   <b-form-invalid-feedback :state="state('email')">{{ errors.email }}</b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
               <b-col md="6">
-                <b-form-group label="Điện thoại" :state="state('phone')">
+                <b-form-group :label="$t('auth.phone')" :state="state('phone')">
                   <div class="input-with-icon">
-                    <b-form-input v-model.trim="form.phone" :state="state('phone')" placeholder="Số điện thoại" />
+                    <b-form-input v-model.trim="form.phone" :state="state('phone')" :placeholder="$t('auth.phonePlaceholder')" />
                   </div>
                   <b-form-invalid-feedback :state="state('phone')">{{ errors.phone }}</b-form-invalid-feedback>
                 </b-form-group>
               </b-col>
             </b-form-row>
 
-            <b-form-group label="Người liên hệ">
+            <b-form-group :label="$t('auth.contact')">
               <div class="input-with-icon">
-                <b-form-input v-model.trim="form.contactName" placeholder="Tên người liên hệ" />
+                <b-form-input v-model.trim="form.contactName" :placeholder="$t('auth.contactPlaceholder')" />
               </div>
             </b-form-group>
 
             <b-button type="submit" block variant="primary" class="submit-btn" :disabled="loading || !canSubmit">
-              <span v-if="loading"><b-spinner small class="mr-2" />Đang gửi đăng ký...</span>
-              <span v-else>Gửi đăng ký</span>
+              <span v-if="loading"><b-spinner small class="mr-2" />{{ $t('auth.registering') }}</span>
+              <span v-else>{{ $t('auth.submitRegistration') }}</span>
             </b-button>
           </b-form>
 
           <div class="text-center mt-3">
-            <b-link @click.prevent="$router.push('/auth/login')">Quay lại đăng nhập</b-link>
+            <b-link @click.prevent="$router.push('/auth/login')">{{ $t('auth.backToLogin') }}</b-link>
           </div>
         </b-card>
       </div>

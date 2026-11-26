@@ -1,50 +1,61 @@
-export function required(value, message = 'Trường này là bắt buộc') {
-  if (value === null || value === undefined || String(value).trim() === '') return message
+import i18n from '@/i18n'
+
+function translatedMessage(key, values) {
+  return i18n.t(`validation.${key}`, values)
+}
+
+export function required(value, customMessage) {
+  const errorMessage = customMessage || translatedMessage('required')
+  if (value === null || value === undefined || String(value).trim() === '') return errorMessage
   return null
 }
 
-export function email(value, message = 'Email không đúng định dạng') {
+export function email(value, customMessage) {
+  const errorMessage = customMessage || translatedMessage('email')
   const text = String(value || '').trim()
   if (!text) return null
-  return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(text) ? null : message
+  return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(text) ? null : errorMessage
 }
 
-export function phone(value, message = 'Số điện thoại không đúng định dạng') {
+export function phone(value, customMessage) {
+  const errorMessage = customMessage || translatedMessage('phone')
   const text = String(value || '').trim()
   if (!text) return null
-  return /^(\+?84|0)[0-9]{8,10}$/.test(text.replace(/[\s.-]/g, '')) ? null : message
+  return /^(\+?84|0)[0-9]{8,10}$/.test(text.replace(/[\s.-]/g, '')) ? null : errorMessage
 }
 
-export function taxCode(value, message = 'Mã số thuế không đúng định dạng') {
+export function taxCode(value, customMessage) {
+  const errorMessage = customMessage || translatedMessage('taxCode')
   const text = String(value || '').trim()
   if (!text) return null
-  return /^(?:\d{10}(?:-?\d{3})?|\d{12})$/.test(text) ? null : message
+  return /^(?:\d{10}(?:-?\d{3})?|\d{12})$/.test(text) ? null : errorMessage
 }
 
-export function minLength(value, min, message) {
+export function minLength(value, min, customMessage) {
   const text = String(value || '')
   if (!text) return null
-  return text.length >= min ? null : (message || `Vui lòng nhập ít nhất ${min} ký tự`)
+  return text.length >= min ? null : (customMessage || translatedMessage('minLength', { min }))
 }
 
-export function numberRange(value, min, max, message) {
+export function numberRange(value, min, max, customMessage) {
   if (value === null || value === undefined || value === '') return null
   const n = Number(value)
-  if (!Number.isFinite(n)) return message || 'Giá trị phải là số'
-  if (min !== null && min !== undefined && n < min) return message || `Giá trị phải từ ${min} trở lên`
-  if (max !== null && max !== undefined && n > max) return message || `Giá trị không được lớn hơn ${max}`
+  if (!Number.isFinite(n)) return customMessage || translatedMessage('number')
+  if (min !== null && min !== undefined && n < min) return customMessage || translatedMessage('minimum', { min })
+  if (max !== null && max !== undefined && n > max) return customMessage || translatedMessage('maximum', { max })
   return null
 }
 
-export function url(value, message = 'Website không đúng định dạng') {
+export function url(value, customMessage) {
+  const errorMessage = customMessage || translatedMessage('url')
   const text = String(value || '').trim()
   if (!text) return null
   const normalized = /^https?:\/\//i.test(text) ? text : `https://${text}`
   try {
     const parsed = new URL(normalized)
-    return parsed.hostname.includes('.') ? null : message
+    return parsed.hostname.includes('.') ? null : errorMessage
   } catch {
-    return message
+    return errorMessage
   }
 }
 

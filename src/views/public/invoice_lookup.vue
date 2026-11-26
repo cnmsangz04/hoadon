@@ -1,13 +1,16 @@
 <template>
   <div class="auth-page">
+    <div class="lookup-language">
+      <LanguageSwitcher />
+    </div>
     <div class="auth-container">
       <div class="brand-side">
         <div class="brand-inner">
           <img class="logo" src="@/assets/images/logo/logo-hoadon.png" alt="logo" />
-          <h2>Hóa đơn điện tử</h2>
-          <p class="text-muted">Quản lý hóa đơn nhanh chóng, an toàn và hiệu quả.</p>
+          <h2>{{ $t('brand.title') }}</h2>
+          <p class="text-muted">{{ $t('brand.description') }}</p>
           <router-link class="brand-action" to="/auth/login">
-            Đăng nhập hệ thống
+            {{ $t('lookup.systemLogin') }}
           </router-link>
         </div>
       </div>
@@ -15,46 +18,46 @@
       <div class="form-side d-flex justify-content-center align-items-center">
         <b-card class="auth-card shadow-lg">
           <div class="text-center mb-4">
-            <h4 class="mb-1">Tra cứu hóa đơn</h4>
-            <small class="text-muted">Nhập mã tra cứu và mã số thuế bên bán</small>
+            <h4 class="mb-1">{{ $t('lookup.title') }}</h4>
+            <small class="text-muted">{{ $t('lookup.hint') }}</small>
           </div>
 
         <b-form @submit.prevent="lookup">
-          <b-form-group label="Mã tra cứu" label-for="lookup-code" :state="state('code')">
+          <b-form-group :label="$t('lookup.code')" label-for="lookup-code" :state="state('code')">
             <b-form-input
               id="lookup-code"
               v-model.trim="form.code"
               autocomplete="off"
-              placeholder="Ví dụ: 8D7F2A..."
+              :placeholder="$t('lookup.codePlaceholder')"
               :disabled="loading"
               :state="state('code')"
             />
             <b-form-invalid-feedback :state="state('code')">{{ errors.code }}</b-form-invalid-feedback>
           </b-form-group>
 
-          <b-form-group label="Mã số thuế bên bán" label-for="lookup-taxcode" :state="state('taxcode')">
+          <b-form-group :label="$t('lookup.sellerTaxCode')" label-for="lookup-taxcode" :state="state('taxcode')">
             <b-form-input
               id="lookup-taxcode"
               v-model.trim="form.taxcode"
               autocomplete="off"
-              placeholder="Nhập MST công ty phát hành"
+              :placeholder="$t('lookup.sellerTaxCodePlaceholder')"
               :disabled="loading"
               :state="state('taxcode')"
             />
             <b-form-invalid-feedback :state="state('taxcode')">{{ errors.taxcode }}</b-form-invalid-feedback>
           </b-form-group>
 
-          <b-form-group label="Mã xác nhận" label-for="lookup-captcha" :state="state('captcha')">
+          <b-form-group :label="$t('lookup.captcha')" label-for="lookup-captcha" :state="state('captcha')">
             <div class="captcha-row">
               <button
                 type="button"
                 class="captcha-image"
                 :disabled="captchaLoading || loading"
-                :title="captchaLoading ? 'Đang tạo mã xác nhận' : 'Tạo mã xác nhận mới'"
-                aria-label="Tạo mã xác nhận mới"
+                :title="captchaLoading ? $t('lookup.captchaLoading') : $t('lookup.newCaptcha')"
+                :aria-label="$t('lookup.newCaptcha')"
                 @click="loadCaptcha"
               >
-                <img v-if="captcha.image" :src="captcha.image" alt="Mã xác nhận" />
+                <img v-if="captcha.image" :src="captcha.image" :alt="$t('lookup.captchaAlt')" />
                 <b-spinner v-else-if="captchaLoading" small></b-spinner>
               </button>
               <b-form-input
@@ -62,7 +65,7 @@
                 v-model.trim="form.captchaAnswer"
                 autocomplete="off"
                 maxlength="5"
-                placeholder="Nhập 5 ký tự"
+                :placeholder="$t('lookup.captchaPlaceholder')"
                 :disabled="loading || captchaLoading"
                 :state="state('captcha')"
               />
@@ -70,7 +73,7 @@
                 type="button"
                 class="captcha-refresh"
                 :disabled="captchaLoading || loading"
-                aria-label="Tải lại mã xác nhận"
+                :aria-label="$t('lookup.reloadCaptcha')"
                 @click="loadCaptcha"
               >
                 <i class="fas fa-sync-alt"></i>
@@ -83,49 +86,49 @@
 
           <b-button type="submit" variant="primary" block :disabled="loading">
             <b-spinner v-if="loading" small class="mr-1"></b-spinner>
-            Tra cứu
+            {{ $t('lookup.submit') }}
           </b-button>
         </b-form>
 
         <div v-if="result" class="lookup-result mt-4">
           <div class="d-flex align-items-center justify-content-between flex-wrap mb-3">
-            <h5 class="mb-1">Kết quả tra cứu</h5>
+            <h5 class="mb-1">{{ $t('lookup.result') }}</h5>
             <b-badge :variant="statusVariant(result.status)" class="status-badge">
               {{ result.statusText }}
             </b-badge>
           </div>
 
           <dl class="lookup-info">
-            <dt>Bên bán</dt>
+            <dt>{{ $t('lookup.seller') }}</dt>
             <dd>{{ result.companyName || '-' }}</dd>
-            <dt>MST bên bán</dt>
+            <dt>{{ $t('lookup.sellerTaxCode') }}</dt>
             <dd>{{ result.companyTaxcode || '-' }}</dd>
-            <dt>Khách hàng</dt>
+            <dt>{{ $t('lookup.customer') }}</dt>
             <dd>{{ result.customerName || '-' }}</dd>
-            <dt>Số hóa đơn</dt>
+            <dt>{{ $t('lookup.invoiceNumber') }}</dt>
             <dd>{{ result.invoiceNo || '-' }}</dd>
-            <dt>Ký hiệu</dt>
+            <dt>{{ $t('lookup.serial') }}</dt>
             <dd>{{ formSerial }}</dd>
-            <dt>Ngày lập</dt>
+            <dt>{{ $t('lookup.issueDate') }}</dt>
             <dd>{{ formatDate(result.dateExport) }}</dd>
-            <dt>Thành tiền</dt>
+            <dt>{{ $t('lookup.amount') }}</dt>
             <dd>{{ formatMoney(result.amount, result.currency) }}</dd>
-            <dt>Mã CQT</dt>
+            <dt>{{ $t('lookup.taxAuthorityCode') }}</dt>
             <dd>{{ result.codeCqt || '-' }}</dd>
           </dl>
 
           <div class="lookup-actions">
             <b-button variant="outline-primary" :href="apiUrl(result.viewUrl)" target="_blank">
               <i class="fas fa-eye mr-1"></i>
-              Xem hóa đơn
+              {{ $t('lookup.viewInvoice') }}
             </b-button>
             <b-button variant="outline-success" :href="apiUrl(result.pdfUrl)" target="_blank">
               <i class="fas fa-file-pdf mr-1"></i>
-              Tải PDF
+              {{ $t('lookup.downloadPdf') }}
             </b-button>
             <b-button variant="outline-secondary" :href="apiUrl(result.xmlUrl)" target="_blank">
               <i class="fas fa-file-code mr-1"></i>
-              Tải XML
+              {{ $t('lookup.downloadXml') }}
             </b-button>
           </div>
         </div>
@@ -139,9 +142,12 @@
 <script>
 import axios from '@/plugins/axios'
 import { firstError, hasErrors, required, taxCode } from '@/utils/validators'
+import { currentIntlLocale } from '@/i18n'
+import LanguageSwitcher from '@/views/components/language_switcher.vue'
 
 export default {
   name: 'PublicInvoiceLookup',
+  components: { LanguageSwitcher },
   data() {
     return {
       loading: false,
@@ -178,15 +184,15 @@ export default {
     },
     validate() {
       this.errors = {
-        code: required(this.form.code, 'Vui lòng nhập mã tra cứu'),
+        code: required(this.form.code, this.$t('lookup.codeRequired')),
         taxcode: firstError([
-          required(this.form.taxcode, 'Vui lòng nhập mã số thuế bên bán'),
+          required(this.form.taxcode, this.$t('lookup.taxCodeRequired')),
           taxCode(this.form.taxcode),
         ]),
         captcha: firstError([
-          required(this.form.captchaAnswer, 'Vui lòng nhập mã xác nhận'),
+          required(this.form.captchaAnswer, this.$t('lookup.captchaRequired')),
           this.form.captchaAnswer && this.form.captchaAnswer.length !== 5
-            ? 'Mã xác nhận gồm 5 ký tự'
+            ? this.$t('lookup.captchaLength')
             : '',
         ]),
       }
@@ -199,7 +205,7 @@ export default {
       this.error = ''
       this.result = null
       if (!this.validate()) {
-        this.error = firstError(Object.values(this.errors)) || 'Vui lòng kiểm tra lại thông tin tra cứu'
+        this.error = firstError(Object.values(this.errors)) || this.$t('lookup.checkInformation')
         return
       }
       this.loading = true
@@ -214,7 +220,7 @@ export default {
         })
         this.result = data
       } catch (err) {
-        this.error = err?.response?.data?.message || 'Không tìm thấy hóa đơn phù hợp'
+        this.error = err?.response?.data?.message || this.$t('lookup.notFound')
         await this.loadCaptcha()
         this.form.captchaAnswer = ''
       } finally {
@@ -233,7 +239,7 @@ export default {
         this.captcha.token = data.token || ''
         this.captcha.image = data.image || ''
       } catch {
-        this.error = 'Không thể tải mã xác nhận. Vui lòng thử lại.'
+        this.error = this.$t('lookup.captchaLoadFailed')
       } finally {
         this.captchaLoading = false
       }
@@ -258,7 +264,7 @@ export default {
       try {
         const d = new Date(value)
         if (Number.isNaN(d.getTime())) return String(value)
-        return d.toLocaleDateString('vi-VN')
+        return d.toLocaleDateString(currentIntlLocale())
       } catch {
         return String(value)
       }
@@ -268,9 +274,9 @@ export default {
       if (!Number.isFinite(n)) return '-'
       const code = currency || 'VND'
       try {
-        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: code }).format(n)
+        return new Intl.NumberFormat(currentIntlLocale(), { style: 'currency', currency: code }).format(n)
       } catch {
-        return `${new Intl.NumberFormat('vi-VN').format(n)} ${code}`
+        return `${new Intl.NumberFormat(currentIntlLocale()).format(n)} ${code}`
       }
     },
   },
@@ -286,6 +292,13 @@ export default {
   justify-content: center;
   background: linear-gradient(135deg, #eef2f7 0%, #f8f9fb 50%, #f1f4f9 100%);
   padding: 16px;
+}
+
+.lookup-language {
+  position: fixed;
+  z-index: 1050;
+  top: 16px;
+  right: 16px;
 }
 
 .auth-container {

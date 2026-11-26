@@ -22,7 +22,7 @@
             <template v-if="item.children">
               <a href="#" class="menu-item" @click.prevent="toggle(index)">
                 <i :class="item.icon"></i>
-                <span class="label">{{ item.title }}</span>
+                <span class="label">{{ itemTitle(item) }}</span>
                 <i class="chev fas fa-chevron-down" :class="{ rotated: openIndex === index }"></i>
               </a>
 
@@ -31,7 +31,7 @@
                   <li v-for="(c, ci) in item.children" :key="ci" :class="{ active: isActive(c) }">
                     <router-link :to="c.to">
                       <i v-if="c.icon" :class="c.icon"></i>
-                      {{ c.title }}
+                      {{ itemTitle(c) }}
                     </router-link>
                   </li>
                 </ul>
@@ -43,7 +43,7 @@
             <template v-else>
               <router-link class="menu-item" :to="item.to">
                 <i :class="item.icon"></i>
-                <span class="label">{{ item.title }}</span>
+                <span class="label">{{ itemTitle(item) }}</span>
               </router-link>
             </template>
 
@@ -67,35 +67,35 @@ export default {
     return {
       openIndex: null,
       menu: [
-        { title: 'Trang admin', icon: 'fas fa-chart-line', to: '/administrator' },
-        { title: 'Công ty', icon: 'fas fa-building', to: '/administrator/company/list' },
-        { title: 'Duyệt đăng ký', icon: 'fas fa-user-check', to: '/administrator/company-registration/list' },
-        { title: 'Quản lý gói hóa đơn', icon: 'fas fa-box-open', to: '/administrator/invoice-package/list' },
-        { title: 'Hạn mức hóa đơn', icon: 'fas fa-file-invoice-dollar', to: '/administrator/buy-invoice/list' },
+        { titleKey: 'dashboard', icon: 'fas fa-chart-line', to: '/administrator' },
+        { titleKey: 'companies', icon: 'fas fa-building', to: '/administrator/company/list' },
+        { titleKey: 'registrations', icon: 'fas fa-user-check', to: '/administrator/company-registration/list' },
+        { titleKey: 'packages', icon: 'fas fa-box-open', to: '/administrator/invoice-package/list' },
+        { titleKey: 'limits', icon: 'fas fa-file-invoice-dollar', to: '/administrator/buy-invoice/list' },
         {
-          title: 'Mẫu hóa đơn',
+          titleKey: 'templates',
           icon: 'fas fa-file-contract',
           children: [
-            { title: 'Mẫu phát hành', icon: 'fas fa-list', to: '/administrator/form-invoice/list' },
-            { title: 'Phần tử mẫu hóa đơn', icon: 'fas fa-code', to: '/administrator/form-invoice/fields' },
+            { titleKey: 'publishedTemplates', icon: 'fas fa-list', to: '/administrator/form-invoice/list' },
+            { titleKey: 'templateFields', icon: 'fas fa-code', to: '/administrator/form-invoice/fields' },
           ],
         },
-        { title: 'Ngân hàng', icon: 'fas fa-piggy-bank', to: '/administrator/bank/list' },
-        { title: 'Cơ quan thuế', icon: 'fas fa-landmark', to: '/administrator/tax-authority/list' },
-        { title: 'Thuế suất', icon: 'fas fa-percent', to: '/administrator/vat-rate/list' },
-        { title: 'Email template', icon: 'fas fa-envelope', to: '/administrator/email-template/list' },
-        { title: 'Lịch sử gửi mail', icon: 'fas fa-history', to: '/administrator/email/mail-history' },
-        { title: 'Log hệ thống', icon: 'fas fa-file-alt', to: '/administrator/logs' },
-        { title: 'Telegram', icon: 'fas fa-paper-plane', to: '/administrator/telegram/config' },
-        { title: 'Báo cáo hóa đơn ngày', icon: 'fas fa-calendar-check', to: '/administrator/daily-invoice-report/config' },
-        { title: 'Phiên đăng nhập', icon: 'fas fa-desktop', to: '/administrator/sessions/list' },
-        { title: 'Dữ liệu database', icon: 'fas fa-database', to: '/administrator/database' },
+        { titleKey: 'banks', icon: 'fas fa-piggy-bank', to: '/administrator/bank/list' },
+        { titleKey: 'taxAuthorities', icon: 'fas fa-landmark', to: '/administrator/tax-authority/list' },
+        { titleKey: 'vatRates', icon: 'fas fa-percent', to: '/administrator/vat-rate/list' },
+        { titleKey: 'emailTemplates', icon: 'fas fa-envelope', to: '/administrator/email-template/list' },
+        { titleKey: 'mailHistory', icon: 'fas fa-history', to: '/administrator/email/mail-history' },
+        { titleKey: 'systemLogs', icon: 'fas fa-file-alt', to: '/administrator/logs' },
+        { titleKey: 'telegram', icon: 'fas fa-paper-plane', to: '/administrator/telegram/config' },
+        { titleKey: 'dailyReport', icon: 'fas fa-calendar-check', to: '/administrator/daily-invoice-report/config' },
+        { titleKey: 'sessions', icon: 'fas fa-desktop', to: '/administrator/sessions/list' },
+        { titleKey: 'database', icon: 'fas fa-database', to: '/administrator/database' },
         {
-          title: 'Phân quyền',
+          titleKey: 'accessControl',
           icon: 'fas fa-user-shield',
           children: [
-            { title: 'Quyền', to: '/administrator/access-control/permissions/list', icon: 'fas fa-key' },
-            { title: 'Nhóm quyền', to: '/administrator/access-control/permission-categories/list', icon: 'fas fa-layer-group' },
+            { titleKey: 'permissions', to: '/administrator/access-control/permissions/list', icon: 'fas fa-key' },
+            { titleKey: 'permissionGroups', to: '/administrator/access-control/permission-categories/list', icon: 'fas fa-layer-group' },
           ],
         },
       ]
@@ -131,6 +131,9 @@ export default {
   },
 
   methods: {
+    itemTitle(item) {
+      return this.$t(`menu.admin.${item.titleKey}`)
+    },
     toggle(index) {
       this.openIndex = this.openIndex === index ? null : index;
     },

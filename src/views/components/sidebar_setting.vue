@@ -26,14 +26,14 @@
             <template v-if="item.children">
               <a href="#" class="menu-item" @click.prevent="toggle(index)">
                 <i :class="item.icon"></i>
-                <span class="label">{{ item.title }}</span>
+                <span class="label">{{ itemTitle(item) }}</span>
                 <i class="chev fas fa-chevron-down" :class="{ rotated: openIndex === index }"></i>
               </a>
 
               <transition name="slide">
                 <ul class="sub" v-show="openIndex === index">
                   <li v-for="(c, ci) in item.children" :key="ci" :class="{ active: isActive(c) }">
-                    <router-link :to="c.to">{{ c.title }}</router-link>
+                    <router-link :to="c.to">{{ itemTitle(c) }}</router-link>
                   </li>
                 </ul>
               </transition>
@@ -44,7 +44,7 @@
             <template v-else>
               <router-link class="menu-item" :to="item.to">
                 <i :class="item.icon"></i>
-                <span class="label">{{ item.title }}</span>
+                <span class="label">{{ itemTitle(item) }}</span>
               </router-link>
             </template>
 
@@ -69,19 +69,19 @@ export default {
       openIndex: null,
       // Menu luôn hiển thị; quyền thao tác được backend kiểm tra theo từng API.
       menu: [
-        { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
-        { title: 'Tài khoản', icon: 'fas fa-user-cog', to: '/setting/account/list' },
-        { title: 'Hồ sơ', icon: 'fas fa-id-card', to: '/setting/profile/list' },
-        { title: 'Phiên đăng nhập', icon: 'fas fa-desktop', to: '/setting/sessions/list' },
-        { title: 'Thành viên', icon: 'fas fa-users', to: '/setting/member/list' },
+        { titleKey: 'home', icon: 'fas fa-home', to: '/' },
+        { titleKey: 'account', icon: 'fas fa-user-cog', to: '/setting/account/list' },
+        { titleKey: 'profile', icon: 'fas fa-id-card', to: '/setting/profile/list' },
+        { titleKey: 'sessions', icon: 'fas fa-desktop', to: '/setting/sessions/list' },
+        { titleKey: 'members', icon: 'fas fa-users', to: '/setting/member/list' },
         {
-          title: 'Bảo mật',
+          titleKey: 'security',
           icon: 'fas fa-shield-alt',
           children: [
-            { title: 'Bảo mật bằng IP', to: '/setting/security/ip' }
+            { titleKey: 'ipSecurity', to: '/setting/security/ip' }
           ]
         },
-        { title: 'Lịch sử đăng nhập', icon: 'fas fa-history', to: '/setting/login-history/list' }
+        { titleKey: 'loginHistory', icon: 'fas fa-history', to: '/setting/login-history/list' }
       ]
     };
   },
@@ -113,6 +113,9 @@ export default {
   },
 
   methods: {
+    itemTitle(item) {
+      return this.$t(`menu.settings.${item.titleKey}`)
+    },
     toggle(index) {
       this.openIndex = this.openIndex === index ? null : index;
     },

@@ -9,11 +9,11 @@
       </div>
 
       <div v-if="isCompanyPending" class="pending-company">
-        Tài khoản công ty đang chờ kích hoạt. Vui lòng mua gói hóa đơn để kích hoạt.
+        {{ $t('menu.pending') }}
       </div>
 
       <div v-else class="search">
-        <input v-model="search" type="search" placeholder="Tìm kiếm..." aria-label="Tìm kiếm menu" />
+        <input v-model="search" type="search" :placeholder="$t('common.search')" :aria-label="$t('menu.searchLabel')" />
       </div>
 
       <!-- Trình đơn -->
@@ -26,7 +26,7 @@
             <template v-if="item.children">
               <a href="#" class="menu-item" @click.prevent="toggle(index)" :aria-expanded="isOpen === index">
                 <i :class="item.icon"></i>
-                <span class="label">{{ item.title }}</span>
+                <span class="label">{{ itemTitle(item) }}</span>
                 <i class="chev fas fa-chevron-down" :class="{ rotated: isOpen === index }" aria-hidden="true"></i>
               </a>
 
@@ -35,7 +35,7 @@
                   <li v-for="(c, ci) in item.children" :key="ci" :class="{ active: isActive(c) }">
                     <router-link :to="c.to">
                       <i v-if="c.icon" :class="c.icon"></i>
-                      <span>{{ c.title }}</span>
+                      <span>{{ itemTitle(c) }}</span>
                     </router-link>
                   </li>
                 </ul>
@@ -46,7 +46,7 @@
             <template v-else>
               <router-link class="menu-item" :to="item.to">
                 <i :class="item.icon"></i>
-                <span class="label">{{ item.title }}</span>
+                <span class="label">{{ itemTitle(item) }}</span>
               </router-link>
             </template>
 
@@ -69,87 +69,87 @@ export default {
       isOpen: null,
       search: '',
       menuItems: [
-        { title: 'Trang chủ', icon: 'fas fa-home', to: '/' },
-        { title: 'Gói hóa đơn', icon: 'fas fa-box-open', to: '/invoice-packages', pendingAllowed: true },
+        { titleKey: 'home', icon: 'fas fa-home', to: '/' },
+        { titleKey: 'invoicePackages', icon: 'fas fa-box-open', to: '/invoice-packages', pendingAllowed: true },
         {
-          title: 'Đăng ký phát hành',
+          titleKey: 'registration',
           icon: 'fas fa-file-signature',
           children: [
-            { title: 'Tờ khai hóa đơn điện tử', icon: 'fas fa-file-alt', to: '/register/invoice/list' },
+            { titleKey: 'electronicInvoiceDeclaration', icon: 'fas fa-file-alt', to: '/register/invoice/list' },
           ],
         },
-        { title: 'Mẫu hóa đơn', icon: 'fas fa-file-contract', to: '/form-invoice/list' },
+        { titleKey: 'invoiceTemplates', icon: 'fas fa-file-contract', to: '/form-invoice/list' },
         {
-          title: 'Hóa đơn',
+          titleKey: 'invoices',
           icon: 'fas fa-file-invoice-dollar',
           children: [
-            { title: 'Hóa đơn GTGT', icon: 'fas fa-receipt', to: '/invoice/vat-invoice/list' },
-            { title: 'Hóa đơn bán hàng', icon: 'fas fa-file-invoice', to: '/invoice/sales-invoice/list' },
+            { titleKey: 'vatInvoices', icon: 'fas fa-receipt', to: '/invoice/vat-invoice/list' },
+            { titleKey: 'salesInvoices', icon: 'fas fa-file-invoice', to: '/invoice/sales-invoice/list' },
           ],
         },
         {
-          title: 'Phiếu xuất kho',
+          titleKey: 'stockIssues',
           icon: 'fas fa-warehouse',
           children: [
-            { title: 'Vận chuyển nội bộ', icon: 'fas fa-truck-loading', to: '/stock-issue/internal-transport/list' },
-            { title: 'Hàng gửi bán đại lý', icon: 'fas fa-dolly', to: '/stock-issue/consignment/list' },
+            { titleKey: 'internalTransport', icon: 'fas fa-truck-loading', to: '/stock-issue/internal-transport/list' },
+            { titleKey: 'consignment', icon: 'fas fa-dolly', to: '/stock-issue/consignment/list' },
           ],
         },
         {
-          title: 'Import dữ liệu',
+          titleKey: 'dataImport',
           icon: 'fas fa-file-import',
           children: [
-            { title: 'Import hóa đơn', icon: 'fas fa-file-excel', to: '/imports/invoice', menuKey: 'invoice-import' },
-            { title: 'Import phiếu xuất kho', icon: 'fas fa-file-excel', to: '/imports/stock-issue', menuKey: 'stock-import' },
-            { title: 'Import khách hàng', icon: 'fas fa-users', to: '/imports/customer' },
-            { title: 'Import sản phẩm', icon: 'fas fa-box', to: '/imports/product' },
+            { titleKey: 'importInvoices', icon: 'fas fa-file-excel', to: '/imports/invoice', menuKey: 'invoice-import' },
+            { titleKey: 'importStockIssues', icon: 'fas fa-file-excel', to: '/imports/stock-issue', menuKey: 'stock-import' },
+            { titleKey: 'importCustomers', icon: 'fas fa-users', to: '/imports/customer' },
+            { titleKey: 'importProducts', icon: 'fas fa-box', to: '/imports/product' },
           ],
         },
         {
-          title: 'Xử lý hóa đơn',
+          titleKey: 'invoiceProcessing',
           icon: 'fas fa-tasks',
           children: [
-            { title: 'Thông báo hóa đơn sai sót', icon: 'fas fa-exclamation-triangle', to: '/error-message/invoice/list', menuKey: 'invoice-error-message' },
-            { title: 'Hóa đơn thay thế', icon: 'fas fa-exchange-alt', to: '/invoice/replace' },
-            { title: 'Hóa đơn điều chỉnh', icon: 'fas fa-sliders-h', to: '/invoice/adjust' },
+            { titleKey: 'invoiceErrors', icon: 'fas fa-exclamation-triangle', to: '/error-message/invoice/list', menuKey: 'invoice-error-message' },
+            { titleKey: 'replacementInvoices', icon: 'fas fa-exchange-alt', to: '/invoice/replace' },
+            { titleKey: 'adjustedInvoices', icon: 'fas fa-sliders-h', to: '/invoice/adjust' },
           ],
         },
         {
-          title: 'Xử lý phiếu xuất kho',
+          titleKey: 'stockIssueProcessing',
           icon: 'fas fa-tools',
           children: [
-            { title: 'Thông báo phiếu xuất kho sai sót', icon: 'fas fa-exclamation-triangle', to: '/error-message/stock-issue/list', menuKey: 'stock-error-message' },
-            { title: 'Phiếu xuất kho thay thế', icon: 'fas fa-exchange-alt', to: '/stock-issue/replace' },
-            { title: 'Phiếu xuất kho điều chỉnh', icon: 'fas fa-sliders-h', to: '/stock-issue/adjust' },
+            { titleKey: 'stockIssueErrors', icon: 'fas fa-exclamation-triangle', to: '/error-message/stock-issue/list', menuKey: 'stock-error-message' },
+            { titleKey: 'replacementStockIssues', icon: 'fas fa-exchange-alt', to: '/stock-issue/replace' },
+            { titleKey: 'adjustedStockIssues', icon: 'fas fa-sliders-h', to: '/stock-issue/adjust' },
           ],
         },
         {
-          title: 'Báo cáo',
+          titleKey: 'reports',
           icon: 'fas fa-chart-bar',
           children: [
-            { title: 'Báo cáo hóa đơn GTGT', icon: 'fas fa-chart-bar', to: '/reports/invoice/list' },
-            { title: 'Báo cáo bán hàng', icon: 'fas fa-chart-line', to: '/reports/sales-invoice/list' },
-            { title: 'Báo cáo vận chuyển nội bộ', icon: 'fas fa-chart-line', to: '/reports/stock-issue/internal-transport/list' },
-            { title: 'Báo cáo hàng gửi bán đại lý', icon: 'fas fa-chart-line', to: '/reports/stock-issue/consignment/list' },
+            { titleKey: 'vatInvoiceReport', icon: 'fas fa-chart-bar', to: '/reports/invoice/list' },
+            { titleKey: 'salesReport', icon: 'fas fa-chart-line', to: '/reports/sales-invoice/list' },
+            { titleKey: 'internalTransportReport', icon: 'fas fa-chart-line', to: '/reports/stock-issue/internal-transport/list' },
+            { titleKey: 'consignmentReport', icon: 'fas fa-chart-line', to: '/reports/stock-issue/consignment/list' },
           ],
         },
         {
-          title: 'Danh mục',
+          titleKey: 'categories',
           icon: 'fas fa-th-list',
           children: [
-            { title: 'Khách hàng', icon: 'fas fa-users', to: '/categories/customer/list' },
-            { title: 'Sản phẩm', icon: 'fas fa-box', to: '/categories/product/list' },
+            { titleKey: 'customers', icon: 'fas fa-users', to: '/categories/customer/list' },
+            { titleKey: 'products', icon: 'fas fa-box', to: '/categories/product/list' },
           ],
         },
         {
-          title: 'Email gửi hóa đơn',
+          titleKey: 'invoiceEmail',
           icon: 'fas fa-envelope',
           children: [
-            { title: 'Máy chủ gửi mail', icon: 'fas fa-server', to: '/email/mail-server' },
-            { title: 'Lịch sử gửi mail', icon: 'fas fa-history', to: '/email/mail-history' },
+            { titleKey: 'mailServer', icon: 'fas fa-server', to: '/email/mail-server' },
+            { titleKey: 'mailHistory', icon: 'fas fa-history', to: '/email/mail-history' },
           ],
         },
-        { title: 'Cài đặt', icon: 'fas fa-cog', to: '/setting' },
+        { titleKey: 'settings', icon: 'fas fa-cog', to: '/setting' },
       ],
     };
   },
@@ -163,10 +163,10 @@ export default {
       return source
         .map((item) => {
           if (!item.children) {
-            return item.title.toLowerCase().indexOf(q) !== -1 ? item : null;
+            return this.itemTitle(item).toLowerCase().indexOf(q) !== -1 ? item : null;
           }
-          const matchedChildren = item.children.filter((c) => c.title.toLowerCase().indexOf(q) !== -1);
-          if (item.title.toLowerCase().indexOf(q) !== -1) return item;
+          const matchedChildren = item.children.filter((c) => this.itemTitle(c).toLowerCase().indexOf(q) !== -1);
+          if (this.itemTitle(item).toLowerCase().indexOf(q) !== -1) return item;
           return matchedChildren.length ? { ...item, children: matchedChildren } : null;
         })
         .filter(Boolean);
@@ -193,6 +193,9 @@ export default {
     }
   },
   methods: {
+    itemTitle(item) {
+      return this.$t(`menu.customer.${item.titleKey}`)
+    },
     toggle(index) {
       this.isOpen = this.isOpen === index ? null : index;
     },

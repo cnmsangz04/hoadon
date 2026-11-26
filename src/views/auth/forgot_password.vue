@@ -4,45 +4,45 @@
       <div class="brand-side">
         <div class="brand-inner">
           <img class="logo" :src="require('@/assets/images/logo/logo-hoadon.png')" alt="logo" />
-          <h2>Hóa đơn điện tử</h2>
-          <p class="text-muted">Quản lý hóa đơn nhanh chóng, an toàn và hiệu quả.</p>
+          <h2>{{ $t('brand.title') }}</h2>
+          <p class="text-muted">{{ $t('brand.description') }}</p>
         </div>
       </div>
 
       <div class="form-side d-flex justify-content-center align-items-center">
         <b-card class="auth-card shadow-lg">
           <div class="text-center mb-4">
-            <h4 class="mb-1">Quên mật khẩu</h4>
-            <small class="text-muted">Nhập tài khoản và email để nhận liên kết đặt lại mật khẩu</small>
+            <h4 class="mb-1">{{ $t('auth.forgotTitle') }}</h4>
+            <small class="text-muted">{{ $t('auth.forgotHint') }}</small>
           </div>
 
           <b-form @submit.prevent="submit">
-            <b-form-group label="Tài khoản" :state="state('username')">
+            <b-form-group :label="$t('auth.username')" :state="state('username')">
               <div class="input-with-icon">
                 <i class="bi bi-person"></i>
-                <b-form-input v-model.trim="username" :state="state('username')" required placeholder="Nhập tài khoản"></b-form-input>
+                <b-form-input v-model.trim="username" :state="state('username')" required :placeholder="$t('auth.usernamePlaceholder')"></b-form-input>
               </div>
               <b-form-invalid-feedback :state="state('username')">{{ errors.username }}</b-form-invalid-feedback>
             </b-form-group>
 
-            <b-form-group label="Email tài khoản" :state="state('companyEmail')">
+            <b-form-group :label="$t('auth.accountEmail')" :state="state('companyEmail')">
               <div class="input-with-icon">
                 <i class="bi bi-envelope"></i>
-                <b-form-input v-model.trim="companyEmail" type="email" :state="state('companyEmail')" required placeholder="Nhập email tài khoản"></b-form-input>
+                <b-form-input v-model.trim="companyEmail" type="email" :state="state('companyEmail')" required :placeholder="$t('auth.accountEmailPlaceholder')"></b-form-input>
               </div>
               <b-form-invalid-feedback :state="state('companyEmail')">{{ errors.companyEmail }}</b-form-invalid-feedback>
             </b-form-group>
 
             <b-button type="submit" block variant="primary" class="submit-btn"
                       :disabled="loading || !username || !companyEmail">
-              <span v-if="loading"><b-spinner small class="me-2"/>Đang gửi...</span>
-              <span v-else>Gửi email cho tôi</span>
+              <span v-if="loading"><b-spinner small class="me-2"/>{{ $t('auth.sending') }}</span>
+              <span v-else>{{ $t('auth.sendEmail') }}</span>
             </b-button>
           </b-form>
 
           <div class="d-flex justify-content-between mt-3">
-            <b-link @click.prevent="resend" :disabled="resending || !canResend">Gửi lại email</b-link>
-            <b-link @click.prevent="$router.push('/auth/login')">Quay lại đăng nhập</b-link>
+            <b-link @click.prevent="resend" :disabled="resending || !canResend">{{ $t('auth.resendEmail') }}</b-link>
+            <b-link @click.prevent="$router.push('/auth/login')">{{ $t('auth.backToLogin') }}</b-link>
           </div>
 
           <div class="text-center mt-3">

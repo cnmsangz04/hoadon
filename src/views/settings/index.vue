@@ -2,31 +2,31 @@
   <div class="container-fluid py-3 settings-home">
     <div class="page-head">
       <div>
-        <h4>Cấu hình</h4>
-        <p>Quản lý thông tin tài khoản, hồ sơ doanh nghiệp và bảo mật đăng nhập.</p>
+        <h4>{{ $t('settingsHome.title') }}</h4>
+        <p>{{ $t('settingsHome.description') }}</p>
       </div>
     </div>
 
     <div class="settings-grid">
       <router-link class="settings-tile" to="/setting/account/list">
         <i class="fas fa-user-cog"></i>
-        <span>Tài khoản</span>
-        <small>Cập nhật thông tin cá nhân và mật khẩu.</small>
+        <span>{{ $t('header.account') }}</span>
+        <small>{{ $t('settingsHome.accountHint') }}</small>
       </router-link>
       <router-link class="settings-tile" to="/setting/profile/list">
         <i class="fas fa-id-card"></i>
-        <span>Hồ sơ</span>
-        <small>Thông tin doanh nghiệp và dữ liệu xuất hóa đơn.</small>
+        <span>{{ $t('settingsHome.profile') }}</span>
+        <small>{{ $t('settingsHome.profileHint') }}</small>
       </router-link>
       <router-link class="settings-tile" to="/setting/sessions/list">
         <i class="fas fa-desktop"></i>
-        <span>Phiên đăng nhập</span>
-        <small>Theo dõi các thiết bị đang đăng nhập.</small>
+        <span>{{ $t('settingsHome.sessions') }}</span>
+        <small>{{ $t('settingsHome.sessionsHint') }}</small>
       </router-link>
       <router-link class="settings-tile" to="/setting/security/ip">
         <i class="fas fa-shield-alt"></i>
-        <span>Bảo mật IP</span>
-        <small>Giới hạn truy cập theo địa chỉ IP tin cậy.</small>
+        <span>{{ $t('settingsHome.ipSecurity') }}</span>
+        <small>{{ $t('settingsHome.ipSecurityHint') }}</small>
       </router-link>
     </div>
   </div>

@@ -5,11 +5,11 @@
         <i class="fas fa-hourglass-half"></i>
       </div>
       <div>
-        <h2>Tài khoản đang chờ kích hoạt</h2>
-        <p>Công ty của bạn đã đăng ký thành công. Vui lòng mua gói hóa đơn để hệ thống tự kích hoạt tài khoản và mở các chức năng sử dụng hóa đơn.</p>
+        <h2>{{ $t('dashboard.pendingTitle') }}</h2>
+        <p>{{ $t('dashboard.pendingText') }}</p>
         <b-button variant="success" class="mt-3" to="/invoice-packages">
           <i class="fas fa-box-open mr-1"></i>
-          Xem gói hóa đơn
+          {{ $t('dashboard.viewPackages') }}
         </b-button>
       </div>
     </div>
@@ -18,23 +18,23 @@
   <div v-else class="dashboard-page">
     <div class="dashboard-head">
       <div>
-        <h2>Thống kê hóa đơn</h2>
+        <h2>{{ $t('dashboard.title') }}</h2>
       </div>
       <div class="head-actions">
         <b-button size="sm" variant="outline-primary" :disabled="loading" @click="loadStats">
           <i class="fas fa-sync-alt mr-1"></i>
-          Làm mới
+          {{ $t('common.refresh') }}
         </b-button>
         <b-button size="sm" variant="success" to="/invoice-packages">
           <i class="fas fa-plus-circle mr-1"></i>
-          Mua thêm hóa đơn
+          {{ $t('dashboard.buyMore') }}
         </b-button>
       </div>
     </div>
 
     <div v-if="loading" class="loading-box">
-      <b-spinner label="Đang tải..."></b-spinner>
-      <div class="text-muted mt-2">Đang tải dữ liệu thống kê</div>
+      <b-spinner :label="$t('common.loading')"></b-spinner>
+      <div class="text-muted mt-2">{{ $t('common.loadingData') }}</div>
     </div>
 
     <template v-else>
@@ -45,7 +45,7 @@
             {{ limitAlert.text }}
           </span>
           <b-button v-if="limitAlert.action" size="sm" variant="success" to="/invoice-packages" class="mt-2 mt-md-0">
-            Mua gói ngay
+            {{ $t('dashboard.buyNow') }}
           </b-button>
         </div>
       </b-alert>
@@ -67,7 +67,7 @@
         <section class="dashboard-card usage-card">
           <div class="section-head">
             <div>
-              <h5>Hạn mức hóa đơn</h5>
+              <h5>{{ $t('dashboard.limit') }}</h5>
               <span>{{ usageSummary }}</span>
             </div>
             <b-badge :variant="limitStatus.variant">{{ limitStatus.text }}</b-badge>
@@ -75,22 +75,22 @@
 
           <div class="usage-number">
             <strong>{{ formatPercentage(usagePercentage) }}</strong>
-            <span>đã sử dụng</span>
+            <span>{{ $t('dashboard.used') }}</span>
           </div>
 
           <b-progress height="12px" :value="usagePercentage" :variant="progressVariant" class="mb-3"></b-progress>
 
           <div class="quota-grid">
             <div>
-              <span>Đã dùng</span>
+              <span>{{ $t('dashboard.usedLabel') }}</span>
               <strong>{{ formatNumber(invoiceStats.usedInvoices) }}</strong>
             </div>
             <div>
-              <span>Còn lại</span>
+              <span>{{ $t('dashboard.remaining') }}</span>
               <strong>{{ formatNumber(invoiceStats.remainingInvoices) }}</strong>
             </div>
             <div>
-              <span>Tổng hạn mức</span>
+              <span>{{ $t('dashboard.totalLimit') }}</span>
               <strong>{{ formatNumber(invoiceStats.totalInvoices) }}</strong>
             </div>
           </div>
@@ -99,8 +99,8 @@
         <section class="dashboard-card insight-card">
           <div class="section-head">
             <div>
-              <h5>Tổng quan năm nay</h5>
-              <span>Các chỉ số phát hành hóa đơn trong năm hiện tại</span>
+              <h5>{{ $t('dashboard.currentYear') }}</h5>
+              <span>{{ $t('dashboard.currentYearHint') }}</span>
             </div>
           </div>
 
@@ -110,7 +110,7 @@
                 <i class="fas fa-file-signature"></i>
               </div>
               <div>
-                <span>Hóa đơn đã phát hành</span>
+                <span>{{ $t('dashboard.issued') }}</span>
                 <strong>{{ formatNumber(invoiceStats.issuedThisYear) }}</strong>
               </div>
             </div>
@@ -119,7 +119,7 @@
                 <i class="fas fa-coins"></i>
               </div>
               <div>
-                <span>Giá trị phát hành</span>
+                <span>{{ $t('dashboard.issuedValue') }}</span>
                 <strong>{{ formatCurrency(invoiceStats.valueThisYear) }}</strong>
               </div>
             </div>
@@ -128,7 +128,7 @@
                 <i class="fas fa-chart-line"></i>
               </div>
               <div>
-                <span>Giá trị trung bình/hóa đơn</span>
+                <span>{{ $t('dashboard.averageValue') }}</span>
                 <strong>{{ formatCurrency(averageInvoiceValue) }}</strong>
               </div>
             </div>
@@ -137,8 +137,8 @@
                 <i class="fas fa-file-invoice"></i>
               </div>
               <div>
-                <span>Hóa đơn bán hàng</span>
-                <strong>{{ formatNumber(invoiceStats.salesIssuedThisYear) }} hóa đơn / {{ formatCurrency(invoiceStats.salesValueThisYear) }}</strong>
+                <span>{{ $t('dashboard.salesInvoices') }}</span>
+                <strong>{{ formatNumber(invoiceStats.salesIssuedThisYear) }} {{ $t('common.invoiceUnit') }} / {{ formatCurrency(invoiceStats.salesValueThisYear) }}</strong>
               </div>
             </div>
           </div>
@@ -149,36 +149,36 @@
         <router-link class="quick-action" to="/invoice/create">
           <i class="fas fa-file-invoice"></i>
           <div>
-            <strong>Lập hóa đơn</strong>
-            <span>Tạo nhanh hóa đơn GTGT mới</span>
+            <strong>{{ $t('dashboard.createInvoice') }}</strong>
+            <span>{{ $t('dashboard.createInvoiceHint') }}</span>
           </div>
         </router-link>
         <router-link class="quick-action" to="/invoice/vat-invoice/list">
           <i class="fas fa-list"></i>
           <div>
-            <strong>Danh sách hóa đơn</strong>
-            <span>Kiểm tra hóa đơn đã tạo</span>
+            <strong>{{ $t('dashboard.invoiceList') }}</strong>
+            <span>{{ $t('dashboard.invoiceListHint') }}</span>
           </div>
         </router-link>
         <router-link class="quick-action" to="/invoice/sales-invoice/create">
           <i class="fas fa-file-invoice"></i>
           <div>
-            <strong>Lập hóa đơn bán hàng</strong>
-            <span>Tạo hóa đơn bán hàng mới</span>
+            <strong>{{ $t('dashboard.createSalesInvoice') }}</strong>
+            <span>{{ $t('dashboard.createSalesInvoiceHint') }}</span>
           </div>
         </router-link>
         <router-link class="quick-action" to="/invoice/sales-invoice/list">
           <i class="fas fa-list"></i>
           <div>
-            <strong>Danh sách bán hàng</strong>
-            <span>Kiểm tra hóa đơn bán hàng</span>
+            <strong>{{ $t('dashboard.salesList') }}</strong>
+            <span>{{ $t('dashboard.salesListHint') }}</span>
           </div>
         </router-link>
         <router-link class="quick-action" to="/reports/invoice/list">
           <i class="fas fa-chart-bar"></i>
           <div>
-            <strong>Báo cáo hóa đơn</strong>
-            <span>Xem báo cáo và đối soát</span>
+            <strong>{{ $t('dashboard.invoiceReport') }}</strong>
+            <span>{{ $t('dashboard.invoiceReportHint') }}</span>
           </div>
         </router-link>
       </div>
@@ -188,6 +188,7 @@
 
 <script>
 import axios from '@/plugins/axios'
+import { currentIntlLocale } from '@/i18n'
 
 export default {
   name: 'CustomerIndex',
@@ -238,22 +239,22 @@ export default {
     },
     limitStatus() {
       if (this.totalInvoices <= 0) {
-        return { text: 'Chưa có hạn mức', variant: 'secondary' }
+        return { text: this.$t('dashboard.noLimit'), variant: 'secondary' }
       }
       if (this.remainingPercentage <= 10) {
-        return { text: 'Sắp hết', variant: 'danger' }
+        return { text: this.$t('dashboard.almostEmpty'), variant: 'danger' }
       }
       if (this.remainingPercentage <= 25) {
-        return { text: 'Cần theo dõi', variant: 'warning' }
+        return { text: this.$t('dashboard.needsAttention'), variant: 'warning' }
       }
-      return { text: 'Ổn định', variant: 'success' }
+      return { text: this.$t('dashboard.stable'), variant: 'success' }
     },
     limitAlert() {
       if (this.totalInvoices <= 0) {
         return {
           variant: 'warning',
           icon: 'fas fa-info-circle',
-          text: 'Công ty chưa có hạn mức hóa đơn. Vui lòng mua gói hóa đơn để bắt đầu sử dụng.',
+          text: this.$t('dashboard.noLimitAlert'),
           action: true,
         }
       }
@@ -261,7 +262,7 @@ export default {
         return {
           variant: 'danger',
           icon: 'fas fa-exclamation-triangle',
-          text: `Hạn mức chỉ còn ${this.formatNumber(this.remainingInvoices)} hóa đơn. Bạn nên mua thêm để không gián đoạn phát hành.`,
+          text: this.$t('dashboard.lowLimitAlert', { remaining: this.formatNumber(this.remainingInvoices) }),
           action: true,
         }
       }
@@ -269,61 +270,61 @@ export default {
         return {
           variant: 'warning',
           icon: 'fas fa-exclamation-circle',
-          text: `Hạn mức còn ${this.formatPercentage(this.remainingPercentage)}. Hãy theo dõi để chủ động bổ sung khi cần.`,
+          text: this.$t('dashboard.watchLimitAlert', { remaining: this.formatPercentage(this.remainingPercentage) }),
           action: false,
         }
       }
       return null
     },
     usageSummary() {
-      if (this.totalInvoices <= 0) return 'Chưa phát sinh hạn mức hóa đơn'
-      return `${this.formatNumber(this.usedInvoices)} / ${this.formatNumber(this.totalInvoices)} hóa đơn`
+      if (this.totalInvoices <= 0) return this.$t('dashboard.noLimitSummary')
+      return `${this.formatNumber(this.usedInvoices)} / ${this.formatNumber(this.totalInvoices)} ${this.$t('common.invoiceUnit')}`
     },
     kpiCards() {
       return [
         {
           key: 'total',
-          label: 'Tổng hóa đơn đã mua',
+          label: this.$t('dashboard.totalPurchased'),
           value: this.formatNumber(this.invoiceStats.totalInvoices),
-          note: 'Hạn mức đang có',
+          note: this.$t('dashboard.availableLimit'),
           icon: 'fas fa-layer-group',
           tone: 'tone-primary',
         },
         {
           key: 'used',
-          label: 'Đã sử dụng',
+          label: this.$t('dashboard.usedLabel'),
           value: this.formatNumber(this.invoiceStats.usedInvoices),
-          note: `${this.formatPercentage(this.usagePercentage)} tổng hạn mức`,
+          note: this.$t('dashboard.totalLimitPercent', { value: this.formatPercentage(this.usagePercentage) }),
           icon: 'fas fa-check-circle',
           tone: 'tone-success',
         },
         {
           key: 'remaining',
-          label: 'Còn lại',
+          label: this.$t('dashboard.remaining'),
           value: this.formatNumber(this.invoiceStats.remainingInvoices),
-          note: `${this.formatPercentage(this.remainingPercentage)} chưa dùng`,
+          note: this.$t('dashboard.unusedPercent', { value: this.formatPercentage(this.remainingPercentage) }),
           icon: 'fas fa-wallet',
           tone: 'tone-warning',
         },
         {
           key: 'issued',
-          label: 'Phát hành năm nay',
+          label: this.$t('dashboard.issuedThisYear'),
           value: this.formatNumber(this.invoiceStats.issuedThisYear),
-          note: 'Hóa đơn thành công',
+          note: this.$t('dashboard.successfulInvoices'),
           icon: 'fas fa-file-alt',
           tone: 'tone-info',
         },
         {
           key: 'value',
-          label: 'Giá trị năm nay',
+          label: this.$t('dashboard.valueThisYear'),
           value: this.formatCurrency(this.invoiceStats.valueThisYear),
-          note: 'Tổng giá trị hóa đơn',
+          note: this.$t('dashboard.totalInvoiceValue'),
           icon: 'fas fa-coins',
           tone: 'tone-dark',
         },
         {
           key: 'sales',
-          label: 'Hóa đơn bán hàng',
+          label: this.$t('dashboard.salesInvoices'),
           value: this.formatNumber(this.invoiceStats.salesIssuedThisYear),
           note: this.formatCurrency(this.invoiceStats.salesValueThisYear),
           icon: 'fas fa-file-invoice',
@@ -357,17 +358,17 @@ export default {
       }
     },
     formatNumber(value) {
-      return new Intl.NumberFormat('vi-VN').format(Number(value || 0))
+      return new Intl.NumberFormat(currentIntlLocale()).format(Number(value || 0))
     },
     formatPercentage(value) {
-      return new Intl.NumberFormat('vi-VN', {
+      return new Intl.NumberFormat(currentIntlLocale(), {
         style: 'percent',
         minimumFractionDigits: 0,
         maximumFractionDigits: 2,
       }).format(Number(value || 0) / 100)
     },
     formatCurrency(value) {
-      return new Intl.NumberFormat('vi-VN', {
+      return new Intl.NumberFormat(currentIntlLocale(), {
         style: 'currency',
         currency: 'VND',
       }).format(Number(value || 0))

@@ -7,6 +7,8 @@
     </div>
 
     <nav class="d-flex align-items-center">
+      <LanguageSwitcher compact class="mr-2" />
+
       <b-button v-if="!isCompanyPending" variant="light" class="circle-btn mr-2" @click="reloadData">
         <i :class="reloading ? 'fa fa-sync fa-spin' : 'fa fa-sync'"></i>
       </b-button>
@@ -15,9 +17,9 @@
         <i class="fa fa-phone"></i>
       </b-button>
       <b-popover v-if="!isCompanyPending" target="popover-hotline" placement="bottom" triggers="hover focus">
-        <template #title>Support</template>
+        <template #title>{{ $t('common.support') }}</template>
         <ul class="list-unstyled mb-0">
-          <li><i class="fa fa-tools"></i> Hỗ trợ kỹ thuật 24/7</li>
+          <li><i class="fa fa-tools"></i> {{ $t('header.technicalSupport') }}</li>
           <li><i class="fa fa-phone"></i> Hotline: 111111 ext:2</li>
         </ul>
       </b-popover>
@@ -36,19 +38,19 @@
         <template #button-content>
           <b-avatar :src="avatarSrc" v-if="avatarSrc" class="user-avatar"></b-avatar>
           <b-avatar variant="primary" v-else class="user-avatar">{{ usernameInitial }}</b-avatar>
-          <span class="ml-2 d-none d-md-inline">{{ app.auth.username || 'User' }}</span>
+          <span class="ml-2 d-none d-md-inline">{{ app.auth.username || $t('common.user') }}</span>
         </template>
         <b-dropdown-item v-if="!isCompanyPending" to="/setting">
-          <i class="fas fa-user"></i> Tài khoản
+          <i class="fas fa-user"></i> {{ $t('header.account') }}
         </b-dropdown-item>
         <b-dropdown-item v-if="!isCompanyPending" :to="sessionRoute">
-          <i class="fas fa-desktop"></i> Phiên đăng nhập
+          <i class="fas fa-desktop"></i> {{ $t('header.sessions') }}
         </b-dropdown-item>
         <b-dropdown-item v-if="!isCompanyPending && showAdminLink" to="/auth/login-admin">
-          <i class="fas fa-shield-alt"></i> Quản trị
+          <i class="fas fa-shield-alt"></i> {{ $t('header.administration') }}
         </b-dropdown-item>
         <b-dropdown-item href="#" @click.prevent="logout">
-          <i class="fas fa-sign-out-alt"></i> Đăng xuất
+          <i class="fas fa-sign-out-alt"></i> {{ $t('header.logout') }}
         </b-dropdown-item>
       </b-dropdown>
     </nav>
@@ -56,7 +58,7 @@
     <b-sidebar
       v-if="!isCompanyPending"
       id="sidebar-right"
-      title="Thông báo"
+      :title="$t('header.notifications')"
       right
       shadow
       backdrop
@@ -68,14 +70,14 @@
         <b-media tag="li" v-for="item in list" :key="item.id" class="mb-2">
           <template #aside>
             <b-avatar size="2rem" :src="item.avatar" v-if="item.avatar"></b-avatar>
-            <b-avatar size="2rem" variant="success" v-else>{{ nameInitial(item.username || 'Hệ thống') }}</b-avatar>
+            <b-avatar size="2rem" variant="success" v-else>{{ nameInitial(item.username || $t('common.system')) }}</b-avatar>
           </template>
-          <h6 class="mb-1">{{ item.username || 'Hệ thống' }}</h6>
+          <h6 class="mb-1">{{ item.username || $t('common.system') }}</h6>
           <small class="text-muted">{{ relativeTime(item.created_at) }}</small>
           <p class="mb-0">{{ item.title }}</p>
         </b-media>
-        <li v-if="notificationsLoading && list.length === 0" class="text-center text-muted py-2">Đang tải thông báo...</li>
-        <li v-else-if="list.length === 0" class="text-center text-muted py-2">Không có thông báo</li>
+        <li v-if="notificationsLoading && list.length === 0" class="text-center text-muted py-2">{{ $t('header.loadingNotifications') }}</li>
+        <li v-else-if="list.length === 0" class="text-center text-muted py-2">{{ $t('common.noNotifications') }}</li>
         <li v-if="list.length > 0 && notificationHasMore" class="notification-load-more">
           <b-button
             block
@@ -85,7 +87,7 @@
             @click="loadMoreNotifications"
           >
             <i :class="notificationsLoadingMore ? 'fas fa-spinner fa-spin' : 'fas fa-chevron-down'"></i>
-            {{ notificationsLoadingMore ? 'Đang tải...' : 'Xem thêm' }}
+            {{ notificationsLoadingMore ? $t('header.loadingMore') : $t('common.loadMore') }}
           </b-button>
         </li>
       </ul>
@@ -95,7 +97,7 @@
       v-model="limitReminder.show"
       centered
       hide-footer
-      title="Nhắc nhở hạn mức hóa đơn"
+      :title="$t('header.invoiceLimitReminder')"
       modal-class="invoice-limit-modal"
     >
       <div class="limit-reminder">
@@ -108,15 +110,15 @@
           <b-progress height="10px" :value="limitReminder.percent" :variant="limitReminder.progressVariant" class="mb-3"></b-progress>
           <div class="limit-reminder-stats">
             <div>
-              <span>Đã dùng</span>
+              <span>{{ $t('header.used') }}</span>
               <strong>{{ formatNumber(limitReminder.used) }}</strong>
             </div>
             <div>
-              <span>Tổng hạn mức</span>
+              <span>{{ $t('header.totalLimit') }}</span>
               <strong>{{ formatNumber(limitReminder.total) }}</strong>
             </div>
             <div>
-              <span>Còn lại</span>
+              <span>{{ $t('header.remaining') }}</span>
               <strong>{{ formatNumber(limitReminder.remaining) }}</strong>
             </div>
           </div>
@@ -124,10 +126,10 @@
       </div>
       <div class="text-right mt-3">
         <b-button variant="success" to="/invoice-packages" @click="closeLimitReminder">
-          Mua thêm hóa đơn
+          {{ $t('header.buyMore') }}
         </b-button>
         <b-button variant="secondary" class="ml-2" @click="closeLimitReminder">
-          Đóng
+          {{ $t('common.close') }}
         </b-button>
       </div>
     </b-modal>
@@ -139,8 +141,11 @@ import { parseJwt } from '@/utils/jwt'
 import axios from '@/plugins/axios'
 import { getAuthToken, removeAuthToken } from '@/utils/authStorage'
 import { appResourceUrl } from '@/utils/appUrl'
+import { currentIntlLocale } from '@/i18n'
+import LanguageSwitcher from '@/views/components/language_switcher.vue'
 export default {
   name: "Header",
+  components: { LanguageSwitcher },
   data() {
     return {
       reloading: false,
@@ -749,17 +754,17 @@ export default {
       } catch {}
     },
     showInvoiceLimitReminder({ threshold, percent, total, used, remaining }) {
-      const usedText = new Intl.NumberFormat('vi-VN').format(used)
-      const totalText = new Intl.NumberFormat('vi-VN').format(total)
-      const remainingText = new Intl.NumberFormat('vi-VN').format(remaining)
+      const usedText = new Intl.NumberFormat(currentIntlLocale()).format(used)
+      const totalText = new Intl.NumberFormat(currentIntlLocale()).format(total)
+      const remainingText = new Intl.NumberFormat(currentIntlLocale()).format(remaining)
       const exactThreshold = percent === threshold
-      const actionText = exactThreshold ? 'đạt' : 'vượt'
-      const title = `Cảnh báo ${actionText} mốc ${threshold}% hạn mức hóa đơn`
+      const actionText = exactThreshold ? this.$t('header.reached') : this.$t('header.exceeded')
+      const title = this.$t('header.limitWarningTitle', { action: actionText, threshold })
       const message = exactThreshold && threshold >= 100
-        ? `Bạn đã sử dụng hết ${usedText}/${totalText} hóa đơn, đạt mốc 100% hạn mức. Vui lòng mua thêm gói hóa đơn để tiếp tục phát hành.`
+        ? this.$t('header.limitExhausted', { used: usedText, total: totalText })
         : exactThreshold
-        ? `Bạn đã sử dụng ${usedText}/${totalText} hóa đơn (${percent}%), đạt mốc ${threshold}% hạn mức. Còn lại ${remainingText} hóa đơn, vui lòng cân nhắc mua thêm.`
-        : `Bạn đã sử dụng ${usedText}/${totalText} hóa đơn (${percent}%), đã vượt mốc ${threshold}%. Còn lại ${remainingText} hóa đơn, vui lòng cân nhắc mua thêm.`
+        ? this.$t('header.limitReached', { used: usedText, total: totalText, percent, threshold, remaining: remainingText })
+        : this.$t('header.limitExceeded', { used: usedText, total: totalText, percent, threshold, remaining: remainingText })
       const variant = threshold >= 100 ? 'danger' : threshold >= 75 ? 'warning' : 'info'
       this.limitReminder = {
         show: true,
@@ -779,7 +784,7 @@ export default {
       this.limitReminder.show = false
     },
     formatNumber(value) {
-      return new Intl.NumberFormat('vi-VN').format(Number(value || 0))
+      return new Intl.NumberFormat(currentIntlLocale()).format(Number(value || 0))
     },
     clearInvoiceLimitPopupKeys() {
       try {
@@ -794,17 +799,18 @@ export default {
         const now = Date.now()
         const t = new Date(d).getTime()
         const diff = Math.max(0, Math.floor((now - t) / 1000))
+        const formatter = new Intl.RelativeTimeFormat(currentIntlLocale(), { numeric: 'auto' })
         const years = Math.floor(diff / (365 * 24 * 3600))
-        if (years > 0) return `${years} năm trước`
+        if (years > 0) return formatter.format(-years, 'year')
         const months = Math.floor(diff / (30 * 24 * 3600))
-        if (months > 0) return `${months} tháng trước`
+        if (months > 0) return formatter.format(-months, 'month')
         const days = Math.floor(diff / (24 * 3600))
-        if (days > 0) return `${days} ngày trước`
+        if (days > 0) return formatter.format(-days, 'day')
         const hours = Math.floor(diff / 3600)
-        if (hours > 0) return `${hours} giờ trước`
+        if (hours > 0) return formatter.format(-hours, 'hour')
         const minutes = Math.floor(diff / 60)
-        if (minutes > 0) return `${minutes} phút trước`
-        return 'Vừa xong'
+        if (minutes > 0) return formatter.format(-minutes, 'minute')
+        return formatter.format(0, 'second')
       } catch { return '' }
     }
   }
