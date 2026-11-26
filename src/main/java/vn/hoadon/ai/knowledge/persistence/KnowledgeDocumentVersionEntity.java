@@ -27,6 +27,8 @@ public class KnowledgeDocumentVersionEntity {
     @Lob
     @Column(name = "source_blob", nullable = false)
     private byte[] sourceBlob;
+    @Column(name = "source_path", length = 500)
+    private String sourcePath;
     @Lob
     @Column(name = "extracted_content")
     private String extractedContent;
@@ -70,6 +72,8 @@ public class KnowledgeDocumentVersionEntity {
     public void setChecksum(String checksum) { this.checksum = checksum; }
     public byte[] getSourceBlob() { return sourceBlob; }
     public void setSourceBlob(byte[] sourceBlob) { this.sourceBlob = sourceBlob; }
+    public String getSourcePath() { return sourcePath; }
+    public void setSourcePath(String sourcePath) { this.sourcePath = sourcePath; }
     public String getExtractedContent() { return extractedContent; }
     public void setExtractedContent(String extractedContent) { this.extractedContent = extractedContent; }
     public KnowledgeDocumentStatus getStatus() { return status; }

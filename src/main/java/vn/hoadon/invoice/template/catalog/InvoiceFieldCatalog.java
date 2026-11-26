@@ -173,15 +173,19 @@ public class InvoiceFieldCatalog {
         datasetDefinitions.add(
                 new InvoiceCatalogSnapshot.Dataset(
                         null, "document", "Hóa đơn", null, "ONE", "/HDon", true, 0L));
-        groupDefinitions.stream()
+        var repeatedGroups = groupDefinitions.stream()
                 .filter(group -> !"document".equals(group.code()) && "MANY".equals(group.cardinality()))
+                .toList();
+        Set<String> repeatedGroupCodes = new HashSet<>();
+        repeatedGroups.forEach(group -> repeatedGroupCodes.add(group.code()));
+        repeatedGroups.stream()
                 .map(
                         group ->
                                 new InvoiceCatalogSnapshot.Dataset(
                                         group.id(),
                                         group.code(),
                                         group.label(),
-                                        null,
+                                        datasetParent(group.code(), repeatedGroupCodes),
                                         group.cardinality(),
                                         group.rootPath(),
                                         group.active(),
@@ -218,6 +222,15 @@ public class InvoiceFieldCatalog {
         }
         return new InvoiceCatalogSnapshot(
                 structure.code(), groupDefinitions, datasetDefinitions, definitions);
+    }
+
+    private String datasetParent(String code, Set<String> datasetCodes) {
+        String candidate = code;
+        while (candidate.contains(".")) {
+            candidate = candidate.substring(0, candidate.lastIndexOf('.'));
+            if (datasetCodes.contains(candidate)) return candidate;
+        }
+        return "document";
     }
 
     @Transactional

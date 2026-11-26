@@ -1,44 +1,37 @@
 <template>
-  <b-card class="ai-invoice-assistant mb-3" border-variant="primary">
-    <div class="d-flex align-items-center justify-content-between flex-wrap">
-      <div>
-        <h6 class="mb-1 font-weight-bold"><i class="fas fa-wand-magic-sparkles mr-2"></i>Trợ lý lập hóa đơn</h6>
-        <div class="small text-muted">Nhập câu lệnh tiếng Việt. Mọi thay đổi chỉ được lưu sau khi bạn xác nhận.</div>
-      </div>
-      <b-button size="sm" variant="outline-primary" @click="expanded = !expanded">
-        {{ expanded ? 'Thu gọn' : 'Mở trợ lý' }}
-      </b-button>
+  <section class="ai-invoice-assistant">
+    <div class="tool-intro">
+      <strong>{{ applyLocally ? 'Trợ lý lập phiếu xuất kho' : 'Trợ lý lập hóa đơn' }}</strong>
+      <span>Nhập yêu cầu bằng tiếng Việt, kiểm tra đề xuất trước khi áp dụng.</span>
     </div>
 
-    <div v-if="expanded" class="mt-3">
-      <b-input-group>
+    <div class="assistant-workflow">
+      <div class="command-row">
         <b-form-textarea
           v-model.trim="command"
           rows="2"
-          max-rows="4"
+          max-rows="5"
           maxlength="2000"
           placeholder="Ví dụ: Chọn khách hàng A, thêm 5 bàn phím giá 350.000 đồng và thanh toán chuyển khoản"
           :disabled="busy || !!proposalId"
         />
-        <b-input-group-append>
-          <b-button variant="primary" :disabled="busy || !command || !!proposalId" @click="preview">
-            <b-spinner v-if="busy" small />
-            <span v-else>Phân tích</span>
-          </b-button>
-        </b-input-group-append>
-      </b-input-group>
+        <b-button size="sm" variant="primary" :disabled="busy || !command || !!proposalId" @click="preview">
+          <b-spinner v-if="busy" small class="mr-1" />
+          <i v-else class="fas fa-search mr-1"></i>Phân tích
+        </b-button>
+      </div>
 
-      <b-alert v-if="error" show variant="danger" class="mt-3 mb-0">{{ error }}</b-alert>
+      <b-alert v-if="error" show variant="danger" class="mt-2 mb-0">{{ error }}</b-alert>
 
-      <div v-if="actions.length" class="mt-3">
-        <div class="font-weight-bold mb-2">Thao tác được nhận diện</div>
-        <ul class="mb-2 pl-4">
+      <div v-if="actions.length" class="assistant-section">
+        <div class="font-weight-bold mb-1">Thao tác được nhận diện</div>
+        <ul class="mb-0 pl-4">
           <li v-for="action in actions" :key="action.id">{{ action.description }}</li>
         </ul>
       </div>
 
-      <div v-if="choices.length" class="choice-box mt-3">
-        <b-alert show :variant="status === 'NEEDS_SELECTION' ? 'warning' : 'info'">{{ message }}</b-alert>
+      <div v-if="choices.length" class="choice-box assistant-section">
+        <b-alert show :variant="status === 'NEEDS_SELECTION' ? 'warning' : 'info'" class="mb-2">{{ message }}</b-alert>
         <b-form-group v-for="choice in choices" :key="choice.actionId" :label="choiceLabel(choice)">
           <b-form-select
             v-if="choice.candidates && choice.candidates.length"
@@ -56,8 +49,8 @@
         >Tiếp tục với lựa chọn</b-button>
       </div>
 
-      <div v-if="proposalId && after" class="preview-box mt-3">
-        <b-alert show variant="info">{{ message }}</b-alert>
+      <div v-if="proposalId && after" class="preview-box assistant-section">
+        <b-alert show variant="info" class="mb-2">{{ message }}</b-alert>
         <b-row>
           <b-col md="6">
             <div class="small text-muted">Khách hàng</div>
@@ -73,7 +66,7 @@
           </b-col>
         </b-row>
         <b-table
-          class="mt-3 mb-2"
+          class="mt-2 mb-2"
           small bordered responsive
           :items="after.detail || []"
           :fields="previewFields"
@@ -85,15 +78,15 @@
           <template #cell(amount)="data">{{ formatMoney(data.item.amount) }}</template>
         </b-table>
         <div class="text-right font-weight-bold">Tổng thanh toán: {{ formatMoney(after.amount) }} {{ after.currency || 'VND' }}</div>
-        <div class="d-flex justify-content-end mt-3">
-          <b-button variant="outline-secondary" class="mr-2" :disabled="busy" @click="cancel">Hủy đề xuất</b-button>
-          <b-button variant="success" :disabled="busy" @click="confirm">
-            <b-spinner v-if="busy" small class="mr-1" />Xác nhận và lưu nháp
+        <div class="d-flex justify-content-end mt-2">
+          <b-button size="sm" variant="outline-secondary" class="mr-2" :disabled="busy" @click="cancel">Hủy đề xuất</b-button>
+          <b-button size="sm" variant="success" :disabled="busy" @click="confirm">
+            <b-spinner v-if="busy" small class="mr-1" />{{ applyLocally ? 'Áp dụng vào biểu mẫu' : 'Xác nhận và lưu nháp' }}
           </b-button>
         </div>
       </div>
     </div>
-  </b-card>
+  </section>
 </template>
 
 <script>
@@ -105,11 +98,11 @@ export default {
     invoiceId: { type: Number, default: null },
     formId: { type: Number, default: null },
     category: { type: Number, required: true },
-    snapshot: { type: Object, required: true }
+    snapshot: { type: Object, required: true },
+    applyLocally: { type: Boolean, default: false }
   },
   data () {
     return {
-      expanded: false,
       busy: false,
       command: '',
       error: '',
@@ -172,6 +165,13 @@ export default {
     },
     async confirm () {
       if (!this.proposalId || this.busy) return
+      if (this.applyLocally) {
+        const result = this.after
+        await this.cancel()
+        this.$emit('applied', result)
+        this.$toastr?.success('Đã điền đề xuất vào biểu mẫu; phiếu xuất kho chưa được lưu', 'Thành công')
+        return
+      }
       this.busy = true
       this.error = ''
       try {
@@ -231,6 +231,17 @@ export default {
 </script>
 
 <style scoped>
-.ai-invoice-assistant { background: linear-gradient(135deg, #f7fbff 0%, #ffffff 70%); }
-.choice-box, .preview-box { border: 1px solid #dce6f2; border-radius: 8px; padding: 14px; background: #fff; }
+.tool-intro { align-items: baseline; display: flex; flex-wrap: wrap; gap: 4px 10px; margin-bottom: 10px; }
+.tool-intro strong { color: #334155; font-size: 13px; }
+.tool-intro span { color: #718096; font-size: 12px; }
+.command-row { align-items: flex-end; display: flex; gap: 8px; }
+.command-row textarea { flex: 1; min-height: 62px; resize: vertical; }
+.command-row .btn { flex: 0 0 auto; min-width: 105px; }
+.assistant-section { margin-top: 12px; }
+.choice-box, .preview-box { background: #f8fafc; border: 1px solid #e1e7ef; border-radius: 7px; padding: 12px; }
+.preview-box ::v-deep .table { background: #fff; }
+@media (max-width: 575px) {
+  .command-row { align-items: stretch; flex-direction: column; }
+  .command-row .btn { align-self: flex-end; }
+}
 </style>

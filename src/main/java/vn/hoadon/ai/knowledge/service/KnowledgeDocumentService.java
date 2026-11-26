@@ -34,6 +34,7 @@ public class KnowledgeDocumentService {
     private final KnowledgeChunker chunker;
     private final KnowledgeSafetyService safetyService;
     private final KnowledgeIndexService indexService;
+    private final KnowledgeDocumentStorage storage;
     private final Semaphore processingSlots;
 
     public KnowledgeDocumentService(KnowledgeDocumentRepository documentRepository,
@@ -45,6 +46,7 @@ public class KnowledgeDocumentService {
                                     KnowledgeChunker chunker,
                                     KnowledgeSafetyService safetyService,
                                     KnowledgeIndexService indexService,
+                                    KnowledgeDocumentStorage storage,
                                     KnowledgeProperties properties) {
         this.documentRepository = documentRepository;
         this.versionRepository = versionRepository;
@@ -55,6 +57,7 @@ public class KnowledgeDocumentService {
         this.chunker = chunker;
         this.safetyService = safetyService;
         this.indexService = indexService;
+        this.storage = storage;
         this.processingSlots = new Semaphore(Math.max(1, properties.getMaxConcurrentProcessing()), true);
     }
 
@@ -82,7 +85,7 @@ public class KnowledgeDocumentService {
                 request.companyId(), request.externalShareAllowed(), KnowledgeDocumentType.MD, userId);
         documentRepository.save(document);
         createVersion(document, "knowledge-" + document.getId() + ".md", "text/markdown", source,
-                request.effectiveFrom(), request.effectiveTo(), userId);
+                request.effectiveFrom(), request.effectiveTo(), userId, null);
         return document;
     }
 
@@ -93,8 +96,14 @@ public class KnowledgeDocumentService {
         KnowledgeDocumentEntity document = newDocument(title, categoryId, scope, companyId,
                 externalShareAllowed, validated.type(), userId);
         documentRepository.save(document);
-        createVersion(document, validated.filename(), validated.mimeType(), validated.bytes(),
-                effectiveFrom, effectiveTo, userId);
+        KnowledgeDocumentStorage.StoredFile stored = storage.write(validated.filename(), validated.bytes());
+        try {
+            createVersion(document, validated.filename(), validated.mimeType(), validated.bytes(),
+                    effectiveFrom, effectiveTo, userId, stored.key());
+        } catch (RuntimeException ex) {
+            storage.delete(stored.key());
+            throw ex;
+        }
         return document;
     }
 
@@ -106,7 +115,7 @@ public class KnowledgeDocumentService {
         }
         if (content == null || content.isBlank()) throw new IllegalArgumentException("Nội dung Markdown không được để trống");
         createVersion(document, "knowledge-" + documentId + ".md", "text/markdown",
-                content.getBytes(StandardCharsets.UTF_8), effectiveFrom, effectiveTo, userId);
+                content.getBytes(StandardCharsets.UTF_8), effectiveFrom, effectiveTo, userId, null);
         return document;
     }
 
@@ -140,8 +149,14 @@ public class KnowledgeDocumentService {
     public KnowledgeDocumentEntity reprocess(long documentId, long userId) {
         KnowledgeDocumentEntity document = get(documentId);
         KnowledgeDocumentVersionEntity current = currentVersion(document);
-        createVersion(document, current.getOriginalFilename(), current.getMimeType(), current.getSourceBlob(),
-                current.getEffectiveFrom(), current.getEffectiveTo(), userId);
+        KnowledgeDocumentStorage.StoredFile stored = storage.write(current.getOriginalFilename(), current.getSourceBlob());
+        try {
+            createVersion(document, current.getOriginalFilename(), current.getMimeType(), current.getSourceBlob(),
+                    current.getEffectiveFrom(), current.getEffectiveTo(), userId, stored.key());
+        } catch (RuntimeException ex) {
+            storage.delete(stored.key());
+            throw ex;
+        }
         return document;
     }
 
@@ -149,6 +164,9 @@ public class KnowledgeDocumentService {
         KnowledgeDocumentEntity document = get(documentId);
         indexService.deleteDocument(documentId);
         chunkRepository.deleteByDocumentId(documentId);
+        for (KnowledgeDocumentVersionEntity version : versions(documentId)) {
+            storage.delete(version.getSourcePath());
+        }
         versionRepository.deleteByDocumentId(documentId);
         documentRepository.delete(document);
     }
@@ -189,7 +207,7 @@ public class KnowledgeDocumentService {
     }
 
     private void createVersion(KnowledgeDocumentEntity document, String filename, String mimeType, byte[] source,
-                               LocalDateTime effectiveFrom, LocalDateTime effectiveTo, long userId) {
+                               LocalDateTime effectiveFrom, LocalDateTime effectiveTo, long userId, String sourcePath) {
         validateEffectiveDates(effectiveFrom, effectiveTo);
         boolean acquired = false;
         KnowledgeDocumentVersionEntity version = new KnowledgeDocumentVersionEntity();
@@ -205,6 +223,7 @@ public class KnowledgeDocumentService {
             version.setFileSize((long) source.length);
             version.setChecksum(checksum(source));
             version.setSourceBlob(source.clone());
+            version.setSourcePath(sourcePath);
             version.setStatus(KnowledgeDocumentStatus.PROCESSING);
             version.setEffectiveFrom(effectiveFrom);
             version.setEffectiveTo(effectiveTo);

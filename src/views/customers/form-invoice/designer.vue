@@ -575,6 +575,7 @@
                 :selected-id="selected ? selected.id : ''"
                 @select="selectBlock($event ? $event.id : null)"
                 @move="moveBlock"
+                @remove="removeBlock"
               />
             </fieldset>
           </div>
@@ -1433,6 +1434,15 @@ export default {
       } else
         this.error =
           "Không thể đặt phần tử ở vị trí này. Một nhóm cột chứa tối đa 6 phần tử.";
+    },
+    removeBlock(id) {
+      if (this.busy || !this.layout) return;
+      const found = findBlock(this.layout.body, id);
+      if (!found?.parent) return;
+      this.recordHistory();
+      found.parent.children.splice(found.parent.children.indexOf(found.block), 1);
+      this.selectBlock(null);
+      this.recordHistory();
     },
     startResizeBlock() {
       clearTimeout(this.historyTimer);

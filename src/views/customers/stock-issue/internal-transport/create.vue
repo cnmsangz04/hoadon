@@ -8,6 +8,16 @@
         </h4>
       </div>
 
+      <InvoiceAiTools
+        v-if="prepare.formId && !form.referenceId && !form.invoiceType && (!form.status || Number(form.status) === 0)"
+        :category="6"
+        :form-id="Number(prepare.formId)"
+        :snapshot="aiSnapshot"
+        :show-assistant="true"
+        @document-applied="applyAiSuggestion"
+        @assistant-applied="applyAiSuggestion"
+      />
+
       <div class="form-section">
         <h5 class="section-title">
           <i class="fas fa-file-invoice mr-2"></i>Thông tin phiếu xuất kho
@@ -377,7 +387,9 @@
 
 <script>
 import axios from '@/plugins/axios'
+import InvoiceAiTools from '@/views/components/invoice_ai_tools.vue'
 import stockIssuePicker from '../stock-issue-picker'
+import { applyStockIssueAi, stockIssueAiSnapshot } from '../stock-issue-ai'
 
 const emptyDetail = (num) => ({
   num,
@@ -394,6 +406,7 @@ const emptyDetail = (num) => ({
 
 export default {
   name: 'StockIssueInternalTransportCreate',
+  components: { InvoiceAiTools },
   mixins: [stockIssuePicker],
   data() {
     return {
@@ -434,6 +447,9 @@ export default {
     }
   },
   computed: {
+    aiSnapshot() {
+      return stockIssueAiSnapshot(this.form, 1)
+    },
     total() {
       return this.form.detail.reduce((sum, row) => sum + this.lineTotal(row), 0)
     },
@@ -460,6 +476,11 @@ export default {
     }
   },
   methods: {
+    applyAiSuggestion(result) {
+      this.form = applyStockIssueAi(this.form, result, 1)
+      this.customerPicker = this.form.stockInfo.buyerCode || this.form.stockInfo.buyerName || ''
+      this.selectedCustomer = this.findStockCustomer(this.customerPicker)
+    },
     redirectToList() {
       if (this.$router)
         this.$router.replace({

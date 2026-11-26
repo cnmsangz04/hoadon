@@ -144,7 +144,7 @@ import { appResourceUrl } from '@/utils/appUrl'
 import { currentIntlLocale } from '@/i18n'
 import LanguageSwitcher from '@/views/components/language_switcher.vue'
 export default {
-  name: "Header",
+  name: "AppHeader",
   components: { LanguageSwitcher },
   data() {
     return {

@@ -84,7 +84,7 @@
                     }}</span>
                 </template>
 
-                <template #cell(company)="data">
+                <template #cell(company)>
                     <div class="font-weight-bold text-dark">
                         {{ currentCompanyName || "---" }}
                     </div>

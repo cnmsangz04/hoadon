@@ -1,44 +1,40 @@
 <template>
-  <b-card class="document-recognition mb-3" border-variant="info">
-    <div class="d-flex align-items-center justify-content-between flex-wrap">
-      <div>
-        <h6 class="mb-1 font-weight-bold"><i class="fas fa-file-image mr-2"></i>Nhận diện chứng từ</h6>
-        <div class="small text-muted">Xử lý nội bộ bằng PDFBox và Tesseract. Dữ liệu không được gửi tới Gemini.</div>
-      </div>
-      <b-button size="sm" variant="outline-info" @click="expanded = !expanded">
-        {{ expanded ? 'Thu gọn' : 'Mở nhận diện' }}
-      </b-button>
+  <section class="document-recognition">
+    <div class="tool-intro">
+      <strong>Nhận diện chứng từ</strong>
+      <span>Ảnh hoặc PDF tối đa 10 MB · Xử lý nội bộ, không gửi đến Gemini.</span>
     </div>
 
-    <div v-if="expanded" class="mt-3">
+    <div>
+      <div class="recognition-upload-row">
       <b-form-file
         v-model="file"
         accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
         browse-text="Chọn file"
-        placeholder="Chọn ảnh hoặc PDF, tối đa 10 MB"
+        placeholder="Chọn ảnh hoặc PDF"
         drop-placeholder="Thả chứng từ vào đây"
         :disabled="busy"
         @input="fileChanged"
       />
+        <b-button size="sm" variant="primary" :disabled="busy || !file" @click="recognize">
+          <b-spinner v-if="busy" small class="mr-1" /><i v-else class="fas fa-search mr-1"></i>
+          {{ busy ? 'Đang nhận diện...' : 'Nhận diện' }}
+        </b-button>
+        <b-button v-if="result || file" size="sm" variant="outline-secondary" :disabled="busy" @click="reset">
+          Hủy
+        </b-button>
+      </div>
       <div v-if="previewUrl" class="document-preview mt-3">
         <iframe v-if="isPdf" :src="previewUrl" title="Xem trước PDF" />
         <img v-else :src="previewUrl" alt="Xem trước chứng từ" />
       </div>
-      <div class="d-flex mt-3">
-        <b-button variant="info" :disabled="busy || !file" @click="recognize">
-          <b-spinner v-if="busy" small class="mr-1" />{{ busy ? 'Đang nhận diện...' : 'Nhận diện nội bộ' }}
-        </b-button>
-        <b-button v-if="result || file" variant="outline-secondary" class="ml-2" :disabled="busy" @click="reset">
-          Hủy bỏ
-        </b-button>
-      </div>
 
-      <b-alert v-if="error" show variant="danger" class="mt-3 mb-0">{{ error }}</b-alert>
-      <b-alert v-if="busy" show variant="info" class="mt-3 mb-0">
+      <b-alert v-if="error" show variant="danger" class="mt-2 mb-0">{{ error }}</b-alert>
+      <b-alert v-if="busy" show variant="info" class="mt-2 mb-0">
         Hệ thống đang trích xuất dữ liệu. Chứng từ nhiều trang hoặc ảnh mờ có thể cần thêm thời gian.
       </b-alert>
 
-      <div v-if="result && form" class="recognition-result mt-3">
+      <div v-if="result && form" class="recognition-result mt-2">
         <div class="d-flex justify-content-between flex-wrap mb-2">
           <strong>Kết quả nhận diện</strong>
           <span class="small text-muted">
@@ -51,14 +47,14 @@
 
         <b-row>
           <b-col md="6">
-            <h6>Người bán</h6>
-            <b-form-group label="Tên người bán" label-class="small mb-1"><b-form-input v-model.trim="form.seller.name" :class="lowClass('seller.name')" @input="touch('seller.name')" /></b-form-group>
+            <h6>{{ category === 6 ? 'Đơn vị xuất' : 'Người bán' }}</h6>
+            <b-form-group :label="category === 6 ? 'Đơn vị xuất' : 'Tên người bán'" label-class="small mb-1"><b-form-input v-model.trim="form.seller.name" :class="lowClass('seller.name')" @input="touch('seller.name')" /></b-form-group>
             <b-form-group label="Mã số thuế" label-class="small mb-1"><b-form-input v-model.trim="form.seller.taxCode" :class="lowClass('seller.taxCode')" @input="touch('seller.taxCode')" /></b-form-group>
             <b-form-group label="Địa chỉ" label-class="small mb-1"><b-form-input v-model.trim="form.seller.address" :class="lowClass('seller.address')" @input="touch('seller.address')" /></b-form-group>
           </b-col>
           <b-col md="6">
-            <h6>Người mua</h6>
-            <b-form-group label="Tên người mua" label-class="small mb-1"><b-form-input v-model.trim="form.buyer.name" :class="lowClass('buyer.name')" @input="touch('buyer.name')" /></b-form-group>
+            <h6>{{ category === 6 ? 'Đơn vị nhận' : 'Người mua' }}</h6>
+            <b-form-group :label="category === 6 ? 'Đơn vị nhận' : 'Tên người mua'" label-class="small mb-1"><b-form-input v-model.trim="form.buyer.name" :class="lowClass('buyer.name')" @input="touch('buyer.name')" /></b-form-group>
             <b-form-group label="Mã số thuế" label-class="small mb-1"><b-form-input v-model.trim="form.buyer.taxCode" :class="lowClass('buyer.taxCode')" @input="touch('buyer.taxCode')" /></b-form-group>
             <b-form-group label="Địa chỉ" label-class="small mb-1"><b-form-input v-model.trim="form.buyer.address" :class="lowClass('buyer.address')" @input="touch('buyer.address')" /></b-form-group>
           </b-col>
@@ -73,7 +69,7 @@
           <b-col md="2">
             <b-form-group label="Tiền hàng" label-class="small mb-1"><b-form-input v-model="form.subtotal" :class="lowClass('subtotal')" @input="touch('subtotal')" /></b-form-group>
           </b-col>
-          <b-col md="2">
+          <b-col v-if="category !== 6" md="2">
             <b-form-group label="Tiền thuế" label-class="small mb-1"><b-form-input v-model="form.vatAmount" :class="lowClass('vatAmount')" @input="touch('vatAmount')" /></b-form-group>
           </b-col>
           <b-col md="4">
@@ -87,9 +83,9 @@
           <b-row>
             <b-col lg="3"><b-form-input v-model.trim="item.name" size="sm" placeholder="Tên hàng hóa" :class="lowClass(`items.${index}.name`)" @input="touch(`items.${index}.name`)" /></b-col>
             <b-col lg="1"><b-form-input v-model.trim="item.unit" size="sm" placeholder="ĐVT" :class="lowClass(`items.${index}.unit`)" @input="touch(`items.${index}.unit`)" /></b-col>
-            <b-col lg="2"><b-form-input v-model="item.quantity" size="sm" placeholder="Số lượng" :class="lowClass(`items.${index}.quantity`)" @input="touch(`items.${index}.quantity`)" /></b-col>
+            <b-col lg="2"><b-form-input v-model="item.quantity" size="sm" :placeholder="category === 6 ? 'Thực xuất' : 'Số lượng'" :class="lowClass(`items.${index}.quantity`)" @input="touch(`items.${index}.quantity`)" /></b-col>
             <b-col lg="2"><b-form-input v-model="item.unitPrice" size="sm" placeholder="Đơn giá" :class="lowClass(`items.${index}.unitPrice`)" @input="touch(`items.${index}.unitPrice`)" /></b-col>
-            <b-col lg="1"><b-form-input v-model="item.vatRate" size="sm" placeholder="Thuế" :disabled="category === 2" :class="lowClass(`items.${index}.vatRate`)" @input="touch(`items.${index}.vatRate`)" /></b-col>
+            <b-col v-if="category !== 6" lg="1"><b-form-input v-model="item.vatRate" size="sm" placeholder="Thuế" :disabled="category === 2" :class="lowClass(`items.${index}.vatRate`)" @input="touch(`items.${index}.vatRate`)" /></b-col>
             <b-col lg="2"><b-form-input v-model="item.lineTotal" size="sm" placeholder="Thành tiền" :class="lowClass(`items.${index}.lineTotal`)" @input="touch(`items.${index}.lineTotal`)" /></b-col>
             <b-col lg="1"><b-button size="sm" variant="outline-danger" title="Xóa dòng" @click="form.items.splice(index, 1)"><i class="fas fa-trash"></i></b-button></b-col>
           </b-row>
@@ -97,14 +93,16 @@
         </div>
         <b-button size="sm" variant="outline-primary" @click="addItem"><i class="fas fa-plus mr-1"></i>Thêm dòng</b-button>
 
-        <div class="d-flex justify-content-end mt-3">
-          <b-button variant="outline-secondary" class="mr-2" @click="recognize">Nhận diện lại</b-button>
-          <b-button variant="success" @click="apply">Xác nhận áp dụng vào biểu mẫu</b-button>
+        <div class="result-actions">
+          <span class="small text-muted">Viền vàng: cần kiểm tra lại · Chưa lưu {{ category === 6 ? 'phiếu' : 'hóa đơn' }}</span>
+          <div>
+            <b-button size="sm" variant="outline-secondary" class="mr-2" :disabled="busy" @click="recognize">Nhận diện lại</b-button>
+            <b-button size="sm" variant="success" :disabled="busy" @click="apply">Áp dụng vào biểu mẫu</b-button>
+          </div>
         </div>
-        <div class="small text-muted mt-2">Viền vàng là trường thiếu hoặc có độ tin cậy thấp. Hệ thống chưa lưu hóa đơn.</div>
       </div>
     </div>
-  </b-card>
+  </section>
 </template>
 
 <script>
@@ -115,7 +113,6 @@ export default {
   props: { category: { type: Number, required: true } },
   data () {
     return {
-      expanded: false,
       busy: false,
       file: null,
       previewUrl: '',
@@ -179,7 +176,7 @@ export default {
         total: value(data.total),
         items: (data.items || []).map(item => ({
           name: value(item.name), unit: value(item.unit), quantity: value(item.quantity),
-          unitPrice: value(item.unitPrice), vatRate: this.category === 2 ? '-1' : value(item.vatRate),
+          unitPrice: value(item.unitPrice), vatRate: this.category === 2 || this.category === 6 ? '-1' : value(item.vatRate),
           lineTotal: value(item.lineTotal), matchedProductId: item.matchedProductId,
           matchedProductCode: item.matchedProductCode
         }))
@@ -187,7 +184,8 @@ export default {
     },
     async apply () {
       if (!this.form) return
-      const confirmed = await this.$bvModal.msgBoxConfirm('Áp dụng dữ liệu đã kiểm tra vào biểu mẫu hóa đơn nháp?', {
+      const documentLabel = this.category === 6 ? 'phiếu xuất kho' : 'hóa đơn nháp'
+      const confirmed = await this.$bvModal.msgBoxConfirm(`Áp dụng dữ liệu đã kiểm tra vào biểu mẫu ${documentLabel}?`, {
         title: 'Xác nhận kết quả nhận diện', okTitle: 'Áp dụng', cancelTitle: 'Hủy', okVariant: 'success'
       })
       if (!confirmed) return
@@ -198,7 +196,7 @@ export default {
       const details = this.form.items.filter(item => item.name).map((item, index) => {
         const quantity = number(item.quantity)
         const price = number(item.unitPrice)
-        const vatRate = this.category === 2 ? -1 : number(item.vatRate || -1)
+        const vatRate = this.category === 2 || this.category === 6 ? -1 : number(item.vatRate || -1)
         const recognizedTotal = String(item.lineTotal ?? '').trim()
         const total = recognizedTotal ? number(recognizedTotal) : quantity * price
         const vatAmount = vatRate > 0 ? total * vatRate / 100 : 0
@@ -221,10 +219,10 @@ export default {
         },
         detail: details
       })
-      this.$toastr?.success('Đã áp dụng dữ liệu vào biểu mẫu; hóa đơn vẫn chưa được lưu', 'Thành công')
+      this.$toastr?.success(`Đã áp dụng dữ liệu vào biểu mẫu; ${documentLabel} vẫn chưa được lưu`, 'Thành công')
     },
     addItem () {
-      this.form.items.push({ name: '', unit: '', quantity: '', unitPrice: '', vatRate: this.category === 2 ? '-1' : '', lineTotal: '', matchedProductCode: '' })
+      this.form.items.push({ name: '', unit: '', quantity: '', unitPrice: '', vatRate: this.category === 2 || this.category === 6 ? '-1' : '', lineTotal: '', matchedProductCode: '' })
     },
     fieldObject (path) {
       const parts = path.split('.')
@@ -253,11 +251,24 @@ export default {
 </script>
 
 <style scoped>
-.document-recognition { background: linear-gradient(135deg, #f2fcff 0%, #fff 72%); }
-.document-preview { height: 300px; border: 1px solid #d7e7ec; border-radius: 8px; overflow: hidden; background: #f6f8fa; text-align: center; }
+.tool-intro { align-items: baseline; display: flex; flex-wrap: wrap; gap: 4px 10px; margin-bottom: 10px; }
+.tool-intro strong { color: #334155; font-size: 13px; }
+.tool-intro span { color: #718096; font-size: 12px; }
+.recognition-upload-row { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+.recognition-upload-row ::v-deep .custom-file { flex: 1 1 300px; min-width: 0; }
+.recognition-upload-row .btn { flex: 0 0 auto; }
+.document-preview { height: 180px; border: 1px solid #dce4ee; border-radius: 7px; overflow: hidden; background: #f8fafc; text-align: center; }
 .document-preview iframe { width: 100%; height: 100%; border: 0; }
 .document-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.recognition-result { border: 1px solid #d7e7ec; border-radius: 8px; padding: 14px; background: #fff; }
-.item-editor { border: 1px solid #e5e9ed; border-radius: 6px; padding: 9px; }
+.recognition-result { background: #f8fafc; border: 1px solid #e1e7ef; border-radius: 7px; max-height: min(65vh, 600px); overflow-y: auto; padding: 12px; }
+.recognition-result ::v-deep .form-group { margin-bottom: 10px; }
+.recognition-result h6 { color: #475569; font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+.item-editor { background: #fff; border: 1px solid #e5e9ed; border-radius: 6px; padding: 9px; }
+.result-actions { align-items: center; background: #f8fafc; border-top: 1px solid #dce4ee; bottom: -12px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; margin: 12px -12px -12px; padding: 10px 12px; position: sticky; z-index: 2; }
 ::v-deep .low-confidence { border-color: #f0ad4e !important; background: #fffaf0; }
+@media (max-width: 575px) {
+  .recognition-upload-row ::v-deep .custom-file { flex-basis: 100%; }
+  .result-actions > div { display: flex; width: 100%; }
+  .result-actions .btn { flex: 1; }
+}
 </style>

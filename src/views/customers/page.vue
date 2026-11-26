@@ -1,7 +1,7 @@
 ﻿<template>
   <div>
     <!-- Tiêu đề -->
-    <Header />
+    <AppHeader />
 
     <div class="main-container">
       <!-- Thanh bên -->
@@ -14,23 +14,23 @@
     </div>
 
     <!-- Chân trang -->
-    <Footer />
+    <AppFooter />
     <AiChatbot />
   </div>
 </template>
 
 <script>
-import Header from '../components/header.vue';
+import AppHeader from '../components/header.vue';
 import Sidebar from '../components/sidebar.vue';
-import Footer from '../components/footer.vue';
+import AppFooter from '../components/footer.vue';
 import AiChatbot from '../components/ai_chatbot.vue';
 
 export default {
   name: 'CustomerPage',
   components: {
-    Header,
+    AppHeader,
     Sidebar,
-    Footer,
+    AppFooter,
     AiChatbot
   },
   data () {

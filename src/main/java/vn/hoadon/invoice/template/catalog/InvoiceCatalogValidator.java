@@ -16,8 +16,10 @@ public final class InvoiceCatalogValidator {
         for (var group : source.groups()) {
             if (!Set.of("ONE", "MANY").contains(group.cardinality()))
                 fail("Kiểu bảng dữ liệu không hợp lệ");
-            if (group.rootPath() == null
-                    || !group.rootPath().matches("/HDon(?:/[A-Za-z_][A-Za-z0-9_.-]*)*"))
+            String rootPattern = "MANY".equals(group.cardinality())
+                    ? "[A-Za-z_][A-Za-z0-9_.-]*(?:/[A-Za-z_][A-Za-z0-9_.-]*)*"
+                    : "/HDon(?:/[A-Za-z_][A-Za-z0-9_.-]*)*";
+            if (group.rootPath() == null || !group.rootPath().matches(rootPattern))
                 fail("Đường dẫn XML của bảng dữ liệu không hợp lệ");
         }
         for (var dataset : source.datasets()) {

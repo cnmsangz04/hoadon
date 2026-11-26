@@ -30,7 +30,12 @@ public class InvoiceTemplateCatalogMigrationPublisher {
         }
         boolean oldGroupPaths = latest.groups().stream()
                 .filter(group -> !"document".equals(group.code()))
-                .anyMatch(group -> group.rootPath() == null || !group.rootPath().startsWith("/HDon/"));
+                .anyMatch(group -> {
+                    if (group.rootPath() == null) return true;
+                    return "MANY".equals(group.cardinality())
+                            ? group.rootPath().startsWith("/HDon")
+                            : !group.rootPath().startsWith("/HDon");
+                });
         boolean retiredSystemFields = latest.fields().stream()
                 .anyMatch(field -> "CONTEXT".equals(field.sourceType()));
         boolean missingCompatibilityFields = latest.fields().stream()

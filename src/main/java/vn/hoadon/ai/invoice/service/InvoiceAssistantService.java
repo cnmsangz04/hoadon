@@ -101,9 +101,12 @@ public class InvoiceAssistantService {
         String command = validateCommand(request == null ? null : request.command());
         SnapshotContext context = loadSnapshot(companyId, request);
         List<KnowledgeReference> references = retrievalService.retrieve(companyId, command, 2, true);
+        String instruction = context.category() == 6
+                ? SYSTEM_INSTRUCTION + "\nChứng từ đang lập là phiếu xuất kho. Chỉ tạo đề xuất để người dùng kiểm tra và điền vào biểu mẫu; không đề xuất thuế GTGT."
+                : SYSTEM_INSTRUCTION;
         AiResponse aiResponse = aiService.generate(new AiExecutionContext(userId, companyId,
                         AiFeature.INVOICE_ASSISTANT),
-                new AiRequest(SYSTEM_INSTRUCTION, commandPrompt(command, references), structuredSchema(),
+                new AiRequest(instruction, commandPrompt(command, references), structuredSchema(),
                         List.of(), 1_500, 0.0));
         List<ParsedAction> actions = parseActions(aiResponse.structuredOutput());
         Resolution resolution = resolve(actions, context.snapshot(), companyId,
@@ -154,6 +157,9 @@ public class InvoiceAssistantService {
         }
         if (!"PENDING".equals(proposal.getStatus())) {
             throw new IllegalArgumentException("Đề xuất này không còn hiệu lực");
+        }
+        if (Integer.valueOf(6).equals(proposal.getInvoiceCategory())) {
+            throw new IllegalArgumentException("Đề xuất phiếu xuất kho chỉ được áp dụng vào biểu mẫu để kiểm tra trước khi lưu");
         }
         if (proposal.getExpiresAt().isBefore(LocalDateTime.now())) {
             proposal.setStatus("EXPIRED");
@@ -318,7 +324,7 @@ public class InvoiceAssistantService {
         row.put("quantity", positive(action.quantity(), BigDecimal.ONE, "Số lượng phải lớn hơn 0"));
         BigDecimal price = action.unitPrice() == null ? product.getPrice() : action.unitPrice();
         row.put("price", nonNegative(price, "Đơn giá không được âm"));
-        row.put("vatRate", category == 2 ? -1 : product.getVatRate() == null ? -1 : product.getVatRate());
+        row.put("vatRate", category == 2 || category == 6 ? -1 : product.getVatRate() == null ? -1 : product.getVatRate());
         row.put("vatRateOther", 0);
         row.put("feature", 1);
         rows.add(row);
@@ -332,7 +338,7 @@ public class InvoiceAssistantService {
         if (action.quantity() != null) row.put("quantity", positive(action.quantity(), null, "Số lượng phải lớn hơn 0"));
         if (action.unitPrice() != null) row.put("price", nonNegative(action.unitPrice(), "Đơn giá không được âm"));
         if (action.unit() != null && !action.unit().isBlank()) row.put("unit", action.unit().trim());
-        if (category == 2) row.put("vatRate", -1);
+        if (category == 2 || category == 6) row.put("vatRate", -1);
     }
 
     private void updateInvoice(ObjectNode snapshot, ParsedAction action) {
@@ -366,7 +372,7 @@ public class InvoiceAssistantService {
                 throw new IllegalArgumentException("Số lượng và đơn giá không được âm");
             }
             BigDecimal lineTotal = quantity.multiply(price).setScale(2, RoundingMode.HALF_UP);
-            int rate = category == 2 ? -1 : row.path("vatRate").asInt(-1);
+            int rate = category == 2 || category == 6 ? -1 : row.path("vatRate").asInt(-1);
             BigDecimal vat = rate < 0 ? BigDecimal.ZERO
                     : lineTotal.multiply(BigDecimal.valueOf(rate)).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
             BigDecimal lineAmount = lineTotal.add(vat);
@@ -380,7 +386,7 @@ public class InvoiceAssistantService {
             }
         }
         snapshot.put("total", total);
-        snapshot.put("vatAmount", category == 2 ? BigDecimal.ZERO : vatTotal);
+        snapshot.put("vatAmount", category == 2 || category == 6 ? BigDecimal.ZERO : vatTotal);
         snapshot.put("amount", amount);
         snapshot.put("amountInWords", readMoney(amount));
     }
@@ -486,8 +492,8 @@ public class InvoiceAssistantService {
                 || !form.getCompanyId().equals(companyId)) {
             throw new IllegalArgumentException("Mẫu hóa đơn không thuộc doanh nghiệp hiện tại");
         }
-        if (form.getCategory() == null || (form.getCategory() != 1 && form.getCategory() != 2)) {
-            throw new IllegalArgumentException("Trợ lý AI chỉ hỗ trợ hóa đơn GTGT và hóa đơn bán hàng");
+        if (form.getCategory() == null || (form.getCategory() != 1 && form.getCategory() != 2 && form.getCategory() != 6)) {
+            throw new IllegalArgumentException("Trợ lý AI chỉ hỗ trợ hóa đơn và phiếu xuất kho");
         }
         return form;
     }

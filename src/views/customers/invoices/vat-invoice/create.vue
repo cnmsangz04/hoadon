@@ -6,19 +6,15 @@
         <h4 class="invoice-title">{{ pageTitle }}</h4>
       </div>
 
-      <DocumentRecognition
+      <InvoiceAiTools
         v-if="canEdit && !isProcessingInvoice"
-        :category="1"
-        @applied="onRecognizedDocumentApplied"
-      />
-
-      <AiInvoiceAssistant
-        v-if="canEdit && !isProcessingInvoice && (formInvoices.form_id || prepare.formId)"
         :invoice-id="editId"
-        :form-id="Number(formInvoices.form_id || prepare.formId)"
+        :form-id="Number(formInvoices.form_id || prepare.formId) || null"
         :category="1"
         :snapshot="aiInvoiceSnapshot"
-        @applied="onAiInvoiceApplied"
+        :show-assistant="!!(formInvoices.form_id || prepare.formId)"
+        @document-applied="onRecognizedDocumentApplied"
+        @assistant-applied="onAiInvoiceApplied"
       />
 
       <b-alert v-if="isProcessingInvoice" show :variant="processingVariant" class="mb-3">
@@ -461,13 +457,12 @@
 
 <script>
 import axios from '@/plugins/axios'
-import AiInvoiceAssistant from '@/views/components/ai_invoice_assistant.vue'
-import DocumentRecognition from '@/views/components/document_recognition.vue'
+import InvoiceAiTools from '@/views/components/invoice_ai_tools.vue'
 import { email, firstError, hasErrors, numberRange, phone, required, taxCode } from '@/utils/validators'
 
 export default {
   name: 'VatInvoiceCreate',
-  components: { AiInvoiceAssistant, DocumentRecognition },
+  components: { InvoiceAiTools },
   data () {
     return {
       isBusy: false,

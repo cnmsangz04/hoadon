@@ -247,7 +247,7 @@ public class InvoiceTemplateFieldService {
         if (input.sourcePath() == null || input.sourcePath().length() > 700)
             invalid("Đường dẫn nguồn không hợp lệ");
         String sourcePath = input.sourcePath().trim();
-        if (sourcePath.startsWith("/") || sourcePath.startsWith("HDon/") || sourcePath.startsWith("DLHDon/"))
+        if (sourcePath.startsWith("/") || sourcePath.startsWith("HDon/"))
             invalid("Đường dẫn XML phải là đường dẫn tương đối của bảng dữ liệu");
         if (!"XML".equals(input.sourceType())) invalid("Phần tử chỉ được lấy dữ liệu từ XML hóa đơn");
         if (!Set.of("STRING", "INTEGER", "DECIMAL", "DATE", "BOOLEAN")

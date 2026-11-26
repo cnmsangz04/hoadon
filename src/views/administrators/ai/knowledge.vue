@@ -1,67 +1,74 @@
 <template>
   <div class="container-fluid py-3 knowledge-page">
-    <div class="d-flex align-items-center justify-content-between flex-wrap mb-3">
-      <div>
-        <h4 class="mb-1 font-weight-bold">Thư viện tài liệu AI</h4>
-        <div class="text-muted small">Quản lý tài liệu RAG, phiên bản và phạm vi được phép gửi tới Gemini.</div>
-      </div>
-      <div class="mt-2 mt-md-0">
-        <b-button size="sm" variant="outline-secondary" class="mr-2" :disabled="busy" @click="rebuildIndex">
-          <i class="fas fa-database mr-1"></i>Xây dựng lại chỉ mục
+    <div class="d-flex align-items-center justify-content-between mb-3 page-header">
+      <h4 class="mb-0 font-weight-bold">Thư viện tài liệu AI</h4>
+      <div class="d-flex align-items-center page-actions">
+        <b-button size="sm" variant="outline-primary" class="mr-2" :disabled="busy" @click="rebuildIndex">
+          <b-spinner v-if="busy" small class="mr-1" />
+          <i v-else class="fas fa-sync-alt mr-1"></i>Đồng bộ chỉ mục
         </b-button>
-        <b-button size="sm" variant="primary" @click="openCreate">
+        <b-button size="sm" variant="success" @click="openCreate">
           <i class="fas fa-plus mr-1"></i>Thêm tài liệu
         </b-button>
       </div>
     </div>
 
-    <b-tabs content-class="pt-3">
+    <b-tabs class="knowledge-tabs" content-class="pt-3" nav-class="mb-0">
       <b-tab title="Tài liệu" active>
-        <b-card class="mb-3 shadow-sm">
+        <b-card class="mb-3 shadow-sm filter-card">
           <b-row>
             <b-col md="4" class="mb-2">
-              <b-form-group label="Tìm kiếm" class="mb-0">
-                <b-form-input v-model.trim="filters.q" placeholder="Tên tài liệu..." @keyup.enter="applyFilters" />
+              <b-form-group label="Từ khóa" label-for="knowledge-search" class="mb-0">
+                <b-input-group>
+                  <b-input-group-prepend is-text><i class="fas fa-search text-muted"></i></b-input-group-prepend>
+                  <b-form-input id="knowledge-search" v-model.trim="filters.q" placeholder="Tên tài liệu..." @keyup.enter="applyFilters" />
+                </b-input-group>
               </b-form-group>
             </b-col>
             <b-col md="2" class="mb-2">
-              <b-form-group label="Danh mục" class="mb-0">
-                <b-form-select v-model="filters.categoryId" :options="categoryOptions" />
+              <b-form-group label="Danh mục" label-for="knowledge-category" class="mb-0">
+                <b-form-select id="knowledge-category" v-model="filters.categoryId" :options="categoryOptions" />
               </b-form-group>
             </b-col>
             <b-col md="2" class="mb-2">
-              <b-form-group label="Định dạng" class="mb-0">
-                <b-form-select v-model="filters.type" :options="typeFilterOptions" />
+              <b-form-group label="Định dạng" label-for="knowledge-type" class="mb-0">
+                <b-form-select id="knowledge-type" v-model="filters.type" :options="typeFilterOptions" />
               </b-form-group>
             </b-col>
             <b-col md="2" class="mb-2">
-              <b-form-group label="Trạng thái" class="mb-0">
-                <b-form-select v-model="filters.status" :options="statusFilterOptions" />
+              <b-form-group label="Trạng thái" label-for="knowledge-status" class="mb-0">
+                <b-form-select id="knowledge-status" v-model="filters.status" :options="statusFilterOptions" />
               </b-form-group>
             </b-col>
-            <b-col md="2" class="mb-2 d-flex align-items-end">
-              <b-button size="sm" variant="primary" class="mr-2" @click="applyFilters">Lọc</b-button>
+            <b-col md="2" class="mb-2 d-flex align-items-end filter-actions">
+              <b-button size="sm" variant="primary" class="mr-2" @click="applyFilters"><i class="fas fa-filter mr-1"></i>Lọc</b-button>
               <b-button size="sm" variant="outline-secondary" @click="resetFilters">Xóa</b-button>
             </b-col>
           </b-row>
         </b-card>
 
-        <b-card class="shadow-sm">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="text-muted small">{{ list.total }} tài liệu</span>
-            <b-button size="sm" variant="link" @click="openCategories">
+        <b-card class="shadow-sm table-card">
+          <div class="d-flex align-items-center justify-content-between flex-wrap mb-2 table-toolbar">
+            <span class="text-muted small"><i class="fas fa-folder-open mr-1"></i>{{ list.total }} tài liệu</span>
+            <b-button size="sm" variant="link" class="header-link p-0" @click="openCategories">
               <i class="fas fa-tags mr-1"></i>Quản lý danh mục
             </b-button>
           </div>
-          <b-table bordered hover responsive small show-empty :busy="busy" :items="list.items" :fields="fields"
-                   empty-text="Chưa có tài liệu kiến thức">
+          <b-table bordered hover responsive="lg" small show-empty class="mb-0 table-modern table-compact"
+                   :busy="busy" :items="list.items" :fields="fields" empty-text="Chưa có tài liệu kiến thức">
+            <template #table-busy>
+              <div class="text-center py-4"><b-spinner small class="mr-2" />Đang tải tài liệu...</div>
+            </template>
             <template #cell(index)="{ index }">
               {{ index + 1 + (list.current_page - 1) * list.per_page }}
             </template>
             <template #cell(title)="{ item }">
-              <div class="font-weight-bold">{{ item.title }}</div>
-              <div class="small text-muted">{{ item.originalFilename || '-' }} · v{{ item.currentVersion || '-' }}</div>
+              <div class="document-title"><i class="fas fa-file-alt mr-2 text-primary"></i>{{ item.title }}</div>
+              <div class="small text-muted document-meta">{{ item.originalFilename || '-' }} · v{{ item.currentVersion || '-' }}</div>
               <b-badge v-if="item.promptInjectionDetected" variant="warning" class="mt-1">Có chỉ dẫn đáng ngờ</b-badge>
+            </template>
+            <template #cell(documentType)="{ item }">
+              <b-badge variant="info">{{ item.documentType || '-' }}</b-badge>
             </template>
             <template #cell(scope)="{ item }">
               <span>{{ item.scope === 'GLOBAL' ? 'Toàn hệ thống' : `Công ty #${item.companyId}` }}</span>
@@ -69,14 +76,16 @@
             <template #cell(status)="{ item }">
               <b-badge :variant="statusVariant(item.status)">{{ statusLabel(item.status) }}</b-badge>
               <div class="small mt-1" :class="item.active ? 'text-success' : 'text-muted'">
-                {{ item.active ? 'Đang áp dụng' : 'Chưa áp dụng' }}
+                <i :class="item.active ? 'fas fa-check-circle mr-1' : 'fas fa-minus-circle mr-1'"></i>{{ item.active ? 'Đang áp dụng' : 'Chưa áp dụng' }}
               </div>
             </template>
             <template #cell(externalShareAllowed)="{ item }">
-              <i :class="item.externalShareAllowed ? 'fas fa-check text-success' : 'fas fa-lock text-muted'"></i>
+              <i :class="item.externalShareAllowed ? 'fas fa-check text-success' : 'fas fa-lock text-muted'"
+                 :title="item.externalShareAllowed ? 'Được phép gửi đến Gemini' : 'Không được phép gửi đến Gemini'"></i>
             </template>
             <template #cell(option)="{ item }">
-              <b-dropdown size="sm" right variant="outline-primary" text="Thao tác">
+              <b-dropdown class="table-action-dropdown" size="sm" right variant="link" toggle-class="text-decoration-none" no-caret boundary="window">
+                <template #button-content><i class="fas fa-ellipsis-h"></i></template>
                 <b-dropdown-item @click="openEdit(item)"><i class="fas fa-edit mr-2"></i>Chỉnh sửa</b-dropdown-item>
                 <b-dropdown-item @click="showVersions(item)"><i class="fas fa-history mr-2"></i>Phiên bản</b-dropdown-item>
                 <b-dropdown-item v-if="!item.active && item.status === 'READY'" @click="toggleActive(item, true)">
@@ -97,48 +106,73 @@
       </b-tab>
 
       <b-tab title="Kiểm thử truy xuất & AI">
-        <b-row>
-          <b-col lg="5">
-            <b-card class="shadow-sm mb-3">
-              <b-form-group label="Câu hỏi hoặc từ khóa">
-                <b-form-textarea v-model.trim="testForm.query" rows="5"
-                                 placeholder="Ví dụ: Cách xử lý hóa đơn điều chỉnh?" />
-              </b-form-group>
-              <b-row>
-                <b-col md="6">
-                  <b-form-group label="Công ty (tùy chọn)">
-                    <b-form-input v-model.number="testForm.companyId" type="number" min="1" placeholder="ID công ty" />
-                  </b-form-group>
-                </b-col>
-                <b-col md="6">
-                  <b-form-group label="Số đoạn">
-                    <b-form-input v-model.number="testForm.limit" type="number" min="1" max="8" />
-                  </b-form-group>
-                </b-col>
-              </b-row>
-              <b-form-checkbox v-model="testForm.externalOnly" class="mb-3">
-                Chỉ tài liệu được phép gửi ra AI Provider
-              </b-form-checkbox>
-              <b-button variant="outline-primary" class="mr-2" :disabled="testing" @click="testRetrieval">
-                <b-spinner v-if="testing" small class="mr-1" />Truy xuất
-              </b-button>
-              <b-button variant="primary" :disabled="testing" @click="askAi">
-                <i class="fas fa-robot mr-1"></i>Hỏi Gemini
-              </b-button>
-              <div class="small text-muted mt-3">
-                Q&A chỉ gửi các đoạn liên quan đã được đánh dấu cho phép chia sẻ. Không gửi toàn bộ tài liệu.
+        <b-card no-body class="shadow-sm mb-3 tool-card">
+          <b-card-header class="card-section-header">
+            <div>
+              <strong><i class="fas fa-flask mr-2 text-primary"></i>Kiểm thử truy xuất</strong>
+              <small class="d-block text-muted">Nhập câu hỏi, chọn phạm vi rồi kiểm tra những đoạn tài liệu được sử dụng.</small>
+            </div>
+          </b-card-header>
+          <b-card-body>
+            <b-row class="test-form-row">
+              <b-col lg="7">
+                <b-form-group label="Câu hỏi hoặc từ khóa" label-for="knowledge-query" class="mb-lg-0">
+                  <b-form-textarea id="knowledge-query" v-model.trim="testForm.query" rows="4"
+                                   placeholder="Ví dụ: Cách xử lý hóa đơn điều chỉnh?" />
+                </b-form-group>
+              </b-col>
+              <b-col lg="5" class="test-options">
+                <b-row>
+                  <b-col sm="6">
+                    <b-form-group label="Công ty (tùy chọn)" label-for="knowledge-company">
+                      <b-form-input id="knowledge-company" v-model.number="testForm.companyId" type="number" min="1" placeholder="ID công ty" />
+                    </b-form-group>
+                  </b-col>
+                  <b-col sm="6">
+                    <b-form-group label="Số đoạn tối đa" label-for="knowledge-limit">
+                      <b-form-input id="knowledge-limit" v-model.number="testForm.limit" type="number" min="1" max="8" />
+                    </b-form-group>
+                  </b-col>
+                </b-row>
+                <b-form-checkbox v-model="testForm.externalOnly">
+                  Chỉ dùng tài liệu được phép gửi đến Gemini
+                </b-form-checkbox>
+              </b-col>
+            </b-row>
+            <div class="test-form-footer">
+              <span><i class="fas fa-shield-alt mr-1"></i>Chỉ các đoạn liên quan và được cấp quyền mới được gửi đi.</span>
+              <div class="tool-actions">
+                <b-button size="sm" variant="outline-primary" :disabled="testing || !testForm.query" @click="testRetrieval">
+                  <b-spinner v-if="testing" small class="mr-1" /><i v-else class="fas fa-search mr-1"></i>Truy xuất
+                </b-button>
+                <b-button size="sm" variant="primary" :disabled="testing || !testForm.query" @click="askAi">
+                  <i class="fas fa-robot mr-1"></i>Hỏi Gemini
+                </b-button>
               </div>
-            </b-card>
-            <b-card v-if="answer" title="Câu trả lời AI" class="shadow-sm mb-3">
-              <div class="answer-text">{{ answer }}</div>
-              <div v-if="requestId" class="small text-muted mt-2">Request ID: {{ requestId }}</div>
-            </b-card>
-          </b-col>
-          <b-col lg="7">
-            <b-card class="shadow-sm" title="Nguồn được truy xuất">
-              <div v-if="!sources.length" class="text-muted">Chưa có kết quả truy xuất.</div>
-              <b-card v-for="(source, index) in sources" :key="source.chunkId" class="mb-2 source-card">
-                <div class="d-flex justify-content-between">
+            </div>
+          </b-card-body>
+        </b-card>
+        <b-card v-if="answer" title="Câu trả lời AI" class="shadow-sm mb-3 answer-card">
+          <div class="answer-text">{{ answer }}</div>
+          <div v-if="requestId" class="small text-muted mt-2">Request ID: {{ requestId }}</div>
+        </b-card>
+        <b-card no-body class="shadow-sm source-panel">
+          <b-card-header class="card-section-header">
+            <div>
+              <strong><i class="fas fa-list-alt mr-2 text-primary"></i>Nguồn được truy xuất</strong>
+              <small class="d-block text-muted">Các đoạn kiến thức được xếp hạng theo mức độ liên quan.</small>
+            </div>
+            <b-badge variant="light">{{ sources.length }} nguồn</b-badge>
+          </b-card-header>
+          <b-card-body>
+            <div v-if="!sources.length" class="empty-state">
+              <i class="fas fa-search"></i>
+              <strong>Chưa có kết quả truy xuất</strong>
+              <span>Nhập câu hỏi ở trên để bắt đầu kiểm tra.</span>
+            </div>
+            <div v-else class="source-grid">
+              <b-card v-for="(source, index) in sources" :key="source.chunkId || index" class="source-card">
+                <div class="d-flex justify-content-between align-items-start">
                   <strong>[S{{ index + 1 }}] {{ source.title }}</strong>
                   <b-badge variant="light">{{ Number(source.score || 0).toFixed(3) }}</b-badge>
                 </div>
@@ -147,98 +181,131 @@
                 </div>
                 <pre class="source-content">{{ source.content }}</pre>
               </b-card>
-            </b-card>
-          </b-col>
-        </b-row>
+            </div>
+          </b-card-body>
+        </b-card>
       </b-tab>
     </b-tabs>
 
-    <b-modal ref="documentModal" :title="editingId ? 'Cập nhật tài liệu' : 'Thêm tài liệu kiến thức'"
-             size="xl" hide-footer @hidden="resetEditor">
-      <b-form @submit.prevent="saveDocument">
-        <b-row>
-          <b-col md="8">
-            <b-form-group label="Tiêu đề *">
-              <b-form-input v-model.trim="editor.title" maxlength="255" required />
-            </b-form-group>
-          </b-col>
-          <b-col md="4">
-            <b-form-group label="Danh mục">
-              <b-form-select v-model="editor.categoryId" :options="categoryOptions" />
-            </b-form-group>
-          </b-col>
-        </b-row>
-        <b-row>
-          <b-col md="3">
-            <b-form-group label="Phạm vi">
-              <b-form-select v-model="editor.scope" :options="scopeOptions" />
-            </b-form-group>
-          </b-col>
-          <b-col md="3">
-            <b-form-group label="ID công ty" :description="editor.scope === 'GLOBAL' ? 'Không áp dụng với phạm vi toàn hệ thống' : ''">
-              <b-form-input v-model.number="editor.companyId" type="number" min="1" :disabled="editor.scope === 'GLOBAL'" />
-            </b-form-group>
-          </b-col>
-          <b-col md="3">
-            <b-form-group label="Hiệu lực từ">
-              <b-form-input v-model="editor.effectiveFrom" type="datetime-local" />
-            </b-form-group>
-          </b-col>
-          <b-col md="3">
-            <b-form-group label="Hiệu lực đến">
-              <b-form-input v-model="editor.effectiveTo" type="datetime-local" />
-            </b-form-group>
-          </b-col>
-        </b-row>
-        <b-form-checkbox v-model="editor.externalShareAllowed" class="mb-3">
-          Cho phép gửi các đoạn liên quan của tài liệu này đến Gemini
-        </b-form-checkbox>
-        <b-alert show variant="warning" v-if="editor.externalShareAllowed">
-          Chỉ bật khi tài liệu không chứa dữ liệu khách hàng, bí mật, token hoặc thông tin nội bộ không được phép chia sẻ.
-        </b-alert>
-
-        <template v-if="!editingId">
-          <b-form-radio-group v-model="editor.mode" class="mb-3">
-            <b-form-radio value="markdown">Soạn Markdown</b-form-radio>
-            <b-form-radio value="upload">Tải tài liệu</b-form-radio>
-          </b-form-radio-group>
-        </template>
-
-        <template v-if="editor.mode === 'markdown'">
-          <b-row>
-            <b-col lg="6">
-              <b-form-group label="Nội dung Markdown *">
-                <b-form-textarea v-model="editor.content" rows="18" class="markdown-editor"
-                                 placeholder="# Tiêu đề&#10;&#10;Nội dung kiến thức..." />
-              </b-form-group>
-              <b-button size="sm" variant="outline-secondary" type="button" @click="previewMarkdown">
-                <i class="fas fa-eye mr-1"></i>Cập nhật xem trước
-              </b-button>
-            </b-col>
-            <b-col lg="6">
-              <label class="font-weight-bold">Xem trước an toàn</label>
-              <div class="markdown-preview" v-html="previewHtml"></div>
-            </b-col>
-          </b-row>
-        </template>
-        <template v-else-if="!editingId">
-          <b-form-group label="Tài liệu *" description="Hỗ trợ MD, TXT, PDF, DOCX, XLSX, XML, XSD; tối đa 10 MB.">
-            <b-form-file v-model="editor.file" accept=".md,.txt,.pdf,.docx,.xlsx,.xml,.xsd"
-                         browse-text="Chọn file" placeholder="Chưa chọn tài liệu" />
+    <b-modal ref="documentModal" class="knowledge-modal" :title="editingId ? 'Cập nhật tài liệu' : 'Thêm tài liệu kiến thức'"
+             size="xl" scrollable dialog-class="knowledge-document-dialog"
+             body-class="knowledge-document-body" @hidden="resetEditor">
+      <b-form id="knowledge-document-form" class="knowledge-document-form" @submit.prevent="saveDocument">
+        <div class="document-workspace" :class="{ 'metadata-only': editor.mode === 'metadata' }">
+          <section class="document-form-section">
+          <div class="document-section-heading">
+            <div>
+              <strong>Thông tin chung</strong>
+              <span>Thông tin và phạm vi sử dụng</span>
+            </div>
+          </div>
+          <b-form-group label="Tiêu đề *" label-for="knowledge-document-title">
+            <b-form-input id="knowledge-document-title" v-model.trim="editor.title" maxlength="255"
+                          placeholder="Nhập tiêu đề dễ nhận biết" required />
           </b-form-group>
-        </template>
+          <b-form-group label="Danh mục" label-for="knowledge-document-category">
+            <b-form-select id="knowledge-document-category" v-model="editor.categoryId" :options="categoryOptions" />
+          </b-form-group>
+          <div class="document-fields-pair">
+            <div>
+              <b-form-group label="Phạm vi" label-for="knowledge-document-scope">
+                <b-form-select id="knowledge-document-scope" v-model="editor.scope" :options="scopeOptions" />
+              </b-form-group>
+            </div>
+            <div>
+              <b-form-group label="ID công ty" label-for="knowledge-document-company"
+                            :description="editor.scope === 'GLOBAL' ? 'Không áp dụng' : ''">
+                <b-form-input id="knowledge-document-company" v-model.number="editor.companyId" type="number" min="1"
+                              placeholder="Nhập ID công ty" :disabled="editor.scope === 'GLOBAL'" />
+              </b-form-group>
+            </div>
+          </div>
+          <div class="document-dates">
+            <div>
+              <b-form-group label="Hiệu lực từ" label-for="knowledge-effective-from">
+                <b-form-input id="knowledge-effective-from" v-model="editor.effectiveFrom" type="datetime-local" />
+              </b-form-group>
+            </div>
+            <div>
+              <b-form-group label="Hiệu lực đến" label-for="knowledge-effective-to">
+                <b-form-input id="knowledge-effective-to" v-model="editor.effectiveTo" type="datetime-local" />
+              </b-form-group>
+            </div>
+          </div>
+          <div class="share-setting" :class="{ active: editor.externalShareAllowed }">
+            <b-form-checkbox v-model="editor.externalShareAllowed">
+              <strong>Cho phép gửi đoạn liên quan đến Gemini</strong>
+              <span>Chỉ bật với tài liệu không chứa dữ liệu mật hoặc dữ liệu khách hàng.</span>
+            </b-form-checkbox>
+          </div>
+          </section>
 
-        <div class="d-flex justify-content-end mt-4">
-          <b-button variant="outline-secondary" class="mr-2" type="button" @click="$refs.documentModal.hide()">Hủy</b-button>
-          <b-button variant="primary" type="submit" :disabled="saving">
-            <b-spinner v-if="saving" small class="mr-1" />Lưu tài liệu
-          </b-button>
+          <section v-if="editor.mode === 'markdown' || !editingId" class="document-form-section content-form-section">
+          <div class="document-section-heading source-heading">
+            <div>
+              <strong>Nội dung tài liệu</strong>
+              <span>{{ editor.mode === 'markdown' ? 'Soạn thảo và xem trước' : 'Tải tài liệu lên để xử lý' }}</span>
+            </div>
+          </div>
+          <b-form-radio-group v-if="!editingId" v-model="editor.mode" buttons button-variant="outline-primary"
+                              size="sm" class="source-mode-switch">
+              <b-form-radio value="markdown"><i class="fas fa-edit mr-1"></i>Soạn Markdown</b-form-radio>
+              <b-form-radio value="upload"><i class="fas fa-upload mr-1"></i>Tải tài liệu</b-form-radio>
+          </b-form-radio-group>
+
+          <template v-if="editor.mode === 'markdown'">
+            <div class="editor-grid">
+              <div>
+                <div class="editor-pane-heading">
+                  <label for="knowledge-markdown-editor">Nội dung Markdown *</label>
+                  <b-button size="sm" variant="outline-secondary" type="button" :disabled="!editor.content" @click="previewMarkdown">
+                    <i class="fas fa-eye mr-1"></i>Xem trước
+                  </b-button>
+                </div>
+                <b-form-textarea id="knowledge-markdown-editor" v-model="editor.content" rows="10" class="markdown-editor"
+                                 :placeholder="'# Tiêu đề\n\nNội dung kiến thức...'" />
+              </div>
+              <div>
+                <div class="editor-pane-heading">
+                  <label>Xem trước an toàn</label>
+                  <span class="text-muted small"><i class="fas fa-shield-alt mr-1"></i>Đã lọc mã nguy hiểm</span>
+                </div>
+                <div v-if="previewHtml" class="markdown-preview" v-html="previewHtml"></div>
+                <div v-else class="markdown-preview preview-empty">
+                  <i class="far fa-eye"></i>
+                  <span>Nhập nội dung rồi chọn “Xem trước”.</span>
+                </div>
+              </div>
+            </div>
+          </template>
+          <template v-else>
+            <div class="upload-panel">
+              <div class="upload-panel-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+              <div class="upload-panel-copy">
+                <strong>Chọn tài liệu từ máy tính</strong>
+                <span>Hỗ trợ MD, TXT, PDF, DOCX, XLSX, XML, XSD · Tối đa 10 MB</span>
+              </div>
+              <b-form-file v-model="editor.file" class="knowledge-file-picker"
+                           accept=".md,.txt,.pdf,.docx,.xlsx,.xml,.xsd"
+                           browse-text="Chọn file" placeholder="Chưa chọn tài liệu" />
+            </div>
+          </template>
+          </section>
         </div>
       </b-form>
+      <template #modal-footer>
+        <div class="document-modal-actions">
+          <b-button size="sm" variant="outline-secondary" @click="$refs.documentModal.hide()">Hủy</b-button>
+          <b-button size="sm" variant="primary" type="submit" form="knowledge-document-form" :disabled="!canSaveDocument">
+            <b-spinner v-if="saving" small class="mr-1" />
+            <i v-else class="fas fa-save mr-1"></i>{{ editingId ? 'Lưu thay đổi' : 'Lưu tài liệu' }}
+          </b-button>
+        </div>
+      </template>
     </b-modal>
 
-    <b-modal ref="versionsModal" title="Lịch sử phiên bản" size="lg" ok-only ok-title="Đóng">
-      <b-table small bordered responsive show-empty :items="versions" :fields="versionFields" empty-text="Chưa có phiên bản">
+    <b-modal ref="versionsModal" class="knowledge-modal" title="Lịch sử phiên bản" size="lg" ok-only ok-title="Đóng">
+      <b-table small bordered responsive show-empty class="table-modern table-compact" :items="versions" :fields="versionFields" empty-text="Chưa có phiên bản">
         <template #cell(status)="{ item }"><b-badge :variant="statusVariant(item.status)">{{ statusLabel(item.status) }}</b-badge></template>
         <template #cell(fileSize)="{ item }">{{ formatBytes(item.fileSize) }}</template>
         <template #cell(ocr)="{ item }">
@@ -257,13 +324,25 @@
       </b-table>
     </b-modal>
 
-    <b-modal ref="categoriesModal" title="Danh mục kiến thức" size="lg" hide-footer>
-      <b-form inline class="mb-3" @submit.prevent="saveCategory">
-        <b-form-input v-model.trim="categoryForm.code" class="mr-2 mb-2" placeholder="Mã danh mục" required />
-        <b-form-input v-model.trim="categoryForm.name" class="mr-2 mb-2 flex-grow-1" placeholder="Tên danh mục" required />
-        <b-button type="submit" variant="primary" class="mb-2">Thêm</b-button>
+    <b-modal ref="categoriesModal" class="knowledge-modal" title="Danh mục kiến thức" size="lg" hide-footer>
+      <b-form class="mb-3" @submit.prevent="saveCategory">
+        <b-row>
+          <b-col md="4">
+            <b-form-group label="Mã danh mục" class="mb-2">
+              <b-form-input v-model.trim="categoryForm.code" placeholder="Ví dụ: POLICY" required />
+            </b-form-group>
+          </b-col>
+          <b-col md="6">
+            <b-form-group label="Tên danh mục" class="mb-2">
+              <b-form-input v-model.trim="categoryForm.name" placeholder="Nhập tên danh mục" required />
+            </b-form-group>
+          </b-col>
+          <b-col md="2" class="d-flex align-items-end mb-2">
+            <b-button type="submit" variant="primary" block :disabled="!categoryForm.code || !categoryForm.name">Thêm</b-button>
+          </b-col>
+        </b-row>
       </b-form>
-      <b-table small bordered :items="categories" :fields="categoryFields">
+      <b-table small bordered responsive show-empty class="mb-0 table-modern table-compact" :items="categories" :fields="categoryFields" empty-text="Chưa có danh mục">
         <template #cell(active)="{ item }"><b-badge :variant="item.active ? 'success' : 'secondary'">{{ item.active ? 'Bật' : 'Tắt' }}</b-badge></template>
         <template #cell(option)="{ item }">
           <b-button size="sm" variant="outline-danger" @click="deleteCategory(item)"><i class="fas fa-trash"></i></b-button>
@@ -298,14 +377,14 @@ export default {
       testForm: { query: '', companyId: null, limit: 5, externalOnly: true },
       sources: [], answer: '', requestId: '',
       fields: [
-        { key: 'index', label: '#', thStyle: { width: '45px' } },
+        { key: 'index', label: '#', thStyle: { width: '48px' }, tdClass: 'text-center' },
         { key: 'title', label: 'Tài liệu' },
-        { key: 'documentType', label: 'Loại', thStyle: { width: '75px' } },
+        { key: 'documentType', label: 'Loại', thStyle: { width: '75px' }, tdClass: 'text-center' },
         { key: 'scope', label: 'Phạm vi', thStyle: { width: '135px' } },
         { key: 'chunkCount', label: 'Đoạn', thStyle: { width: '65px' }, tdClass: 'text-center' },
         { key: 'externalShareAllowed', label: 'Gemini', thStyle: { width: '70px' }, tdClass: 'text-center' },
         { key: 'status', label: 'Trạng thái', thStyle: { width: '125px' } },
-        { key: 'option', label: '', thStyle: { width: '115px' } },
+        { key: 'option', label: '', thStyle: { width: '48px' }, tdClass: 'text-center' },
       ],
       versionFields: [
         { key: 'versionNumber', label: 'Phiên bản' }, { key: 'originalFilename', label: 'File' },
@@ -329,6 +408,13 @@ export default {
   computed: {
     categoryOptions() {
       return [{ value: null, text: 'Không phân loại' }, ...this.categories.map(item => ({ value: item.id, text: item.name }))]
+    },
+    canSaveDocument() {
+      if (this.saving || !this.editor.title) return false
+      if (this.editor.scope === 'COMPANY' && !this.editor.companyId) return false
+      if (this.editor.mode === 'markdown' && !this.editor.content) return false
+      if (!this.editingId && this.editor.mode === 'upload' && !this.editor.file) return false
+      return true
     },
   },
   mounted() {
@@ -487,15 +573,124 @@ export default {
 </script>
 
 <style scoped>
-.knowledge-page { max-width: 100%; }
-.knowledge-page ::v-deep th { background: #eef4fa; vertical-align: middle; }
-.knowledge-page ::v-deep td { vertical-align: middle; }
-.markdown-editor { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-.markdown-preview { border: 1px solid #dfe7ef; border-radius: 6px; min-height: 430px; max-height: 60vh; overflow: auto; padding: 16px; background: #fff; }
+.knowledge-page { max-width: 100%; color: #1f2937; font-size: 13px; }
+.page-header h4 { color: #1f2937; }
+.page-actions { flex-wrap: wrap; }
+.knowledge-page ::v-deep .btn { border-radius: 6px; font-weight: 600; }
+.knowledge-page ::v-deep .form-control,
+.knowledge-page ::v-deep .custom-select { border-color: #d8dee8; border-radius: 6px; min-height: 34px; }
+.knowledge-page ::v-deep .form-control:focus,
+.knowledge-page ::v-deep .custom-select:focus { border-color: #93b4ef; box-shadow: 0 0 0 3px rgba(37, 99, 235, .1); }
+.knowledge-page ::v-deep .form-group { margin-bottom: 12px; }
+.knowledge-page ::v-deep .form-group label { color: #475569; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.knowledge-page ::v-deep .card { border: 1px solid #e6ebf2; border-radius: 8px; }
+.knowledge-page ::v-deep .card-header { background: #fff; border-bottom: 1px solid #edf1f6; padding: 13px 16px; }
+.knowledge-page ::v-deep .card-body { padding: 16px; }
+.card-section-header { align-items: center; display: flex; justify-content: space-between; gap: 16px; }
+.card-section-header strong { color: #263445; font-size: 14px; }
+.card-section-header small { color: #7b8797 !important; font-size: 12px; font-weight: 400; margin-top: 3px; }
+.header-link { color: #2563eb; font-size: 12px; padding: 4px 0; }
+.table-toolbar { min-height: 28px; }
+.filter-actions { gap: 8px; }
+.filter-actions .btn { margin: 0 !important; }
+.knowledge-tabs ::v-deep .nav-tabs { border-bottom: 1px solid #d8dee8; }
+.knowledge-tabs ::v-deep .nav-link { border: 0; border-bottom: 2px solid transparent; color: #64748b; font-weight: 600; padding: 10px 16px; }
+.knowledge-tabs ::v-deep .nav-link:hover { color: #2563eb; }
+.knowledge-tabs ::v-deep .nav-link.active { background: transparent; border-bottom-color: #2563eb; color: #2563eb; }
+.knowledge-page ::v-deep .table { margin-bottom: 0; }
+.knowledge-page ::v-deep .table thead th { background: #f8fafc; border-bottom: 2px solid #e5e7eb; color: #475569; font-size: 12px; font-weight: 700; vertical-align: middle; white-space: nowrap; }
+.knowledge-page ::v-deep .table td { vertical-align: middle; }
+.knowledge-page ::v-deep .table-modern.table-compact td,
+.knowledge-page ::v-deep .table-modern.table-compact th { padding: 9px 12px; }
+.knowledge-page ::v-deep .table-modern tbody tr:hover { background: #f8fbff; }
+.document-title { color: #1f2937; font-weight: 700; }
+.document-meta { padding-left: 22px; }
+.test-form-row { align-items: stretch; }
+.test-form-row ::v-deep textarea { min-height: 102px; resize: vertical; }
+.test-options { border-left: 1px solid #e8edf4; padding-left: 22px; }
+.test-options ::v-deep .custom-control-label { line-height: 1.5; }
+.test-form-footer { align-items: center; border-top: 1px solid #edf1f6; color: #64748b; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; margin-top: 14px; padding-top: 12px; }
+.test-form-footer > span { font-size: 12px; }
+.tool-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tool-actions .btn { margin: 0; min-width: 104px; }
+.source-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.source-card { border-left: 3px solid #3b82f6 !important; border-radius: 6px !important; }
+.source-card ::v-deep .card-body { padding: 12px; min-height: 0; }
+.source-content { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 5px; color: #334155; font-size: 12px; line-height: 1.5; margin: 0; max-height: 260px; overflow: auto; padding: 10px; white-space: pre-wrap; word-break: break-word; }
+.empty-state { align-items: center; color: #64748b; display: flex; flex-direction: column; gap: 4px; justify-content: center; min-height: 126px; text-align: center; }
+.empty-state i { color: #94a3b8; font-size: 22px; margin-bottom: 3px; }
+.empty-state strong { color: #475569; }
+.answer-card ::v-deep .card-body { background: #f8fafc; }
+.answer-text { line-height: 1.65; white-space: pre-wrap; }
+.document-workspace { align-items: stretch; display: grid; gap: 14px; grid-template-columns: minmax(320px, 350px) minmax(0, 1fr); }
+.document-workspace.metadata-only { grid-template-columns: minmax(0, 1fr); }
+.document-form-section { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; min-width: 0; padding: 14px 16px 12px; }
+.document-form-section ::v-deep .form-group { margin-bottom: 11px; }
+.document-form-section ::v-deep .form-group label { color: #475569; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.document-form-section ::v-deep .form-control,
+.document-form-section ::v-deep .custom-select { border-color: #d8dee8; border-radius: 6px; min-height: 34px; }
+.document-section-heading { align-items: flex-start; border-bottom: 1px solid #edf1f6; display: flex; justify-content: space-between; gap: 16px; margin-bottom: 12px; padding-bottom: 10px; }
+.document-section-heading strong { color: #263445; display: block; font-size: 14px; }
+.document-section-heading span { color: #7b8797; display: block; font-size: 12px; margin-top: 2px; }
+.document-fields-pair { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.document-dates > div { min-width: 0; }
+.document-dates ::v-deep input { min-width: 0; width: 100%; }
+.document-fields-pair ::v-deep .form-text { font-size: 11px; line-height: 1.3; margin-top: 2px; }
+.source-mode-switch { display: flex; margin-bottom: 12px; width: 100%; }
+.source-mode-switch ::v-deep .btn { flex: 1; min-width: 0; }
+.share-setting { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin-top: 2px; padding: 9px 10px; transition: background .15s ease, border-color .15s ease; }
+.share-setting.active { background: #fff8e6; border-color: #f4cf75; }
+.share-setting ::v-deep .custom-control-label strong { color: #334155; display: block; font-size: 13px; }
+.share-setting ::v-deep .custom-control-label span { color: #64748b; display: block; font-size: 12px; line-height: 1.4; margin-top: 1px; }
+.editor-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.editor-grid > div { min-width: 0; }
+.editor-pane-heading { align-items: center; display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; min-height: 32px; }
+.editor-pane-heading label { color: #475569; font-size: 12px; font-weight: 700; margin: 0; }
+.markdown-editor { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; height: 280px; min-height: 220px; resize: vertical; }
+.markdown-preview { background: #fff; border: 1px solid #d8dee8; border-radius: 6px; height: 280px; overflow: auto; padding: 14px; }
+.preview-empty { align-items: center; background: #f8fafc; color: #94a3b8; display: flex; flex-direction: column; gap: 8px; justify-content: center; text-align: center; }
+.preview-empty i { font-size: 26px; }
 .markdown-preview ::v-deep table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
 .markdown-preview ::v-deep th, .markdown-preview ::v-deep td { border: 1px solid #dee2e6; padding: 6px 8px; }
 .markdown-preview ::v-deep pre { background: #f4f6f8; border-radius: 4px; padding: 12px; overflow: auto; }
-.source-card { border-left: 4px solid #3b82f6; }
-.source-content { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 5px; max-height: 260px; overflow: auto; padding: 10px; white-space: pre-wrap; word-break: break-word; }
-.answer-text { white-space: pre-wrap; line-height: 1.6; }
+.upload-panel { align-items: center; background: #f8fafc; border: 1px dashed #aebbd0; border-radius: 8px; display: grid; gap: 12px; grid-template-columns: 44px minmax(0, 1fr); min-height: 190px; padding: 20px; }
+.upload-panel-icon { align-items: center; background: #eaf2ff; border-radius: 8px; color: #2563eb; display: flex; font-size: 20px; height: 44px; justify-content: center; width: 44px; }
+.upload-panel-copy strong { color: #334155; display: block; }
+.upload-panel-copy span { color: #64748b; display: block; font-size: 12px; margin-top: 3px; }
+.knowledge-file-picker { grid-column: 1 / -1; margin: 0; }
+.document-modal-actions { align-items: center; display: flex; gap: 8px; justify-content: flex-end; width: 100%; }
+.document-modal-actions .btn { margin: 0 !important; min-width: 100px; }
+.knowledge-page ::v-deep .custom-file-label { border-color: #d8dee8; border-radius: 6px; color: #64748b; min-height: 36px; }
+.knowledge-page ::v-deep .custom-file-label::after { background: #f8fafc; border-left-color: #d8dee8; color: #475569; }
+.knowledge-page ::v-deep .badge { border-radius: 999px; font-size: 11px; font-weight: 700; padding: 4px 8px; }
+
+@media (max-width: 768px) {
+  .page-header { align-items: flex-start !important; flex-direction: column; }
+  .page-actions { margin-top: 4px; width: 100%; }
+  .page-actions .btn { flex: 1; }
+  .card-section-header { align-items: flex-start; }
+  .source-grid { grid-template-columns: 1fr; }
+  .test-form-footer { align-items: flex-start; flex-direction: column; }
+  .tool-actions, .tool-actions .btn { width: 100%; }
+  .document-workspace { grid-template-columns: 1fr; }
+  .editor-grid { grid-template-columns: 1fr; }
+  .markdown-editor, .markdown-preview { height: 220px; }
+}
+@media (max-width: 991px) {
+  .test-options { border-left: 0; border-top: 1px solid #e8edf4; margin-top: 12px; padding-left: 15px; padding-top: 12px; }
+  .document-workspace { grid-template-columns: 1fr; }
+}
+</style>
+
+<style>
+.knowledge-document-dialog { max-width: min(1120px, calc(100vw - 32px)); }
+.knowledge-document-dialog .modal-content { max-height: calc(100vh - 32px); }
+.knowledge-document-dialog .modal-header { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 13px 18px; }
+.knowledge-document-dialog .modal-title { color: #263445; font-size: 16px; font-weight: 700; }
+.knowledge-document-dialog .knowledge-document-body { background: #f5f7fb; padding: 14px 16px; }
+.knowledge-document-dialog .modal-footer { background: #fff; border-top: 1px solid #e2e8f0; padding: 10px 16px; }
+@media (max-width: 768px) {
+  .knowledge-document-dialog { margin: 8px auto; max-width: calc(100vw - 16px); }
+  .knowledge-document-dialog .modal-content { max-height: calc(100vh - 16px); }
+}
 </style>

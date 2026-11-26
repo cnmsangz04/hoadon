@@ -87,6 +87,7 @@
         @select="$emit('select', $event)"
         @change="$emit('change')"
         @move="$emit('move', $event)"
+        @remove="$emit('remove', $event)"
       />
     </li>
   </ul>
@@ -202,14 +203,18 @@ export default {
       );
     },
     move(index, direction) {
-      const block = this.blocks.splice(index, 1)[0];
-      this.blocks.splice(index + direction, 0, block);
-      this.$emit("change");
+      const block = this.blocks[index];
+      const target = this.blocks[index + direction];
+      if (!block || !target) return;
+      this.$emit("move", {
+        id: block.id,
+        targetId: target.id,
+        placement: direction < 0 ? "before" : "after",
+      });
     },
     remove(index) {
-      this.blocks.splice(index, 1);
-      this.$emit("select", null);
-      this.$emit("change");
+      const block = this.blocks[index];
+      if (block) this.$emit("remove", block.id);
     },
   },
 };

@@ -48,8 +48,8 @@ public class DocumentRecognitionService {
             throw new DocumentRecognitionException("document_recognition_disabled",
                     "Chức năng nhận diện chứng từ đang tắt");
         }
-        if (category != 1 && category != 2) {
-            throw new IllegalArgumentException("Chỉ hỗ trợ nhận diện cho hóa đơn GTGT và hóa đơn bán hàng");
+        if (category != 1 && category != 2 && category != 6) {
+            throw new IllegalArgumentException("Chỉ hỗ trợ nhận diện cho hóa đơn và phiếu xuất kho");
         }
         ValidatedUpload upload = validate(file);
         OcrDocument document;
@@ -79,7 +79,8 @@ public class DocumentRecognitionService {
         for (ParsedItem item : parsed.items()) {
             ProductMatch product = matchProduct(item.name(), productPage);
             if (product == null) warnings.add("Chưa đối chiếu được hàng hóa: " + item.name().value());
-            ParsedField vatRate = category == 2 ? new ParsedField("-1", 1d, "Hóa đơn bán hàng không áp dụng thuế GTGT")
+            ParsedField vatRate = category == 2 || category == 6
+                    ? new ParsedField("-1", 1d, "Chứng từ không áp dụng thuế GTGT")
                     : item.vatRate();
             items.add(new DocumentRecognitionDtos.ItemView(fieldExtractor.view(item.name()),
                     fieldExtractor.view(product != null && item.unit().empty()

@@ -34,12 +34,12 @@ public class DocumentFieldExtractor {
     public ParsedDocument extract(String text, double sourceConfidence) {
         List<String> lines = cleanLines(text);
         double base = clamp(sourceConfidence <= 0d ? 0.5d : sourceConfidence);
-        ParsedField sellerName = labeled(lines, List.of("ten nguoi ban", "don vi ban hang", "nguoi ban"), base);
-        ParsedField buyerName = labeled(lines, List.of("ten nguoi mua", "don vi mua hang", "nguoi mua", "khach hang"), base);
-        ParsedField sellerTax = labeledTax(lines, List.of("nguoi ban", "don vi ban", "seller"), base);
-        ParsedField buyerTax = labeledTax(lines, List.of("nguoi mua", "don vi mua", "buyer", "khach hang"), base);
-        ParsedField sellerAddress = labeled(lines, List.of("dia chi nguoi ban", "dia chi don vi ban"), base);
-        ParsedField buyerAddress = labeled(lines, List.of("dia chi nguoi mua", "dia chi don vi mua", "dia chi khach hang"), base);
+        ParsedField sellerName = labeled(lines, List.of("ten nguoi ban", "don vi ban hang", "nguoi ban", "don vi xuat hang"), base);
+        ParsedField buyerName = labeled(lines, List.of("ten nguoi mua", "don vi mua hang", "nguoi mua", "khach hang", "don vi nhan", "dai ly nhan"), base);
+        ParsedField sellerTax = labeledTax(lines, List.of("nguoi ban", "don vi ban", "don vi xuat", "seller"), base);
+        ParsedField buyerTax = labeledTax(lines, List.of("nguoi mua", "don vi mua", "don vi nhan", "dai ly nhan", "buyer", "khach hang"), base);
+        ParsedField sellerAddress = labeled(lines, List.of("dia chi nguoi ban", "dia chi don vi ban", "dia chi don vi xuat"), base);
+        ParsedField buyerAddress = labeled(lines, List.of("dia chi nguoi mua", "dia chi don vi mua", "dia chi khach hang", "dia chi don vi nhan", "dia chi dai ly"), base);
         if (sellerAddress.empty() || buyerAddress.empty()) {
             List<ParsedField> addresses = allLabeled(lines, List.of("dia chi"), base);
             if (sellerAddress.empty() && !addresses.isEmpty()) sellerAddress = addresses.get(0);
@@ -71,6 +71,7 @@ public class DocumentFieldExtractor {
         for (String line : lines) {
             String normalized = normalize(line);
             for (String label : labels) {
+                if (normalized.startsWith("dia chi") && !label.startsWith("dia chi")) continue;
                 int position = normalized.indexOf(label);
                 if (position < 0) continue;
                 String value = afterLabel(line);

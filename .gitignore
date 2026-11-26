@@ -37,6 +37,7 @@ logs/
 !src/views/administrators/logs/list.vue
 *.log
 *.md
+/data/ai-knowledge-index/
 .env
 .local/
 **/node_modules/
@@ -46,3 +47,4 @@ logs/
 /logs/
 /src/test/
 /uploads/*/invoice-pdfs/
+/uploads/*/knowledge/
