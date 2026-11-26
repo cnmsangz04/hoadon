@@ -16,6 +16,8 @@ public class AiProperties {
     private RateLimit rateLimit = new RateLimit();
     private Gemini gemini = new Gemini();
     private Features features = new Features();
+    private Chatbot chatbot = new Chatbot();
+    private InvoiceAssistant invoiceAssistant = new InvoiceAssistant();
 
     public boolean isFeatureEnabled(AiFeature feature) {
         return switch (feature) {
@@ -50,6 +52,10 @@ public class AiProperties {
     public void setGemini(Gemini gemini) { this.gemini = gemini; }
     public Features getFeatures() { return features; }
     public void setFeatures(Features features) { this.features = features; }
+    public Chatbot getChatbot() { return chatbot; }
+    public void setChatbot(Chatbot chatbot) { this.chatbot = chatbot; }
+    public InvoiceAssistant getInvoiceAssistant() { return invoiceAssistant; }
+    public void setInvoiceAssistant(InvoiceAssistant invoiceAssistant) { this.invoiceAssistant = invoiceAssistant; }
 
     public static class Retry {
         private int maxAttempts = 3;
@@ -116,5 +122,37 @@ public class AiProperties {
         public void setChatbot(boolean chatbot) { this.chatbot = chatbot; }
         public boolean isKnowledgeManagement() { return knowledgeManagement; }
         public void setKnowledgeManagement(boolean knowledgeManagement) { this.knowledgeManagement = knowledgeManagement; }
+    }
+
+    public static class Chatbot {
+        private int maxQuestionCharacters = 4_000;
+        private int maxHistoryMessages = 12;
+        private int maxHistoryCharacters = 8_000;
+        private int maxConversations = 50;
+
+        public int getMaxQuestionCharacters() { return maxQuestionCharacters; }
+        public void setMaxQuestionCharacters(int maxQuestionCharacters) { this.maxQuestionCharacters = maxQuestionCharacters; }
+        public int getMaxHistoryMessages() { return maxHistoryMessages; }
+        public void setMaxHistoryMessages(int maxHistoryMessages) { this.maxHistoryMessages = maxHistoryMessages; }
+        public int getMaxHistoryCharacters() { return maxHistoryCharacters; }
+        public void setMaxHistoryCharacters(int maxHistoryCharacters) { this.maxHistoryCharacters = maxHistoryCharacters; }
+        public int getMaxConversations() { return maxConversations; }
+        public void setMaxConversations(int maxConversations) { this.maxConversations = maxConversations; }
+    }
+
+    public static class InvoiceAssistant {
+        private int maxCommandCharacters = 2_000;
+        private int maxActions = 20;
+        private int proposalTtlMinutes = 10;
+        private int maxCatalogCandidates = 6;
+
+        public int getMaxCommandCharacters() { return maxCommandCharacters; }
+        public void setMaxCommandCharacters(int maxCommandCharacters) { this.maxCommandCharacters = maxCommandCharacters; }
+        public int getMaxActions() { return maxActions; }
+        public void setMaxActions(int maxActions) { this.maxActions = maxActions; }
+        public int getProposalTtlMinutes() { return proposalTtlMinutes; }
+        public void setProposalTtlMinutes(int proposalTtlMinutes) { this.proposalTtlMinutes = proposalTtlMinutes; }
+        public int getMaxCatalogCandidates() { return maxCatalogCandidates; }
+        public void setMaxCatalogCandidates(int maxCatalogCandidates) { this.maxCatalogCandidates = maxCatalogCandidates; }
     }
 }

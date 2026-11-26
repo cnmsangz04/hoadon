@@ -15,6 +15,7 @@
 
     <!-- Chân trang -->
     <Footer />
+    <AiChatbot />
   </div>
 </template>
 
@@ -22,13 +23,15 @@
 import Header from '../components/header.vue';
 import Sidebar from '../components/sidebar.vue';
 import Footer from '../components/footer.vue';
+import AiChatbot from '../components/ai_chatbot.vue';
 
 export default {
   name: 'CustomerPage',
   components: {
     Header,
     Sidebar,
-    Footer
+    Footer,
+    AiChatbot
   },
   data () {
     return {

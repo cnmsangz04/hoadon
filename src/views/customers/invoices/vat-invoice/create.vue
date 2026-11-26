@@ -6,6 +6,15 @@
         <h4 class="invoice-title">{{ pageTitle }}</h4>
       </div>
 
+      <AiInvoiceAssistant
+        v-if="canEdit && !isProcessingInvoice && (formInvoices.form_id || prepare.formId)"
+        :invoice-id="editId"
+        :form-id="Number(formInvoices.form_id || prepare.formId)"
+        :category="1"
+        :snapshot="aiInvoiceSnapshot"
+        @applied="onAiInvoiceApplied"
+      />
+
       <b-alert v-if="isProcessingInvoice" show :variant="processingVariant" class="mb-3">
         <div class="font-weight-bold">{{ processingLabel }}</div>
         <div class="small mt-1">
@@ -446,10 +455,12 @@
 
 <script>
 import axios from '@/plugins/axios'
+import AiInvoiceAssistant from '@/views/components/ai_invoice_assistant.vue'
 import { email, firstError, hasErrors, numberRange, phone, required, taxCode } from '@/utils/validators'
 
 export default {
   name: 'VatInvoiceCreate',
+  components: { AiInvoiceAssistant },
   data () {
     return {
       isBusy: false,
@@ -580,6 +591,22 @@ export default {
     canEdit () {
       if (!this.editId) return true
       return Number(this.invoiceStatus) === 0
+    },
+    aiInvoiceSnapshot () {
+      const rows = Array.isArray(this.frmData.detail)
+        ? this.frmData.detail.filter(row => String(row.name || '').trim() || String(row.code || '').trim())
+        : []
+      return {
+        formId: this.formInvoices.form_id || this.prepare.formId || null,
+        category: 1,
+        dateExport: this.frmData.date_export || null,
+        paymentType: this.frmData.payment_type || 1,
+        orderCode: this.frmData.order?.code || null,
+        customer: { ...this.frmData.customer },
+        detail: rows.map(row => ({ ...row })),
+        currency: 'VND',
+        exchangeRate: 1
+      }
     }
   },
   async created () { 
@@ -599,6 +626,12 @@ export default {
     }
   },
   methods: {
+    onAiInvoiceApplied (result) {
+      const id = Number(result?.invoiceId || 0)
+      if (id > 0 && this.$router) {
+        this.$router.replace({ name: 'CustomerVatInvoiceEdit', params: { id } })
+      }
+    },
     applyProcessingQuery () {
       const q = (this.$route && this.$route.query) || {}
       const referenceId = Number(q.referenceId || q.reference_id || 0)
